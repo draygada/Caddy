@@ -6,10 +6,12 @@ share one workbench.
 
 ## Evidence ceiling
 
-The checked-in fixture and render model are **TARGET / SYNTHETIC browser evidence only**. They prove
-interaction, presentation, stable-ID mapping, typed proposal handling, responsive behavior, and
-failure recovery. They do not prove a core CAD kernel, B-rep authority, exchange correctness,
-AssemblyDocument support, product-thread behavior, or compatibility with a shared wire contract.
+The checked-in fixture and render model are **TARGET / SYNTHETIC code-level evidence only**. Focused
+Node tests exercise render-model validation, stable-ID mapping, typed proposal handling, and synthetic
+state transitions. They do not provide browser-rendered interaction or presentation evidence,
+responsive or accessibility evidence, memory evidence, external-SLO evidence, a core CAD kernel,
+B-rep authority, exchange correctness, AssemblyDocument support, product-thread behavior, or
+compatibility with a shared wire contract.
 
 The earlier cross-lane draft was superseded. Until the integration owner supplies an admitted
 successor commit and exact receipt, this lane intentionally contains no final shared wire types or
@@ -59,6 +61,9 @@ mapping, state-truth labeling, or the source-scene immutability invariant in tha
 ## Known contract gaps
 
 - No admitted core-kernel packet or shared boundary adapter exists in this lane.
-- Recompute and worker transitions are browser simulations, not authoritative geometry execution.
+- Recompute and worker transitions are synthetic UI simulations. No geometry recompute, worker
+  execution, transport, crash recovery, or authoritative geometry execution is implemented here.
 - Mobile semantic-diff review and browser-driven accessibility/responsive automation remain unbuilt.
+- The timing script is a synthetic Node-process target; it records no browser, memory, or external-SLO
+  evidence.
 - Retired screenshots were removed because they depicted out-of-scope Assembly and product-thread UI.

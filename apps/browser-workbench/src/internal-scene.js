@@ -31,8 +31,12 @@ export function validateRenderScene(scene) {
 
   const nodeIds = new Set();
   const bodyIds = new Set();
+  const stableIdentitySets = {
+    entityIds: new Set(),
+    semanticReferenceIds: new Set(),
+  };
   for (const node of scene.nodes) {
-    validateNode(node, nodeIds);
+    validateNode(node, scene, nodeIds, stableIdentitySets);
     assert(!bodyIds.has(node.bodyId), "SCENE_BODY_DUPLICATE", `Duplicate PartDocument body ${node.bodyId}.`);
     nodeIds.add(node.nodeId);
     bodyIds.add(node.bodyId);
@@ -41,7 +45,7 @@ export function validateRenderScene(scene) {
   return scene;
 }
 
-function validateNode(node, existingIds) {
+function validateNode(node, scene, existingIds, stableIdentitySets) {
   assert(node && typeof node === "object", "SCENE_NODE_INVALID", "Scene node must be an object.");
   assertNonEmpty(node.nodeId, "nodeId");
   assert(!existingIds.has(node.nodeId), "SCENE_NODE_DUPLICATE", `Duplicate render node ${node.nodeId}.`);
@@ -55,8 +59,20 @@ function validateNode(node, existingIds) {
   assert(node.metadata && typeof node.metadata === "object", "SCENE_PROVENANCE_MISSING", `Node ${node.nodeId} is missing source provenance.`);
   assertNonEmpty(node.metadata.sourceDocumentId, "sourceDocumentId");
   assertNonEmpty(node.metadata.sourceRevisionId, "sourceRevisionId");
+  assert(
+    node.metadata.sourceDocumentId === scene.documentId,
+    "SCENE_PROVENANCE_MISMATCH",
+    `Node ${node.nodeId} source document does not match enclosing PartDocument ${scene.documentId}.`,
+    { field: "sourceDocumentId", expected: scene.documentId, actual: node.metadata.sourceDocumentId },
+  );
+  assert(
+    node.metadata.sourceRevisionId === scene.revisionId,
+    "SCENE_PROVENANCE_MISMATCH",
+    `Node ${node.nodeId} source revision does not match enclosing revision ${scene.revisionId}.`,
+    { field: "sourceRevisionId", expected: scene.revisionId, actual: node.metadata.sourceRevisionId },
+  );
   validateTransform(node.transform, node.nodeId);
-  validateMesh(node.mesh, node.nodeId);
+  validateMesh(node.mesh, node.nodeId, stableIdentitySets);
 }
 
 function validateTransform(transform, nodeId) {
@@ -69,7 +85,7 @@ function validateTransform(transform, nodeId) {
   assert(transform.scale.every((value) => value !== 0), "SCENE_TRANSFORM_INVALID", `Node ${nodeId} scale cannot contain zero.`);
 }
 
-function validateMesh(mesh, nodeId) {
+function validateMesh(mesh, nodeId, stableIdentitySets) {
   assert(mesh && typeof mesh === "object", "SCENE_MESH_INVALID", `Node ${nodeId} is missing mesh data.`);
   const positions = asNumericArray(mesh.positions, `${nodeId}.positions`);
   const normals = asNumericArray(mesh.normals, `${nodeId}.normals`);
@@ -94,6 +110,14 @@ function validateMesh(mesh, nodeId) {
       occupancy[index] += 1;
       assert(occupancy[index] === 1, "SCENE_ENTITY_RANGE_AMBIGUOUS", `Node ${nodeId} maps triangle ${index} to multiple stable entities.`);
     }
+    assert(!stableIdentitySets.entityIds.has(range.entityId), "SCENE_ENTITY_DUPLICATE", `Duplicate stable entity ${range.entityId}.`);
+    assert(
+      !stableIdentitySets.semanticReferenceIds.has(range.semanticReferenceId),
+      "SCENE_SEMANTIC_REFERENCE_DUPLICATE",
+      `Duplicate semantic reference ${range.semanticReferenceId}.`,
+    );
+    stableIdentitySets.entityIds.add(range.entityId);
+    stableIdentitySets.semanticReferenceIds.add(range.semanticReferenceId);
   }
 }
 
@@ -114,34 +138,71 @@ export function resolveStableEntity(node, triangleIndex) {
   return {
     ok: true,
     code: null,
-    target: {
-      nodeId: node.nodeId,
-      nodeKind: node.kind,
-      bodyId: node.bodyId ?? null,
-      entityId: range.entityId,
-      semanticReferenceId: range.semanticReferenceId,
-      featureId: range.featureId,
-      startTriangle: range.startTriangle,
-      triangleCount: range.triangleCount,
-    },
+    target: stableTarget(node, range),
   };
+}
+
+export function rebindStableTarget(scene, target) {
+  if (!scene || !Array.isArray(scene.nodes) || !target || typeof target !== "object") {
+    return { ok: false, code: "SELECTION_TARGET_INVALID", target: null };
+  }
+
+  const nodeId = typeof target.nodeId === "string" && target.nodeId.trim() !== "" ? target.nodeId : null;
+  const bodyId = typeof target.bodyId === "string" && target.bodyId.trim() !== "" ? target.bodyId : null;
+  if (!nodeId && !bodyId) return { ok: false, code: "SELECTION_TARGET_INVALID", target: null };
+
+  const nodes = scene.nodes.filter((node) => (
+    (!nodeId || node.nodeId === nodeId)
+    && (!bodyId || node.bodyId === bodyId)
+  ));
+  if (nodes.length === 0) return { ok: false, code: "SELECTION_NODE_MISSING", target: null };
+  if (nodes.length !== 1) return { ok: false, code: "SELECTION_NODE_AMBIGUOUS", target: null };
+
+  const node = nodes[0];
+  const declaresEntity = target.entityId !== null && target.entityId !== undefined;
+  const declaresSemanticReference = target.semanticReferenceId !== null && target.semanticReferenceId !== undefined;
+  if (!declaresEntity && !declaresSemanticReference) {
+    return { ok: true, code: null, target: stableTarget(node) };
+  }
+  if (
+    !declaresEntity
+    || !declaresSemanticReference
+    || typeof target.entityId !== "string"
+    || target.entityId.trim() === ""
+    || typeof target.semanticReferenceId !== "string"
+    || target.semanticReferenceId.trim() === ""
+  ) {
+    return { ok: false, code: "SELECTION_IDENTITY_INVALID", target: null };
+  }
+
+  const ranges = node.mesh.entityRanges.filter((range) => (
+    range.entityId === target.entityId
+    && range.semanticReferenceId === target.semanticReferenceId
+  ));
+  if (ranges.length === 0) return { ok: false, code: "SELECTION_MAPPING_MISSING", target: null };
+  if (ranges.length !== 1) return { ok: false, code: "SELECTION_MAPPING_AMBIGUOUS", target: null };
+  return { ok: true, code: null, target: stableTarget(node, ranges[0]) };
 }
 
 export function stableTargets(scene, visibleNodeIds = null) {
   const visible = visibleNodeIds ? new Set(visibleNodeIds) : null;
   return scene.nodes.flatMap((node) => {
     if (!node.visible || (visible && !visible.has(node.nodeId))) return [];
-    return node.mesh.entityRanges.map((range) => ({
-      nodeId: node.nodeId,
-      nodeKind: node.kind,
-      bodyId: node.bodyId ?? null,
-      entityId: range.entityId,
-      semanticReferenceId: range.semanticReferenceId,
-      featureId: range.featureId,
-      startTriangle: range.startTriangle,
-      triangleCount: range.triangleCount,
-    }));
+    return node.mesh.entityRanges.map((range) => stableTarget(node, range));
   });
+}
+
+function stableTarget(node, range = null) {
+  return {
+    nodeId: node.nodeId,
+    nodeKind: node.kind,
+    bodyId: node.bodyId ?? null,
+    entityId: range?.entityId ?? null,
+    semanticReferenceId: range?.semanticReferenceId ?? null,
+    featureId: range?.featureId ?? null,
+    startTriangle: range?.startTriangle ?? 0,
+    triangleCount: range?.triangleCount ?? node.mesh.indices.length / 3,
+  };
 }
 
 function asNumericArray(value, field) {

@@ -69,9 +69,34 @@ test("schema updates are immutable, typed, bounded, and path-safe", () => {
 
   const afterEnum = updateSchemaValue(afterBoolean, arbitraryDescriptorSchema, "strategy", "OCTET");
   assert.equal(afterEnum.strategy, "OCTET");
+  assert.throws(() => updateSchemaValue(before, arbitraryDescriptorSchema, "strategy", "HEXAGONAL"), /declared choices/);
   assert.throws(() => updateSchemaValue(before, arbitraryDescriptorSchema, "cellSize", "0.01"), /at least 0.1/);
   assert.throws(() => updateSchemaValue(before, arbitraryDescriptorSchema, "options/seedCount", "2.5"), /integer/);
   assert.throws(() => updateSchemaValue(before, arbitraryDescriptorSchema, "undeclared", "x"), /not declared/);
+});
+
+test("direct const is the authoritative default and rejects any other value", () => {
+  const schema = { type: "string", title: "Direction", const: "NORMAL", default: "TANGENT" };
+  assert.equal(schemaDefault(schema), "NORMAL");
+  const [field] = flattenSchema(schema);
+  assert.equal(field.control, "select");
+  assert.deepEqual(field.choices.map((choice) => choice.value), ["NORMAL"]);
+  assert.equal(updateSchemaValue(undefined, schema, "", "NORMAL"), "NORMAL");
+  assert.throws(() => updateSchemaValue(undefined, schema, "", "TANGENT"), /declared choices/);
+});
+
+test("numeric multipleOf uses exact decimal arithmetic", () => {
+  const schema = {
+    type: "object",
+    properties: {
+      pitch: { type: "number", multipleOf: 0.1, default: "0.2" },
+    },
+  };
+  const initial = schemaDefault(schema);
+  assert.equal(updateSchemaValue(initial, schema, "pitch", "0.3").pitch, "0.3");
+  assert.equal(updateSchemaValue(initial, schema, "pitch", "3e-1").pitch, "3e-1");
+  assert.throws(() => updateSchemaValue(initial, schema, "pitch", "0.31"), /multiple of 0.1/);
+  assert.throws(() => updateSchemaValue(initial, schema, "pitch", "0.30000000000000004"), /multiple of 0.1/);
 });
 
 test("encoded schema paths and decimal canonicalization handle edge cases", () => {

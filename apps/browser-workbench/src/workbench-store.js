@@ -1,4 +1,5 @@
 import { schemaDefault } from "./schema-form.js";
+import { rebindStableTarget } from "./internal-scene.js";
 
 export class WorkbenchStore {
   constructor(fixture, options = {}) {
@@ -80,9 +81,21 @@ export class WorkbenchStore {
   }
 
   select(selection, reason = "selection") {
-    this.state.selection = selection;
-    if (selection) this.state.rightOpen = true;
+    let nextSelection = selection;
+    if (selection?.kind === "node" || selection?.kind === "entity") {
+      const rebound = rebindStableTarget(this.document.scene, selection);
+      nextSelection = rebound.ok
+        ? {
+            ...selection,
+            ...rebound.target,
+            id: selection.kind === "entity" ? rebound.target.entityId : rebound.target.nodeId,
+          }
+        : null;
+    }
+    this.state.selection = nextSelection;
+    if (nextSelection) this.state.rightOpen = true;
     this.emit(reason);
+    return nextSelection;
   }
 
   hover(selection) {

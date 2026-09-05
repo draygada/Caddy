@@ -5,6 +5,7 @@ import {
   INTERNAL_RENDER_MODEL,
   RenderSceneError,
   createFixtureRenderScenes,
+  rebindStableTarget,
   resolveStableEntity,
   stableTargets,
   validateRenderScene,
@@ -60,6 +61,26 @@ test("every displayed Part entity resolves to an operation present in the PartDo
   assert.ok(featureIds.every((featureId) => operationIds.has(featureId)));
 });
 
+test("PartDocument validation rejects node provenance outside the enclosing document and revision", () => {
+  const wrongDocument = structuredClone(createFixtureRenderScenes().part);
+  wrongDocument.nodes[0].metadata.sourceDocumentId = "part:other-document";
+  assert.throws(() => validateRenderScene(wrongDocument), expectSceneError("SCENE_PROVENANCE_MISMATCH"));
+
+  const wrongRevision = structuredClone(createFixtureRenderScenes().part);
+  wrongRevision.nodes[1].metadata.sourceRevisionId = "part-rev:other-revision";
+  assert.throws(() => validateRenderScene(wrongRevision), expectSceneError("SCENE_PROVENANCE_MISMATCH"));
+});
+
+test("PartDocument validation rejects duplicate stable identities across bodies", () => {
+  const duplicateEntity = structuredClone(createFixtureRenderScenes().part);
+  duplicateEntity.nodes[1].mesh.entityRanges[0].entityId = duplicateEntity.nodes[0].mesh.entityRanges[0].entityId;
+  assert.throws(() => validateRenderScene(duplicateEntity), expectSceneError("SCENE_ENTITY_DUPLICATE"));
+
+  const duplicateReference = structuredClone(createFixtureRenderScenes().part);
+  duplicateReference.nodes[1].mesh.entityRanges[0].semanticReferenceId = duplicateReference.nodes[0].mesh.entityRanges[0].semanticReferenceId;
+  assert.throws(() => validateRenderScene(duplicateReference), expectSceneError("SCENE_SEMANTIC_REFERENCE_DUPLICATE"));
+});
+
 test("stable selection survives body, triangle-group, and entity-range reordering", () => {
   const source = createFixtureRenderScenes().part;
   const sourceNode = source.nodes.find((node) => node.nodeId === "body:mount-primary");
@@ -74,7 +95,12 @@ test("stable selection survives body, triangle-group, and entity-range reorderin
   validateRenderScene(reordered);
 
   const relocated = reorderedNode.mesh.entityRanges.find((range) => range.entityId === wanted.entityId);
-  const after = resolveStableEntity(reorderedNode, relocated.startTriangle);
+  assert.notEqual(relocated.startTriangle, before.target.startTriangle);
+  const rebound = rebindStableTarget(reordered, before.target);
+  assert.equal(rebound.ok, true);
+  assert.equal(rebound.target.startTriangle, relocated.startTriangle);
+  assert.equal(rebound.target.triangleCount, relocated.triangleCount);
+  const after = resolveStableEntity(reorderedNode, rebound.target.startTriangle);
   assert.equal(after.ok, true);
   assert.deepEqual(
     {
@@ -102,8 +128,8 @@ test("selection fails closed when a triangle mapping is missing or ambiguous", (
   validateRenderScene({
     model: INTERNAL_RENDER_MODEL,
     documentKind: "PART",
-    documentId: "part:test-gap",
-    revisionId: "part-rev:test-gap",
+    documentId: node.metadata.sourceDocumentId,
+    revisionId: node.metadata.sourceRevisionId,
     nodes: [node],
   });
 

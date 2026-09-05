@@ -2,6 +2,7 @@
 
 export function schemaDefault(schema) {
   if (!schema || typeof schema !== "object") return null;
+  if (Object.hasOwn(schema, "const")) return structuredClone(schema.const);
   if (Object.hasOwn(schema, "default")) return structuredClone(schema.default);
   if (Array.isArray(schema.enum) && schema.enum.length > 0) return structuredClone(schema.enum[0]);
   if (Array.isArray(schema.oneOf) && schema.oneOf.length > 0) {
@@ -145,8 +146,10 @@ function parseControlValue(schema, rawValue, checked) {
     if (schema.type === "object" && (!parsed || Array.isArray(parsed) || typeof parsed !== "object")) throw new Error("Expected a JSON object.");
     return parsed;
   }
-  const choice = enumChoices(schema).find(({ value }) => serializeScalar(value) === rawValue);
+  const choices = enumChoices(schema);
+  const choice = choices.find(({ value }) => serializeScalar(value) === rawValue);
   if (choice) return structuredClone(choice.value);
+  if (choices.length > 0) throw new Error("Value must be one of the declared choices.");
   if (schema.type === "integer") {
     if (!/^-?[0-9]+$/.test(rawValue)) throw new Error("Enter an integer without a unit suffix.");
     validateNumericBounds(schema, rawValue);
@@ -166,6 +169,41 @@ function validateNumericBounds(schema, rawValue) {
   const numeric = Number(rawValue);
   if (schema.minimum !== undefined && numeric < Number(schema.minimum)) throw new Error(`Value must be at least ${schema.minimum}.`);
   if (schema.maximum !== undefined && numeric > Number(schema.maximum)) throw new Error(`Value must be at most ${schema.maximum}.`);
+  if (schema.multipleOf !== undefined) {
+    const multiple = decimalParts(schema.multipleOf);
+    if (!multiple || multiple.coefficient <= 0n) throw new Error("Schema multipleOf must be a positive finite decimal.");
+    if (!isExactDecimalMultiple(rawValue, multiple)) throw new Error(`Value must be a multiple of ${schema.multipleOf}.`);
+  }
+}
+
+function isExactDecimalMultiple(value, multiple) {
+  const candidate = decimalParts(value);
+  if (!candidate) return false;
+  if (candidate.coefficient === 0n) return true;
+  const exponentDelta = candidate.exponent - multiple.exponent;
+  if (exponentDelta >= 0) {
+    return (candidate.coefficient * (10n ** BigInt(exponentDelta))) % multiple.coefficient === 0n;
+  }
+  return candidate.coefficient % (multiple.coefficient * (10n ** BigInt(-exponentDelta))) === 0n;
+}
+
+function decimalParts(value) {
+  const text = String(value).trim();
+  if (text.length === 0 || text.length > 1_000) return null;
+  const match = /^([+-]?)(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d+))?$/.exec(text);
+  if (!match) return null;
+  const explicitExponent = Number(match[5] ?? 0);
+  if (!Number.isSafeInteger(explicitExponent) || Math.abs(explicitExponent) > 1_000) return null;
+  const whole = match[2] ?? "0";
+  const fraction = match[3] ?? match[4] ?? "";
+  let coefficient = BigInt(`${whole}${fraction}`);
+  if (match[1] === "-") coefficient = -coefficient;
+  let exponent = explicitExponent - fraction.length;
+  while (coefficient !== 0n && coefficient % 10n === 0n) {
+    coefficient /= 10n;
+    exponent += 1;
+  }
+  return { coefficient, exponent };
 }
 
 export function normalizeDecimalString(value) {
@@ -185,6 +223,7 @@ export function decodePath(token) {
 }
 
 function enumChoices(schema) {
+  if (Object.hasOwn(schema, "const")) return [{ value: schema.const, label: String(schema.const) }];
   if (Array.isArray(schema.enum)) return schema.enum.map((value) => ({ value, label: String(value) }));
   if (Array.isArray(schema.oneOf)) {
     return schema.oneOf.filter((option) => Object.hasOwn(option, "const")).map((option) => ({ value: option.const, label: option.title ?? String(option.const) }));
