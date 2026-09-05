@@ -1,8 +1,23 @@
 {
-  "schema_version": "caddydaddy.sanitized-bundle/2",
+  "schema_version": "caddydaddy.sanitized-bundle/3",
   "candidate": "0.1",
   "target": "vercel-file-based-python-function",
   "python": "3.12",
+  "build_command": "packages/core-kernel/.venv/bin/python apps/product-service/scripts/build_bundle.py --output <outside-repo-output>",
+  "runtime_dependency_closure": [
+    {"name": "attrs", "version": "26.1.0", "license": "MIT"},
+    {"name": "jsonschema", "version": "4.25.1", "license": "MIT"},
+    {"name": "jsonschema-specifications", "version": "2025.9.1", "license": "MIT"},
+    {"name": "referencing", "version": "0.37.0", "license": "MIT"},
+    {"name": "rfc8785", "version": "0.1.4", "license": "Apache-2.0"},
+    {"name": "rpds-py", "version": "2026.6.3", "license": "MIT"},
+    {"name": "typing-extensions", "version": "4.16.0", "license": "PSF-2.0"}
+  ],
+  "generated_snapshot": {
+    "generator": "apps/product-service/scripts/generate_snapshot.py",
+    "target": "apps/product-service/product_service/candidate-snapshot.v1.json",
+    "schema_version": "caddydaddy.core-snapshot/1"
+  },
   "required_trees": [
     {
       "source": "apps/browser-workbench/dist",
@@ -11,10 +26,6 @@
     {
       "source": "apps/product-service/product_service",
       "target": "apps/product-service/product_service"
-    },
-    {
-      "source": "packages/core-kernel/src/strafe_forge_core",
-      "target": "packages/core-kernel/src/strafe_forge_core"
     },
     {
       "source": "packages/compliance-bridge/compliance_bridge",
@@ -43,8 +54,8 @@
       "target": "apps/browser-workbench/THIRD_PARTY_NOTICES.md"
     },
     {
-      "source": "packages/core-kernel/THIRD_PARTY_NOTICES.md",
-      "target": "packages/core-kernel/THIRD_PARTY_NOTICES.md"
+      "source": "apps/product-service/THIRD_PARTY_NOTICES.md",
+      "target": "apps/product-service/THIRD_PARTY_NOTICES.md"
     },
     {
       "source": "packages/caddydaddy-contracts/schemas/compliance-input.v1.schema.json",
@@ -68,7 +79,8 @@
     "features/tripwire/data/catalog/consolidated_screening_list.csv",
     "features/tripwire/data/catalog/PX4_PARTS_DATABASE.csv",
     "packages/history-collaboration/**",
-    "packages/core-kernel/evidence/**",
+    "packages/core-kernel/**",
+    "apps/product-service/scripts/**",
     "governance/**",
     "docs/**",
     "tests/**",
@@ -99,11 +111,16 @@
     "**/bom/**",
     "**/*bom-data*",
     "**/*BOM*",
+    "**/private/**",
+    "**/*private-data*",
     "apps/browser-workbench/src/internal-fixture.js",
     "apps/browser-workbench/src/internal-scene.js"
   ],
   "forbidden_content": [
     "/Users/",
-    "file:///Users/"
+    "file:///Users/",
+    "consolidated_screening_list.csv",
+    "PX4_PARTS_DATABASE.csv",
+    "product-thread:kestrel"
   ]
 }

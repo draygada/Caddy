@@ -9,11 +9,15 @@ import gzip
 import hashlib
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tarfile
+import tempfile
 
 REPO = Path(__file__).resolve().parents[3]
 POLICY = REPO / "apps" / "product-service" / "bundle-manifest.v1.json"
 RESOLVED_MANIFEST = "bundle-manifest.resolved.json"
+SNAPSHOT_GENERATOR = REPO / "apps" / "product-service" / "scripts" / "generate_snapshot.py"
 
 
 def _relative_path(value: str, label: str) -> Path:
@@ -44,6 +48,23 @@ def _write_archive(bundle: Path, archive: Path) -> None:
                     tar.addfile(info, io.BytesIO(content))
 
 
+def _git_output(*args: str) -> str:
+    completed = subprocess.run(["git", *args], cwd=REPO, check=True, capture_output=True, text=True, timeout=10)
+    return completed.stdout.strip()
+
+
+def _source_identity() -> dict[str, str]:
+    unstaged = subprocess.run(["git", "diff", "--quiet", "--"], cwd=REPO, check=False, timeout=10)
+    untracked = _git_output("ls-files", "--others", "--exclude-standard")
+    if unstaged.returncode != 0 or untracked:
+        raise SystemExit("Source worktree must match the Git index before snapshot generation.")
+    commit = _git_output("rev-parse", "--verify", "HEAD")
+    commit_tree = _git_output("rev-parse", "--verify", "HEAD^{tree}")
+    tree = _git_output("write-tree")
+    tree_state = "COMMITTED" if tree == commit_tree else "STAGED_CANDIDATE"
+    return {"commit": commit, "tree": tree, "commit_tree": commit_tree, "tree_state": tree_state}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True, type=Path)
@@ -68,22 +89,25 @@ def main() -> int:
 
     payloads: dict[str, tuple[str, bytes]] = {}
 
-    def admit(source: Path, target_relative: Path) -> None:
-        if source.is_symlink():
-            raise SystemExit(f"Symlinks are not admitted: {source.relative_to(REPO)}")
-        source_relative = source.relative_to(REPO).as_posix()
+    def admit_content(source_relative: str, target_relative: Path, content: bytes) -> None:
         target_name = target_relative.as_posix()
         if is_excluded(source_relative) or is_excluded(target_name):
             raise SystemExit(f"Excluded path entered bundle allowlist: {source_relative} -> {target_name}")
         if target_name in payloads:
             raise SystemExit(f"Multiple sources target the same bundle path: {target_name}")
-        content = source.read_bytes()
         if str(REPO).encode() in content or b"/Users/" in content:
             raise SystemExit(f"Absolute workspace path found in runtime file: {source_relative}")
         for marker in forbidden_content:
             if marker in content:
                 raise SystemExit(f"Forbidden content marker found in runtime file: {source_relative}")
         payloads[target_name] = (source_relative, content)
+
+    def admit(source: Path, target_relative: Path) -> None:
+        if source.is_symlink():
+            raise SystemExit(f"Symlinks are not admitted: {source.relative_to(REPO)}")
+        source_relative = source.relative_to(REPO).as_posix()
+        content = source.read_bytes()
+        admit_content(source_relative, target_relative, content)
 
     for mapping in policy["required_trees"]:
         source_root = _relative_path(mapping["source"], "tree source")
@@ -104,6 +128,31 @@ def main() -> int:
             raise SystemExit(f"Required runtime file is missing: {source_relative.as_posix()}")
         admit(source, target_relative)
 
+    source_identity = _source_identity()
+    snapshot_policy = policy["generated_snapshot"]
+    snapshot_target = _relative_path(snapshot_policy["target"], "snapshot target")
+    with tempfile.TemporaryDirectory(prefix="caddydaddy-snapshot-") as temporary:
+        snapshot_path = Path(temporary) / "candidate-snapshot.v1.json"
+        command = [
+            sys.executable,
+            str(SNAPSHOT_GENERATOR),
+            "--output", str(snapshot_path),
+            "--source-commit", source_identity["commit"],
+            "--source-tree", source_identity["tree"],
+            "--source-commit-tree", source_identity["commit_tree"],
+            "--source-tree-state", source_identity["tree_state"],
+            "--build-command", policy["build_command"],
+        ]
+        try:
+            subprocess.run(command, cwd=REPO, check=True, capture_output=True, text=True, timeout=90)
+        except subprocess.CalledProcessError as error:
+            raise SystemExit(f"Core snapshot generation failed: {error.stderr.strip()}") from error
+        snapshot_bytes = snapshot_path.read_bytes()
+        snapshot = json.loads(snapshot_bytes)
+    if snapshot["schema_version"] != snapshot_policy["schema_version"] or snapshot["source"] != source_identity:
+        raise SystemExit("Generated snapshot identity does not match the resolved source identity.")
+    admit_content("generated/core-snapshot", snapshot_target, snapshot_bytes)
+
     records = []
     for target_name, (source_relative, content) in sorted(payloads.items()):
         target = output / target_name
@@ -117,6 +166,18 @@ def main() -> int:
         "candidate": policy["candidate"],
         "target": policy["target"],
         "python": policy["python"],
+        "source": source_identity,
+        "build_command": policy["build_command"],
+        "runtime_dependency_closure": policy["runtime_dependency_closure"],
+        "generated_snapshot": {
+            "path": snapshot_target.as_posix(),
+            "schema_version": snapshot["schema_version"],
+            "file_sha256": hashlib.sha256(snapshot_bytes).hexdigest(),
+            "document_sha256": snapshot["snapshot_hash"],
+            "provenance": snapshot["generation"],
+            "core": snapshot["core"],
+        },
+        "tripwire": snapshot["tripwire"],
         "files": records,
         "payload_file_count": len(records),
         "payload_bytes": sum(record["bytes"] for record in records),
@@ -139,6 +200,9 @@ def main() -> int:
         "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
         "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
         "closure_sha256": manifest["closure_sha256"],
+        "snapshot_sha256": snapshot["snapshot_hash"],
+        "source_commit": source_identity["commit"],
+        "source_tree": source_identity["tree"],
     }, sort_keys=True))
     return 0
 

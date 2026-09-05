@@ -8,7 +8,6 @@ _BUNDLE_ROOT = Path(__file__).resolve().parents[1]
 for _source in (
     _BUNDLE_ROOT / "apps" / "product-service",
     _BUNDLE_ROOT / "packages" / "compliance-bridge",
-    _BUNDLE_ROOT / "packages" / "core-kernel" / "src",
 ):
     _relative_runtime_path = str(_source)
     if _relative_runtime_path not in sys.path:
