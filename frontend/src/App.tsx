@@ -10,6 +10,8 @@ import { Reasoning } from './panels/Reasoning';
 import { Timeline } from './panels/Timeline';
 import { HelpOverlay } from './panels/HelpOverlay';
 import { DemoBar } from './panels/DemoBar';
+import { CommandBox } from './panels/CommandBox';
+import { runCommand } from './commands';
 
 function useKeyboard() {
   useEffect(() => {
@@ -17,10 +19,16 @@ function useKeyboard() {
       const st = useStore.getState();
       const tag = ((e.target as HTMLElement | null)?.tagName || '').toLowerCase();
       if (e.key === 'Escape') { st.closeAll(); return; }
-      if (tag === 'input' || tag === 'textarea') return;
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = e.key.toLowerCase();
       if (e.key === '?') st.toggleHelp();
-      else if (e.key === 'l' || e.key === 'L') st.toggleTimeline();
-      else if (e.key === 'f' || e.key === 'F') st.setView('iso');
+      else if (k === 's') { e.preventDefault(); st.patch({ cmdOpen: !st.cmdOpen, marking: null }); }
+      else if (k === 'l') st.toggleTimeline();
+      else if (k === 'f') st.setView('iso');
+      else if (k === 'e') runCommand('create.extrude');
+      else if (k === 'm') runCommand('modify.move');
+      else if (k === 'h') runCommand('create.hole');
+      else if (k === 'i') runCommand('inspect.measure');
       else if ((e.key === 'ArrowRight' || e.key === ' ') && st.demoBar) { e.preventDefault(); st.advance(); }
     };
     window.addEventListener('keydown', onKey);
@@ -72,6 +80,7 @@ export default function App() {
         </button>
         {timelineOpen && <Timeline />}
         {helpOpen && <HelpOverlay />}
+        <CommandBox />
       </div>
       {demoBar && <DemoBar />}
     </div>
