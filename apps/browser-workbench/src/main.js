@@ -1,6 +1,6 @@
 import { hydrateIcons, icon } from "./icons.js";
-import { createComplianceRequest, validateComplianceResponse } from "./compliance-client.js";
-import { loadProductCandidate } from "./runtime-candidate.js";
+import { createComplianceRequest, requestComplianceReview, toComplianceDiagnostic } from "./compliance-client.js";
+import { BOUNDED_CLAIM, loadProductCandidate } from "./runtime-candidate.js";
 import { escapeAttribute, escapeHtml, renderSchemaForm, updateSchemaValue } from "./schema-form.js";
 import { WorkbenchViewer } from "./viewer.js";
 import { WorkbenchStore } from "./workbench-store.js";
@@ -60,6 +60,7 @@ function render(reason) {
 
   renderLayout();
   renderHeader();
+  renderReviewPath();
   renderTree();
   renderProperties();
   renderBottomPanel();
@@ -106,10 +107,13 @@ function renderHeader() {
   }
 
   const button = document.querySelector("#recompute-button");
-  button.hidden = fixture.capabilities?.recompute !== true;
+  const recomputeAvailable = fixture.capabilities?.recompute === true;
+  button.hidden = !recomputeAvailable;
   const inFlight = ["QUEUED", "RUNNING"].includes(store.evidenceState.recomputeStatus);
-  button.disabled = store.state.mobileReviewOnly || store.state.busy || inFlight || (!store.evidenceState.editable && store.draftCount > 0);
-  button.title = inFlight
+  button.disabled = !recomputeAvailable || store.state.mobileReviewOnly || store.state.busy || inFlight || (!store.evidenceState.editable && store.draftCount > 0);
+  button.title = !recomputeAvailable
+    ? "Candidate 0.1 is a revision-pinned review build; recompute is unavailable."
+    : inFlight
     ? `Synthetic recompute is ${store.evidenceState.recomputeStatus.toLowerCase()}.`
     : button.disabled && store.draftCount > 0
       ? "Discard or roll back the failed proposal before recomputing."
@@ -119,10 +123,8 @@ function renderHeader() {
     ? "Queued…"
     : store.evidenceState.recomputeStatus === "RUNNING" || store.state.busy
       ? "Running…"
-      : store.evidenceState.recomputeStatus === "WORKER_CRASHED"
-        ? "Retry worker"
-        : "Recompute";
-  button.innerHTML = `${icon(inFlight || store.state.busy || store.evidenceState.recomputeStatus === "WORKER_CRASHED" ? "refresh" : "play")}<span>${actionLabel}</span>`;
+      : "Recompute";
+  button.innerHTML = `${icon(inFlight || store.state.busy ? "refresh" : "play")}<span>${actionLabel}</span>`;
 }
 
 function renderTree() {
@@ -224,7 +226,7 @@ function documentProperties() {
     parameters: store.document.parameters?.length ?? 0,
   };
   return `${propertyHero("body", store.document.label, store.document.documentId)}
-    <div class="candidate-claim"><span>LOCAL CANDIDATE 0.1</span><strong>${escapeHtml(fixture.candidate.claim)}</strong><p>${escapeHtml(fixture.candidate.positioning)}</p></div>
+    <div class="candidate-claim"><span>LOCAL CANDIDATE 0.1</span><strong>${escapeHtml(BOUNDED_CLAIM)}</strong><p>${escapeHtml(fixture.candidate.positioning)}</p></div>
     ${editabilityNotice()}
     <section class="property-section">
       <div class="property-section-heading"><h4>Identity & contents</h4><span class="state-badge" data-state="${escapeAttribute(store.evidenceState.displayState)}">${escapeHtml(store.evidenceState.displayState)}</span></div>
@@ -337,34 +339,62 @@ function entityProperties(selection) {
     ${compliancePanel(selection)}`;
 }
 
+function renderReviewPath() {
+  const container = document.querySelector("#review-path");
+  if (!container) return;
+  const selection = store.state.selection;
+  const isEntity = selection?.kind === "entity";
+  const review = isEntity && complianceReview.entityId === selection.entityId ? complianceReview : { phase: "IDLE" };
+  let stateMarkup;
+  let actionMarkup;
+  if (!isEntity) {
+    stateMarkup = '<strong>Next: select a CAD entity</strong><span>Tap geometry, or focus the viewport and use the arrow keys, then Enter.</span>';
+    actionMarkup = '<button class="review-path-action" type="button" data-action="guide-review-selection">Select an entity</button>';
+  } else if (review.phase === "RUNNING") {
+    stateMarkup = `<strong>Checking review readiness</strong><span>Tripwire is binding ${escapeHtml(shortId(selection.entityId))} to ${escapeHtml(shortId(store.evidenceState.displayedRevisionId))}.</span>`;
+    actionMarkup = '<button class="review-path-action" type="button" disabled>Tripwire check running</button>';
+  } else if (review.phase === "BOUND") {
+    stateMarkup = '<strong>Insufficient evidence · human review required</strong><span>The selected entity is bound to this immutable revision. Tripwire did not make a compliance determination.</span>';
+    actionMarkup = '<button class="review-path-action is-secondary" type="button" data-action="open-review-details">Open bound evidence</button>';
+  } else if (review.phase === "BLOCKED") {
+    stateMarkup = `<strong>Review check unavailable</strong><span>${escapeHtml(review.diagnostic?.message ?? "Tripwire could not complete this check. Your selection is unchanged; try again.")}</span>`;
+    actionMarkup = '<button class="review-path-action" type="button" data-action="run-compliance-check">Retry Tripwire</button>';
+  } else {
+    stateMarkup = `<strong>Entity selected · ready to check</strong><span>${escapeHtml(shortId(selection.entityId))} will be bound to ${escapeHtml(shortId(store.evidenceState.displayedRevisionId))}.</span>`;
+    actionMarkup = '<button class="review-path-action" type="button" data-action="run-compliance-check">Check with Tripwire</button>';
+  }
+  container.dataset.phase = review.phase;
+  container.innerHTML = `<span class="review-path-kicker">CANDIDATE 0.1 · REVISION-PINNED</span><h2 id="review-path-title">Review readiness with Tripwire</h2><p>Tripwire checks whether a selected CAD entity has enough evidence for human review. It does not make a compliance determination.</p><div class="review-path-state" role="status" aria-live="polite">${stateMarkup}</div>${actionMarkup}<small id="recompute-explanation">Recompute is unavailable in this revision-pinned review build.</small>`;
+}
+
 function compliancePanel(selection) {
   const binding = store.document.complianceBindings?.[selection.entityId];
-  if (!binding) return '<div class="notice-card is-danger"><strong>Compliance check blocked</strong><span>No exact record binding exists for this entity.</span></div>';
+  if (!binding) return '<div class="notice-card is-danger"><strong>Review-readiness check unavailable</strong><span>No exact revision binding exists for this entity.</span></div>';
   const review = complianceReview.entityId === selection.entityId ? complianceReview : { phase: "IDLE" };
-  if (review.phase === "RUNNING") return '<section class="property-section compliance-card"><div class="property-section-heading"><h4>Compliance at design click</h4><span class="status-badge" data-status="RUNNING">EVALUATING</span></div><p>Binding the selected entity to the immutable product revision and Tripwire evaluator.</p><button class="secondary-action" type="button" disabled>Review running</button></section>';
+  if (review.phase === "RUNNING") return '<section class="property-section compliance-card"><div class="property-section-heading"><h4>Tripwire review readiness</h4><span class="status-badge" data-status="RUNNING">CHECKING</span></div><p>Binding the selected CAD entity to the immutable revision for a review-readiness check.</p><button class="secondary-action" type="button" disabled>Tripwire check running</button></section>';
   if (review.phase === "BOUND") {
     const payload = review.payload;
     const finding = payload.evidence.finding;
     const receipt = payload.binding_receipt;
-    return `<section class="property-section compliance-card"><div class="property-section-heading"><h4>Compliance at design click</h4><span class="status-badge" data-status="PENDING">HUMAN REVIEW</span></div><div class="review-only-banner"><strong>DRAFT_REVIEW_ONLY</strong><span>Review support, not legal approval.</span></div>${readoutList([
+    return `<section class="property-section compliance-card"><div class="property-section-heading"><h4>Tripwire review readiness</h4><span class="status-badge" data-status="PENDING">HUMAN REVIEW</span></div><div class="review-only-banner"><strong>INSUFFICIENT EVIDENCE</strong><span>Candidate 0.1 requires human review and makes no compliance determination.</span></div>${readoutList([
       ["Evidence outcome", finding.outcome], ["Reason codes", finding.reason_codes.join(", ")], ["Policy state", payload.policy_state],
       ["Review gate", payload.human_review_requirement], ["Receipt", receipt.receipt_id], ["Receipt hash", receipt.receipt_hash], ["Observed", payload.observation.observed_at],
-    ])}<div class="notice-card"><strong>No legal conclusion</strong><span>${escapeHtml(payload.claim_ceiling)}. Legal effect: NONE.</span></div><button class="secondary-action" type="button" data-action="run-compliance-check">Run again on this revision</button></section>`;
+    ])}<div class="notice-card"><strong>Human review required</strong><span>Tripwire is a review-readiness guardrail only. This result is not a compliance determination.</span></div><button class="secondary-action" type="button" data-action="run-compliance-check">Run Tripwire again</button></section>`;
   }
   if (review.phase === "BLOCKED") {
     const diagnostic = review.diagnostic ?? { code: "COMPLIANCE_BLOCKED", message: "The response could not be safely bound." };
     const receipt = review.payload?.binding_receipt;
-    return `<section class="property-section compliance-card"><div class="property-section-heading"><h4>Compliance at design click</h4><span class="status-badge" data-status="BLOCKED">BLOCKED</span></div>${readoutList([["Diagnostic", diagnostic.code], ["Policy state", "BLOCKED"], ["Receipt", receipt?.receipt_id ?? "Not accepted"]])}<div class="notice-card is-danger"><strong>No cleared result is displayed</strong><span>${escapeHtml(diagnostic.message)}</span></div><button class="secondary-action" type="button" data-action="run-compliance-check">Retry exact binding</button></section>`;
+    return `<section class="property-section compliance-card"><div class="property-section-heading"><h4>Tripwire review readiness</h4><span class="status-badge" data-status="BLOCKED">UNAVAILABLE</span></div>${readoutList([["Diagnostic", diagnostic.code], ["Policy state", "BLOCKED"], ["Receipt", receipt?.receipt_id ?? "Not accepted"]])}<div class="notice-card is-danger"><strong>No review result was accepted</strong><span>${escapeHtml(diagnostic.message)}</span></div><button class="secondary-action" type="button" data-action="run-compliance-check">Retry Tripwire</button></section>`;
   }
-  return `<section class="property-section compliance-card"><div class="property-section-heading"><h4>Compliance at design click</h4><span class="status-badge" data-status="PENDING">DRAFT REVIEW</span></div>${readoutList([
+  return `<section class="property-section compliance-card"><div class="property-section-heading"><h4>Tripwire review readiness</h4><span class="status-badge" data-status="PENDING">READY</span></div>${readoutList([
     ["Product thread", binding.request.product_thread_id], ["Forge record", binding.request.forge_record_id], ["Occurrence", binding.request.occurrence_path.join(" / ")], ["Revision", binding.request.forge_revision_id],
-  ])}<div class="review-only-banner"><strong>DRAFT_REVIEW_ONLY</strong><span>Invokes Tripwire for dated review support on this immutable revision. It is not legal approval.</span></div><button class="compliance-action" type="button" data-action="run-compliance-check">Run review-only compliance check</button></section>`;
+  ])}<div class="review-only-banner"><strong>REVIEW-READINESS GUARDRAIL</strong><span>Tripwire checks for sufficient evidence on this immutable revision. It does not determine compliance.</span></div><button class="compliance-action" type="button" data-action="run-compliance-check">Check review readiness with Tripwire</button></section>`;
 }
 
 function renderPropertyFooter() {
   const footer = document.querySelector("#property-footer");
   if (fixture.capabilities?.complianceAtDesignClick) {
-    footer.innerHTML = '<div class="review-mode-footer"><span data-icon="cursor" aria-hidden="true"></span><span><strong>Immutable review workflow</strong>Select mapped geometry to run the bound draft compliance check.</span></div>';
+    footer.innerHTML = '<div class="review-mode-footer"><span data-icon="cursor" aria-hidden="true"></span><span><strong>Review readiness</strong>Select a mapped CAD entity, then use Tripwire. Insufficient evidence requires human review.</span></div>';
     return;
   }
   if (store.state.mobileReviewOnly) {
@@ -449,6 +479,9 @@ function selectionPanelMarkup() {
 function renderRevisionBanner() {
   const banner = document.querySelector("#revision-banner");
   const state = store.evidenceState;
+  const recomputeAction = (label) => fixture.capabilities?.recompute === true
+    ? `<button type="button" data-action="recompute">${label}</button>`
+    : '<span class="revision-pin-note">Candidate 0.1 is revision-pinned; recompute is unavailable.</span>';
   if (state.displayState === "CURRENT") {
     banner.hidden = true;
     banner.replaceChildren();
@@ -464,8 +497,8 @@ function renderRevisionBanner() {
       : state.displayState === "LAST_VALID"
     ? `<span class="banner-icon">${icon("error")}</span><span><strong>Last-valid geometry</strong> · attempted <code title="${escapeAttribute(state.requestedRevisionId)}">${escapeHtml(state.requestedRevisionId)}</code>, displaying producing revision <code title="${escapeAttribute(state.displayedRevisionId)}">${escapeHtml(state.displayedRevisionId)}</code></span><button type="button" data-action="open-diagnostics">Review diagnostics</button>`
     : state.displayState === "STALE"
-      ? `<span class="banner-icon">${icon("warning")}</span><span><strong>Stale derived preview</strong> · requested <code title="${escapeAttribute(state.requestedRevisionId)}">${escapeHtml(state.requestedRevisionId)}</code>, displaying <code title="${escapeAttribute(state.displayedRevisionId)}">${escapeHtml(state.displayedRevisionId)}</code>; editing is blocked</span><button type="button" data-action="recompute">Refresh</button>`
-      : `<span class="banner-icon">${icon("info")}</span><span><strong>Geometry unavailable</strong> · semantic records and diagnostics remain reviewable</span><button type="button" data-action="recompute">Retry</button>`;
+      ? `<span class="banner-icon">${icon("warning")}</span><span><strong>Stale derived preview</strong> · requested <code title="${escapeAttribute(state.requestedRevisionId)}">${escapeHtml(state.requestedRevisionId)}</code>, displaying <code title="${escapeAttribute(state.displayedRevisionId)}">${escapeHtml(state.displayedRevisionId)}</code>; editing is blocked</span>${recomputeAction("Refresh")}`
+      : `<span class="banner-icon">${icon("info")}</span><span><strong>Geometry unavailable</strong> · semantic records and diagnostics remain reviewable</span>${recomputeAction("Retry")}`;
   banner.dataset.state = state.displayState;
   banner.dataset.requestedRevision = state.requestedRevisionId;
   banner.dataset.displayedRevision = state.displayedRevisionId;
@@ -703,6 +736,15 @@ async function handleAction(action, button) {
     case "stage-export": stageExport(); break;
     case "recompute": await simulateRecompute(); break;
     case "run-compliance-check": await runComplianceCheck(); break;
+    case "guide-review-selection":
+      store.setMobilePanel("viewport");
+      viewportHost.focus({ preventScroll: true });
+      showToast("Select a CAD entity", "Tap a face, or use the viewport arrow keys and Enter. Stable selection will remain bound to this revision.", "info", 6500);
+      break;
+    case "open-review-details":
+      store.setMobilePanel("properties");
+      document.querySelector("#properties-content")?.focus({ preventScroll: true });
+      break;
     case "open-diagnostics": store.setBottomTab("diagnostics"); if (store.state.mobileReviewOnly) store.setMobilePanel("history"); break;
     case "clear-drafts": {
       const restoreCurrent = !store.evidenceState.editable && store.draftCount > 0;
@@ -757,7 +799,10 @@ function stageSchemaControl(control) {
 }
 
 async function simulateRecompute() {
-  if (fixture.capabilities?.recompute !== true) return;
+  if (fixture.capabilities?.recompute !== true) {
+    showToast("Revision-pinned review build", "Recompute is unavailable in Candidate 0.1. The displayed CAD revision is immutable.", "info", 6200);
+    return;
+  }
   if (store.state.busy || store.state.mobileReviewOnly) return;
   const invalid = Object.values(store.state.drafts.parameters).some((value) => Number(value) <= 0);
   store.setBusy(true);
@@ -783,26 +828,29 @@ async function runComplianceCheck() {
   try {
     request = createComplianceRequest(store.document, selection, store.evidenceState.displayedRevisionId);
   } catch (error) {
-    complianceReview = { phase: "BLOCKED", entityId: selection?.entityId ?? null, payload: null, diagnostic: { code: error.code ?? "SELECTION_BINDING_INVALID", message: error.message } };
+    complianceReview = { phase: "BLOCKED", entityId: selection?.entityId ?? null, payload: null, diagnostic: toComplianceDiagnostic(error) };
+    renderReviewPath();
     renderProperties();
     hydrateIcons(document.querySelector("#properties-panel"));
     return;
   }
   complianceReview = { phase: "RUNNING", entityId: selection.entityId, payload: null, diagnostic: null };
+  renderReviewPath();
   renderProperties();
   hydrateIcons(document.querySelector("#properties-panel"));
   try {
-    const response = await fetch("/api/compliance-at-design-click", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(request) });
-    const payload = await response.json();
-    const validated = await validateComplianceResponse(payload, request);
+    const { payload, validated } = await requestComplianceReview(request);
+    const blockedDiagnostic = validated.displayState === "BOUND" ? null : toComplianceDiagnostic(payload.diagnostic);
     complianceReview = validated.displayState === "BOUND"
       ? { phase: "BOUND", entityId: selection.entityId, payload, diagnostic: null }
-      : { phase: "BLOCKED", entityId: selection.entityId, payload, diagnostic: payload.diagnostic };
-    showToast(validated.displayState === "BOUND" ? "Review evidence bound" : "Compliance check blocked", validated.displayState === "BOUND" ? "DRAFT_REVIEW_ONLY evidence is ready for human review." : payload.diagnostic?.code ?? "No result was accepted.", validated.displayState === "BOUND" ? "info" : "danger");
+      : { phase: "BLOCKED", entityId: selection.entityId, payload, diagnostic: blockedDiagnostic };
+    showToast(validated.displayState === "BOUND" ? "Human review required" : "Review check unavailable", validated.displayState === "BOUND" ? "Tripwire returned insufficient evidence. No compliance determination was made." : blockedDiagnostic.message, validated.displayState === "BOUND" ? "info" : "danger");
   } catch (error) {
-    complianceReview = { phase: "BLOCKED", entityId: selection.entityId, payload: null, diagnostic: { code: error.code ?? "COMPLIANCE_RESPONSE_REJECTED", message: error.message ?? "The response could not be safely bound." } };
-    showToast("Compliance response rejected", complianceReview.diagnostic.code, "danger");
+    const diagnostic = toComplianceDiagnostic(error);
+    complianceReview = { phase: "BLOCKED", entityId: selection.entityId, payload: null, diagnostic };
+    showToast("Review check unavailable", diagnostic.message, "danger");
   }
+  renderReviewPath();
   renderProperties();
   hydrateIcons(document.querySelector("#properties-panel"));
 }
@@ -879,7 +927,6 @@ function executeCommand(commandId) {
     "state:current": () => store.setEvidenceState("current"),
     "state:failed": () => store.setEvidenceState("failed"),
     "state:stale": () => store.setEvidenceState("stale"),
-    "state:worker-crashed": () => store.setEvidenceState("worker-crashed"),
   };
   actions[commandId]?.();
   store.closePalette();

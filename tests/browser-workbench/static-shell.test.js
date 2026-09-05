@@ -16,13 +16,43 @@ test("shell exposes the authoring center, review surfaces, and accessibility lan
     'id="bottom-panel"',
     'id="command-palette"',
     'id="exchange-modal"',
+    'id="review-path"',
     'class="mobile-nav"',
     "DERIVED PREVIEW · NOT GEOMETRY AUTHORITY",
   ]) assert.match(html, new RegExp(required));
-  assert.match(html, /href="#viewport-region">Skip to viewport/);
+  assert.match(html, /href="#viewport-canvas">Skip to viewport/);
   assert.match(html, /tabindex="0" role="application"/);
+  assert.match(html, /Review readiness with Tripwire/);
+  assert.match(html, /data-mobile-panel="properties"[^>]*>[\s\S]*?<span>Review<\/span>/);
   assert.doesNotMatch(html, /https?:\/\//);
   assert.doesNotMatch(html, /AssemblyDocument|Product thread/);
+});
+
+test("candidate review path is honest, recoverable, and revision-pinned", async () => {
+  const [main, runtime, bootstrap, client, fixture, readme, candidateStyles] = await Promise.all([
+    readFile(path.join(appRoot, "src", "main.js"), "utf8"),
+    readFile(path.join(appRoot, "src", "runtime-candidate.js"), "utf8"),
+    readFile(path.join(appRoot, "src", "bootstrap.js"), "utf8"),
+    readFile(path.join(appRoot, "src", "compliance-client.js"), "utf8"),
+    readFile(path.join(appRoot, "src", "internal-fixture.js"), "utf8"),
+    readFile(path.join(appRoot, "README.md"), "utf8"),
+    readFile(path.join(appRoot, "src", "candidate.css"), "utf8"),
+  ]);
+  const surface = `${main}\n${runtime}\n${bootstrap}\n${client}\n${readme}`;
+  assert.match(runtime, /Selected CAD entity bound to immutable revision; review-readiness guardrail through Tripwire/);
+  assert.match(surface, /insufficient evidence/i);
+  assert.match(surface, /not a compliance determination|no compliance determination was made/i);
+  assert.doesNotMatch(surface, /dated, review-only compliance|dated review support/i);
+  assert.match(main, /button\.hidden = !recomputeAvailable/);
+  assert.match(main, /Revision-pinned review build/);
+  assert.match(bootstrap, /Retry loading Candidate 0\.1/);
+  assert.match(bootstrap, /skipLink[\s\S]*?viewport-canvas[\s\S]*?focus\(\{ preventScroll: false \}\)/);
+  assert.match(bootstrap, /addEventListener\("keydown"[\s\S]*?event\.key === "Enter"/);
+  assert.match(client, /REVIEW_RESPONSE_UNREADABLE/);
+  assert.doesNotMatch(`${main}\n${fixture}\n${readme}`, /WORKER_CRASHED|worker-crashed|scenario=/i);
+  assert.match(candidateStyles, /@media \(max-width: 680px\)[\s\S]*?\.review-path/);
+  assert.match(candidateStyles, /width: auto/);
+  assert.match(candidateStyles, /\.primary-action\[hidden\][\s\S]*?display: none !important/);
 });
 
 test("runtime dependency is exact, minimal, and acknowledged", async () => {

@@ -8,6 +8,39 @@ export class ComplianceClientError extends Error {
 
 const REQUEST_KEYS = ["entity_id", "forge_record_id", "forge_record_revision_id", "forge_revision_id", "node_id", "occurrence_path", "product_thread_id"];
 
+const PUBLIC_DIAGNOSTICS = new Map([
+  ["REVIEW_SERVICE_UNAVAILABLE", "Tripwire is temporarily unavailable. Your selected entity is unchanged; try again."],
+  ["REVIEW_RESPONSE_UNREADABLE", "Tripwire returned an unreadable response. No review result was accepted; try again."],
+  ["SELECTION_REQUIRED", "Select a mapped CAD entity before checking review readiness."],
+]);
+
+export async function requestComplianceReview(request, fetchImpl = fetch) {
+  let response;
+  try {
+    response = await fetchImpl("/api/compliance-at-design-click", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(request) });
+  } catch {
+    throw new ComplianceClientError("REVIEW_SERVICE_UNAVAILABLE", PUBLIC_DIAGNOSTICS.get("REVIEW_SERVICE_UNAVAILABLE"));
+  }
+  if (!response?.ok) throw new ComplianceClientError("REVIEW_SERVICE_UNAVAILABLE", PUBLIC_DIAGNOSTICS.get("REVIEW_SERVICE_UNAVAILABLE"));
+  let payload;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new ComplianceClientError("REVIEW_RESPONSE_UNREADABLE", PUBLIC_DIAGNOSTICS.get("REVIEW_RESPONSE_UNREADABLE"));
+  }
+  const validated = await validateComplianceResponse(payload, request);
+  return { payload, validated };
+}
+
+export function toComplianceDiagnostic(error) {
+  const code = typeof error?.code === "string" ? error.code : "REVIEW_RESPONSE_REJECTED";
+  return {
+    code,
+    message: PUBLIC_DIAGNOSTICS.get(code)
+      ?? "Tripwire could not safely bind this review-readiness result. Your selected entity is unchanged; try again.",
+  };
+}
+
 export function createComplianceRequest(document, selection, displayedRevisionId) {
   check(selection?.kind === "entity" && selection.entityId, "SELECTION_REQUIRED", "Select a mapped design entity.");
   const binding = document.complianceBindings?.[selection.entityId];
@@ -42,6 +75,8 @@ export async function validateComplianceResponse(payload, request) {
   check(canonicalJson(receipt.tripwire.input_ref) === canonicalJson(observation.input_ref), "RECEIPT_INPUT_MISMATCH", "Receipt input reference changed.");
   check(canonicalJson(receipt.current_observation_ref) === canonicalJson({ observation_id: observation.observation_id, observation_hash: observation.observation_hash }), "RECEIPT_OBSERVATION_MISMATCH", "Receipt observation reference changed.");
   check(observation.findings?.length === 1 && observation.findings[0].node_id === payload.binding.tripwire_node_id, "FINDING_SCOPE_MISMATCH", "Finding is not bound to the selected entity.");
+  check(observation.findings[0].outcome === "INSUFFICIENT_EVIDENCE", "FINDING_OUTCOME_INVALID", "Candidate 0.1 may display only insufficient evidence.");
+  check(canonicalJson(payload.evidence?.finding) === canonicalJson(observation.findings[0]), "FINDING_EVIDENCE_MISMATCH", "Displayed finding is not the stamped finding.");
   return { displayState: "BOUND", payload };
 }
 

@@ -2,15 +2,38 @@ import { validateRenderScene } from "./scene-contract.js";
 
 export const BOUNDED_CLAIM = "CADdyDaddy binds a selected CAD entity to its immutable product revision and runs a review-readiness guardrail through Tripwire; Candidate 0.1 returns insufficient evidence and requires human review, not a compliance determination.";
 
+export class CandidateLoadError extends Error {
+  constructor(code) {
+    super("Candidate 0.1 could not be opened. No review data was accepted. Check the local service, then retry.");
+    this.name = "CandidateLoadError";
+    this.code = code;
+  }
+}
+
 export async function loadProductCandidate(fetchImpl = fetch) {
-  const response = await fetchImpl("/api/candidate", { headers: { Accept: "application/json" }, cache: "no-store" });
-  if (!response.ok) throw new Error(`Candidate service unavailable (${response.status}).`);
-  return validateProductCandidate(await response.json());
+  let response;
+  try {
+    response = await fetchImpl("/api/candidate", { headers: { Accept: "application/json" }, cache: "no-store" });
+  } catch {
+    throw new CandidateLoadError("CANDIDATE_SERVICE_UNAVAILABLE");
+  }
+  if (!response?.ok) throw new CandidateLoadError("CANDIDATE_SERVICE_UNAVAILABLE");
+  let payload;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new CandidateLoadError("CANDIDATE_RESPONSE_UNREADABLE");
+  }
+  try {
+    return validateProductCandidate(payload);
+  } catch {
+    throw new CandidateLoadError("CANDIDATE_RESPONSE_REJECTED");
+  }
 }
 
 export function validateProductCandidate(candidate) {
   requireValue(candidate?.candidate?.version === "0.1", "CANDIDATE_VERSION_INVALID");
-  requireValue(candidate.candidate.claim === BOUNDED_CLAIM, "CANDIDATE_CLAIM_INVALID");
+  requireValue(typeof candidate.candidate.claim === "string", "CANDIDATE_CLAIM_INVALID");
   requireValue(candidate.candidate.policyState === "DRAFT_REVIEW_ONLY", "CANDIDATE_POLICY_INVALID");
   requireValue(candidate.document?.kind === "PART", "DOCUMENT_KIND_INVALID");
   requireValue(candidate.document.revisionId === candidate.forgeRevision?.revision_id, "DOCUMENT_REVISION_MISMATCH");
@@ -27,6 +50,7 @@ export function validateProductCandidate(candidate) {
     requireValue(request.product_thread_id === candidate.productThreadId, "COMPLIANCE_THREAD_MISMATCH");
   }
   requireValue(candidate.states?.current?.displayState === "CURRENT", "DISPLAY_STATE_INVALID");
+  candidate.candidate = { ...candidate.candidate, claim: BOUNDED_CLAIM };
   return candidate;
 }
 

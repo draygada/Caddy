@@ -204,20 +204,6 @@ function evidenceStates() {
       adapterOnline: true,
       editable: false,
     },
-    "worker-crashed": {
-      key: "worker-crashed",
-      recomputeStatus: "WORKER_CRASHED",
-      displayState: "LAST_VALID",
-      requestedRevisionId: "part-rev:fixture-crash-d2af",
-      displayedRevisionId: currentRevision,
-      sourceArtifactId: artifactId,
-      diagnostics: [
-        diagnostic("WORKER_CRASHED", "ERROR", "The preview worker stopped before returning a result. The prior artifact remains separately identified.", null, []),
-      ],
-      operationStatus: {},
-      adapterOnline: false,
-      editable: false,
-    },
   };
 }
 

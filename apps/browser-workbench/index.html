@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0b0d10" />
     <meta
       name="description"
-      content="CADdyDaddy Candidate 0.1: bounded browser CAD and dated review-only compliance at design click."
+      content="CADdyDaddy Candidate 0.1 binds a selected CAD entity to an immutable revision and uses Tripwire as a human review-readiness guardrail, not a compliance determination."
     />
     <title>CADdyDaddy · Candidate 0.1</title>
     <link rel="stylesheet" href="./src/styles.css" />
@@ -21,7 +21,7 @@
     </script>
   </head>
   <body>
-    <a class="skip-link" href="#viewport-region">Skip to viewport</a>
+    <a class="skip-link" href="#viewport-canvas">Skip to viewport</a>
     <div class="workbench" id="workbench" data-ready="false">
       <header class="app-header" aria-label="Document toolbar">
         <div class="brand-lockup">
@@ -136,6 +136,18 @@
               </div>
             </div>
 
+            <aside class="review-path" id="review-path" aria-labelledby="review-path-title">
+              <span class="review-path-kicker">CANDIDATE 0.1 · REVISION-PINNED</span>
+              <h2 id="review-path-title">Review readiness with Tripwire</h2>
+              <p>Tripwire checks whether a selected CAD entity has enough evidence for human review. It does not make a compliance determination.</p>
+              <div class="review-path-state" role="status" aria-live="polite">
+                <strong>Next: select a CAD entity</strong>
+                <span>Tap geometry, or focus the viewport and use the arrow keys, then Enter.</span>
+              </div>
+              <button class="review-path-action" type="button" data-action="guide-review-selection">Select an entity</button>
+              <small id="recompute-explanation">Recompute is unavailable in this revision-pinned review build.</small>
+            </aside>
+
             <div class="revision-banner" id="revision-banner" role="status" aria-live="polite" hidden></div>
             <div class="selection-hud" id="selection-hud" aria-live="polite" hidden></div>
 
@@ -198,7 +210,7 @@
               </button>
             </div>
           </div>
-          <div class="properties-scroll" id="properties-content">
+          <div class="properties-scroll" id="properties-content" tabindex="-1">
             <div class="skeleton skeleton-properties" aria-hidden="true"></div>
           </div>
           <div class="panel-footer property-footer" id="property-footer"></div>
@@ -220,7 +232,7 @@
       <nav class="mobile-nav" aria-label="Mobile workbench sections">
         <button type="button" data-mobile-panel="model" aria-pressed="false"><span data-icon="tree" aria-hidden="true"></span><span>Model</span></button>
         <button type="button" data-mobile-panel="viewport" aria-pressed="true"><span data-icon="cube" aria-hidden="true"></span><span>View</span></button>
-        <button type="button" data-mobile-panel="properties" aria-pressed="false"><span data-icon="sliders" aria-hidden="true"></span><span>Details</span></button>
+        <button type="button" data-mobile-panel="properties" aria-pressed="false"><span data-icon="sliders" aria-hidden="true"></span><span>Review</span></button>
         <button type="button" data-mobile-panel="history" aria-pressed="false"><span data-icon="history" aria-hidden="true"></span><span>History</span></button>
       </nav>
 
