@@ -174,7 +174,7 @@
         "candidate_id": {"type": "string", "minLength": 1},
         "provision": {"type": "string", "minLength": 1},
         "stage": {"enum": ["usml_enumerated", "specially_designed_itar", "six_hundred_series", "specially_designed_ear", "other_ccl", "residual"]},
-        "status": {"enum": ["leading", "knocked_out", "blocked_on_facts"]},
+        "status": {"enum": ["leading", "knocked_out", "blocked_on_facts", "not_reached"]},
         "pursuit": {"enum": ["worth_pursuing", "explicitly_not", null]},
         "origin": {"enum": ["proposed", "floor", "intake_trigger"]},
         "why_considered": {"type": "string"},

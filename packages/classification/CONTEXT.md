@@ -48,7 +48,7 @@ _Avoid_: hit, match, result
 The candidate's place in the order of review: `usml_enumerated`, `specially_designed_itar`, `six_hundred_series`, `specially_designed_ear`, `other_ccl`, `residual`. Data, not presentation; an empty stage still renders.
 
 **Status**:
-`leading`, `knocked_out` or `blocked_on_facts`. A knockout carries its written reason and a cited element that fails.
+`leading`, `knocked_out`, `blocked_on_facts` or `not_reached`. A knockout carries its written reason and a cited element that fails; `not_reached` means the order of review decided before this candidate's stage and it was never analysed.
 _Avoid_: verdict, result, decision
 
 **Knockout / negative finding**:

@@ -52,3 +52,11 @@ def test_cost_cap_breach_is_a_hard_abort_too():
     with pytest.raises(BudgetExhausted):
         m.propose("advocate", "p1", {})
     assert inner.calls == []
+
+
+def test_scripted_model_routes_per_provision_when_the_prompt_names_one():
+    m = ScriptedModel({("advocate", "USML XI(c)(2)"): [{"p": "xi"}], ("advocate", "9A991.d"): [{"p": "9a"}], "advocate": [{"p": "generic"}]})
+    assert m.propose("advocate", "PROVISION: 9A991.d\n...", {}) == {"p": "9a"}
+    assert m.propose("advocate", "PROVISION: USML XI(c)(2)\n...", {}) == {"p": "xi"}
+    assert m.propose("advocate", "no provision line", {}) == {"p": "generic"}
+    assert isinstance(m.propose("advocate", "PROVISION: 9A991.d\n...", {}), Abstain)

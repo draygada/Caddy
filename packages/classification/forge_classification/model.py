@@ -41,12 +41,22 @@ class ScriptedModel:
     """Answers each kind from a queue; abstains when the script runs out. Records every prompt so
     tests can assert what a call was and was not shown."""
 
-    def __init__(self, responses: dict[str, list[dict]]):
+    def __init__(self, responses: dict):
         self._queues = {k: list(v) for k, v in responses.items()}
         self.calls: list[Call] = []
 
+    @staticmethod
+    def _provision(prompt: str) -> str | None:
+        for line in prompt.splitlines():
+            if line.startswith("PROVISION: "):
+                return line[len("PROVISION: "):].strip()
+        return None
+
     def propose(self, kind: str, prompt: str, schema: dict) -> dict | Abstain:
-        queue = self._queues.get(kind, [])
+        provision = self._provision(prompt)
+        queue = self._queues.get((kind, provision)) if provision else None
+        if queue is None or (not queue and (kind, provision) not in self._queues):
+            queue = self._queues.get(kind, [])
         response: dict | Abstain = queue.pop(0) if queue else Abstain("script exhausted")
         self.calls.append(Call(kind, prompt, response))
         return response
