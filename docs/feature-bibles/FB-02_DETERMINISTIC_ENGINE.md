@@ -47,6 +47,7 @@ Do not return a generic boolean when a causal object can be returned.
 - F8 no-change edits report zero changed determinations.
 - Empty fields never fire; mismatched units never compare.
 - Same canonical input produces byte-equivalent canonical output.
+- A test-only synthetic USML/EAR collision proves USML wins, and an EAR99 fixture stays blocked until a named specific CCL candidate is rejected. These fixtures create no user-visible coverage claim.
 - The 80-node performance test loads the real P0 pack and remains below 50 ms on the local target; an empty-pack benchmark is not evidence.
 
 ## Falsifiers
@@ -59,4 +60,4 @@ Do not return a generic boolean when a causal object can be returned.
 
 ## Cut line
 
-Minimum engine for the demo is baseline plus F1, F3, F8, the camera parent-propagation path, and missing-evidence questions. Additional rows or destination conclusions may be displayed only after their separate governed artifacts and exact tests pass.
+Minimum engine for the demo is baseline plus F1, F3, F8, the camera parent-propagation path, missing-evidence questions, and the test-only order-of-review collision. If time tightens again, cut the RS1 `>60`/`>111000` branches before cutting F3's `>9 Hz` direct finding and `9A012.a.3` propagation. Additional rows or destination conclusions may be displayed only after their separate governed artifacts and exact tests pass.

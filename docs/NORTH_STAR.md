@@ -33,7 +33,7 @@ If the screen cannot communicate those four facts, the feature is not done.
    - the panel names the before/after fact and threshold;
    - the panel shows the rule entry, verbatim source text, content date, and evidence state;
    - destination consequences say `not evaluated` unless a separately approved policy artifact exists.
-6. Reverse the change. The relevant flag clears and the change remains in the audit timeline.
+6. Reverse the change. The relevant flag clears and an in-memory before/after indication remains for the current demo run.
 
 The winning run is two substantive edits plus a control: F1 battery/endurance, F3 thermal-camera swap with parent propagation, then F8 no-change to prove the system does not manufacture a visual delta. F2 span/range and the gyro path are excluded from P0 until their derived formulas and unresolved facts are governed.
 
@@ -46,7 +46,7 @@ Tripwire promises only what the local build demonstrates:
 - **Causal flags:** every rendered flag names the node, fact, operator, threshold, rule, and evidence used.
 - **Propagation:** a controlled child can visibly affect its parent without hiding the causal path.
 - **Honest uncertainty:** absent or incomparable facts render as a question, never as green or a guessed classification.
-- **Reproducibility:** the build pins the rule pack and source date and can replay accepted changes.
+- **Reproducibility:** the build pins the rule pack and source date and can replay the committed F1/F3/F8 fixtures.
 
 Tripwire does not promise a final legal classification, full EAR/ITAR coverage, arbitrary CAD authoring, autonomous filing, or a live-network-dependent result.
 

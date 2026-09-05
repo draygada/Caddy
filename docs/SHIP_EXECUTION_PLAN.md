@@ -14,13 +14,15 @@ The live broker currently has two workers. Use waves; do not pretend four listed
 
 | Wave | Role | Bible | Mutates? | Verification |
 |---|---|---|---|---|
-| 0 | truth/contract owner | FB-00 then FB-01 | governed data/contract lane | fresh read-only contract verifier |
-| 1A | engine builder | FB-02 | backend engine lane | fresh opposite profile on candidate |
-| 1B | visual builder | FB-03 | frontend lane | fresh opposite profile on candidate |
-| 2 | integration owner | FB-04 | serialized integration | fresh full-suite verifier |
+| 0 | truth/contract integration owner | FB-00 then FB-01 | serialized exact allowlist across `schemas/`, `data/demo/`, `data/rules/`, `backend/tests/fixtures/`, `docs/api/` | fresh read-only contract verifier |
+| 1A | engine builder | FB-02 | backend engine lane | fresh transcript-blind task on candidate |
+| 1B | visual builder | FB-03 | frontend lane | fresh transcript-blind task on candidate |
+| 2 | integration owner | FB-04 | serialized exact allowlist: `backend/app.py`, `backend/tests/test_api.py`, `frontend/src/api/`, `frontend/src/App.jsx`, `vite.config.js` | fresh full-suite verifier |
 | 3 | final adversarial verifier | FB-07 candidate only | no | owns GO/HOLD evidence |
 
 FB-05 and FB-06 are outside the hackathon critical path. Do not run two sessions against `backend/app.py` or `frontend/src/App.jsx` at once.
+
+The README human-owner table is not a session allowlist. Wave 0 and Wave 2 are deliberate serialized integration lanes with the exact paths above; no other writer runs while either cross-owner lane is active. Every other builder gets a single-root `.lane`.
 
 ## Session packet template
 
@@ -50,7 +52,7 @@ The verifier gets the bible, immutable candidate, fixtures, and falsifier—neve
 4. Create isolated worktrees from the immutable plan commit and write a narrow `.lane` in each. The hook is commit-time protection, not a write sandbox.
 5. Clear FB-00 and verify FB-01 before engine dispatch. A visual builder may work against labeled golden fixtures in parallel; it may not claim live evaluation.
 6. Dispatch engine and visual builders under the two-worker limit.
-7. Create fresh verifier sessions on candidate-pinned disposable verifier worktrees. Manually require a different profile; never use handoff for acceptance.
+7. Create fresh verifier sessions on candidate-pinned disposable verifier worktrees. Use the controlling Sol/xhigh/fast route, with a new transcript-blind task and no builder rationale; never use handoff for acceptance.
 8. Integrate one verified candidate at a time; run fast tests/build after each. Dispatch FB-04 only on the integrated base.
 9. Run FB-07 from a fresh clone and emit GO/HOLD evidence. Archive completed sessions only after candidate/evidence pointers are recorded. Do not start roadmap lanes until that verdict exists.
 
@@ -68,7 +70,8 @@ Prompts, transcript bodies, provider-native IDs, workspace roots, credentials, a
 
 ## Model routing
 
-- Use one profile to build and the other to verify when available.
+- Benji's 2026-09-05 correction, relayed from source task `01a072c3-2d8d-7e31-93cd-f5f65fa6844c`, is controlling for future Codex dispatches on this Mac: “set everything to sol extra high fast 1.5x.” Concretely, request `gpt-5.6-sol`, `xhigh`, and service tier `fast`. This supersedes only the Codex model/reasoning/service-tier clause of D-089's older Spark/high route; it does not interrupt existing turns or change custody, evidence, privacy, legal, security, claims, release, spend, or deployment gates. Claude routing is unchanged.
+- Builder-distinct verification still requires a fresh candidate-bound task. Since the current route uses one Codex profile, independence comes from a fresh task with no builder transcript, read-only custody, immutable candidate identity, and prewritten falsifiers—not from silently substituting another model.
 - Fable is not a standing broker profile. It may be used only through its separate bounded governance path and never as a mutation owner or terminal verdict.
 - No fallback model is silently substituted; record requested and served identities.
 
@@ -84,4 +87,6 @@ Prompts, transcript bodies, provider-native IDs, workspace roots, credentials, a
 
 ## Current dispatch verdict
 
-HOLD. As observed on 2026-09-05, only the `strafe` workspace is registered, the live process is runtime-skewed from console HEAD, Tripwire has no isolated worktrees, and approved `data/rules/rules.P0.json` is absent. These are setup/truth blockers, not reasons to let builders improvise.
+PARTIAL GO. The dependency-safe FB-03 visual shell is active against labeled fixtures from immutable base `ccfd3be140d2563c428312edc7997921ed5a722e` in `/Users/benjihuh/Programming/tripwire-worktrees/fb03-visual`, branch `hackathon/fb03-visual`, with custody limited to `frontend/src/**`. Its source task reports `gpt-5.6-sol` / `xhigh` / `fast`; no second visual writer may be dispatched.
+
+All truth, engine, and integration mutation lanes remain HOLD until FB-00 is approved and the relevant contract is frozen. The direct broker path also remains setup-gated: the observed live configuration registered only `strafe`, was runtime-skewed from console HEAD, and returned 404 for `/api/operator/now`. Do not restart it while any task is active. The visual fixture lane is not evidence of a live evaluator or approved rule pack.

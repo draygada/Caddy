@@ -13,6 +13,7 @@ Produce the smallest approved, executable body of facts needed for the demo befo
 - Destination output is `{ "status": "not_evaluated", "reason": "P0 has no approved destination policy" }`. Country Chart X/blank cells alone may not be converted into NLR, STA, LIC, denial, DDTC, or other exact outcomes.
 - The rule grammar is made executable for the retained subset through one controlled schema thaw/refreeze. Clauses and atoms get exclusive discriminators and `additionalProperties: false`; `not` accepts one clause such as `{ "not": { "any": [...] } }`; unsupported declaration, list, and existence constructs remain excluded. Units and value types are explicit before an evaluator is written.
 - A baseline Kestrel design and golden before/after outputs contain every required attribute, unit, parent edge, stable ID, and provenance label.
+- A test-only synthetic collision pack proves USML → CCL → EAR99 ordering and proves EAR99 is unavailable until a named specific candidate is rejected. It does not expand the product claim ceiling or appear in the demo.
 - Unsupported draft rows, F2, F4, F5/F6, P3 downward inheritance, `items[]` runtime behavior, live AI, and destination/legal coverage are explicitly excluded rather than left ambiguous.
 
 ## Non-negotiable semantic decisions
@@ -30,7 +31,6 @@ Produce the smallest approved, executable body of facts needed for the demo befo
 - No P0 screen copy depends on `rules.DRAFT.json` or a hard-coded regulatory string in JSX.
 - Every P0 rule has one positive, one exact-boundary, one negative, and one missing-fact fixture.
 - Exact before/after truth tables exist for baseline, F1, F3, F8, and the missing-evidence case.
-- Chart regeneration reproduces the committed `countries` shape and passes schema validation.
 - Semantic graph admission rejects duplicate IDs, missing/non-product roots, dangling parents, and cycles.
 - The P0 baseline and flips validate and produce the expected entries: baseline `9A012.a.1`; F1 `9A012.a.2`; F3 fires the camera thresholds and adds `9A012.a.3` to the product; F8 has zero changed determinations.
 - An independent reviewer signs the truth-pack receipt and records the refrozen schema and P0 rule-pack digests plus the coverage/claim ceiling. Machine quote/shape checks alone do not clear this gate.
@@ -42,3 +42,5 @@ Ask two independent implementers to derive the same golden outputs using only th
 ## Stop rules
 
 Stop rather than curate legal meaning when a quote, threshold, effective date, declaration, exception, destination policy, or schema change lacks the required authority. Visual-shell work may continue against clearly labeled golden fixtures, but no fixture may be represented as live engine output.
+
+Country-chart parser repair is non-blocking while destinations remain `not_evaluated`; track it outside the P0 critical path.

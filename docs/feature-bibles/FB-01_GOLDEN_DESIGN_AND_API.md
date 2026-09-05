@@ -59,10 +59,17 @@ It returns:
       "entries": [],
       "direct_tripwires": [{
         "rule_id": "CCL-6A003.b.4.b",
+        "state": "fired",
+        "jurisdiction": "EAR",
         "entry": "6A003.b.4.b",
+        "reason_for_control": ["RS1"],
         "cause_node_id": "nose_thermal",
-        "fact": {"attribute": "frame_rate", "observed": 60, "unit": "Hz", "operator": ">", "threshold": 9},
-        "evidence_ref": "sha256:...#bytes=..."
+        "fact": {"attribute": "frame_rate_hz", "observed": 60, "unit": "Hz", "operator": ">", "threshold": 9},
+        "text": "verbatim pinned rule text",
+        "source_url": "https://www.ecfr.gov/...",
+        "ecfr_date": "2026-09-01",
+        "rule_effective": null,
+        "evidence": {"level": "verified", "sha256": "...", "span": [120, 184]}
       }],
       "propagated_tripwires": [],
       "unresolved_tripwires": [],
@@ -84,6 +91,8 @@ It returns:
 ```
 
 Internal `evaluate()` may keep returning the determinations map; `backend/app.py` owns the envelope. The fixtures settle field names before parallel implementation starts. The echoed `request_id` and canonical `design_revision` are both required: one rejects browser response races and the other binds evidence to content.
+
+`direct_tripwires`, `propagated_tripwires`, and `unresolved_tripwires` use this same complete object. Propagated objects additionally require `cause_node_id` and `path`; unresolved objects set `state: "cannot_evaluate"` and name the missing or incompatible fact. The inspector renders these fields directly and never joins hidden legal data in React.
 
 ## Acceptance
 

@@ -25,10 +25,10 @@ FB-05 audit history and FB-06 AI/classification bridges are roadmap lanes, not h
 | ID | Outcome | Primary paths | Depends on | Demo priority |
 |---|---|---|---|---|
 | `FB-00` | Approved, explicitly partial P0 rule pack and semantic decisions | `data/rules/`, decision record, corpus receipts | required authority | P0 blocker |
-| `FB-01` | One canonical Kestrel fixture and stable evaluate contract | `data/demo/`, `backend/tests/fixtures/`, `docs/api/` | FB-00 | P0 |
+| `FB-01` | One canonical Kestrel fixture and stable evaluate contract | exact cross-owner allowlist: `data/demo/`, `backend/tests/fixtures/`, `docs/api/` | FB-00; serialized contract owner | P0 |
 | `FB-02` | Deterministic per-node evaluation and propagation | `backend/engine/`, engine tests | FB-01, approved P0 rule pack | P0 |
 | `FB-03` | Inspectable 3D inventory with in-context tripwire markers | `frontend/src/` | FB-01; fixture-shaped evaluator response | P0 |
-| `FB-04` | End-to-end edit → evaluate → flag → explain → clear loop | frontend integration and `backend/app.py` | FB-02, FB-03 | P0 |
+| `FB-04` | End-to-end edit → evaluate → flag → explain → clear loop | exact integration allowlist: `backend/app.py`, `backend/tests/test_api.py`, `frontend/src/api/`, `frontend/src/App.jsx`, `vite.config.js` | FB-02, FB-03; serialized integration owner | P0 |
 | `FB-05` | Append-only change/evaluation timeline and replay/tamper proof | `backend/log/`, log tests, timeline UI | FB-04 | roadmap |
 | `FB-06` | Bounded extractor, replacement search, and classification request | `backend/integrations/`, cached fixtures | FB-04 verified | roadmap |
 | `FB-07` | Offline demo, visual QA, failure recovery, and final claims gate | scripts/tests/docs only | FB-04 | P0 |
