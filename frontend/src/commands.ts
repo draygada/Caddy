@@ -2,8 +2,9 @@
 // right-click marking menu and the keyboard shortcuts all resolve here.
 import { useStore, nodeOfBody, type BodyId, type WorkbenchState } from './store';
 import { UNITS } from './lib/units';
+import { useTripwireStore } from './tripwire-store';
 
-export type CommandGroup = 'view' | 'create' | 'modify' | 'inspect' | 'select' | 'document' | 'panels';
+export type CommandGroup = 'view' | 'create' | 'modify' | 'inspect' | 'select' | 'document' | 'review' | 'panels';
 export interface Command {
   id: string;
   label: string;
@@ -59,6 +60,8 @@ export const COMMANDS: Command[] = [
   ...UNITS.map((u) => ({ id: 'doc.units.' + u, label: 'Units · ' + u, group: 'document' as CommandGroup, run: (st: WorkbenchState) => st.setUnits(u) })),
   { id: 'doc.live', label: 'Timeline · back to live', group: 'document', when: (st) => st.viewSeq != null, run: (st) => st.viewAt(null) },
   { id: 'doc.restore', label: 'Timeline · restore this state (supersede)', group: 'document', when: (st) => st.viewSeq != null, run: (st) => st.restoreHere() },
+
+  { id: 'review.tripwire', label: 'Tripwire · review a canonical Candidate 0.1 entity…', group: 'review', keys: 'T', run: () => useTripwireStore.getState().openPanel() },
 
   { id: 'panels.timeline', label: 'Timeline drawer', group: 'panels', keys: 'L', run: (st) => st.toggleTimeline() },
   { id: 'panels.reasoning', label: 'Reasoning · why the product reads', group: 'panels', run: (st) => st.openReasoning() },

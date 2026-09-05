@@ -36,7 +36,9 @@ URL switches: `?demo=1` shows the caption bar (→ / Space advances the eight-st
 
 ## Where the backend plugs in
 
-`src/lib/service.ts` is the browser side of the seam described in the engineering direction (`backend/app/service.py`: `apply_change · rederive · now`). Today `service.evaluate()` answers locally from `src/lib/rules.ts`, a synthetic copy of the 14-row rule table so the shell renders an outcome. When the FastAPI service exists, replace that call with a POST to `/api/...` (Vite already proxies `/api` → `127.0.0.1:8000`) and render the response shape verbatim; the panels read an `Outcome` (`rules`, `cannot`, `cols`, `cruiseW`, `endurance`, `range`, `keys`) and nothing else. The log (`events`) should likewise come from the service; the store's `append` is the local stand-in for the signed chain.
+`src/lib/service.ts` remains the browser side of the design-simulator seam. `service.evaluate()` answers locally from `src/lib/rules.ts`, a synthetic copy of the rule table, so Diego's CAD and product-status interactions stay responsive without being presented as authoritative.
+
+`src/lib/tripwire.ts`, `src/tripwire-store.ts`, and `src/panels/TripwirePanel.tsx` are a separate live proof seam. They load `/api/candidate`, expose only the stable entities and exact request bindings supplied by that immutable candidate, POST the selected binding to `/api/compliance-at-design-click`, cryptographically validate the stamped response, and render the receipt under the `DRAFT_REVIEW_ONLY` / `HUMAN_REVIEW_REQUIRED` ceiling. The synthetic Kestrel preview is never silently mapped to the canonical bracket candidate.
 
 ## Layout
 
@@ -50,4 +52,4 @@ URL switches: `?demo=1` shows the caption bar (→ / Space advances the eight-st
 
 ## Claim ceiling
 
-This is a slot-assembly editor with one parametric dimension and a rendered outcome. It computes nothing authoritative; the meshes are previews; every regulatory string is rendered from data and is subject to the say/never-say table in the UX doc §8.
+The design workspace is a slot-assembly editor with local preview tooling and a rendered synthetic outcome. It computes nothing authoritative; the meshes are previews. The Tripwire drawer is the distinct Candidate 0.1 proof: it binds one API-supplied stable entity to the immutable API-supplied revision and returns insufficient evidence requiring human review, never a compliance determination.

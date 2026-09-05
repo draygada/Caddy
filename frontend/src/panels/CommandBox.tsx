@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { COMMANDS, runCommand, type Command } from '../commands';
 
-const GROUP_LABEL: Record<Command['group'], string> = { view: 'View', create: 'Create', modify: 'Modify', inspect: 'Inspect', select: 'Select', document: 'Document', panels: 'Panels' };
+const GROUP_LABEL: Record<Command['group'], string> = { view: 'View', create: 'Create', modify: 'Modify', inspect: 'Inspect', select: 'Select', document: 'Document', review: 'Review', panels: 'Panels' };
 
 /** S-key command box: every command, searchable, recent ones pinned when the query is empty. */
 export function CommandBox() {
@@ -27,8 +27,8 @@ export function CommandBox() {
   if (!open) return null;
   const run = (c: Command) => runCommand(c.id, target);
   return (
-    <div className="absolute inset-0 z-[30] flex items-start justify-center pt-16" onMouseDown={() => st.patch({ cmdOpen: false })}>
-      <div role="dialog" aria-label="Commands" onMouseDown={(e) => e.stopPropagation()} className="w-[520px] max-h-[70%] flex flex-col bg-surface border border-line rounded-r shadow-[0_16px_40px_rgba(0,0,0,.22)] overflow-hidden">
+    <div className="absolute inset-0 z-[30] flex items-start justify-center px-2 pt-16" onMouseDown={() => st.patch({ cmdOpen: false })}>
+      <div role="dialog" aria-label="Commands" onMouseDown={(e) => e.stopPropagation()} className="w-[min(520px,100%)] max-h-[70%] flex flex-col bg-surface border border-line rounded-r shadow-[0_16px_40px_rgba(0,0,0,.22)] overflow-hidden">
         <div className="flex items-center gap-2 px-3 border-b border-line2">
           <span className="font-mono text-[12px] text-muted">S</span>
           <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setIdx(0); }} placeholder="type a command…" className="flex-1 min-h-11 bg-transparent border-0 outline-none text-[15px] text-ink"

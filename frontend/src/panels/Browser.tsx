@@ -59,7 +59,7 @@ export function Browser() {
   const readOnly = s.viewSeq != null;
 
   return (
-    <div data-panel="browser" className="panel flex flex-col min-h-0">
+    <div data-panel="browser" className="panel h-full flex flex-col min-h-0">
       <div className="panel-head">
         <div className="panel-title">Browser</div>
         <span className="text-[12px] text-muted flex items-center gap-2">
@@ -116,7 +116,7 @@ export function Browser() {
               return (
                 <Row key={slot} depth={1} icon={<Component />} name={GENERIC_NAME[slot]} hiddenId={placed ? slot : undefined} active={s.sel === slot} dim={!placed}
                   onClick={() => (placed ? s.select(slot) : s.place(slot, dragPid))}
-                  trailing={placed ? <Swatch slot={slot} /> : 'not placed · drag onto the plate'}
+                  trailing={placed ? <Swatch slot={slot} /> : 'not placed · click or drag'}
                   draggable={!readOnly} onDragStart={onDragStart(dragPid)} onDragEnd={onDragEnd}
                   title={placed ? 'click to select · drag onto the plate to move' : 'drag onto the plate to place, or click'} />
               );

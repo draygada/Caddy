@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type DragEvent, type MouseEvent as RMouseEvent, type WheelEvent } from 'react';
-import { useStore, isBodyId, nodeOfBody, type BodyId, type Pos } from '../store';
+import { useStore, isBodyId, nodeOfBody, BODY_LABEL, type BodyId, type Pos } from '../store';
 import { CATALOG, PLATE_T, PLATE_W, SLOTS, SLOT_LABEL, type PartId, type Slot } from '../lib/catalog';
 import { boxFaces, clipFaces, K, proj, renderSolid, solidBounds, type Face, type Projector, type Solid, type Vec3 } from '../lib/geometry';
 import { buildBodies } from '../lib/scene';
@@ -267,6 +267,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
             <option value="component">components</option><option value="body">bodies</option><option value="face">faces</option>
           </select>
         </label>
+        {s.selFilter === 'face' && s.selFace && <span role="status" className="chip normal-case">{BODY_LABEL[s.selFace.body]} · face {s.selFace.fi + 1} · preview index</span>}
         <div className="flex-1" />
         {s.viewSeq != null ? (
           <span className="text-[13px] font-semibold text-amber">replaying #{s.viewSeq} · read-only · <button onClick={() => s.viewAt(null)} className="underline">back to live</button></span>
@@ -285,7 +286,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
           {scene.gridLines.map((g, i) => <line key={'g' + i} x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} stroke={g.stroke} strokeWidth={g.sw} />)}
           {scene.axes.map((ax) => (<g key={ax.label}><line x1={ax.x1} y1={ax.y1} x2={ax.x2} y2={ax.y2} stroke="var(--muted)" strokeWidth="1.5" /><text x={ax.tx} y={ax.ty} fill="var(--muted)" fontSize="12" fontFamily="Geist Mono, monospace" textAnchor="middle">{ax.label}</text></g>))}
           {scene.faces.map((f, i) => (
-            <polygon key={i} points={f.pts} fill={f.fill} stroke={f.stroke} strokeWidth={f.sw} strokeDasharray={f.dash || undefined} strokeLinejoin="round" data-slot={f.slot} data-body={f.body}
+            <polygon key={i} points={f.pts} fill={f.fill} stroke={f.stroke} strokeWidth={f.sw} strokeDasharray={f.dash || undefined} strokeLinejoin="round" data-slot={f.slot} data-body={f.body} data-face={f.fi}
               onMouseDown={bodyDown(f.body)} onClick={() => clickFace(f.body, f.fi)} onMouseEnter={() => { if (isBodyId(f.body)) s.patch({ hover: f.body }); }} onMouseLeave={() => s.patch({ hover: null })}
               style={{ cursor: isBodyId(f.body) && f.body !== 'plate' && f.body !== 'flange' && s.parts[f.body] && s.selFilter !== 'face' ? 'grab' : 'pointer' }} />
           ))}

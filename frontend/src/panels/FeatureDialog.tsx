@@ -24,9 +24,9 @@ function LenField({ id, label, metres, units, min, max, onChange, hint }: { id: 
   );
 }
 
-function Frame({ title, sub, children, onOk, onCancel, okLabel = 'OK', okDisabled }: { title: string; sub?: string; children: React.ReactNode; onOk?: () => void; onCancel: () => void; okLabel?: string; okDisabled?: boolean }) {
+function Frame({ title, sub, children, onOk, onCancel, okLabel = 'OK', okDisabled, placement = 'right-3 top-[176px]' }: { title: string; sub?: string; children: React.ReactNode; onOk?: () => void; onCancel: () => void; okLabel?: string; okDisabled?: boolean; placement?: string }) {
   return (
-    <div role="dialog" aria-label={title} className="absolute right-3 top-[176px] w-[300px] max-h-[calc(100%-240px)] flex flex-col bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] z-[12]" onMouseDown={(e) => e.stopPropagation()}>
+    <div role="dialog" aria-label={title} className={'absolute ' + placement + ' w-[min(300px,calc(100%-24px))] max-h-[calc(100%-180px)] flex flex-col bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] z-[12]'} onMouseDown={(e) => e.stopPropagation()}>
       <div className="px-3 py-2 border-b border-line2 flex items-baseline justify-between gap-2">
         <span className="text-[13px] font-semibold">{title}</span>
         {sub && <span className="text-[12px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">{sub}</span>}
@@ -109,7 +109,7 @@ export function FeatureDialog() {
       const ang = A && B ? (Math.atan2(B.c[1] - A.c[1], B.c[0] - A.c[0]) * 180) / Math.PI : null;
       const row = (k: string, v: string) => <div key={k} className="grid grid-cols-[1fr_auto] gap-2 text-[13px]"><span className="text-muted">{k}</span><span className="font-mono">{v}</span></div>;
       return (
-        <Frame title="Measure" sub="click two bodies" onCancel={cancel}>
+        <Frame title="Measure" sub="click two bodies" onCancel={cancel} placement="left-3 top-[112px]">
           <div className="text-[13px]">{!s.measure.a ? 'click the first body in the viewport' : !s.measure.b ? 'first: ' + BODY_LABEL[s.measure.a] + ' · click the second body' : BODY_LABEL[s.measure.a] + ' → ' + BODY_LABEL[s.measure.b]}</div>
           {A && B && dist != null && ang != null && (
             <div className="grid gap-1 border-t border-line2 pt-2">

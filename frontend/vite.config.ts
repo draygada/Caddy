@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
-    proxy: { '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true, rewrite: (p) => p.replace(/^\/api/, '') } },
+    proxy: { '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true } },
   },
   test: { include: ['tests/**/*.test.ts'], environment: 'node' },
 });

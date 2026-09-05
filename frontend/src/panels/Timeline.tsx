@@ -12,11 +12,11 @@ export function Timeline() {
   const copy = useStore((s) => s.copy);
   const rederiveLog = useStore((s) => s.rederiveLog);
   const filtered = lane === 'all' ? events : events.filter((e) => e.lane === lane);
-  const shown = filtered.slice(0, 8);
+  const shown = filtered;
   return (
     <>
       <div onClick={closeAll} className="absolute inset-0 bg-scrim z-[5]" />
-      <div role="dialog" aria-label="Timeline" className="absolute top-0 right-0 bottom-0 w-[460px] bg-surface border-l border-line z-[6] flex flex-col shadow-[-8px_0_24px_rgba(0,0,0,.12)]">
+      <div role="dialog" aria-label="Timeline" className="absolute top-0 right-0 bottom-0 w-[min(460px,100%)] bg-surface border-l border-line z-[6] flex flex-col shadow-[-8px_0_24px_rgba(0,0,0,.12)]">
         <div className="flex items-center justify-between gap-2 px-[14px] py-[10px] border-b border-line2">
           <div className="text-[13px] font-semibold">Timeline <span className="text-muted font-normal">· newest first · {shown.length} of {events.length}</span></div>
           <button onClick={closeAll} className="btn">Close · Esc</button>

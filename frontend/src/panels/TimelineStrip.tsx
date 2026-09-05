@@ -1,4 +1,4 @@
-import { useRef, type MouseEvent, type ReactElement } from 'react';
+import { useEffect, useRef, type MouseEvent, type ReactElement } from 'react';
 import { useStore } from '../store';
 import { Body, Check, Component, Doc, Feature, Folder, Gear, Pan, Sketch } from './Icons';
 
@@ -18,13 +18,18 @@ export function TimelineStrip() {
   const latest = events.length;
   const cur = viewSeq ?? latest;
   const stripRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const drag = useRef(false);
+
+  useEffect(() => {
+    if (viewSeq == null && scrollRef.current) scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+  }, [events.length, viewSeq]);
 
   const seqAt = (clientX: number) => {
     const el = stripRef.current; if (!el) return cur;
     const r = el.getBoundingClientRect();
     const t = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
-    return Math.max(1, Math.min(latest, Math.round(t * latest)));
+    return Math.max(1, Math.min(latest, Math.floor(t * latest) + 1));
   };
   const onDown = (e: MouseEvent<HTMLDivElement>) => {
     drag.current = true;
@@ -36,30 +41,32 @@ export function TimelineStrip() {
   const step = (d: number) => { const q = Math.max(1, Math.min(latest, cur + d)); viewAt(q >= latest ? null : q); };
 
   return (
-    <div className="flex-none h-11 flex items-center gap-2 px-2 border-t border-line2 bg-surface select-none">
+    <div className="flex-none h-11 flex items-center gap-2 px-2 border-t border-line2 bg-surface select-none overflow-x-auto">
       <div className="flex gap-[2px]">
         <button className="btn btn-xs text-ink min-w-6 px-0" title="First" onClick={() => viewAt(1)}>⏮</button>
         <button className="btn btn-xs text-ink min-w-6 px-0" title="Previous" onClick={() => step(-1)}>◀</button>
         <button className="btn btn-xs text-ink min-w-6 px-0" title="Next" onClick={() => step(1)}>▶</button>
         <button className="btn btn-xs text-ink min-w-6 px-0" title="Live" onClick={() => viewAt(null)}>⏭</button>
       </div>
-      <div ref={stripRef} onMouseDown={onDown} className="relative flex-1 h-8 cursor-pointer" title="drag the marker to replay the design to that point">
-        <div className="absolute left-0 right-0 top-1/2 h-px bg-line" />
-        {asc.map((e) => {
-          const Ico = ICON[e.kind] || Feature;
-          const x = (e.seq / latest) * 100;
-          const after = e.seq > cur;
-          const amber = e.word.startsWith('unconfirmed');
-          return (
-            <button key={e.seq} title={'#' + e.seq + ' ' + e.kind + ' · ' + e.text} onMouseDown={(ev) => ev.stopPropagation()} onClick={() => viewAt(e.seq >= latest ? null : e.seq)}
-              className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-[4px] border flex items-center justify-center bg-surface hover:bg-hover"
-              style={{ left: x + '%', borderColor: amber ? 'var(--amber)' : e.seq === cur ? 'var(--focus)' : 'var(--line)', color: amber ? 'var(--amber)' : 'var(--ink)', opacity: after ? 0.35 : 1 }}>
-              <Ico width={13} height={13} />
-            </button>
-          );
-        })}
-        <div className="absolute top-0 bottom-0 w-[2px] -translate-x-1/2 pointer-events-none" style={{ left: (cur / latest) * 100 + '%', background: 'var(--focus)' }}>
-          <div className="absolute -top-[3px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent" style={{ borderTopColor: 'var(--focus)' }} />
+      <div ref={scrollRef} className="relative flex-1 min-w-[120px] h-8 overflow-x-auto overflow-y-hidden">
+        <div ref={stripRef} onMouseDown={onDown} className="relative h-8 cursor-pointer" style={{ minWidth: Math.max(320, latest * 30) }} title="drag the marker to replay the design to that point">
+          <div className="absolute left-0 right-0 top-1/2 h-px bg-line" />
+          {asc.map((e) => {
+            const Ico = ICON[e.kind] || Feature;
+            const x = ((e.seq - 0.5) / latest) * 100;
+            const after = e.seq > cur;
+            const amber = e.word.startsWith('unconfirmed');
+            return (
+              <button key={e.seq} title={'#' + e.seq + ' ' + e.kind + ' · ' + e.text} onMouseDown={(ev) => ev.stopPropagation()} onClick={() => viewAt(e.seq >= latest ? null : e.seq)}
+                className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-[4px] border flex items-center justify-center bg-surface hover:bg-hover"
+                style={{ left: x + '%', borderColor: amber ? 'var(--amber)' : e.seq === cur ? 'var(--focus)' : 'var(--line)', color: amber ? 'var(--amber)' : 'var(--ink)', opacity: after ? 0.35 : 1 }}>
+                <Ico width={13} height={13} />
+              </button>
+            );
+          })}
+          <div className="absolute top-0 bottom-0 w-[2px] -translate-x-1/2 pointer-events-none" style={{ left: ((cur - 0.5) / latest) * 100 + '%', background: 'var(--focus)' }}>
+            <div className="absolute -top-[3px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent" style={{ borderTopColor: 'var(--focus)' }} />
+          </div>
         </div>
       </div>
       <div className="font-mono text-[12px] text-muted whitespace-nowrap min-w-[120px] text-right">
