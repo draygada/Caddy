@@ -3,7 +3,7 @@
   "framework": null,
   "functions": {
     "api/index.py": {
-      "excludeFiles": "{public/**,apps/browser-workbench/**,apps/product-service/README.md,apps/product-service/bundle-manifest.v1.json,packages/core-kernel/pyproject.toml,packages/core-kernel/uv.lock,packages/core-kernel/THIRD_PARTY_NOTICES.md,bundle-manifest.resolved.json,tests/**,governance/**,docs/**,.git/**,.vercel/**,features/tripwire/data/**,packages/history-collaboration/**,packages/core-kernel/evidence/**,**/__pycache__/**,**/*.pyc,**/*.pyo,**/.env*,**/*credential*,**/*secret*}"
+      "excludeFiles": "{public/**,apps/browser-workbench/**,apps/product-service/README.md,apps/product-service/bundle-manifest.v1.json,apps/product-service/scripts/**,tests/**,governance/**,docs/**,.git/**,.vercel/**,features/tripwire/data/**,packages/history-collaboration/**,packages/core-kernel/**,**/__pycache__/**,**/*.pyc,**/*.pyo,**/.env*,**/*credential*,**/*secret*,**/private/**,**/*private-data*}"
     }
   },
   "rewrites": [

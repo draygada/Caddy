@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -20,6 +21,8 @@ SOURCE_ONLY_INPUTS = {
     "apps/product-service/bundle-manifest.v1.json",
     "packages/core-kernel/pyproject.toml",
     "packages/core-kernel/uv.lock",
+    "packages/core-kernel/THIRD_PARTY_NOTICES.md",
+    "apps/product-service/scripts/generate_snapshot.py",
 }
 
 
@@ -50,10 +53,18 @@ import http.client
 import json
 from pathlib import Path
 from threading import Thread
-from unittest.mock import patch
+import importlib.abc
+import sys
 
-with patch("platform.system", return_value="Linux"), patch("platform.machine", return_value="x86_64"):
-    from api.index import handler
+class BlockNativeRuntime(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split(".")[0] in {"OCP", "cadquery", "strafe_forge_core"}:
+            raise ImportError(f"blocked native runtime import: {fullname}")
+        return None
+
+sys.meta_path.insert(0, BlockNativeRuntime())
+from api.index import handler
+assert not any(name.split(".")[0] in {"OCP", "cadquery", "strafe_forge_core"} for name in sys.modules)
 
 assert issubclass(handler, BaseHTTPRequestHandler)
 server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -79,8 +90,8 @@ try:
     assert status == 200 and candidate["candidate"]["version"] == "0.1"
     assert len(payload) < 4_500_000
     provenance = candidate["kernelProvenance"]
-    assert "wheel-sha256=8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b" in provenance["binding"]
-    assert provenance["platformImage"] == "Linux@x86_64;python=cp312;wheel-platform=manylinux_2_31_x86_64"
+    assert candidate["snapshotProvenance"]["coreExecutedAtRuntime"] is False
+    assert provenance["platformImage"].startswith("Darwin@arm64;python=cp312")
 
     bindings = candidate["document"]["complianceBindings"]
     selected = bindings[sorted(bindings)[0]]["request"]
@@ -93,6 +104,8 @@ try:
     )
     compliance = json.loads(payload)
     assert status == 200 and compliance["status"] == "REVIEW_REQUIRED"
+    assert compliance["evidence_status"] == "INSUFFICIENT_EVIDENCE"
+    assert compliance["review_readiness_guardrail"]["can_classify"] is False
     assert compliance["legal_effect"] == "NONE"
 
     status, headers, payload = request("GET", "/src/main.js")
@@ -138,6 +151,7 @@ finally:
 '''
     environment = os.environ.copy()
     environment.pop("PYTHONPATH", None)
+    environment.pop("CADDYDADDY_SNAPSHOT_PATH", None)
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
     completed = subprocess.run(
         [sys.executable, "-c", probe],
@@ -167,9 +181,13 @@ def test_static_spa_routing_and_runtime_pins(vercel_bundle: tuple[Path, Path, di
     requirements = (bundle / "requirements.txt").read_text(encoding="utf-8").splitlines()
     assert requirements == [
         "--only-binary=:all:",
-        "cadquery-ocp-novtk==7.9.3.1",
+        "attrs==26.1.0",
         "jsonschema==4.25.1",
+        "jsonschema-specifications==2025.9.1",
+        "referencing==0.37.0",
         "rfc8785==0.1.4",
+        "rpds-py==2026.6.3",
+        "typing-extensions==4.16.0",
     ]
     assert (bundle / "public" / "index.html").is_file()
     assert (bundle / "public" / "build-manifest.json").is_file()
@@ -184,6 +202,14 @@ def test_manifest_closure_hash_archive_and_determinism(
     manifest_bytes = manifest_path.read_bytes()
     manifest = json.loads(manifest_bytes)
     records = manifest["files"]
+    assert len(manifest["source"]["commit"]) == 40
+    assert len(manifest["source"]["tree"]) == 40
+    assert manifest["source"]["tree_state"] in {"COMMITTED", "STAGED_CANDIDATE"}
+    assert manifest["build_command"]
+    assert manifest["generated_snapshot"]["document_sha256"] == summary["snapshot_sha256"]
+    assert manifest["generated_snapshot"]["core"]["execution_boundary"] == "BUILD_TIME_ONLY"
+    assert manifest["tripwire"]["evaluator"]["source_commit"] == "898f6167e4305a4f86f3ebe4a473278ffbd56530"
+    assert manifest["tripwire"]["rulepack"]["rule_count"] == 0
     expected_paths = {record["path"] for record in records}
     assert expected_paths.isdisjoint(SOURCE_ONLY_INPUTS)
     actual_paths = {
@@ -210,6 +236,8 @@ def test_manifest_closure_hash_archive_and_determinism(
     assert (second / manifest_path.name).read_bytes() == manifest_bytes
     assert second_summary["archive_sha256"] == summary["archive_sha256"]
     assert second_archive.read_bytes() == archive.read_bytes()
+    snapshot_path = manifest["generated_snapshot"]["path"]
+    assert (second / snapshot_path).read_bytes() == (bundle / snapshot_path).read_bytes()
 
 
 def test_forbidden_paths_content_and_sensitive_datasets_are_absent(
@@ -222,7 +250,7 @@ def test_forbidden_paths_content_and_sensitive_datasets_are_absent(
     for required in (
         "features/tripwire/data/**",
         "packages/history-collaboration/**",
-        "packages/core-kernel/evidence/**",
+        "packages/core-kernel/**",
         "governance/**",
         "docs/**",
         "tests/**",
@@ -234,13 +262,14 @@ def test_forbidden_paths_content_and_sensitive_datasets_are_absent(
         "**/*secret*",
         "**/*kestrel*",
         "**/bom/**",
+        "**/private/**",
     ):
         assert required in excluded
 
     forbidden_path_parts = (
         "/features/tripwire/data/",
         "/packages/history-collaboration/",
-        "/packages/core-kernel/evidence/",
+        "/packages/core-kernel/",
         "/governance/",
         "/docs/",
         "/tests/",
@@ -260,6 +289,50 @@ def test_forbidden_paths_content_and_sensitive_datasets_are_absent(
     assert not any(path.is_symlink() for path in bundle.rglob("*"))
     assert not (bundle / ".vercel").exists()
     assert summary["bundle_bytes"] < 500 * 1024 * 1024
+    assert not any("core-kernel" in record["path"] or "core-kernel" in record["source"] for record in manifest["files"])
+    python_source = b"\n".join(path.read_bytes() for path in bundle.rglob("*.py"))
+    assert b"import OCP" not in python_source
+    assert b"strafe_forge_core" not in python_source
+    notice = (bundle / "apps" / "product-service" / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+    assert "redistribution review remains unresolved" in notice
+    assert not (bundle / "packages" / "core-kernel").exists()
+
+
+def test_snapshot_tamper_stale_manifest_and_missing_evaluator_fail_closed(
+    vercel_bundle: tuple[Path, Path, dict], tmp_path: Path
+) -> None:
+    source, _, _ = vercel_bundle
+
+    def import_probe(bundle: Path) -> subprocess.CompletedProcess[str]:
+        environment = os.environ.copy()
+        environment.pop("PYTHONPATH", None)
+        environment.pop("CADDYDADDY_SNAPSHOT_PATH", None)
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        return subprocess.run([sys.executable, "-c", "from api.index import handler"], cwd=bundle, env=environment, check=False, capture_output=True, text=True, timeout=30)
+
+    tampered = tmp_path / "tampered"
+    shutil.copytree(source, tampered)
+    snapshot_path = tampered / "apps" / "product-service" / "product_service" / "candidate-snapshot.v1.json"
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    snapshot["candidate_state"]["public"]["candidate"]["status"] = "TAMPERED"
+    snapshot_path.write_text(json.dumps(snapshot), encoding="utf-8")
+    result = import_probe(tampered)
+    assert result.returncode != 0 and "SNAPSHOT_TAMPERED" in result.stderr
+
+    stale = tmp_path / "stale"
+    shutil.copytree(source, stale)
+    manifest_path = stale / "bundle-manifest.resolved.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["source"]["tree"] = "0" * 40
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    result = import_probe(stale)
+    assert result.returncode != 0 and "SNAPSHOT_STALE" in result.stderr
+
+    missing = tmp_path / "missing"
+    shutil.copytree(source, missing)
+    (missing / "features" / "tripwire" / "backend" / "engine" / "evaluate.py").unlink()
+    result = import_probe(missing)
+    assert result.returncode != 0 and "EVALUATOR_MISSING" in result.stderr
 
 
 def test_builder_rejects_forbidden_absolute_path_content(

@@ -1,17 +1,17 @@
-"""Core-kernel to browser to Tripwire integration for local Candidate 0.1."""
+"""Immutable core snapshot to Tripwire review-readiness runtime."""
 
 from __future__ import annotations
 
 import argparse
 from copy import deepcopy
 from dataclasses import dataclass
-from fractions import Fraction
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
+import os
 from pathlib import Path
-import platform
+import re
 from typing import Any, Callable, Mapping
 from urllib.parse import unquote, urlsplit
 
@@ -24,105 +24,21 @@ from compliance_bridge import (
     validate_binding_receipt,
     validate_observation,
 )
-from strafe_forge_core.assembly import AssemblyEngine, AssemblyProgram, Component, FixedTransform, PartDefinition
-from strafe_forge_core.engine import EngineManifest, RecomputeEngine
-from strafe_forge_core.ocp_operations import ocp_registry
-from strafe_forge_core.program import PartProgram, ProgramOperation
-from strafe_forge_core.viewport import tessellate_part
-
 from . import REPOSITORY_ROOT
 
 CANDIDATE_TIME = "2026-09-05T20:00:00Z"
 TRIPWIRE_SOURCE_COMMIT = "898f6167e4305a4f86f3ebe4a473278ffbd56530"
 PRODUCT_THREAD_ID = "product-thread:caddydaddy-demo-01"
-BOUNDED_CLAIM = "CADdyDaddy combines one bounded browser CAD workflow with a dated, review-only compliance-at-design-click evaluation on the same immutable product revision."
+BOUNDED_CLAIM = "CADdyDaddy binds a selected CAD entity to its immutable product revision and runs a review-readiness guardrail through Tripwire; Candidate 0.1 returns insufficient evidence and requires human review, not a compliance determination."
 POSITIONING = "We're closing the loop from idea to execution for high-stakes industries."
 REQUEST_KEYS = {"entity_id", "node_id", "product_thread_id", "forge_record_id", "occurrence_path", "forge_record_revision_id", "forge_revision_id"}
 MAX_REQUEST_BODY_BYTES = 65536
-_LOCKED_RUNTIME_PROVENANCE: tuple[dict[str, str], ...] = (
-    {
-        "system": "Darwin",
-        "machine": "arm64",
-        "python_tag": "cp312",
-        "wheel_filename": "cadquery_ocp_novtk-7.9.3.1-cp312-cp312-macosx_11_0_arm64.whl",
-        "wheel_platform": "macosx_11_0_arm64",
-        "wheel_sha256": "a070f99039e877e9558759570fd379365e2d28de3850b62e33c9c48e5ac1f0e3",
-    },
-    {
-        "system": "Linux",
-        "machine": "x86_64",
-        "python_tag": "cp312",
-        "wheel_filename": "cadquery_ocp_novtk-7.9.3.1-cp312-cp312-manylinux_2_31_x86_64.whl",
-        "wheel_platform": "manylinux_2_31_x86_64",
-        "wheel_sha256": "8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b",
-    },
-)
-_LOCKED_RUNTIME_PROVENANCE_SHA256 = "5913aa949b3979b6c93e3df4e0228acdb63633e0c5dbefdcb37f64242fcd44ff"
-
-
-def _literal(parameter_id: str, value: str) -> dict[str, object]:
-    return {"parameter_id": parameter_id, "name": parameter_id.removeprefix("param:"), "value_type": "LENGTH", "literal": value, "expression": None}
-
-
-def _runtime_provenance_lock_sha256(records: tuple[Mapping[str, str], ...]) -> str:
-    encoded = json.dumps(records, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
-
-
-def _runtime_provenance(
-    *,
-    system_name: str | None = None,
-    machine: str | None = None,
-    python_implementation: str | None = None,
-    python_version: str | None = None,
-) -> dict[str, str]:
-    if _runtime_provenance_lock_sha256(_LOCKED_RUNTIME_PROVENANCE) != _LOCKED_RUNTIME_PROVENANCE_SHA256:
-        raise RuntimeError("RUNTIME_PROVENANCE_LOCK_TAMPERED")
-    active_system = platform.system() if system_name is None else system_name
-    active_machine = platform.machine() if machine is None else machine
-    active_implementation = platform.python_implementation() if python_implementation is None else python_implementation
-    active_version = platform.python_version() if python_version is None else python_version
-    version_parts = active_version.split(".")
-    if active_implementation != "CPython" or len(version_parts) < 2 or not all(part.isdigit() for part in version_parts[:2]):
-        raise RuntimeError(
-            f"RUNTIME_PROVENANCE_UNSUPPORTED:{active_implementation}:{active_system}:{active_machine}:{active_version}"
-        )
-    python_tag = f"cp{version_parts[0]}{version_parts[1]}"
-    matches = [
-        record
-        for record in _LOCKED_RUNTIME_PROVENANCE
-        if (record["system"], record["machine"], record["python_tag"])
-        == (active_system, active_machine, python_tag)
-    ]
-    if len(matches) != 1:
-        raise RuntimeError(
-            f"RUNTIME_PROVENANCE_UNSUPPORTED:{active_implementation}:{active_system}:{active_machine}:{active_version}"
-        )
-    return {**matches[0], "python_version": active_version}
-
-
-def _manifest() -> EngineManifest:
-    provenance = _runtime_provenance()
-    return EngineManifest(
-        adapter="strafe-ocp@0.1.0",
-        binding=(
-            "cadquery-ocp-novtk@7.9.3.1"
-            f";wheel={provenance['wheel_filename']}"
-            f";wheel-sha256={provenance['wheel_sha256']}"
-            ";source=d69b064a3a604ebf245b1f3b14fb54c835a3a571"
-            ";lock=packages/core-kernel/uv.lock"
-        ),
-        kernel="OCCT@7.9.3;source=a016080bf6738d6aeae020badee4e888ad1540a5",
-        solver="NONE:not-adopted",
-        toolchain=f"CPython@{provenance['python_version']};dependency-lock=uv@0.11.17",
-        platform_image=(
-            f"{provenance['system']}@{provenance['machine']}"
-            f";python={provenance['python_tag']}"
-            f";wheel-platform={provenance['wheel_platform']}"
-        ),
-        tolerances={"linear_mm": "0.000001", "angular_deg": "0.000001"},
-        deterministic_settings={"parallel": False, "boolean_fuzzy_mm": "0.0000001", "brep_format": 4, "binary64_rounding": "nearest-ties-even"},
-    )
+SNAPSHOT_SCHEMA = "caddydaddy.core-snapshot/1"
+SNAPSHOT_FILENAME = "candidate-snapshot.v1.json"
+_HEX40 = re.compile(r"^[0-9a-f]{40}$")
+_HEX64 = re.compile(r"^[0-9a-f]{64}$")
+_TRIPWIRE_EVALUATOR = REPOSITORY_ROOT / "features" / "tripwire" / "backend" / "engine" / "evaluate.py"
+_EMPTY_RULES: list[dict[str, Any]] = []
 
 
 @dataclass(slots=True)
@@ -132,122 +48,186 @@ class CandidateState:
     bindings: dict[str, dict[str, Any]]
     records: dict[str, dict[str, Any]]
     integrity_hash: str
+    snapshot_receipt: dict[str, Any]
 
     def preimage(self) -> dict[str, Any]:
         return {"public": self.public, "revision": self.revision, "bindings": self.bindings, "records": self.records}
 
 
-def build_candidate_state() -> CandidateState:
-    parameters = {"param:length": _literal("param:length", "24"), "param:width": _literal("param:width", "12"), "param:height": _literal("param:height", "4")}
-    operation = ProgramOperation("op:bracket-stock", "primitive.box", 1, (), {"length": "param:length", "width": "param:width", "height": "param:height"}, (), {}, True)
-    program = PartProgram("part:public-demo-bracket", "revision:public-demo-bracket-01", {"length": "mm", "angle": "deg"}, parameters, (operation,), {})
-    manifest = _manifest()
-    part = RecomputeEngine(ocp_registry(), manifest).recompute(program)
-    if part.status != "SUCCEEDED" or part.current_artifact is None:
-        raise RuntimeError("CORE_RECOMPUTE_FAILED")
-    definition = PartDefinition.from_recompute("definition:public-demo-bracket", part, metadata={"description": "synthetic public demo bracket"}, material_id="material:public-demo-aluminum")
-    assembly_program = AssemblyProgram(
-        "assembly:caddydaddy-demo-01",
-        "revision:caddydaddy-candidate-0.1",
-        {definition.definition_id: definition},
-        (
-            Component("component:bracket-left", definition.definition_id, None, FixedTransform(), True, "bom:public-demo-bracket", {"label": "Left bracket"}),
-            Component("component:bracket-right", definition.definition_id, None, FixedTransform((Fraction(36), Fraction(0), Fraction(0))), True, "bom:public-demo-bracket", {"label": "Right bracket"}),
-        ),
-    )
-    assembly = AssemblyEngine(manifest).evaluate(assembly_program)
-    if assembly.status != "SUCCEEDED" or assembly.current_artifact is None:
-        raise RuntimeError("CORE_ASSEMBLY_FAILED")
-    viewport = tessellate_part(part).as_dict()
-    revision = {"revision_id": assembly.attempted_revision_id, "content_hash": assembly.geometry_hash, "recompute_state": "SUCCEEDED", "geometry_artifact_hash": assembly.current_artifact.content_hash}
-    bindings: dict[str, dict[str, Any]] = {}
-    records: dict[str, dict[str, Any]] = {}
-    nodes = []
-    bodies = []
-    colors = ("#7895a1", "#ad805c")
-    for index, component in enumerate(assembly.components):
-        scoped_ranges = []
-        for core_range in viewport["entity_ranges"]:
-            if core_range["count"] % 3 or core_range["start"] % 3:
-                raise RuntimeError("CORE_VIEWPORT_RANGE_INVALID")
-            entity_id = "entity:" + canonical_sha256({"component_id": component.component_id, "core_entity_id": core_range["entity_id"]})
-            semantic_id = "ref:" + canonical_sha256({"component_id": component.component_id, "core_reference_id": core_range["semantic_reference_id"]})
-            record_id = "forge-record:" + canonical_sha256({"component_id": component.component_id, "entity_id": entity_id})
-            occurrence_path = [assembly.assembly_id, component.component_id, entity_id]
-            record_revision_id = "record-revision:" + canonical_sha256({"forge_revision_id": assembly.attempted_revision_id, "forge_record_id": record_id, "occurrence_path": occurrence_path})
-            request = {"entity_id": entity_id, "node_id": component.component_id, "product_thread_id": PRODUCT_THREAD_ID, "forge_record_id": record_id, "occurrence_path": occurrence_path, "forge_record_revision_id": record_revision_id, "forge_revision_id": assembly.attempted_revision_id}
-            bindings[entity_id] = {"request": request, "coreEntityId": core_range["entity_id"], "coreSemanticReferenceId": core_range["semantic_reference_id"]}
-            records[record_id] = {
-                "forge_record_revision_id": record_revision_id,
-                "occurrence_path": occurrence_path,
-                "tripwire_node_id": compute_node_id(PRODUCT_THREAD_ID, record_id, occurrence_path),
-                "business_fields": {"mpn": "PUBLIC-DEMO-BRACKET-01", "vendor": "Synthetic public demo", "display_name": component.component_metadata["label"]},
-                "measurements": [{"name": "length", "source_mm": "24", "projected_m": "0.024", "exact_factor": "0.001"}],
-                "tripwire_payload": {"kind": "part", "mpn": "PUBLIC-DEMO-BRACKET-01", "vendor": "Synthetic public demo"},
-            }
-            scoped_ranges.append({"startTriangle": core_range["start"] // 3, "triangleCount": core_range["count"] // 3, "entityId": entity_id, "semanticReferenceId": semantic_id, "featureId": core_range["feature_id"]})
-        transform = component.local_transform
-        translation = [float(Fraction(int(item["numerator"]), int(item["denominator"]))) for item in transform["translation_mm"]]
-        angle = float(Fraction(int(transform["rotation_angle_deg"]["numerator"]), int(transform["rotation_angle_deg"]["denominator"])))
-        rotation = {"X": [angle, 0, 0], "Y": [0, angle, 0], "Z": [0, 0, angle]}[transform["rotation_axis"]]
-        body_id = "body:" + canonical_sha256({"assembly_id": assembly.assembly_id, "component_id": component.component_id, "part_artifact_id": component.part_artifact_id})
-        label = component.component_metadata["label"]
-        nodes.append({
-            "nodeId": component.component_id,
-            "kind": "BODY",
-            "label": label,
-            "bodyId": body_id,
-            "visible": True,
-            "transform": {"translation": translation, "rotationDegrees": rotation, "scale": [1, 1, 1]},
-            "mesh": {"positions": viewport["positions"], "normals": viewport["normals"], "indices": viewport["indices"], "entityRanges": scoped_ranges},
-            "appearance": {"color": colors[index], "opacity": 1},
-            "metadata": {"material": "Public demo aluminum", "mass": {"value": None, "unit": "kg", "evidence": "NOT_PROVIDED"}, "sourceDocumentId": assembly.assembly_id, "sourceRevisionId": assembly.attempted_revision_id, "corePartDocumentId": component.part_document_id, "corePartRevisionId": component.part_revision_id, "corePartArtifactId": component.part_artifact_id, "assemblyArtifactId": assembly.current_artifact.artifact_id, "sourceRecordHash": definition.source_record_hash},
-        })
-        bodies.append({"bodyId": body_id, "label": label, "material": "Public demo aluminum", "featureIds": [operation.operation_id]})
-    document = {
-        "kind": "PART",
-        "label": "Public demo bracket pair",
-        "documentId": assembly.assembly_id,
-        "revisionId": assembly.attempted_revision_id,
-        "units": {"length": "mm", "angle": "deg"},
-        "scene": {"model": "forge.browser-render-scene/internal-1", "documentKind": "PART", "documentId": assembly.assembly_id, "revisionId": assembly.attempted_revision_id, "label": "Public demo bracket pair", "nodes": nodes},
-        "parameters": [{"parameterId": key, "name": value["name"], "valueType": "LENGTH", "literal": value["literal"], "expression": None, "unit": "mm", "description": "Core-kernel input"} for key, value in parameters.items()],
-        "operations": [{"operationId": operation.operation_id, "type": operation.type, "typeVersion": operation.type_version, "label": "Bracket stock", "dependsOn": [], "enabled": True, "payload": {}, "parameterBindings": dict(operation.parameter_bindings)}],
-        "bodies": bodies,
-        "complianceBindings": bindings,
-    }
-    current = {"key": "current", "recomputeStatus": "SUCCEEDED", "displayState": "CURRENT", "requestedRevisionId": assembly.attempted_revision_id, "displayedRevisionId": assembly.attempted_revision_id, "sourceArtifactId": assembly.current_artifact.artifact_id, "diagnostics": [], "operationStatus": {operation.operation_id: "SUCCEEDED"}, "adapterOnline": True, "editable": False}
-    public = {
-        "candidate": {"version": "0.1", "status": "LOCAL_CANDIDATE", "observedAt": CANDIDATE_TIME, "policyState": "DRAFT_REVIEW_ONLY", "claimCeiling": "REVIEW_SUPPORT_ONLY_NO_LEGAL_CONCLUSION", "claim": BOUNDED_CLAIM, "positioning": POSITIONING},
-        "productThreadId": PRODUCT_THREAD_ID,
-        "adapterLabel": "Core kernel + Tripwire bridge",
-        "evidenceCeiling": "DEMONSTRATED_LOCAL",
-        "capabilities": {"authoring": False, "recompute": False, "import": False, "export": False, "complianceAtDesignClick": True},
-        "forgeRevision": revision,
-        "kernelProvenance": {"partResult": "forge.core-recompute-result/1", "assemblyResult": "forge.core-assembly-result/1", "viewportPacket": viewport["protocol_version"], "engineManifestHash": assembly.engine_manifest_hash, "binding": manifest.binding, "toolchain": manifest.toolchain, "platformImage": manifest.platform_image, "geometryArtifactId": assembly.current_artifact.artifact_id, "geometryArtifactHash": assembly.current_artifact.content_hash},
-        "descriptors": [],
-        "document": document,
-        "states": {"current": current},
-        "history": [{"sequence": 1, "revisionId": assembly.attempted_revision_id, "label": "Core candidate execution", "actor": "core-kernel", "disposition": "DEMONSTRATED_LOCAL", "time": "2026-09-05", "summary": "Fixed-transform demo projected for browser review"}],
-    }
-    state = CandidateState(public, revision, bindings, records, "")
-    state.public["candidate"]["payloadHash"] = canonical_sha256(state.public)
-    state.integrity_hash = canonical_sha256(state.preimage())
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _snapshot_error(code: str) -> RuntimeError:
+    return RuntimeError(code)
+
+
+def _require_identity(value: Any, pattern: re.Pattern[str], code: str) -> str:
+    if not isinstance(value, str) or pattern.fullmatch(value) is None:
+        raise _snapshot_error(code)
+    return value
+
+
+def _verify_resolved_manifest(snapshot: Mapping[str, Any], snapshot_path: Path, manifest_path: Path) -> None:
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        generated = manifest["generated_snapshot"]
+        if manifest["source"] != snapshot["source"]:
+            raise _snapshot_error("SNAPSHOT_STALE")
+        if generated["schema_version"] != SNAPSHOT_SCHEMA:
+            raise _snapshot_error("SNAPSHOT_SCHEMA_INVALID")
+        if generated["file_sha256"] != _sha256_file(snapshot_path):
+            raise _snapshot_error("SNAPSHOT_TAMPERED")
+        if generated["document_sha256"] != snapshot["snapshot_hash"]:
+            raise _snapshot_error("SNAPSHOT_TAMPERED")
+        if generated["provenance"] != snapshot["generation"] or manifest["tripwire"] != snapshot["tripwire"]:
+            raise _snapshot_error("SNAPSHOT_STALE")
+        if manifest["build_command"] != snapshot["generation"]["build_command"]:
+            raise _snapshot_error("SNAPSHOT_STALE")
+        records = {record["path"]: record for record in manifest["files"]}
+        record = records[generated["path"]]
+        if record["sha256"] != generated["file_sha256"]:
+            raise _snapshot_error("SNAPSHOT_TAMPERED")
+    except RuntimeError:
+        raise
+    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise _snapshot_error("RESOLVED_MANIFEST_INVALID") from error
+
+
+def load_candidate_state(snapshot_path: Path | None = None, manifest_path: Path | None = None) -> CandidateState:
+    configured = os.environ.get("CADDYDADDY_SNAPSHOT_PATH")
+    active_snapshot = (snapshot_path or (Path(configured) if configured else Path(__file__).with_name(SNAPSHOT_FILENAME))).resolve()
+    if not active_snapshot.is_file():
+        raise _snapshot_error("SNAPSHOT_MISSING")
+    try:
+        snapshot = json.loads(active_snapshot.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        raise _snapshot_error("SNAPSHOT_INVALID") from error
+    if not isinstance(snapshot, dict) or snapshot.get("schema_version") != SNAPSHOT_SCHEMA:
+        raise _snapshot_error("SNAPSHOT_SCHEMA_INVALID")
+    _require_identity(snapshot.get("snapshot_hash"), _HEX64, "SNAPSHOT_IDENTITY_INVALID")
+    unsigned = {key: value for key, value in snapshot.items() if key != "snapshot_hash"}
+    if canonical_sha256(unsigned) != snapshot["snapshot_hash"]:
+        raise _snapshot_error("SNAPSHOT_TAMPERED")
+    try:
+        source = snapshot["source"]
+        _require_identity(source["commit"], _HEX40, "SNAPSHOT_SOURCE_IDENTITY_INVALID")
+        _require_identity(source["tree"], _HEX40, "SNAPSHOT_SOURCE_IDENTITY_INVALID")
+        _require_identity(source["commit_tree"], _HEX40, "SNAPSHOT_SOURCE_IDENTITY_INVALID")
+        if source["tree_state"] not in {"COMMITTED", "STAGED_CANDIDATE"}:
+            raise _snapshot_error("SNAPSHOT_SOURCE_IDENTITY_INVALID")
+        generation = snapshot["generation"]
+        if generation["mode"] != "LOCAL_CORE_RECOMPUTE" or not generation["build_command"]:
+            raise _snapshot_error("SNAPSHOT_PROVENANCE_INVALID")
+        evaluator = snapshot["tripwire"]["evaluator"]
+        _require_identity(evaluator["source_commit"], _HEX40, "EVALUATOR_IDENTITY_INVALID")
+        _require_identity(evaluator["source_tree"], _HEX40, "EVALUATOR_IDENTITY_INVALID")
+        _require_identity(evaluator["sha256"], _HEX64, "EVALUATOR_IDENTITY_INVALID")
+        rulepack = snapshot["tripwire"]["rulepack"]
+        _require_identity(rulepack["sha256"], _HEX64, "RULEPACK_IDENTITY_INVALID")
+        if rulepack["state"] != "DRAFT_REVIEW_ONLY" or rulepack["rule_count"] != 0:
+            raise _snapshot_error("RULEPACK_IDENTITY_INVALID")
+        raw_state = snapshot["candidate_state"]
+        state = CandidateState(
+            public=raw_state["public"],
+            revision=raw_state["revision"],
+            bindings=raw_state["bindings"],
+            records=raw_state["records"],
+            integrity_hash=raw_state["integrity_hash"],
+            snapshot_receipt={
+                "path": str(active_snapshot),
+                "file_sha256": _sha256_file(active_snapshot),
+                "document_sha256": snapshot["snapshot_hash"],
+                "source": deepcopy(source),
+                "generation": deepcopy(generation),
+                "core": deepcopy(snapshot["core"]),
+                "tripwire": deepcopy(snapshot["tripwire"]),
+            },
+        )
+    except RuntimeError:
+        raise
+    except (KeyError, TypeError, ValueError) as error:
+        raise _snapshot_error("SNAPSHOT_INVALID") from error
+    if canonical_sha256(state.preimage()) != state.integrity_hash:
+        raise _snapshot_error("SNAPSHOT_STATE_TAMPERED")
+    expected_public_source = {"commit": source["commit"], "tree": source["tree"]}
+    if state.public.get("snapshotProvenance", {}).get("source") != expected_public_source:
+        raise _snapshot_error("SNAPSHOT_STALE")
+    active_manifest = manifest_path
+    if active_manifest is None:
+        default_manifest = REPOSITORY_ROOT / "bundle-manifest.resolved.json"
+        active_manifest = default_manifest if default_manifest.is_file() else None
+    if active_manifest is not None:
+        _verify_resolved_manifest(snapshot, active_snapshot, active_manifest.resolve())
     return state
 
 
+def review_readiness_guardrail(record: Mapping[str, Any]) -> dict[str, Any]:
+    """Report evidence presence only; this function cannot clear or classify."""
+
+    requirements = (
+        ("origin", "tripwire_payload", "origin"),
+        ("material", "tripwire_payload", "material"),
+        ("supplier", "business_fields", "vendor"),
+        ("end_use", "tripwire_payload", "end_use"),
+    )
+    missing: list[dict[str, str]] = []
+    present: list[dict[str, str]] = []
+    for field, container, key in requirements:
+        value = record.get(container, {}).get(key)
+        has_value = value is not None and (not isinstance(value, (str, list, tuple, dict)) or bool(value))
+        target = present if has_value else missing
+        target.append({
+            "field": field,
+            "source": f"{container}.{key}",
+            "reason_code": f"REVIEW_EVIDENCE_{'PRESENT' if has_value else 'MISSING'}:{field.upper()}",
+            "reason": (
+                f"{field.replace('_', ' ').title()} evidence is present for human review; no inference or determination was made."
+                if has_value
+                else f"{field.replace('_', ' ').title()} evidence is missing from the bound product record."
+            ),
+        })
+    return {
+        "guardrail": "caddydaddy.review-readiness/1",
+        "scope": "EVIDENCE_PRESENCE_ONLY",
+        "outcome": "MISSING_EVIDENCE" if missing else "EVIDENCE_FIELDS_PRESENT",
+        "missing": missing,
+        "present": present,
+        "can_clear": False,
+        "can_classify": False,
+        "regulatory_determination": "NOT_PERFORMED",
+        "human_review_requirement": "HUMAN_REVIEW_REQUIRED",
+    }
+
+
 class CandidateRuntime:
-    def __init__(self, state: CandidateState | None = None, bridge_evaluate: Callable[..., dict[str, Any]] | None = None) -> None:
-        self.state = state or build_candidate_state()
+    def __init__(self, state: CandidateState | None = None, bridge_evaluate: Callable[..., dict[str, Any]] | None = None, *, snapshot_path: Path | None = None, manifest_path: Path | None = None) -> None:
+        self.state = state or load_candidate_state(snapshot_path, manifest_path)
         self.bridge_evaluate = bridge_evaluate or evaluate_compliance
+        self.evaluator_path = _TRIPWIRE_EVALUATOR
+        self._verify_runtime_inputs()
+
+    def _verify_runtime_inputs(self) -> None:
+        evaluator = self.state.snapshot_receipt["tripwire"]["evaluator"]
+        if not self.evaluator_path.is_file():
+            raise _snapshot_error("EVALUATOR_MISSING")
+        if _sha256_file(self.evaluator_path) != evaluator["sha256"]:
+            raise _snapshot_error("EVALUATOR_TAMPERED")
+        rulepack = self.state.snapshot_receipt["tripwire"]["rulepack"]
+        if canonical_sha256(_EMPTY_RULES) != rulepack["sha256"]:
+            raise _snapshot_error("RULEPACK_TAMPERED")
 
     def candidate(self) -> dict[str, Any]:
         return deepcopy(self.state.public)
 
     def health(self) -> dict[str, Any]:
-        return {"ok": True, "service": "caddydaddy-product-service", "candidate": "0.1", "status": "LOCAL_CANDIDATE", "policy_state": "DRAFT_REVIEW_ONLY"}
+        return {"ok": True, "service": "caddydaddy-product-service", "candidate": "0.1", "status": "SNAPSHOT_RUNTIME", "policy_state": "DRAFT_REVIEW_ONLY", "snapshot": {"sha256": self.state.snapshot_receipt["document_sha256"], "source": deepcopy(self.state.snapshot_receipt["source"]), "verified": True}}
 
     def evaluate_request(self, request: Any) -> tuple[int, dict[str, Any]]:
+        try:
+            self._verify_runtime_inputs()
+        except RuntimeError as error:
+            return self._blocked(503, str(error), "Immutable runtime evidence failed verification.")
         if canonical_sha256(self.state.preimage()) != self.state.integrity_hash:
             return self._blocked(503, "CANDIDATE_TAMPERED", "The in-memory candidate no longer matches its startup receipt.")
         if not isinstance(request, dict) or set(request) != REQUEST_KEYS:
@@ -268,7 +248,8 @@ class CandidateRuntime:
             if request.get(field) != expected[field]:
                 return self._blocked(409, code, f"The submitted {field} does not match the current immutable selection.")
         record = self.state.records[request["forge_record_id"]]
-        rules: list[dict] = []
+        rules = deepcopy(_EMPTY_RULES)
+        guardrail = review_readiness_guardrail(record)
         compliance_input = {
             "schema_version": "caddydaddy.compliance-input/1",
             "projection_id": "compliance-input:" + "0" * 64,
@@ -313,6 +294,8 @@ class CandidateRuntime:
                 or receipt["tripwire"]["input_ref"] != observation["input_ref"]
                 or len(findings) != 1
                 or findings[0]["node_id"] != record["tripwire_node_id"]
+                or findings[0]["outcome"] != "INSUFFICIENT_EVIDENCE"
+                or findings[0]["rule_ids"]
                 or observation["legal_effect"] != "NONE"
             ):
                 raise ComplianceBridgeError("BINDING_MISMATCH", "Bound evidence does not match selection")
@@ -321,13 +304,16 @@ class CandidateRuntime:
             return self._blocked(502, code, "The evaluator response failed receipt validation.")
         return 200, {
             "status": "REVIEW_REQUIRED",
+            "evidence_status": "INSUFFICIENT_EVIDENCE",
             "cleared": False,
             "policy_state": "DRAFT_REVIEW_ONLY",
             "human_review_requirement": "HUMAN_REVIEW_REQUIRED",
             "claim_ceiling": "REVIEW_SUPPORT_ONLY_NO_LEGAL_CONCLUSION",
+            "claim_ceiling_statement": BOUNDED_CLAIM,
             "legal_effect": "NONE",
             "binding": {"request": deepcopy(request), "tripwire_node_id": record["tripwire_node_id"], "projection_ref": {"projection_id": compliance_input["projection_id"], "projection_hash": compliance_input["projection_hash"]}},
             "evidence": {"finding": deepcopy(findings[0]), "determination": deepcopy(result["evaluator_output"][record["tripwire_node_id"]])},
+            "review_readiness_guardrail": guardrail,
             "observation": deepcopy(observation),
             "binding_receipt": deepcopy(receipt),
         }

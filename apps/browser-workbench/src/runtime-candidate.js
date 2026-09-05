@@ -1,6 +1,6 @@
 import { validateRenderScene } from "./scene-contract.js";
 
-export const BOUNDED_CLAIM = "CADdyDaddy combines one bounded browser CAD workflow with a dated, review-only compliance-at-design-click evaluation on the same immutable product revision.";
+export const BOUNDED_CLAIM = "CADdyDaddy binds a selected CAD entity to its immutable product revision and runs a review-readiness guardrail through Tripwire; Candidate 0.1 returns insufficient evidence and requires human review, not a compliance determination.";
 
 export async function loadProductCandidate(fetchImpl = fetch) {
   const response = await fetchImpl("/api/candidate", { headers: { Accept: "application/json" }, cache: "no-store" });
