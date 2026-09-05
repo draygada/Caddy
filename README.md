@@ -1,7 +1,15 @@
 # Tripwire
 
 Design-stage export-control guidance. DNHacks, Station DC, 5–6 September 2026.
-Spec: `~/Programming/Strafe/hackathon-dc-2026/THE_BUILD.md`.
+
+Canonical implementation authority:
+
+1. `docs/NORTH_STAR.md`
+2. `docs/feature-bibles/00_INDEX.md` and the assigned feature bible
+3. frozen schemas and fixtures in this repository
+
+Research/scenario source: `~/Programming/Strafe/hackathon-dc-2026/THE_BUILD.md`.
+The older `hackathon-dc-2026/bible/` describes a superseded project and is not build authority.
 
 ## What is real vs. what is scaffolding
 
