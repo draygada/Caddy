@@ -1,0 +1,50 @@
+{
+  "request_id": 2,
+  "stub": true,
+  "fixture_mode": "SYNTHETIC_DEMO",
+  "artifact_status": "candidate_unapproved",
+  "design_revision": "sha256:73f29ea9b9b0818053e3ff3922a364621e6c4492716f22d9d67b3a0056094027",
+  "rule_pack_sha": "sha256:ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f",
+  "rule_pack_status": "unapproved_input",
+  "destination_policy_sha": null,
+  "ecfr_date": "2026-09-01",
+  "determinations": {
+    "kestrel": {
+      "state": "flag",
+      "jurisdiction": "EAR",
+      "entries": ["9A012.a.2"],
+      "direct_tripwires": [
+        {
+          "rule_id": "CCL-9A012.a.2",
+          "state": "fired",
+          "jurisdiction": "EAR",
+          "entry": "9A012.a.2",
+          "reason_for_control": ["NS1", "AT1"],
+          "node_id": "kestrel",
+          "cause_node_id": "battery_pack",
+          "facts": [
+            {"attribute": "bvlos", "observed": true, "unit": null, "operator": "equals", "threshold": true},
+            {"attribute": "endurance_h", "observed": 3.25, "unit": "h", "operator": ">=", "threshold": 3},
+            {"attribute": "endurance_contract", "observed": "SYNTHETIC_DEMO_ONLY", "unit": null, "operator": "equals", "threshold": "SYNTHETIC_DEMO_ONLY"}
+          ],
+          "text": "[UNAPPROVED SHAPE VECTOR] a.2. A maximum 'endurance' of 3 hours or greater;",
+          "source_url": "https://www.ecfr.gov/current/title-15/part-774",
+          "ecfr_date": "2026-09-01",
+          "rule_effective": "2026-08-13",
+          "evidence": {"level": "synthetic", "sha256": "sha256:c60be9cd7da59aa8e5cca3bce8a3938bd40d79f7aec5f3a3fb4c7c40e818b51f", "span": [1837785, 1837841]}
+        }
+      ],
+      "propagated_tripwires": [],
+      "unresolved_tripwires": [],
+      "destinations": {"status": "not_evaluated", "reason": "P0 has no approved destination policy"},
+      "evidence_level": "synthetic"
+    }
+  },
+  "delta": {
+    "changed_nodes": ["battery_pack", "kestrel"],
+    "tripwires_added": [{"node_id": "kestrel", "rule_id": "CCL-9A012.a.2", "kind": "direct", "cause_node_id": "battery_pack"}],
+    "tripwires_removed": [{"node_id": "kestrel", "rule_id": "CCL-9A012.a.1", "kind": "direct"}],
+    "rules_evaluated": ["CCL-9A012.a.1", "CCL-9A012.a.2"]
+  },
+  "summary": {"clear": 0, "watch": 0, "question": 0, "flag": 1}
+}

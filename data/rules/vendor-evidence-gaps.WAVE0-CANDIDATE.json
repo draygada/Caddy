@@ -1,0 +1,53 @@
+{
+  "artifact_status": "candidate_unapproved",
+  "semantic_approval": false,
+  "classification_inference": "none",
+  "claim_ceiling": "This ledger records missing evidence only. A URL, planning assertion, reseller description, or supplier-declared ECCN is not treated as a Tripwire classification.",
+  "gaps": [
+    {
+      "id": "kestrel-platform-endurance",
+      "subject": "Kestrel synthetic demo airframe",
+      "existing_material": ["Planning assertion for baseline and F1 energy values"],
+      "missing_evidence": ["Approved D2 formula", "usable fraction", "steady or maximum power assumption", "ISA sea-level and zero-wind worked calculation", "qualified engineering or explicit synthetic-demo approval"],
+      "blocked_claim": "Actual maximum endurance or an approved 9A012 endurance result",
+      "classification": null,
+      "status": "open"
+    },
+    {
+      "id": "baseline-thermal-lepton",
+      "subject": "Planning reference: Teledyne FLIR Lepton, MPN 500-0771-01",
+      "existing_material": ["Uncached URL in data/catalog/catalog.json", "Supplier-declared ECCN in planning catalog"],
+      "missing_evidence": ["Cached authoritative vendor document", "document SHA-256 and raw span", "maximum frame rate", "focal-plane-array identity and element count", "evidence addressing 6A002.a.3.f prerequisite", "evidence for every Note 3 exclusion branch", "qualified semantic review"],
+      "blocked_claim": "Any verified classification, release, reason code, or complete camera predicate",
+      "classification": null,
+      "status": "open"
+    },
+    {
+      "id": "swap-thermal-boson-plus-640",
+      "subject": "Planning reference: Teledyne FLIR Boson+ 640 (60 Hz)",
+      "existing_material": ["Uncached reseller URL in data/catalog/catalog.json", "Planning assertion of 60 Hz and 327,680 elements"],
+      "missing_evidence": ["Cached authoritative vendor document for the exact ordered configuration", "document SHA-256 and raw span", "maximum frame rate", "focal-plane-array identity and element count", "evidence addressing 6A002.a.3.f prerequisite", "evidence for every Note 3 exclusion branch", "civil-embedding facts", "qualified semantic review of the 60 Hz and 111,000-element RS branches and exemptions"],
+      "blocked_claim": "Any verified 6A003.b.4.b or RS result, parent propagation, or legal classification",
+      "classification": null,
+      "status": "open"
+    },
+    {
+      "id": "battery-baseline-molicel",
+      "subject": "Planning reference: Molicel INR-21700-P45B / synthetic 1,000 Wh pack",
+      "existing_material": ["Uncached product URL in data/catalog/catalog.json", "Synthetic pack-energy planning value"],
+      "missing_evidence": ["Cached authoritative cell evidence", "pack topology and losses", "usable capacity", "power draw and environmental assumptions", "approved D2 worked example"],
+      "blocked_claim": "Actual Kestrel endurance or a vendor-backed pack result",
+      "classification": null,
+      "status": "open"
+    },
+    {
+      "id": "battery-swap-molicel",
+      "subject": "Planning reference: Molicel synthetic 1,300 Wh pack",
+      "existing_material": ["Synthetic pack-energy planning value only"],
+      "missing_evidence": ["Exact pack bill of materials", "cached authoritative component evidence", "pack topology and losses", "usable capacity", "power draw and environmental assumptions", "approved D2 worked example"],
+      "blocked_claim": "Actual F1 maximum endurance or an approved 9A012 result",
+      "classification": null,
+      "status": "open"
+    }
+  ]
+}

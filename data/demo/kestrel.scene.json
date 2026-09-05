@@ -1,0 +1,12 @@
+{
+  "artifact_status": "candidate_unapproved",
+  "fixture_mode": "SYNTHETIC_DEMO",
+  "coordinate_claim": "Schematic rendering anchors only; not dimensional CAD data.",
+  "slots": {
+    "nose_thermal": {"position": [0, 0.08, 1.42], "node_ids": ["nose_thermal"]},
+    "belly_sensor_pod": {"position": [0, -0.22, 0.42], "node_ids": ["sensor_pod"]},
+    "fc_bay": {"position": [0, 0.02, 0.16], "node_ids": ["fc_board", "fc_mcu", "io_mcu", "imu", "baro", "mag", "gnss"]},
+    "battery_bay": {"position": [0, -0.02, -0.18], "node_ids": ["battery_pack"]},
+    "mast_datalink": {"position": [0, 0.32, -0.18], "node_ids": ["datalink"]}
+  }
+}

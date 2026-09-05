@@ -1,0 +1,63 @@
+{
+  "artifact_status": "candidate_unapproved",
+  "fixture_mode": "SYNTHETIC_DEMO",
+  "base_design": "data/demo/kestrel-baseline.design.json",
+  "mutation_format": "RFC6901 JSON Pointer replacement applied in listed order",
+  "vectors": [
+    {
+      "id": "baseline",
+      "request_id": 1,
+      "changed_node_id": null,
+      "mutations": [],
+      "expected_response": "backend/tests/fixtures/evaluate-baseline.json",
+      "expected_design_revision": "sha256:fac39ef03be1ba8edbaa30b7cdcfab02e58ca14db00ade4c3c212049b23171dc"
+    },
+    {
+      "id": "battery-flag-shape",
+      "request_id": 2,
+      "changed_node_id": "battery_pack",
+      "mutations": [
+        {"path": "/nodes/14/mpn", "value": "SYN-BATTERY-1300WH"},
+        {"path": "/nodes/14/attrs/energy_Wh/value", "value": 1300},
+        {"path": "/nodes/0/attrs/endurance_h/value", "value": 3.25}
+      ],
+      "expected_response": "backend/tests/fixtures/evaluate-battery-flag.json",
+      "expected_design_revision": "sha256:73f29ea9b9b0818053e3ff3922a364621e6c4492716f22d9d67b3a0056094027"
+    },
+    {
+      "id": "camera-flag-shape",
+      "request_id": 3,
+      "changed_node_id": "nose_thermal",
+      "mutations": [
+        {"path": "/nodes/16/mpn", "value": "SYN-THERMAL-640"},
+        {"path": "/nodes/16/attrs/frame_rate_hz/value", "value": 60},
+        {"path": "/nodes/16/attrs/fpa_elements/value", "value": 327680},
+        {"path": "/nodes/16/attrs/fpa_6A002_a3_f_status/value", "value": "SYNTHETIC_PRESENT"},
+        {"path": "/nodes/16/attrs/note_3_exclusions_reviewed/value", "value": true}
+      ],
+      "expected_response": "backend/tests/fixtures/evaluate-camera-flag.json",
+      "expected_design_revision": "sha256:ae55dc0b39980313d0e26894001e42ee0da51203d587c745d1fc02542c8b9fcc"
+    },
+    {
+      "id": "no-change",
+      "request_id": 4,
+      "changed_node_id": "fc_board",
+      "mutations": [],
+      "expected_response": "backend/tests/fixtures/evaluate-no-change.json",
+      "expected_design_revision": "sha256:fac39ef03be1ba8edbaa30b7cdcfab02e58ca14db00ade4c3c212049b23171dc"
+    },
+    {
+      "id": "missing-evidence",
+      "request_id": 5,
+      "changed_node_id": "nose_thermal",
+      "mutations": [
+        {"path": "/nodes/16/mpn", "value": "SYN-THERMAL-MISSING-EVIDENCE"},
+        {"path": "/nodes/16/attrs/frame_rate_hz/value", "value": 60},
+        {"path": "/nodes/16/attrs/fpa_6A002_a3_f_status/value", "value": null},
+        {"path": "/nodes/16/attrs/note_3_exclusions_reviewed/value", "value": false}
+      ],
+      "expected_response": "backend/tests/fixtures/evaluate-missing-evidence.json",
+      "expected_design_revision": "sha256:5514a9deff89d3195e6b29bb523bd7e724da9acef955ca7acd33ceec4bcbcd82"
+    }
+  ]
+}

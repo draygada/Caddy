@@ -1,6 +1,6 @@
 # Candidate rule text
 
-This is an evidence bundle for human transcription into `rules.json`; it is not a determination and is not `rules.json`. Candidate printer output below is reproduced exactly as emitted by `tools/print_rule_text.py`.
+This is an evidence bundle for human transcription into `rules.json`; it is not a determination and is not `rules.json`. Most candidate printer output below is reproduced exactly as emitted by `tools/print_rule_text.py`. The five 9A012 sections identified as stale in `DRAFT_REVIEW.md` were mechanically regenerated in Wave 0 directly from the pinned raw XML because the current printer begins its scoped search at an earlier cross-reference. Those sections carry reproducible raw-byte receipts and remain explicitly unapproved.
 
 ## EAR / title-15 part-774
 
@@ -10,42 +10,15 @@ Entry id: `9A012.a`
 
 Source file(s) searched: `ecfr/title-15-part-774-2026-09-01.xml` (ecfr_date 2026-09-01)
 
-Printer output (verbatim, unedited):
+Wave-0 raw-span candidate (normalized only for display):
 
 ```text
-### title-15-part-774-2026-09-01.xml  (ecfr_date 2026-09-01)  — 9 block(s)
-
-[Supplement No. 1 to Part 774—The Commerce Control List]  <FP-1>
-STA: License Exception STA may not be used to ship commodities in 9A012.a that are controlled for missile technology (MT) reasons that have a payload capability of at least 500 kg to a range of at least 300 km to any of the destinations listed in Country Groups A:5 or A:6 (See supplement no. 1 to part 740 of the EAR).
-
-[Technical Notes:]  <I>
-1. For the purposes of 9A012.a, 'operator' is a person who initiates or commands the “UAV” or unmanned “airship” flight.
-
-[Technical Notes:]  <I>
-2. For the purposes of 9A012.a, 'endurance' is to be calculated for ISA conditions (ISO 2533:1975) at sea level in zero wind.
-
-[Technical Notes:]  <I>
-3. For the purposes of 9A012.a, 'natural vision' means unaided human sight, with or without corrective lenses.
-
-[Supplement No. 1 to Part 774—The Commerce Control List]  <P>
-b.3. Equipment or “components” “specially designed” to convert a manned “aircraft” or a manned “airship” to a “UAV” or unmanned “airship”, controlled by 9A012.a;
-
-[Supplement No. 1 to Part 774—The Commerce Control List]  <TD>
-NS applies to “software” for equipment controlled by 9A001 to 9A004, 9A012 (except 9A012.a.1), 9B001 to 9B010, and technology controlled by 9E003
-
-[Supplement No. 1 to Part 774—The Commerce Control List]  <TD>
-NS applies to “software” for equipment controlled by 9A001 to 9A004, 9A012 (except 9A012.a.1), 9B001 to 9B010
-
-[Supplement No. 1 to Part 774—The Commerce Control List]  <TD>
-NS applies to entire entry, except 9D004.e for 9A012.a.1 items
-
-[Supplement No. 1 to Part 774—The Commerce Control List]  <TD>
-NS applies to “technology” for items controlled by 9A004, 9A012 (except for 9A012.a.1), 9B001 to 9B010, 9D001 to 9D004 for NS reasons
-
-=== 9A012.a: 9 block(s) across 1 file(s) ===
+a. “UAVs” or unmanned “airships”, designed to have controlled flight out of the direct 'natural vision' of the 'operator' and having any of the following:
 ```
 
-SUGGESTION (unverified): No returned block contains the operative list paragraph; the [Technical Notes:] <I> block beginning “1. For the purposes of 9A012.a” is the closest identifier-specific candidate because it defines a term used by that paragraph.
+Receipt: raw bytes `[1837535, 1837731)`, raw-span SHA-256 `ff89b7f79a3da557d9f6c91b5bea6ab14a9d8a836e76fd03d2e9717533d34fef`. Full receipt: `source-receipts.WAVE0-CANDIDATE.json#ecfr-774-9A012-a-chapeau`.
+
+Status: **UNAPPROVED CANDIDATE.** Whether `bvlos` represents this chapeau is reserved for qualified review.
 
 ### 9A012.a.1
 
@@ -53,27 +26,15 @@ Entry id: `9A012.a.1`
 
 Source file(s) searched: `ecfr/title-15-part-774-2026-09-01.xml` (ecfr_date 2026-09-01)
 
-Printer output (verbatim, unedited):
+Wave-0 raw-span candidate (normalized only for display):
 
 ```text
-### title-15-part-774-2026-09-01.xml  (ecfr_date 2026-09-01)  — 4 block(s)
-
-[Supplement No. 1 to Part 774—The Commerce Control List]  <TD>
-NS applies to “software” for equipment controlled by 9A001 to 9A004, 9A012 (except 9A012.a.1), 9B001 to 9B010, and technology controlled by 9E003
-
-[Supplement No. 1 to Part 774—The Commerce Control List]  <TD>
-NS applies to “software” for equipment controlled by 9A001 to 9A004, 9A012 (except 9A012.a.1), 9B001 to 9B010
-
-[Supplement No. 1 to Part 774—The Commerce Control List]  <TD>
-NS applies to entire entry, except 9D004.e for 9A012.a.1 items
-
-[Supplement No. 1 to Part 774—The Commerce Control List]  <TD>
-NS applies to “technology” for items controlled by 9A004, 9A012 (except for 9A012.a.1), 9B001 to 9B010, 9D001 to 9D004 for NS reasons
-
-=== 9A012.a.1: 4 block(s) across 1 file(s) ===
+a.1. A maximum 'endurance' less than 3 hours;
 ```
 
-SUGGESTION (unverified): No returned block contains the operative list paragraph; the <TD> block beginning “NS applies to entire entry” is the closest control-specific candidate because it states an express exception for 9A012.a.1.
+Receipt: raw bytes `[1837732, 1837784)`, raw-span SHA-256 `fc8aae6116915056ab92f90791ad6dbeafb390dabf712790f916b12b6874d2a0`. Full receipt: `source-receipts.WAVE0-CANDIDATE.json#ecfr-774-9A012-a1`.
+
+Status: **UNAPPROVED CANDIDATE.** The chapeau, reason codes, MT handling, and effective date are not approved by this extraction.
 
 ### 9A012.a.2
 
@@ -81,15 +42,15 @@ Entry id: `9A012.a.2`
 
 Source file(s) searched: `ecfr/title-15-part-774-2026-09-01.xml` (ecfr_date 2026-09-01)
 
-**NOT FOUND:** `tools/print_rule_text.py` returned zero blocks from: `ecfr/title-15-part-774-2026-09-01.xml` (ecfr_date 2026-09-01).
-
-Printer output (verbatim, unedited):
+Wave-0 raw-span candidate (normalized only for display):
 
 ```text
-=== 9A012.a.2: 0 block(s) across 1 file(s) ===
+a.2. A maximum 'endurance' of 3 hours or greater;
 ```
 
-SUGGESTION (unverified): None; the printer returned zero candidate blocks, so there is no block to identify as operative.
+Receipt: raw bytes `[1837785, 1837841)`, raw-span SHA-256 `5a5cb4fbad7a8e84759c599888397c1197408f7c7b294cc0401a990d65359c6c`. Full receipt: `source-receipts.WAVE0-CANDIDATE.json#ecfr-774-9A012-a2`.
+
+Status: **UNAPPROVED CANDIDATE.** The chapeau, reason codes, MT handling, and effective date are not approved by this extraction.
 
 ### 9A012.a.3
 
@@ -97,15 +58,15 @@ Entry id: `9A012.a.3`
 
 Source file(s) searched: `ecfr/title-15-part-774-2026-09-01.xml` (ecfr_date 2026-09-01)
 
-**NOT FOUND:** `tools/print_rule_text.py` returned zero blocks from: `ecfr/title-15-part-774-2026-09-01.xml` (ecfr_date 2026-09-01).
-
-Printer output (verbatim, unedited):
+Wave-0 raw-span candidate (normalized only for display):
 
 ```text
-=== 9A012.a.3: 0 block(s) across 1 file(s) ===
+a.3. “UAVs” or unmanned “airships” incorporating items specified in ECCN 6A003.b.3, 6A003.b.4.b, or 6A008.d to .h;
 ```
 
-SUGGESTION (unverified): None; the printer returned zero candidate blocks, so there is no block to identify as operative.
+Receipt: raw bytes `[1837842, 1837991)`, raw-span SHA-256 `5281dea710ce689c8da668752f290d93f1baac8a0620776a6fa8e2633833ec78`. Full receipt: `source-receipts.WAVE0-CANDIDATE.json#ecfr-774-9A012-a3`.
+
+Status: **UNAPPROVED CANDIDATE.** Parent propagation is not approved by this extraction.
 
 ### 9A012.a.5
 
@@ -113,15 +74,15 @@ Entry id: `9A012.a.5`
 
 Source file(s) searched: `ecfr/title-15-part-774-2026-09-01.xml` (ecfr_date 2026-09-01)
 
-**NOT FOUND:** `tools/print_rule_text.py` returned zero blocks from: `ecfr/title-15-part-774-2026-09-01.xml` (ecfr_date 2026-09-01).
-
-Printer output (verbatim, unedited):
+Wave-0 raw-span candidate (normalized only for display):
 
 ```text
-=== 9A012.a.5: 0 block(s) across 1 file(s) ===
+a.5. “UAVs” or unmanned “airships” incorporating “inertial measurement equipment or systems” using accelerometers or gyros specified in ECCNs 7A001, 7A002, 7A003, or 7A005.
 ```
 
-SUGGESTION (unverified): None; the printer returned zero candidate blocks, so there is no block to identify as operative.
+Receipt: raw bytes `[1838110, 1838331)`, raw-span SHA-256 `b81c58cd19742986858446c2b8b7d08296a214513aa653fe8b529393d10c64d9`. Full receipt: `source-receipts.WAVE0-CANDIDATE.json#ecfr-774-9A012-a5`.
+
+Status: **UNAPPROVED CANDIDATE; OUTSIDE P0.** This extraction does not authorize the excluded gyro path.
 
 ### 6A003.b.4.b
 
@@ -5212,11 +5173,11 @@ SUGGESTION (unverified): No returned block looks like operative § 770.2 interpr
 
 | Entry id | Block count | File(s) |
 |---|---:|---|
-| `9A012.a` | 9 | `title-15-part-774-2026-09-01.xml` |
-| `9A012.a.1` | 4 | `title-15-part-774-2026-09-01.xml` |
-| `9A012.a.2` | 0 | `title-15-part-774-2026-09-01.xml` (searched; no blocks) |
-| `9A012.a.3` | 0 | `title-15-part-774-2026-09-01.xml` (searched; no blocks) |
-| `9A012.a.5` | 0 | `title-15-part-774-2026-09-01.xml` (searched; no blocks) |
+| `9A012.a` | 1 regenerated raw-span candidate | `title-15-part-774-2026-09-01.xml` |
+| `9A012.a.1` | 1 regenerated raw-span candidate | `title-15-part-774-2026-09-01.xml` |
+| `9A012.a.2` | 1 regenerated raw-span candidate | `title-15-part-774-2026-09-01.xml` |
+| `9A012.a.3` | 1 regenerated raw-span candidate | `title-15-part-774-2026-09-01.xml` |
+| `9A012.a.5` | 1 regenerated raw-span candidate | `title-15-part-774-2026-09-01.xml` (outside P0) |
 | `6A003.b.4.b` | 9 | `title-15-part-774-2026-09-01.xml` |
 | `6A993` | 4 | `title-15-part-774-2026-09-01.xml` |
 | `7A105.b.1` | 0 | `title-15-part-774-2026-09-01.xml` (searched; no blocks) |
@@ -5245,9 +5206,6 @@ SUGGESTION (unverified): No returned block looks like operative § 770.2 interpr
 
 ### NOT FOUND entries
 
-- `9A012.a.2` — searched `ecfr/title-15-part-774-2026-09-01.xml`
-- `9A012.a.3` — searched `ecfr/title-15-part-774-2026-09-01.xml`
-- `9A012.a.5` — searched `ecfr/title-15-part-774-2026-09-01.xml`
 - `7A105.b.1` — searched `ecfr/title-15-part-774-2026-09-01.xml`
 - `3A991.a.2` — searched `ecfr/title-15-part-774-2026-09-01.xml`
 - `XII(e)(12)` — searched `ecfr/title-22-part-121-2026-09-01.xml`

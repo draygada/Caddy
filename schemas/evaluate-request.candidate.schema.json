@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tripwire.local/schemas/evaluate-request.candidate.schema.json",
+  "title": "Candidate evaluate request — unapproved",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "changed_node_id", "design"],
+  "properties": {
+    "request_id": {"type": "integer", "minimum": 0},
+    "changed_node_id": {"type": ["string", "null"]},
+    "design": {
+      "type": "object",
+      "description": "Must independently validate against design.schema.json and its semantic graph-admission invariants.",
+      "required": ["root", "nodes"]
+    }
+  }
+}

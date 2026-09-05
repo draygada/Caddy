@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tripwire.local/schemas/source-receipts.candidate.schema.json",
+  "title": "Candidate source receipts — unapproved",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_status", "semantic_approval", "span_convention", "receipts"],
+  "properties": {
+    "artifact_status": {"const": "candidate_unapproved"},
+    "semantic_approval": {"const": false},
+    "span_convention": {"const": "zero-based UTF-8 byte offsets, start inclusive, end exclusive"},
+    "receipts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "candidate_for", "repository_file", "sha256", "raw_span", "raw_span_sha256", "normalized_display_text", "content_date", "url", "approval"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "candidate_for": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+          "repository_file": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "raw_span": {
+            "type": "array",
+            "prefixItems": [{"type": "integer", "minimum": 0}, {"type": "integer", "minimum": 1}],
+            "items": false,
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "raw_span_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "normalized_display_text": {"type": "string", "minLength": 1},
+          "content_date": {"type": "string", "format": "date"},
+          "url": {"type": "string", "format": "uri"},
+          "approval": {"const": "unapproved_candidate"}
+        }
+      }
+    }
+  }
+}

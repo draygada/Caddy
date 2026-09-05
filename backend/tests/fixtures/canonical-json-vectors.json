@@ -1,0 +1,35 @@
+{
+  "artifact_status": "candidate_unapproved",
+  "algorithm": {
+    "canonicalization": "RFC8785-JCS",
+    "digest": "SHA-256",
+    "encoding": "UTF-8",
+    "digest_prefix": "sha256:",
+    "scope": "The complete design object exactly as received, after JSON parsing and before evaluation; object member order is ignored and array order is preserved."
+  },
+  "vectors": [
+    {
+      "id": "object-member-order-is-insignificant",
+      "documents": [
+        {"root": "synthetic-root", "nodes": [{"kind": "product", "id": "synthetic-root", "attrs": {"z": {"value": 1, "unit": "h"}, "a": {"unit": "Hz", "value": 9}}}], "rule_pack_sha": null},
+        {"rule_pack_sha": null, "nodes": [{"attrs": {"a": {"value": 9, "unit": "Hz"}, "z": {"unit": "h", "value": 1}}, "id": "synthetic-root", "kind": "product"}], "root": "synthetic-root"}
+      ],
+      "expected_canonical_json": "{\"nodes\":[{\"attrs\":{\"a\":{\"unit\":\"Hz\",\"value\":9},\"z\":{\"unit\":\"h\",\"value\":1}},\"id\":\"synthetic-root\",\"kind\":\"product\"}],\"root\":\"synthetic-root\",\"rule_pack_sha\":null}",
+      "expected_digests": ["sha256:188ee58ceb87c07a88b4c0468aa277e13896f26305c583018d8557002fd97efa", "sha256:188ee58ceb87c07a88b4c0468aa277e13896f26305c583018d8557002fd97efa"],
+      "expected_equal": true
+    },
+    {
+      "id": "array-order-is-significant",
+      "documents": [
+        {"nodes": [{"id": "alpha", "kind": "product"}, {"id": "beta", "kind": "part", "parent": "alpha"}], "root": "alpha"},
+        {"nodes": [{"id": "beta", "kind": "part", "parent": "alpha"}, {"id": "alpha", "kind": "product"}], "root": "alpha"}
+      ],
+      "expected_canonical_json": [
+        "{\"nodes\":[{\"id\":\"alpha\",\"kind\":\"product\"},{\"id\":\"beta\",\"kind\":\"part\",\"parent\":\"alpha\"}],\"root\":\"alpha\"}",
+        "{\"nodes\":[{\"id\":\"beta\",\"kind\":\"part\",\"parent\":\"alpha\"},{\"id\":\"alpha\",\"kind\":\"product\"}],\"root\":\"alpha\"}"
+      ],
+      "expected_digests": ["sha256:6b638605484c79fbe861c1ad88304487148526cf1417034558e6ef3f51c50914", "sha256:ef6dcc6e4ef6fba69892618eda0505d7f470b904435c69e28d3ebe84da1719f1"],
+      "expected_equal": false
+    }
+  ]
+}

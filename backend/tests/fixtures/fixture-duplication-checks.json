@@ -1,0 +1,23 @@
+{
+  "artifact_status": "candidate_unapproved",
+  "checks": [
+    {
+      "id": "kestrel-baseline-byte-identity",
+      "canonical_path": "data/demo/kestrel-baseline.design.json",
+      "duplicate_path": "backend/tests/fixtures/kestrel-baseline.design.json",
+      "comparison": "raw_bytes_sha256",
+      "expected_sha256": "2c3fb2212246a1c115f81f681e93fb3de430f1924f4980c4a9ff683193d7c9f2",
+      "expected_equal": true,
+      "maintenance_rule": "The data/demo file is canonical; the backend fixture is never edited independently."
+    },
+    {
+      "id": "kestrel-baseline-canonical-design-revision",
+      "canonical_path": "data/demo/kestrel-baseline.design.json",
+      "duplicate_path": "backend/tests/fixtures/kestrel-baseline.design.json",
+      "comparison": "RFC8785-JCS-SHA-256",
+      "expected_sha256": "fac39ef03be1ba8edbaa30b7cdcfab02e58ca14db00ade4c3c212049b23171dc",
+      "expected_equal": true,
+      "maintenance_rule": "The response design_revision uses this digest with the sha256: prefix."
+    }
+  ]
+}

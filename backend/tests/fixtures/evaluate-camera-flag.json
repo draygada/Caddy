@@ -1,0 +1,107 @@
+{
+  "request_id": 3,
+  "stub": true,
+  "fixture_mode": "SYNTHETIC_DEMO",
+  "artifact_status": "candidate_unapproved",
+  "design_revision": "sha256:ae55dc0b39980313d0e26894001e42ee0da51203d587c745d1fc02542c8b9fcc",
+  "rule_pack_sha": "sha256:ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f",
+  "rule_pack_status": "unapproved_input",
+  "destination_policy_sha": null,
+  "ecfr_date": "2026-09-01",
+  "determinations": {
+    "nose_thermal": {
+      "state": "flag",
+      "jurisdiction": "EAR",
+      "entries": ["6A003.b.4.b"],
+      "direct_tripwires": [
+        {
+          "rule_id": "CCL-6A003.b.4.b",
+          "state": "fired",
+          "jurisdiction": "EAR",
+          "entry": "6A003.b.4.b",
+          "reason_for_control": ["NS2", "AT1"],
+          "node_id": "nose_thermal",
+          "cause_node_id": "nose_thermal",
+          "facts": [
+            {"attribute": "fpa_entry", "observed": "6A002.a.3.f", "unit": null, "operator": "equals", "threshold": "6A002.a.3.f"},
+            {"attribute": "frame_rate_hz", "observed": 60, "unit": "Hz", "operator": ">", "threshold": 9},
+            {"attribute": "note_3_a_exclusion_applies", "observed": false, "unit": null, "operator": "equals", "threshold": false},
+            {"attribute": "note_3_b_exclusion_applies", "observed": false, "unit": null, "operator": "equals", "threshold": false},
+            {"attribute": "note_3_c_exclusion_applies", "observed": false, "unit": null, "operator": "equals", "threshold": false}
+          ],
+          "text": "[UNAPPROVED SHAPE VECTOR] b.4.b. Incorporating “focal plane arrays” controlled by 6A002.a.3.f; or",
+          "source_url": "https://www.ecfr.gov/current/title-15/part-774",
+          "ecfr_date": "2026-09-01",
+          "rule_effective": null,
+          "evidence": {"level": "synthetic", "sha256": "sha256:c60be9cd7da59aa8e5cca3bce8a3938bd40d79f7aec5f3a3fb4c7c40e818b51f", "span": [1438200, 1438299]}
+        },
+        {
+          "rule_id": "CCL-6A003.b.4.b-RS1",
+          "state": "fired",
+          "jurisdiction": "EAR",
+          "entry": "6A003.b.4.b",
+          "reason_for_control": ["RS1"],
+          "node_id": "nose_thermal",
+          "cause_node_id": "nose_thermal",
+          "facts": [
+            {"attribute": "established_entry", "observed": "6A003.b.4.b", "unit": null, "operator": "requires_entry", "threshold": "6A003.b.4.b"},
+            {"attribute": "frame_rate_hz", "observed": 60, "unit": "Hz", "operator": ">", "threshold": 60},
+            {"attribute": "fpa_elements", "observed": 327680, "unit": "elements", "operator": ">", "threshold": 111000},
+            {"attribute": "civil_embedding", "observed": false, "unit": null, "operator": "equals", "threshold": true},
+            {"attribute": "referenced_exemptions_review", "observed": "SYNTHETIC_NOT_APPLICABLE", "unit": null, "operator": "equals", "threshold": "SYNTHETIC_NOT_APPLICABLE"}
+          ],
+          "text": "[UNAPPROVED SHAPE VECTOR] RS applies to qualifying items through the complete synthetic element-count branch; 60 Hz does not satisfy the greater-than-60 branch.",
+          "source_url": "https://www.ecfr.gov/current/title-15/part-774",
+          "ecfr_date": "2026-09-01",
+          "rule_effective": null,
+          "evidence": {"level": "synthetic", "sha256": "sha256:c60be9cd7da59aa8e5cca3bce8a3938bd40d79f7aec5f3a3fb4c7c40e818b51f", "span": [1431019, 1431425]}
+        }
+      ],
+      "propagated_tripwires": [],
+      "unresolved_tripwires": [],
+      "destinations": {"status": "not_evaluated", "reason": "P0 has no approved destination policy"},
+      "evidence_level": "synthetic"
+    },
+    "kestrel": {
+      "state": "flag",
+      "jurisdiction": "EAR",
+      "entries": ["9A012.a.3"],
+      "direct_tripwires": [],
+      "propagated_tripwires": [
+        {
+          "rule_id": "CCL-9A012.a.3",
+          "state": "fired",
+          "jurisdiction": "EAR",
+          "entry": "9A012.a.3",
+          "reason_for_control": ["NS1", "AT1"],
+          "node_id": "kestrel",
+          "cause_node_id": "nose_thermal",
+          "path": ["nose_thermal", "kestrel"],
+          "facts": [
+            {"attribute": "bvlos", "observed": true, "unit": null, "operator": "equals", "threshold": true},
+            {"attribute": "installed_descendant_entry", "observed": "6A003.b.4.b", "unit": null, "operator": "in", "threshold": ["6A003.b.3", "6A003.b.4.b", "6A008.d", "6A008.e", "6A008.f", "6A008.g", "6A008.h"]}
+          ],
+          "text": "[UNAPPROVED SHAPE VECTOR] a.3. “UAVs” or unmanned “airships” incorporating items specified in ECCN 6A003.b.3, 6A003.b.4.b, or 6A008.d to .h;",
+          "source_url": "https://www.ecfr.gov/current/title-15/part-774",
+          "ecfr_date": "2026-09-01",
+          "rule_effective": "2026-08-13",
+          "evidence": {"level": "synthetic", "sha256": "sha256:c60be9cd7da59aa8e5cca3bce8a3938bd40d79f7aec5f3a3fb4c7c40e818b51f", "span": [1837842, 1837991]}
+        }
+      ],
+      "unresolved_tripwires": [],
+      "destinations": {"status": "not_evaluated", "reason": "P0 has no approved destination policy"},
+      "evidence_level": "synthetic"
+    }
+  },
+  "delta": {
+    "changed_nodes": ["nose_thermal", "kestrel"],
+    "tripwires_added": [
+      {"node_id": "nose_thermal", "rule_id": "CCL-6A003.b.4.b", "kind": "direct"},
+      {"node_id": "nose_thermal", "rule_id": "CCL-6A003.b.4.b-RS1", "kind": "direct"},
+      {"node_id": "kestrel", "rule_id": "CCL-9A012.a.3", "kind": "propagated", "cause_node_id": "nose_thermal"}
+    ],
+    "tripwires_removed": [],
+    "rules_evaluated": ["CCL-6A003.b.4.b", "CCL-6A003.b.4.b-RS1", "CCL-9A012.a.3"]
+  },
+  "summary": {"clear": 0, "watch": 0, "question": 0, "flag": 2}
+}

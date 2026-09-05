@@ -1,0 +1,11 @@
+{
+  "artifact_status": "candidate_unapproved",
+  "fixture_mode": "SYNTHETIC_DEMO",
+  "claim_ceiling": "Wholly synthetic selection labels and values; no real MPN or vendor claim.",
+  "options": [
+    {"slot": "battery_bay", "option_id": "synthetic-battery-baseline", "mpn": "SYN-BATTERY-1000WH", "vendor": "Synthetic Fixture Works", "attrs": {"energy_Wh": {"value": 1000, "unit": "Wh"}}, "provenance": "synthetic"},
+    {"slot": "battery_bay", "option_id": "synthetic-battery-candidate", "mpn": "SYN-BATTERY-1300WH", "vendor": "Synthetic Fixture Works", "attrs": {"energy_Wh": {"value": 1300, "unit": "Wh"}}, "provenance": "synthetic"},
+    {"slot": "nose_thermal", "option_id": "synthetic-camera-baseline", "mpn": "SYN-THERMAL-BASELINE", "vendor": "Synthetic Fixture Works", "attrs": {"frame_rate_hz": {"value": 9, "unit": "Hz"}, "fpa_elements": {"value": 19200, "unit": "elements"}}, "predicate_status": "incomplete_unapproved", "provenance": "synthetic"},
+    {"slot": "nose_thermal", "option_id": "synthetic-camera-candidate", "mpn": "SYN-THERMAL-640", "vendor": "Synthetic Fixture Works", "attrs": {"frame_rate_hz": {"value": 60, "unit": "Hz"}, "fpa_elements": {"value": 327680, "unit": "elements"}}, "predicate_status": "incomplete_unapproved", "provenance": "synthetic"}
+  ]
+}

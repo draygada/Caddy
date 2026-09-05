@@ -1,0 +1,61 @@
+{
+  "artifact_status": "candidate_unapproved",
+  "purpose": "Declarative semantic graph-admission vectors only; no validator or test implementation is included in Wave 0.",
+  "schema_expectation": "Each design is structurally valid against schemas/design.schema.json and must be rejected by semantic graph admission.",
+  "vectors": [
+    {
+      "id": "duplicate-node-id",
+      "expected_error": "duplicate_node_id",
+      "design": {
+        "root": "synthetic-root",
+        "nodes": [
+          {"id": "synthetic-root", "kind": "product", "parent": null},
+          {"id": "synthetic-root", "kind": "part", "parent": "synthetic-root"}
+        ]
+      }
+    },
+    {
+      "id": "invalid-root-missing",
+      "expected_error": "invalid_root",
+      "design": {
+        "root": "missing-root",
+        "nodes": [
+          {"id": "synthetic-product", "kind": "product", "parent": null}
+        ]
+      }
+    },
+    {
+      "id": "invalid-root-not-product",
+      "expected_error": "invalid_root",
+      "design": {
+        "root": "synthetic-part",
+        "nodes": [
+          {"id": "synthetic-part", "kind": "part", "parent": null}
+        ]
+      }
+    },
+    {
+      "id": "dangling-parent",
+      "expected_error": "dangling_parent",
+      "design": {
+        "root": "synthetic-root",
+        "nodes": [
+          {"id": "synthetic-root", "kind": "product", "parent": null},
+          {"id": "synthetic-part", "kind": "part", "parent": "missing-assembly"}
+        ]
+      }
+    },
+    {
+      "id": "parent-cycle",
+      "expected_error": "cycle",
+      "design": {
+        "root": "synthetic-root",
+        "nodes": [
+          {"id": "synthetic-root", "kind": "product", "parent": null},
+          {"id": "synthetic-assembly-a", "kind": "assembly", "parent": "synthetic-assembly-b"},
+          {"id": "synthetic-assembly-b", "kind": "assembly", "parent": "synthetic-assembly-a"}
+        ]
+      }
+    }
+  ]
+}
