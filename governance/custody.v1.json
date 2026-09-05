@@ -1,5 +1,6 @@
 {
   "schema_version": "1.0.0",
+  "topology_revision": 2,
   "repository": {
     "name": "Strafe Forge",
     "root": "/Users/benjihuh/Programming/Strafe/strafe-forge",
@@ -70,6 +71,138 @@
         "governance/receipts/history-collaboration.json"
       ],
       "handoff": "docs/handoff/history-collaboration.md"
+    },
+    "solver-advanced-modeling": {
+      "branch": "lane/solver-advanced-modeling",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/solver-advanced-modeling",
+      "worktree_label": "forge/solver-advanced-modeling",
+      "write_allowlist": [
+        "packages/solver-advanced-modeling/**",
+        "tests/solver-advanced-modeling/**",
+        "governance/receipts/solver-advanced-modeling.json"
+      ],
+      "handoff": "docs/handoff/solver-advanced-modeling.md"
+    },
+    "assemblies-configurations": {
+      "branch": "lane/assemblies-configurations",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/assemblies-configurations",
+      "worktree_label": "forge/assemblies-configurations",
+      "write_allowlist": [
+        "packages/assemblies-configurations/**",
+        "tests/assemblies-configurations/**",
+        "governance/receipts/assemblies-configurations.json"
+      ],
+      "handoff": "docs/handoff/assemblies-configurations.md"
+    },
+    "drawings-mbd": {
+      "branch": "lane/drawings-mbd",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/drawings-mbd",
+      "worktree_label": "forge/drawings-mbd",
+      "write_allowlist": [
+        "packages/drawings-mbd/**",
+        "tests/drawings-mbd/**",
+        "governance/receipts/drawings-mbd.json"
+      ],
+      "handoff": "docs/handoff/drawings-mbd.md"
+    },
+    "interop-mesh": {
+      "branch": "lane/interop-mesh",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/interop-mesh",
+      "worktree_label": "forge/interop-mesh",
+      "write_allowlist": [
+        "packages/interop-mesh/**",
+        "tests/interop-mesh/**",
+        "governance/receipts/interop-mesh.json"
+      ],
+      "handoff": "docs/handoff/interop-mesh.md"
+    },
+    "manufacturing": {
+      "branch": "lane/manufacturing",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/manufacturing",
+      "worktree_label": "forge/manufacturing",
+      "write_allowlist": [
+        "packages/manufacturing/**",
+        "tests/manufacturing/**",
+        "governance/receipts/manufacturing.json"
+      ],
+      "handoff": "docs/handoff/manufacturing.md"
+    },
+    "simulation-generative": {
+      "branch": "lane/simulation-generative",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/simulation-generative",
+      "worktree_label": "forge/simulation-generative",
+      "write_allowlist": [
+        "packages/simulation-generative/**",
+        "tests/simulation-generative/**",
+        "governance/receipts/simulation-generative.json"
+      ],
+      "handoff": "docs/handoff/simulation-generative.md"
+    },
+    "ecad-routing": {
+      "branch": "lane/ecad-routing",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/ecad-routing",
+      "worktree_label": "forge/ecad-routing",
+      "write_allowlist": [
+        "packages/ecad-routing/**",
+        "tests/ecad-routing/**",
+        "governance/receipts/ecad-routing.json"
+      ],
+      "handoff": "docs/handoff/ecad-routing.md"
+    },
+    "platform-security": {
+      "branch": "lane/platform-security",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/platform-security",
+      "worktree_label": "forge/platform-security",
+      "write_allowlist": [
+        "packages/platform-security/**",
+        "tests/platform-security/**",
+        "governance/receipts/platform-security.json"
+      ],
+      "handoff": "docs/handoff/platform-security.md"
+    },
+    "mission-requirements": {
+      "branch": "lane/mission-requirements",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/mission-requirements",
+      "worktree_label": "forge/mission-requirements",
+      "write_allowlist": [
+        "packages/mission-requirements/**",
+        "tests/mission-requirements/**",
+        "governance/receipts/mission-requirements.json"
+      ],
+      "handoff": "docs/handoff/mission-requirements.md"
+    },
+    "supply-erp": {
+      "branch": "lane/supply-erp",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/supply-erp",
+      "worktree_label": "forge/supply-erp",
+      "write_allowlist": [
+        "packages/supply-erp/**",
+        "tests/supply-erp/**",
+        "governance/receipts/supply-erp.json"
+      ],
+      "handoff": "docs/handoff/supply-erp.md"
+    },
+    "mes-quality": {
+      "branch": "lane/mes-quality",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/mes-quality",
+      "worktree_label": "forge/mes-quality",
+      "write_allowlist": [
+        "packages/mes-quality/**",
+        "tests/mes-quality/**",
+        "governance/receipts/mes-quality.json"
+      ],
+      "handoff": "docs/handoff/mes-quality.md"
+    },
+    "operations-feedback": {
+      "branch": "lane/operations-feedback",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/operations-feedback",
+      "worktree_label": "forge/operations-feedback",
+      "write_allowlist": [
+        "packages/operations-feedback/**",
+        "tests/operations-feedback/**",
+        "governance/receipts/operations-feedback.json"
+      ],
+      "handoff": "docs/handoff/operations-feedback.md"
     }
   }
 }

@@ -1,0 +1,49 @@
+{
+  "schema_version": "forge.atomic-capability-integrity/1",
+  "parent_count": 69,
+  "atomic_count": 833,
+  "mandatory_atomic_count": 833,
+  "verdict_counts": {
+    "HOLD": 833
+  },
+  "aggregate_status_counts": {
+    "HOLD": 69
+  },
+  "atomic_ids_digest": "e348518f7feec3c7a74f9eabf95fbcc810b24f8303195c61ccf23f8cb5e869c7",
+  "decomposition_digest": "45730399021c40eab64ff8429fa3f569e078a2702c77daab9f269a4f6bc5b5ef",
+  "ledger_records_digest": "ea4588c04cd55cad9b28d116b437820a25bc721a4c99d32186869f51370af096",
+  "aggregate_manifest_digest": "02ef945b1eef5c02acb99fe81042a2f76fa9e2def9872c61a11d6426cabda46f",
+  "source_hashes": {
+    "canonical_atlas_sha256": "1f231b57dd2cb7fbe1cb427725d00890b6c9454ee25dba90a55a767bdcc44cb2",
+    "research_annex_sha256": "222930c99be0fd0358017cf03732e00f5aa05cb87035e40371cd40a976f3023c"
+  },
+  "aggregation_test_vectors": [
+    {
+      "mandatory_states": [
+        "PASS",
+        "FAILED",
+        "PASS"
+      ],
+      "expected_parent": "FAILED"
+    },
+    {
+      "mandatory_states": [
+        "PASS",
+        "HOLD",
+        "PASS"
+      ],
+      "expected_parent": "HOLD"
+    },
+    {
+      "mandatory_states": [
+        "PASS",
+        "PASS"
+      ],
+      "expected_parent": "PASS"
+    },
+    {
+      "mandatory_states": [],
+      "expected_parent": "HOLD"
+    }
+  ]
+}

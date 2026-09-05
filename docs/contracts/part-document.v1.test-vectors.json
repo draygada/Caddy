@@ -1,0 +1,1007 @@
+{
+  "schema_version": "forge.part-document-test-vectors/1",
+  "canonicalization": "RFC8785",
+  "hash": "SHA-256",
+  "vectors": {
+    "geometry_hash": {
+      "preimage": {
+        "schema_version": "forge.kernel-projection/1",
+        "document_id": "part:test",
+        "units": {
+          "length": "mm",
+          "angle": "deg"
+        },
+        "parameters": {},
+        "bodies": [],
+        "operations": [],
+        "semantic_references": {}
+      },
+      "canonical_utf8": "{\"bodies\":[],\"document_id\":\"part:test\",\"operations\":[],\"parameters\":{},\"schema_version\":\"forge.kernel-projection/1\",\"semantic_references\":{},\"units\":{\"angle\":\"deg\",\"length\":\"mm\"}}",
+      "sha256": "581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de"
+    },
+    "revision_hash": {
+      "preimage": {
+        "schema_version": "forge.part-document/1",
+        "document_id": "part:test",
+        "geometry_hash": "581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de",
+        "parent_revision_ids": [],
+        "actor_id": "actor:test",
+        "intent": "test",
+        "authorization_ref": null
+      },
+      "canonical_utf8": "{\"actor_id\":\"actor:test\",\"authorization_ref\":null,\"document_id\":\"part:test\",\"geometry_hash\":\"581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de\",\"intent\":\"test\",\"parent_revision_ids\":[],\"schema_version\":\"forge.part-document/1\"}",
+      "sha256": "26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0",
+      "revision_id": "rev:26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0"
+    },
+    "operation_hash": {
+      "preimage": {
+        "schema_version": "forge.operation-hash/1",
+        "operation": {
+          "operation_id": "op:test",
+          "body_id": "body:test",
+          "type": "test.operation",
+          "type_version": 1,
+          "depends_on": [],
+          "parameter_bindings": {
+            "distance": "param:d"
+          },
+          "input_references": [],
+          "payload": {
+            "axis": "Z"
+          },
+          "enabled": true
+        },
+        "resolved_parameters": {
+          "distance": {
+            "value_type": "LENGTH",
+            "numerator": "40",
+            "denominator": "1"
+          }
+        },
+        "input_semantic_ids": [],
+        "dependency_operation_hashes": []
+      },
+      "canonical_utf8": "{\"dependency_operation_hashes\":[],\"input_semantic_ids\":[],\"operation\":{\"body_id\":\"body:test\",\"depends_on\":[],\"enabled\":true,\"input_references\":[],\"operation_id\":\"op:test\",\"parameter_bindings\":{\"distance\":\"param:d\"},\"payload\":{\"axis\":\"Z\"},\"type\":\"test.operation\",\"type_version\":1},\"resolved_parameters\":{\"distance\":{\"denominator\":\"1\",\"numerator\":\"40\",\"value_type\":\"LENGTH\"}},\"schema_version\":\"forge.operation-hash/1\"}",
+      "sha256": "2be663a16d370bf32d273ccb286944b53be76010d393aa3446909d9b582031b1"
+    },
+    "engine_manifest_hash": {
+      "preimage": {
+        "schema_version": "forge.engine-manifest/1",
+        "adapter": "test-adapter",
+        "binding": "test-binding",
+        "kernel": "test-kernel@1",
+        "solver": "test-solver@1",
+        "toolchain": "test-toolchain@1",
+        "platform_image": "sha256:test",
+        "tolerances": {
+          "linear_mm": "0.000001",
+          "angular_deg": "0.000001"
+        },
+        "deterministic_settings": {
+          "parallel": false
+        }
+      },
+      "canonical_utf8": "{\"adapter\":\"test-adapter\",\"binding\":\"test-binding\",\"deterministic_settings\":{\"parallel\":false},\"kernel\":\"test-kernel@1\",\"platform_image\":\"sha256:test\",\"schema_version\":\"forge.engine-manifest/1\",\"solver\":\"test-solver@1\",\"tolerances\":{\"angular_deg\":\"0.000001\",\"linear_mm\":\"0.000001\"},\"toolchain\":\"test-toolchain@1\"}",
+      "sha256": "20fc13c933457812e768df1af90508c5f40db093ab4467f1146da77eea7ce11a"
+    },
+    "semantic_fingerprint": {
+      "preimage": {
+        "schema_version": "forge.semantic-fingerprint/1",
+        "units": {
+          "length": "mm",
+          "angle": "deg"
+        },
+        "bounds_mm": {
+          "min": [
+            "0",
+            "0",
+            "0"
+          ],
+          "max": [
+            "1",
+            "1",
+            "1"
+          ]
+        },
+        "mass_properties": {
+          "area_mm2": "6",
+          "volume_mm3": "1"
+        },
+        "topology_counts": {
+          "VERTEX": 8,
+          "EDGE": 12,
+          "FACE": 6,
+          "SOLID": 1
+        },
+        "entities": [
+          {
+            "semantic_reference_id": "ref:result",
+            "entity_kind": "SOLID"
+          }
+        ]
+      },
+      "canonical_utf8": "{\"bounds_mm\":{\"max\":[\"1\",\"1\",\"1\"],\"min\":[\"0\",\"0\",\"0\"]},\"entities\":[{\"entity_kind\":\"SOLID\",\"semantic_reference_id\":\"ref:result\"}],\"mass_properties\":{\"area_mm2\":\"6\",\"volume_mm3\":\"1\"},\"schema_version\":\"forge.semantic-fingerprint/1\",\"topology_counts\":{\"EDGE\":12,\"FACE\":6,\"SOLID\":1,\"VERTEX\":8},\"units\":{\"angle\":\"deg\",\"length\":\"mm\"}}",
+      "sha256": "8a762e43149b030665fff35e035be69462725a142ef671a3d537a34950f8a176"
+    },
+    "entity_id": {
+      "preimage": {
+        "document_id": "part:test",
+        "body_id": "body:test",
+        "semantic_reference_id": "ref:result",
+        "entity_kind": "SOLID"
+      },
+      "canonical_utf8": "{\"body_id\":\"body:test\",\"document_id\":\"part:test\",\"entity_kind\":\"SOLID\",\"semantic_reference_id\":\"ref:result\"}",
+      "sha256": "37237612af1d4550d3f7ab2517ce6eec3cbf7115c7ec1ca8528fc5acb068dddc",
+      "entity_id": "entity:37237612af1d4550d3f7ab2517ce6eec3cbf7115c7ec1ca8528fc5acb068dddc"
+    },
+    "artifact_record_hash": {
+      "preimage": {
+        "schema_version": "forge.artifact/1",
+        "artifact_kind": "BREP",
+        "source_revision_id": "rev:26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0",
+        "geometry_hash": "581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de",
+        "body_id": "body:test",
+        "producing_operation_id": "op:test",
+        "engine_manifest_hash": "20fc13c933457812e768df1af90508c5f40db093ab4467f1146da77eea7ce11a",
+        "media_type": "application/vnd.opencascade.brep",
+        "byte_length": 0,
+        "content_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "semantic_fingerprint": "8a762e43149b030665fff35e035be69462725a142ef671a3d537a34950f8a176"
+      },
+      "canonical_utf8": "{\"artifact_kind\":\"BREP\",\"body_id\":\"body:test\",\"byte_length\":0,\"content_hash\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"engine_manifest_hash\":\"20fc13c933457812e768df1af90508c5f40db093ab4467f1146da77eea7ce11a\",\"geometry_hash\":\"581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de\",\"media_type\":\"application/vnd.opencascade.brep\",\"producing_operation_id\":\"op:test\",\"schema_version\":\"forge.artifact/1\",\"semantic_fingerprint\":\"8a762e43149b030665fff35e035be69462725a142ef671a3d537a34950f8a176\",\"source_revision_id\":\"rev:26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0\"}",
+      "sha256": "51e2842fbb55143a9be38196e9def069c0d6bbb3e774d9f96188600b3d990d9a",
+      "artifact_id": "artifact:51e2842fbb55143a9be38196e9def069c0d6bbb3e774d9f96188600b3d990d9a"
+    },
+    "definition_revision_hash": {
+      "preimage": {
+        "definition_id": "partdef:test",
+        "part_document_id": "part:test",
+        "part_revision_id": "rev:26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0",
+        "part_geometry_hash": "581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de",
+        "body_bindings": [
+          {
+            "body_id": "body:test",
+            "brep_artifact_id": "artifact:51e2842fbb55143a9be38196e9def069c0d6bbb3e774d9f96188600b3d990d9a",
+            "brep_content_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "semantic_fingerprint": "8a762e43149b030665fff35e035be69462725a142ef671a3d537a34950f8a176"
+          }
+        ],
+        "metadata": {},
+        "material_mass": {
+          "material_ref": null,
+          "density_kg_per_mm3": null,
+          "mass_override_kg": null
+        },
+        "bom_identity": {
+          "part_number": "TEST-001",
+          "revision": "A",
+          "description": "Test part",
+          "unit": "EA"
+        }
+      },
+      "canonical_utf8": "{\"body_bindings\":[{\"body_id\":\"body:test\",\"brep_artifact_id\":\"artifact:51e2842fbb55143a9be38196e9def069c0d6bbb3e774d9f96188600b3d990d9a\",\"brep_content_hash\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"semantic_fingerprint\":\"8a762e43149b030665fff35e035be69462725a142ef671a3d537a34950f8a176\"}],\"bom_identity\":{\"description\":\"Test part\",\"part_number\":\"TEST-001\",\"revision\":\"A\",\"unit\":\"EA\"},\"definition_id\":\"partdef:test\",\"material_mass\":{\"density_kg_per_mm3\":null,\"mass_override_kg\":null,\"material_ref\":null},\"metadata\":{},\"part_document_id\":\"part:test\",\"part_geometry_hash\":\"581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de\",\"part_revision_id\":\"rev:26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0\"}",
+      "sha256": "47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+      "definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa"
+    },
+    "assembly_definition_revision_hash_subassembly": {
+      "preimage": {
+        "definition_id": "assemblydef:clamp",
+        "components": [
+          {
+            "component_id": "component:bracket-a",
+            "target_definition_kind": "PART",
+            "target_definition_id": "partdef:test",
+            "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+            "multiplicity": 1,
+            "nominal_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "-2",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            },
+            "default_composition_state": "INCLUDED",
+            "default_visibility_state": "VISIBLE",
+            "default_bom_state": "INCLUDED",
+            "relation_ids": [],
+            "metadata": {}
+          },
+          {
+            "component_id": "component:bracket-b",
+            "target_definition_kind": "PART",
+            "target_definition_id": "partdef:test",
+            "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+            "multiplicity": 1,
+            "nominal_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            },
+            "default_composition_state": "INCLUDED",
+            "default_visibility_state": "VISIBLE",
+            "default_bom_state": "INCLUDED",
+            "relation_ids": [],
+            "metadata": {}
+          },
+          {
+            "component_id": "component:bracket-c",
+            "target_definition_kind": "PART",
+            "target_definition_id": "partdef:test",
+            "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+            "multiplicity": 1,
+            "nominal_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "2",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            },
+            "default_composition_state": "INCLUDED",
+            "default_visibility_state": "VISIBLE",
+            "default_bom_state": "INCLUDED",
+            "relation_ids": [],
+            "metadata": {}
+          }
+        ],
+        "metadata": {},
+        "bom_identity": null
+      },
+      "canonical_utf8": "{\"bom_identity\":null,\"components\":[{\"component_id\":\"component:bracket-a\",\"default_bom_state\":\"INCLUDED\",\"default_composition_state\":\"INCLUDED\",\"default_visibility_state\":\"VISIBLE\",\"metadata\":{},\"multiplicity\":1,\"nominal_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"-2\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]},\"relation_ids\":[],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\"},{\"component_id\":\"component:bracket-b\",\"default_bom_state\":\"INCLUDED\",\"default_composition_state\":\"INCLUDED\",\"default_visibility_state\":\"VISIBLE\",\"metadata\":{},\"multiplicity\":1,\"nominal_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]},\"relation_ids\":[],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\"},{\"component_id\":\"component:bracket-c\",\"default_bom_state\":\"INCLUDED\",\"default_composition_state\":\"INCLUDED\",\"default_visibility_state\":\"VISIBLE\",\"metadata\":{},\"multiplicity\":1,\"nominal_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"2\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]},\"relation_ids\":[],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\"}],\"definition_id\":\"assemblydef:clamp\",\"metadata\":{}}",
+      "sha256": "24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe",
+      "definition_revision_id": "assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe"
+    },
+    "assembly_definition_revision_hash_root": {
+      "preimage": {
+        "definition_id": "assemblydef:root",
+        "components": [
+          {
+            "component_id": "component:clamp-left",
+            "target_definition_kind": "ASSEMBLY",
+            "target_definition_id": "assemblydef:clamp",
+            "target_definition_revision_id": "assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe",
+            "multiplicity": 1,
+            "nominal_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "-10",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            },
+            "default_composition_state": "INCLUDED",
+            "default_visibility_state": "VISIBLE",
+            "default_bom_state": "INCLUDED",
+            "relation_ids": [],
+            "metadata": {}
+          },
+          {
+            "component_id": "component:clamp-right",
+            "target_definition_kind": "ASSEMBLY",
+            "target_definition_id": "assemblydef:clamp",
+            "target_definition_revision_id": "assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe",
+            "multiplicity": 1,
+            "nominal_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "10",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            },
+            "default_composition_state": "INCLUDED",
+            "default_visibility_state": "VISIBLE",
+            "default_bom_state": "INCLUDED",
+            "relation_ids": [],
+            "metadata": {}
+          }
+        ],
+        "metadata": {},
+        "bom_identity": null
+      },
+      "canonical_utf8": "{\"bom_identity\":null,\"components\":[{\"component_id\":\"component:clamp-left\",\"default_bom_state\":\"INCLUDED\",\"default_composition_state\":\"INCLUDED\",\"default_visibility_state\":\"VISIBLE\",\"metadata\":{},\"multiplicity\":1,\"nominal_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"-10\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]},\"relation_ids\":[],\"target_definition_id\":\"assemblydef:clamp\",\"target_definition_kind\":\"ASSEMBLY\",\"target_definition_revision_id\":\"assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe\"},{\"component_id\":\"component:clamp-right\",\"default_bom_state\":\"INCLUDED\",\"default_composition_state\":\"INCLUDED\",\"default_visibility_state\":\"VISIBLE\",\"metadata\":{},\"multiplicity\":1,\"nominal_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"10\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]},\"relation_ids\":[],\"target_definition_id\":\"assemblydef:clamp\",\"target_definition_kind\":\"ASSEMBLY\",\"target_definition_revision_id\":\"assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe\"}],\"definition_id\":\"assemblydef:root\",\"metadata\":{}}",
+      "sha256": "7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d",
+      "definition_revision_id": "assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d"
+    },
+    "configuration_revision_hash": {
+      "preimage": {
+        "schema_version": "forge.configuration-revision/1",
+        "configuration_id": "configuration:default",
+        "name": "Default",
+        "base_assembly_definition_revision_id": "assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d",
+        "overrides": [],
+        "parent_revision_ids": [],
+        "actor_id": "actor:test",
+        "intent": "resolve default configuration",
+        "authorization_ref": null
+      },
+      "canonical_utf8": "{\"actor_id\":\"actor:test\",\"authorization_ref\":null,\"base_assembly_definition_revision_id\":\"assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d\",\"configuration_id\":\"configuration:default\",\"intent\":\"resolve default configuration\",\"name\":\"Default\",\"overrides\":[],\"parent_revision_ids\":[],\"schema_version\":\"forge.configuration-revision/1\"}",
+      "sha256": "8104e623ae7b36ffc6159402fdbe3060f28d986ef93951514025dd75fa32a116",
+      "revision_id": "configuration-rev:8104e623ae7b36ffc6159402fdbe3060f28d986ef93951514025dd75fa32a116"
+    },
+    "resolved_configuration_hash": {
+      "preimage": {
+        "schema_version": "forge.resolved-configuration/1",
+        "base_assembly_definition_revision_id": "assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d",
+        "overrides": []
+      },
+      "canonical_utf8": "{\"base_assembly_definition_revision_id\":\"assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d\",\"overrides\":[],\"schema_version\":\"forge.resolved-configuration/1\"}",
+      "sha256": "72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951",
+      "resolved_configuration_id": "configuration-resolved:72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951"
+    },
+    "assembly_content_hash": {
+      "preimage": {
+        "schema_version": "forge.assembly-content/1",
+        "assembly_id": "assembly:test",
+        "part_definitions": {
+          "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa": {
+            "definition_id": "partdef:test",
+            "part_document_id": "part:test",
+            "part_revision_id": "rev:26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0",
+            "part_geometry_hash": "581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de",
+            "body_bindings": [
+              {
+                "body_id": "body:test",
+                "brep_artifact_id": "artifact:51e2842fbb55143a9be38196e9def069c0d6bbb3e774d9f96188600b3d990d9a",
+                "brep_content_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "semantic_fingerprint": "8a762e43149b030665fff35e035be69462725a142ef671a3d537a34950f8a176"
+              }
+            ],
+            "metadata": {},
+            "material_mass": {
+              "material_ref": null,
+              "density_kg_per_mm3": null,
+              "mass_override_kg": null
+            },
+            "bom_identity": {
+              "part_number": "TEST-001",
+              "revision": "A",
+              "description": "Test part",
+              "unit": "EA"
+            },
+            "definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+            "definition_revision_hash": "47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa"
+          }
+        },
+        "assembly_definitions": {
+          "assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d": {
+            "definition_id": "assemblydef:root",
+            "components": [
+              {
+                "component_id": "component:clamp-left",
+                "target_definition_kind": "ASSEMBLY",
+                "target_definition_id": "assemblydef:clamp",
+                "target_definition_revision_id": "assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe",
+                "multiplicity": 1,
+                "nominal_transform": {
+                  "matrix4x4_row_major": [
+                    "1",
+                    "0",
+                    "0",
+                    "-10",
+                    "0",
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "1"
+                  ]
+                },
+                "default_composition_state": "INCLUDED",
+                "default_visibility_state": "VISIBLE",
+                "default_bom_state": "INCLUDED",
+                "relation_ids": [],
+                "metadata": {}
+              },
+              {
+                "component_id": "component:clamp-right",
+                "target_definition_kind": "ASSEMBLY",
+                "target_definition_id": "assemblydef:clamp",
+                "target_definition_revision_id": "assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe",
+                "multiplicity": 1,
+                "nominal_transform": {
+                  "matrix4x4_row_major": [
+                    "1",
+                    "0",
+                    "0",
+                    "10",
+                    "0",
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "1"
+                  ]
+                },
+                "default_composition_state": "INCLUDED",
+                "default_visibility_state": "VISIBLE",
+                "default_bom_state": "INCLUDED",
+                "relation_ids": [],
+                "metadata": {}
+              }
+            ],
+            "metadata": {},
+            "bom_identity": null,
+            "definition_revision_id": "assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d",
+            "definition_revision_hash": "7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d"
+          },
+          "assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe": {
+            "definition_id": "assemblydef:clamp",
+            "components": [
+              {
+                "component_id": "component:bracket-a",
+                "target_definition_kind": "PART",
+                "target_definition_id": "partdef:test",
+                "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+                "multiplicity": 1,
+                "nominal_transform": {
+                  "matrix4x4_row_major": [
+                    "1",
+                    "0",
+                    "0",
+                    "-2",
+                    "0",
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "1"
+                  ]
+                },
+                "default_composition_state": "INCLUDED",
+                "default_visibility_state": "VISIBLE",
+                "default_bom_state": "INCLUDED",
+                "relation_ids": [],
+                "metadata": {}
+              },
+              {
+                "component_id": "component:bracket-b",
+                "target_definition_kind": "PART",
+                "target_definition_id": "partdef:test",
+                "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+                "multiplicity": 1,
+                "nominal_transform": {
+                  "matrix4x4_row_major": [
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "1"
+                  ]
+                },
+                "default_composition_state": "INCLUDED",
+                "default_visibility_state": "VISIBLE",
+                "default_bom_state": "INCLUDED",
+                "relation_ids": [],
+                "metadata": {}
+              },
+              {
+                "component_id": "component:bracket-c",
+                "target_definition_kind": "PART",
+                "target_definition_id": "partdef:test",
+                "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+                "multiplicity": 1,
+                "nominal_transform": {
+                  "matrix4x4_row_major": [
+                    "1",
+                    "0",
+                    "0",
+                    "2",
+                    "0",
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "1"
+                  ]
+                },
+                "default_composition_state": "INCLUDED",
+                "default_visibility_state": "VISIBLE",
+                "default_bom_state": "INCLUDED",
+                "relation_ids": [],
+                "metadata": {}
+              }
+            ],
+            "metadata": {},
+            "bom_identity": null,
+            "definition_revision_id": "assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe",
+            "definition_revision_hash": "24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe"
+          }
+        },
+        "root_assembly_definition_revision_id": "assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d",
+        "resolved_configuration": {
+          "schema_version": "forge.resolved-configuration/1",
+          "configuration_id": "configuration:default",
+          "configuration_revision_id": "configuration-rev:8104e623ae7b36ffc6159402fdbe3060f28d986ef93951514025dd75fa32a116",
+          "configuration_revision_hash": "8104e623ae7b36ffc6159402fdbe3060f28d986ef93951514025dd75fa32a116",
+          "parent_revision_ids": [],
+          "actor_id": "actor:test",
+          "intent": "resolve default configuration",
+          "authorization_ref": null,
+          "name": "Default",
+          "base_assembly_definition_revision_id": "assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d",
+          "overrides": [],
+          "resolved_configuration_hash": "72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951",
+          "resolved_configuration_id": "configuration-resolved:72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951"
+        },
+        "metadata": {}
+      },
+      "canonical_utf8": "{\"assembly_definitions\":{\"assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe\":{\"bom_identity\":null,\"components\":[{\"component_id\":\"component:bracket-a\",\"default_bom_state\":\"INCLUDED\",\"default_composition_state\":\"INCLUDED\",\"default_visibility_state\":\"VISIBLE\",\"metadata\":{},\"multiplicity\":1,\"nominal_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"-2\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]},\"relation_ids\":[],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\"},{\"component_id\":\"component:bracket-b\",\"default_bom_state\":\"INCLUDED\",\"default_composition_state\":\"INCLUDED\",\"default_visibility_state\":\"VISIBLE\",\"metadata\":{},\"multiplicity\":1,\"nominal_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]},\"relation_ids\":[],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\"},{\"component_id\":\"component:bracket-c\",\"default_bom_state\":\"INCLUDED\",\"default_composition_state\":\"INCLUDED\",\"default_visibility_state\":\"VISIBLE\",\"metadata\":{},\"multiplicity\":1,\"nominal_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"2\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]},\"relation_ids\":[],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\"}],\"definition_id\":\"assemblydef:clamp\",\"definition_revision_hash\":\"24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe\",\"definition_revision_id\":\"assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe\",\"metadata\":{}},\"assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d\":{\"bom_identity\":null,\"components\":[{\"component_id\":\"component:clamp-left\",\"default_bom_state\":\"INCLUDED\",\"default_composition_state\":\"INCLUDED\",\"default_visibility_state\":\"VISIBLE\",\"metadata\":{},\"multiplicity\":1,\"nominal_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"-10\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]},\"relation_ids\":[],\"target_definition_id\":\"assemblydef:clamp\",\"target_definition_kind\":\"ASSEMBLY\",\"target_definition_revision_id\":\"assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe\"},{\"component_id\":\"component:clamp-right\",\"default_bom_state\":\"INCLUDED\",\"default_composition_state\":\"INCLUDED\",\"default_visibility_state\":\"VISIBLE\",\"metadata\":{},\"multiplicity\":1,\"nominal_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"10\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]},\"relation_ids\":[],\"target_definition_id\":\"assemblydef:clamp\",\"target_definition_kind\":\"ASSEMBLY\",\"target_definition_revision_id\":\"assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe\"}],\"definition_id\":\"assemblydef:root\",\"definition_revision_hash\":\"7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d\",\"definition_revision_id\":\"assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d\",\"metadata\":{}}},\"assembly_id\":\"assembly:test\",\"metadata\":{},\"part_definitions\":{\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\":{\"body_bindings\":[{\"body_id\":\"body:test\",\"brep_artifact_id\":\"artifact:51e2842fbb55143a9be38196e9def069c0d6bbb3e774d9f96188600b3d990d9a\",\"brep_content_hash\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"semantic_fingerprint\":\"8a762e43149b030665fff35e035be69462725a142ef671a3d537a34950f8a176\"}],\"bom_identity\":{\"description\":\"Test part\",\"part_number\":\"TEST-001\",\"revision\":\"A\",\"unit\":\"EA\"},\"definition_id\":\"partdef:test\",\"definition_revision_hash\":\"47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\",\"definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\",\"material_mass\":{\"density_kg_per_mm3\":null,\"mass_override_kg\":null,\"material_ref\":null},\"metadata\":{},\"part_document_id\":\"part:test\",\"part_geometry_hash\":\"581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de\",\"part_revision_id\":\"rev:26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0\"}},\"resolved_configuration\":{\"actor_id\":\"actor:test\",\"authorization_ref\":null,\"base_assembly_definition_revision_id\":\"assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d\",\"configuration_id\":\"configuration:default\",\"configuration_revision_hash\":\"8104e623ae7b36ffc6159402fdbe3060f28d986ef93951514025dd75fa32a116\",\"configuration_revision_id\":\"configuration-rev:8104e623ae7b36ffc6159402fdbe3060f28d986ef93951514025dd75fa32a116\",\"intent\":\"resolve default configuration\",\"name\":\"Default\",\"overrides\":[],\"parent_revision_ids\":[],\"resolved_configuration_hash\":\"72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951\",\"resolved_configuration_id\":\"configuration-resolved:72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951\",\"schema_version\":\"forge.resolved-configuration/1\"},\"root_assembly_definition_revision_id\":\"assemblydef-rev:7190535b04ea956bdcda3a126cb6f4c07b19b34228a59a74f166862111c17c3d\",\"schema_version\":\"forge.assembly-content/1\"}",
+      "sha256": "fea92214df1f060bdd500336511f693259d5af4312220e443b5b8136360734a2"
+    },
+    "assembly_geometry_hash": {
+      "preimage": {
+        "schema_version": "forge.assembly-composition/1",
+        "assembly_id": "assembly:test",
+        "resolved_configuration_id": "configuration-resolved:72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951",
+        "occurrences": [
+          {
+            "occurrence_path": [
+              "component:clamp-left"
+            ],
+            "component_id": "component:clamp-left",
+            "target_definition_kind": "ASSEMBLY",
+            "target_definition_id": "assemblydef:clamp",
+            "target_definition_revision_id": "assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe",
+            "instance_ordinal": 1,
+            "world_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "-10",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            }
+          },
+          {
+            "occurrence_path": [
+              "component:clamp-left",
+              "component:bracket-a"
+            ],
+            "component_id": "component:bracket-a",
+            "target_definition_kind": "PART",
+            "target_definition_id": "partdef:test",
+            "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+            "instance_ordinal": 1,
+            "world_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "-12",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            }
+          },
+          {
+            "occurrence_path": [
+              "component:clamp-left",
+              "component:bracket-b"
+            ],
+            "component_id": "component:bracket-b",
+            "target_definition_kind": "PART",
+            "target_definition_id": "partdef:test",
+            "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+            "instance_ordinal": 1,
+            "world_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "-10",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            }
+          },
+          {
+            "occurrence_path": [
+              "component:clamp-left",
+              "component:bracket-c"
+            ],
+            "component_id": "component:bracket-c",
+            "target_definition_kind": "PART",
+            "target_definition_id": "partdef:test",
+            "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+            "instance_ordinal": 1,
+            "world_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "-8",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            }
+          },
+          {
+            "occurrence_path": [
+              "component:clamp-right"
+            ],
+            "component_id": "component:clamp-right",
+            "target_definition_kind": "ASSEMBLY",
+            "target_definition_id": "assemblydef:clamp",
+            "target_definition_revision_id": "assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe",
+            "instance_ordinal": 1,
+            "world_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "10",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            }
+          },
+          {
+            "occurrence_path": [
+              "component:clamp-right",
+              "component:bracket-a"
+            ],
+            "component_id": "component:bracket-a",
+            "target_definition_kind": "PART",
+            "target_definition_id": "partdef:test",
+            "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+            "instance_ordinal": 1,
+            "world_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "8",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            }
+          },
+          {
+            "occurrence_path": [
+              "component:clamp-right",
+              "component:bracket-b"
+            ],
+            "component_id": "component:bracket-b",
+            "target_definition_kind": "PART",
+            "target_definition_id": "partdef:test",
+            "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+            "instance_ordinal": 1,
+            "world_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "10",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            }
+          },
+          {
+            "occurrence_path": [
+              "component:clamp-right",
+              "component:bracket-c"
+            ],
+            "component_id": "component:bracket-c",
+            "target_definition_kind": "PART",
+            "target_definition_id": "partdef:test",
+            "target_definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+            "instance_ordinal": 1,
+            "world_transform": {
+              "matrix4x4_row_major": [
+                "1",
+                "0",
+                "0",
+                "12",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1"
+              ]
+            }
+          }
+        ]
+      },
+      "canonical_utf8": "{\"assembly_id\":\"assembly:test\",\"occurrences\":[{\"component_id\":\"component:clamp-left\",\"instance_ordinal\":1,\"occurrence_path\":[\"component:clamp-left\"],\"target_definition_id\":\"assemblydef:clamp\",\"target_definition_kind\":\"ASSEMBLY\",\"target_definition_revision_id\":\"assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe\",\"world_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"-10\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]}},{\"component_id\":\"component:bracket-a\",\"instance_ordinal\":1,\"occurrence_path\":[\"component:clamp-left\",\"component:bracket-a\"],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\",\"world_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"-12\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]}},{\"component_id\":\"component:bracket-b\",\"instance_ordinal\":1,\"occurrence_path\":[\"component:clamp-left\",\"component:bracket-b\"],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\",\"world_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"-10\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]}},{\"component_id\":\"component:bracket-c\",\"instance_ordinal\":1,\"occurrence_path\":[\"component:clamp-left\",\"component:bracket-c\"],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\",\"world_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"-8\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]}},{\"component_id\":\"component:clamp-right\",\"instance_ordinal\":1,\"occurrence_path\":[\"component:clamp-right\"],\"target_definition_id\":\"assemblydef:clamp\",\"target_definition_kind\":\"ASSEMBLY\",\"target_definition_revision_id\":\"assemblydef-rev:24c4e9d451f5546c0101c12c2ac83fac0ba6792b0c4060b7856787ca23c42ebe\",\"world_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"10\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]}},{\"component_id\":\"component:bracket-a\",\"instance_ordinal\":1,\"occurrence_path\":[\"component:clamp-right\",\"component:bracket-a\"],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\",\"world_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"8\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]}},{\"component_id\":\"component:bracket-b\",\"instance_ordinal\":1,\"occurrence_path\":[\"component:clamp-right\",\"component:bracket-b\"],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\",\"world_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"10\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]}},{\"component_id\":\"component:bracket-c\",\"instance_ordinal\":1,\"occurrence_path\":[\"component:clamp-right\",\"component:bracket-c\"],\"target_definition_id\":\"partdef:test\",\"target_definition_kind\":\"PART\",\"target_definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\",\"world_transform\":{\"matrix4x4_row_major\":[\"1\",\"0\",\"0\",\"12\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\",\"0\",\"0\",\"0\",\"0\",\"1\"]}}],\"resolved_configuration_id\":\"configuration-resolved:72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951\",\"schema_version\":\"forge.assembly-composition/1\"}",
+      "sha256": "5115cb627ebda83c093b62f14f3982b785d69711fda1092dc2940ac336418308"
+    },
+    "assembly_revision_hash": {
+      "preimage": {
+        "schema_version": "forge.assembly-document/1",
+        "assembly_id": "assembly:test",
+        "assembly_content_hash": "fea92214df1f060bdd500336511f693259d5af4312220e443b5b8136360734a2",
+        "assembly_geometry_hash": "5115cb627ebda83c093b62f14f3982b785d69711fda1092dc2940ac336418308",
+        "resolved_configuration_hash": "72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951",
+        "parent_revision_ids": [],
+        "actor_id": "actor:test",
+        "intent": "reuse one subassembly twice",
+        "authorization_ref": null
+      },
+      "canonical_utf8": "{\"actor_id\":\"actor:test\",\"assembly_content_hash\":\"fea92214df1f060bdd500336511f693259d5af4312220e443b5b8136360734a2\",\"assembly_geometry_hash\":\"5115cb627ebda83c093b62f14f3982b785d69711fda1092dc2940ac336418308\",\"assembly_id\":\"assembly:test\",\"authorization_ref\":null,\"intent\":\"reuse one subassembly twice\",\"parent_revision_ids\":[],\"resolved_configuration_hash\":\"72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951\",\"schema_version\":\"forge.assembly-document/1\"}",
+      "sha256": "680f7c324c6d6b55d9cda776681fbe63751f7e42adcf9e934b68c7079f897e2e",
+      "revision_id": "assembly-rev:680f7c324c6d6b55d9cda776681fbe63751f7e42adcf9e934b68c7079f897e2e"
+    },
+    "bom_line_hash": {
+      "preimage": {
+        "definition_id": "partdef:test",
+        "definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+        "part_revision_id": "rev:26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0",
+        "part_geometry_hash": "581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de",
+        "body_ids": [
+          "body:test"
+        ],
+        "part_number": "TEST-001",
+        "revision": "A",
+        "description": "Test part",
+        "quantity": 6,
+        "unit": "EA",
+        "resolved_configuration_id": "configuration-resolved:72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951",
+        "effectivity": {
+          "start": null,
+          "end": null
+        },
+        "source_occurrence_paths": [
+          [
+            "component:clamp-left",
+            "component:bracket-a"
+          ],
+          [
+            "component:clamp-left",
+            "component:bracket-b"
+          ],
+          [
+            "component:clamp-left",
+            "component:bracket-c"
+          ],
+          [
+            "component:clamp-right",
+            "component:bracket-a"
+          ],
+          [
+            "component:clamp-right",
+            "component:bracket-b"
+          ],
+          [
+            "component:clamp-right",
+            "component:bracket-c"
+          ]
+        ]
+      },
+      "canonical_utf8": "{\"body_ids\":[\"body:test\"],\"definition_id\":\"partdef:test\",\"definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\",\"description\":\"Test part\",\"effectivity\":{\"end\":null,\"start\":null},\"part_geometry_hash\":\"581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de\",\"part_number\":\"TEST-001\",\"part_revision_id\":\"rev:26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0\",\"quantity\":6,\"resolved_configuration_id\":\"configuration-resolved:72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951\",\"revision\":\"A\",\"source_occurrence_paths\":[[\"component:clamp-left\",\"component:bracket-a\"],[\"component:clamp-left\",\"component:bracket-b\"],[\"component:clamp-left\",\"component:bracket-c\"],[\"component:clamp-right\",\"component:bracket-a\"],[\"component:clamp-right\",\"component:bracket-b\"],[\"component:clamp-right\",\"component:bracket-c\"]],\"unit\":\"EA\"}",
+      "sha256": "c0ed08f802fb1883a89d7d55a735d72d5c2c22028c59f919ca6d8ec04f3147df",
+      "bom_line_id": "bom:c0ed08f802fb1883a89d7d55a735d72d5c2c22028c59f919ca6d8ec04f3147df"
+    },
+    "bom_hash": {
+      "preimage": [
+        {
+          "definition_id": "partdef:test",
+          "definition_revision_id": "partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa",
+          "part_revision_id": "rev:26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0",
+          "part_geometry_hash": "581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de",
+          "body_ids": [
+            "body:test"
+          ],
+          "part_number": "TEST-001",
+          "revision": "A",
+          "description": "Test part",
+          "quantity": 6,
+          "unit": "EA",
+          "resolved_configuration_id": "configuration-resolved:72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951",
+          "effectivity": {
+            "start": null,
+            "end": null
+          },
+          "source_occurrence_paths": [
+            [
+              "component:clamp-left",
+              "component:bracket-a"
+            ],
+            [
+              "component:clamp-left",
+              "component:bracket-b"
+            ],
+            [
+              "component:clamp-left",
+              "component:bracket-c"
+            ],
+            [
+              "component:clamp-right",
+              "component:bracket-a"
+            ],
+            [
+              "component:clamp-right",
+              "component:bracket-b"
+            ],
+            [
+              "component:clamp-right",
+              "component:bracket-c"
+            ]
+          ],
+          "bom_line_id": "bom:c0ed08f802fb1883a89d7d55a735d72d5c2c22028c59f919ca6d8ec04f3147df"
+        }
+      ],
+      "canonical_utf8": "[{\"body_ids\":[\"body:test\"],\"bom_line_id\":\"bom:c0ed08f802fb1883a89d7d55a735d72d5c2c22028c59f919ca6d8ec04f3147df\",\"definition_id\":\"partdef:test\",\"definition_revision_id\":\"partdef-rev:47e96898c47edffe1307b7c3e8eeabcb9336f5e0c9ad17b22a7a0328c0325afa\",\"description\":\"Test part\",\"effectivity\":{\"end\":null,\"start\":null},\"part_geometry_hash\":\"581f842568b1ed35d1de04a0bd9a666f06b20b395eff7d7149be8a55ec5fb3de\",\"part_number\":\"TEST-001\",\"part_revision_id\":\"rev:26e436d1021a3702d736383c0c4f10c6b03924ab6693cf2c12a888bfd661a9f0\",\"quantity\":6,\"resolved_configuration_id\":\"configuration-resolved:72b79aae5650c52b3c3c05698d9db84116510647b91ee40750462c58b9f86951\",\"revision\":\"A\",\"source_occurrence_paths\":[[\"component:clamp-left\",\"component:bracket-a\"],[\"component:clamp-left\",\"component:bracket-b\"],[\"component:clamp-left\",\"component:bracket-c\"],[\"component:clamp-right\",\"component:bracket-a\"],[\"component:clamp-right\",\"component:bracket-b\"],[\"component:clamp-right\",\"component:bracket-c\"]],\"unit\":\"EA\"}]",
+      "sha256": "4c94a4cfdf8a596eb6419a4ed82d0b8f5fbc9497670790c75ecd25c53c4a49bd"
+    }
+  }
+}

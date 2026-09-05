@@ -1,0 +1,275 @@
+{
+  "schema_version": "forge.platform-records-test-vectors/1",
+  "canonicalization": "RFC8785",
+  "hash": "SHA-256",
+  "vectors": {
+    "record_content_hash": {
+      "preimage": {
+        "schema_version": "forge.record/1",
+        "record_kind": "mission.requirement.v1",
+        "record_id": "requirement:mass",
+        "parent_revision_ids": [],
+        "lifecycle_state": "DRAFT",
+        "authority_domain": "mission",
+        "actor": {
+          "actor_id": "actor:lead",
+          "actor_type": "HUMAN",
+          "alias": "program-lead"
+        },
+        "authorization_ref": null,
+        "command_id": "command:create-mass-requirement",
+        "idempotency_key": "fixture:create-mass-requirement:v1",
+        "occurred_at": "2026-09-05T16:00:00Z",
+        "recorded_at": "2026-09-05T16:00:00Z",
+        "effective_window": {
+          "from": null,
+          "through": null
+        },
+        "source_confidence": {
+          "level": "DECLARED",
+          "basis": "synthetic fixture",
+          "observed_at": "2026-09-05T16:00:00Z"
+        },
+        "source_refs": [],
+        "provenance": {
+          "adapter_id": "forge-native",
+          "adapter_version": "1",
+          "tool_identity": "forge@test",
+          "input_record_refs": [],
+          "artifact_refs": [],
+          "generated_at": "2026-09-05T16:00:00Z"
+        },
+        "units": {
+          "system": "SI_MM",
+          "overrides": {}
+        },
+        "tolerances": {
+          "linear_mm": "0.000001",
+          "angular_deg": "0.000001"
+        },
+        "claim_ceiling": "SYNTHETIC_LOCAL_ONLY",
+        "payload": {
+          "requirement_id": "requirement:mass",
+          "text": "Fixture mass shall be at most 2 kg",
+          "owner_actor_id": "actor:lead",
+          "source_spans": [
+            {
+              "source_id": "source:synthetic-brief",
+              "start": 0,
+              "end": 39
+            }
+          ],
+          "uncertainty": "DECLARED",
+          "approval_state": "DRAFT",
+          "acceptance_criteria": [
+            {
+              "criterion_id": "criterion:mass",
+              "metric": "mass",
+              "comparator": "LTE",
+              "threshold": "2",
+              "unit": "kg",
+              "verification_method_ref": null,
+              "evidence_state": "PLANNED"
+            }
+          ],
+          "trace_links": []
+        }
+      },
+      "canonical_utf8": "{\"actor\":{\"actor_id\":\"actor:lead\",\"actor_type\":\"HUMAN\",\"alias\":\"program-lead\"},\"authority_domain\":\"mission\",\"authorization_ref\":null,\"claim_ceiling\":\"SYNTHETIC_LOCAL_ONLY\",\"command_id\":\"command:create-mass-requirement\",\"effective_window\":{\"from\":null,\"through\":null},\"idempotency_key\":\"fixture:create-mass-requirement:v1\",\"lifecycle_state\":\"DRAFT\",\"occurred_at\":\"2026-09-05T16:00:00Z\",\"parent_revision_ids\":[],\"payload\":{\"acceptance_criteria\":[{\"comparator\":\"LTE\",\"criterion_id\":\"criterion:mass\",\"evidence_state\":\"PLANNED\",\"metric\":\"mass\",\"threshold\":\"2\",\"unit\":\"kg\",\"verification_method_ref\":null}],\"approval_state\":\"DRAFT\",\"owner_actor_id\":\"actor:lead\",\"requirement_id\":\"requirement:mass\",\"source_spans\":[{\"end\":39,\"source_id\":\"source:synthetic-brief\",\"start\":0}],\"text\":\"Fixture mass shall be at most 2 kg\",\"trace_links\":[],\"uncertainty\":\"DECLARED\"},\"provenance\":{\"adapter_id\":\"forge-native\",\"adapter_version\":\"1\",\"artifact_refs\":[],\"generated_at\":\"2026-09-05T16:00:00Z\",\"input_record_refs\":[],\"tool_identity\":\"forge@test\"},\"record_id\":\"requirement:mass\",\"record_kind\":\"mission.requirement.v1\",\"recorded_at\":\"2026-09-05T16:00:00Z\",\"schema_version\":\"forge.record/1\",\"source_confidence\":{\"basis\":\"synthetic fixture\",\"level\":\"DECLARED\",\"observed_at\":\"2026-09-05T16:00:00Z\"},\"source_refs\":[],\"tolerances\":{\"angular_deg\":\"0.000001\",\"linear_mm\":\"0.000001\"},\"units\":{\"overrides\":{},\"system\":\"SI_MM\"}}",
+      "sha256": "d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de",
+      "revision_id": "record-rev:d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de"
+    },
+    "command_hash": {
+      "preimage": {
+        "protocol_version": "forge.command/1",
+        "command_id": "command:create-mass-requirement",
+        "command_kind": "CREATE_RECORD",
+        "target_authority_domain": "mission",
+        "target_record_kind": "mission.requirement.v1",
+        "target_record_id": "requirement:mass",
+        "base_revision_id": null,
+        "base_content_hash": null,
+        "actor": {
+          "actor_id": "actor:lead",
+          "actor_type": "HUMAN",
+          "alias": "program-lead"
+        },
+        "intent": "Create measurable mass requirement",
+        "authorization_ref": null,
+        "idempotency_key": "fixture:create-mass-requirement:v1",
+        "external": false,
+        "payload": {
+          "requirement_id": "requirement:mass",
+          "text": "Fixture mass shall be at most 2 kg",
+          "owner_actor_id": "actor:lead",
+          "source_spans": [
+            {
+              "source_id": "source:synthetic-brief",
+              "start": 0,
+              "end": 39
+            }
+          ],
+          "uncertainty": "DECLARED",
+          "approval_state": "DRAFT",
+          "acceptance_criteria": [
+            {
+              "criterion_id": "criterion:mass",
+              "metric": "mass",
+              "comparator": "LTE",
+              "threshold": "2",
+              "unit": "kg",
+              "verification_method_ref": null,
+              "evidence_state": "PLANNED"
+            }
+          ],
+          "trace_links": []
+        }
+      },
+      "canonical_utf8": "{\"actor\":{\"actor_id\":\"actor:lead\",\"actor_type\":\"HUMAN\",\"alias\":\"program-lead\"},\"authorization_ref\":null,\"base_content_hash\":null,\"base_revision_id\":null,\"command_id\":\"command:create-mass-requirement\",\"command_kind\":\"CREATE_RECORD\",\"external\":false,\"idempotency_key\":\"fixture:create-mass-requirement:v1\",\"intent\":\"Create measurable mass requirement\",\"payload\":{\"acceptance_criteria\":[{\"comparator\":\"LTE\",\"criterion_id\":\"criterion:mass\",\"evidence_state\":\"PLANNED\",\"metric\":\"mass\",\"threshold\":\"2\",\"unit\":\"kg\",\"verification_method_ref\":null}],\"approval_state\":\"DRAFT\",\"owner_actor_id\":\"actor:lead\",\"requirement_id\":\"requirement:mass\",\"source_spans\":[{\"end\":39,\"source_id\":\"source:synthetic-brief\",\"start\":0}],\"text\":\"Fixture mass shall be at most 2 kg\",\"trace_links\":[],\"uncertainty\":\"DECLARED\"},\"protocol_version\":\"forge.command/1\",\"target_authority_domain\":\"mission\",\"target_record_id\":\"requirement:mass\",\"target_record_kind\":\"mission.requirement.v1\"}",
+      "sha256": "b46ca8314fff846d7cbf513a891964f6416ff0a4c99d684a4dff5596ab3b79f5"
+    },
+    "event_hash": {
+      "preimage": {
+        "protocol_version": "forge.event/1",
+        "event_order": 1,
+        "product_thread_id": "product-thread:fixture",
+        "state": "APPLIED",
+        "command_id": "command:create-mass-requirement",
+        "command_hash": "b46ca8314fff846d7cbf513a891964f6416ff0a4c99d684a4dff5596ab3b79f5",
+        "authorization_ref": null,
+        "before_ref": null,
+        "after_ref": {
+          "record_kind": "mission.requirement.v1",
+          "record_id": "requirement:mass",
+          "revision_id": "record-rev:d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de",
+          "content_hash": "d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de",
+          "authority_domain": "mission"
+        },
+        "effect_ref": null,
+        "previous_event_hash": null,
+        "occurred_at": "2026-09-05T16:00:00Z",
+        "diagnostics": []
+      },
+      "canonical_utf8": "{\"after_ref\":{\"authority_domain\":\"mission\",\"content_hash\":\"d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de\",\"record_id\":\"requirement:mass\",\"record_kind\":\"mission.requirement.v1\",\"revision_id\":\"record-rev:d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de\"},\"authorization_ref\":null,\"before_ref\":null,\"command_hash\":\"b46ca8314fff846d7cbf513a891964f6416ff0a4c99d684a4dff5596ab3b79f5\",\"command_id\":\"command:create-mass-requirement\",\"diagnostics\":[],\"effect_ref\":null,\"event_order\":1,\"occurred_at\":\"2026-09-05T16:00:00Z\",\"previous_event_hash\":null,\"product_thread_id\":\"product-thread:fixture\",\"protocol_version\":\"forge.event/1\",\"state\":\"APPLIED\"}",
+      "sha256": "7a534b82b981c614c3db652e90d0e860f8473535e61dc72dcd34695321f96f9c",
+      "event_id": "event:7a534b82b981c614c3db652e90d0e860f8473535e61dc72dcd34695321f96f9c"
+    },
+    "edge_hash": {
+      "preimage": {
+        "edge_type": "DERIVES_REQUIREMENT",
+        "source_ref": {
+          "record_kind": "mission.need.v1",
+          "record_id": "need:fixture",
+          "revision_id": "record-rev:0000000000000000000000000000000000000000000000000000000000000000",
+          "content_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "authority_domain": "mission"
+        },
+        "target_ref": {
+          "record_kind": "mission.requirement.v1",
+          "record_id": "requirement:mass",
+          "revision_id": "record-rev:d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de",
+          "content_hash": "d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de",
+          "authority_domain": "mission"
+        },
+        "source_role": "need",
+        "target_role": "requirement"
+      },
+      "canonical_utf8": "{\"edge_type\":\"DERIVES_REQUIREMENT\",\"source_ref\":{\"authority_domain\":\"mission\",\"content_hash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"record_id\":\"need:fixture\",\"record_kind\":\"mission.need.v1\",\"revision_id\":\"record-rev:0000000000000000000000000000000000000000000000000000000000000000\"},\"source_role\":\"need\",\"target_ref\":{\"authority_domain\":\"mission\",\"content_hash\":\"d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de\",\"record_id\":\"requirement:mass\",\"record_kind\":\"mission.requirement.v1\",\"revision_id\":\"record-rev:d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de\"},\"target_role\":\"requirement\"}",
+      "sha256": "983af53deebeb1080cc075fbdf7bc633d5d3de7b4324eb6c16426c937138a440",
+      "edge_id": "edge:983af53deebeb1080cc075fbdf7bc633d5d3de7b4324eb6c16426c937138a440"
+    },
+    "graph_digest": {
+      "preimage": {
+        "product_thread_id": "product-thread:fixture",
+        "product_id": "product:fixture",
+        "configuration_ref": null,
+        "node_refs": [
+          {
+            "record_kind": "mission.need.v1",
+            "record_id": "need:fixture",
+            "revision_id": "record-rev:0000000000000000000000000000000000000000000000000000000000000000",
+            "content_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "authority_domain": "mission"
+          },
+          {
+            "record_kind": "mission.requirement.v1",
+            "record_id": "requirement:mass",
+            "revision_id": "record-rev:d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de",
+            "content_hash": "d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de",
+            "authority_domain": "mission"
+          }
+        ],
+        "edges": [
+          {
+            "edge_type": "DERIVES_REQUIREMENT",
+            "source_ref": {
+              "record_kind": "mission.need.v1",
+              "record_id": "need:fixture",
+              "revision_id": "record-rev:0000000000000000000000000000000000000000000000000000000000000000",
+              "content_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+              "authority_domain": "mission"
+            },
+            "target_ref": {
+              "record_kind": "mission.requirement.v1",
+              "record_id": "requirement:mass",
+              "revision_id": "record-rev:d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de",
+              "content_hash": "d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de",
+              "authority_domain": "mission"
+            },
+            "source_role": "need",
+            "target_role": "requirement",
+            "edge_id": "edge:983af53deebeb1080cc075fbdf7bc633d5d3de7b4324eb6c16426c937138a440",
+            "edge_hash": "983af53deebeb1080cc075fbdf7bc633d5d3de7b4324eb6c16426c937138a440"
+          }
+        ],
+        "ordered_event_refs": [
+          {
+            "record_kind": "platform.event.v1",
+            "record_id": "event:7a534b82b981c614c3db652e90d0e860f8473535e61dc72dcd34695321f96f9c",
+            "revision_id": "event:7a534b82b981c614c3db652e90d0e860f8473535e61dc72dcd34695321f96f9c",
+            "content_hash": "7a534b82b981c614c3db652e90d0e860f8473535e61dc72dcd34695321f96f9c",
+            "authority_domain": "platform"
+          }
+        ],
+        "release_refs": [],
+        "delivery_refs": [],
+        "feedback_refs": [],
+        "change_proposal_refs": []
+      },
+      "canonical_utf8": "{\"change_proposal_refs\":[],\"configuration_ref\":null,\"delivery_refs\":[],\"edges\":[{\"edge_hash\":\"983af53deebeb1080cc075fbdf7bc633d5d3de7b4324eb6c16426c937138a440\",\"edge_id\":\"edge:983af53deebeb1080cc075fbdf7bc633d5d3de7b4324eb6c16426c937138a440\",\"edge_type\":\"DERIVES_REQUIREMENT\",\"source_ref\":{\"authority_domain\":\"mission\",\"content_hash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"record_id\":\"need:fixture\",\"record_kind\":\"mission.need.v1\",\"revision_id\":\"record-rev:0000000000000000000000000000000000000000000000000000000000000000\"},\"source_role\":\"need\",\"target_ref\":{\"authority_domain\":\"mission\",\"content_hash\":\"d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de\",\"record_id\":\"requirement:mass\",\"record_kind\":\"mission.requirement.v1\",\"revision_id\":\"record-rev:d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de\"},\"target_role\":\"requirement\"}],\"feedback_refs\":[],\"node_refs\":[{\"authority_domain\":\"mission\",\"content_hash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"record_id\":\"need:fixture\",\"record_kind\":\"mission.need.v1\",\"revision_id\":\"record-rev:0000000000000000000000000000000000000000000000000000000000000000\"},{\"authority_domain\":\"mission\",\"content_hash\":\"d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de\",\"record_id\":\"requirement:mass\",\"record_kind\":\"mission.requirement.v1\",\"revision_id\":\"record-rev:d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de\"}],\"ordered_event_refs\":[{\"authority_domain\":\"platform\",\"content_hash\":\"7a534b82b981c614c3db652e90d0e860f8473535e61dc72dcd34695321f96f9c\",\"record_id\":\"event:7a534b82b981c614c3db652e90d0e860f8473535e61dc72dcd34695321f96f9c\",\"record_kind\":\"platform.event.v1\",\"revision_id\":\"event:7a534b82b981c614c3db652e90d0e860f8473535e61dc72dcd34695321f96f9c\"}],\"product_id\":\"product:fixture\",\"product_thread_id\":\"product-thread:fixture\",\"release_refs\":[]}",
+      "sha256": "df3fd9ecafed5eaac89b765cfe4b87d7832ee58eea63785c6cb70f0cd85f41b5"
+    },
+    "local_effect_hash": {
+      "preimage": {
+        "schema_version": "forge.local-effect/1",
+        "sink_id": "local-sink:fixture",
+        "idempotency_key": "fixture:order:1",
+        "command_hash": "b46ca8314fff846d7cbf513a891964f6416ff0a4c99d684a4dff5596ab3b79f5",
+        "authorization_revision_id": "record-rev:1111111111111111111111111111111111111111111111111111111111111111",
+        "order_ref": {
+          "record_kind": "mission.requirement.v1",
+          "record_id": "requirement:mass",
+          "revision_id": "record-rev:d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de",
+          "content_hash": "d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de",
+          "authority_domain": "mission"
+        },
+        "recipient_ref": {
+          "record_kind": "supply.supplier.v1",
+          "record_id": "supplier:synthetic",
+          "revision_id": "record-rev:2222222222222222222222222222222222222222222222222222222222222222",
+          "content_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+          "authority_domain": "supply"
+        },
+        "quantity": {
+          "value": "1",
+          "unit": "EA"
+        },
+        "attachment_refs": [],
+        "external": false
+      },
+      "canonical_utf8": "{\"attachment_refs\":[],\"authorization_revision_id\":\"record-rev:1111111111111111111111111111111111111111111111111111111111111111\",\"command_hash\":\"b46ca8314fff846d7cbf513a891964f6416ff0a4c99d684a4dff5596ab3b79f5\",\"external\":false,\"idempotency_key\":\"fixture:order:1\",\"order_ref\":{\"authority_domain\":\"mission\",\"content_hash\":\"d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de\",\"record_id\":\"requirement:mass\",\"record_kind\":\"mission.requirement.v1\",\"revision_id\":\"record-rev:d265f083d186b5df4618a0467bfb99bcdb9702357004c4a8d39f818b7a9f73de\"},\"quantity\":{\"unit\":\"EA\",\"value\":\"1\"},\"recipient_ref\":{\"authority_domain\":\"supply\",\"content_hash\":\"2222222222222222222222222222222222222222222222222222222222222222\",\"record_id\":\"supplier:synthetic\",\"record_kind\":\"supply.supplier.v1\",\"revision_id\":\"record-rev:2222222222222222222222222222222222222222222222222222222222222222\"},\"schema_version\":\"forge.local-effect/1\",\"sink_id\":\"local-sink:fixture\"}",
+      "sha256": "b8b0b14b522e9cf1277011e5b9a585b4eb6a5f0daa624b6ee9e7ec078cabfd93",
+      "effect_id": "effect:b8b0b14b522e9cf1277011e5b9a585b4eb6a5f0daa624b6ee9e7ec078cabfd93"
+    }
+  }
+}

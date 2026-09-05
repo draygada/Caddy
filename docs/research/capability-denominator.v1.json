@@ -1,0 +1,1043 @@
+{
+  "schema_version": "forge.capability-denominator/1",
+  "source_authority": {
+    "canonical_atlas_sha256": "1f231b57dd2cb7fbe1cb427725d00890b6c9454ee25dba90a55a767bdcc44cb2",
+    "research_annex_sha256": "222930c99be0fd0358017cf03732e00f5aa05cb87035e40371cd40a976f3023c",
+    "relationship": "The annex decomposes but does not supersede the canonical Atlas. CAD-001..CAD-069 are integration-owned parent IDs, not canonical Atlas IDs."
+  },
+  "parents": [
+    {
+      "parent_id": "CAD-001",
+      "source_row": 1,
+      "source_line": 25,
+      "source_family": "requirements-operational-analysis",
+      "source_title": "RFQ, drawing, document, and model intake",
+      "minimum_credible_proof": "Ingest a synthetic mixed packet; preserve originals/hashes; extract requirements, assumptions, unknowns, and model/drawing links with human correction.",
+      "architecture_action_source": "**BUILD—simplify** intake/evidence objects; **INTEGRATE** document/CAD parsers.",
+      "source_evidence_refs": [
+        "SW-06",
+        "FU-04",
+        "IN-06",
+        "ON-06"
+      ]
+    },
+    {
+      "parent_id": "CAD-002",
+      "source_row": 2,
+      "source_line": 26,
+      "source_family": "requirements-operational-analysis",
+      "source_title": "Requirements, scenarios, constraints, acceptance and verification method",
+      "minimum_credible_proof": "Versioned requirement objects with source spans, owner, verification method, acceptance criterion, uncertainty, and approval state.",
+      "architecture_action_source": "**BUILD—simplify** the lifecycle spine; **INTEGRATE** domain solvers; **REJECT** automatic legal conclusions.",
+      "source_evidence_refs": [
+        "FU-10",
+        "STD-01",
+        "AR-02"
+      ]
+    },
+    {
+      "parent_id": "CAD-003",
+      "source_row": 3,
+      "source_line": 27,
+      "source_family": "requirements-operational-analysis",
+      "source_title": "Requirement-to-feature/model trace",
+      "minimum_credible_proof": "A parameter/feature change shows exact upstream requirement and downstream BOM/process/test impact; broken links fail visibly.",
+      "architecture_action_source": "**BUILD** stable typed links and change impact; **DEFER** broad systems-engineering authoring.",
+      "source_evidence_refs": [
+        "STD-01",
+        "AR-02"
+      ]
+    },
+    {
+      "parent_id": "CAD-004",
+      "source_row": 4,
+      "source_line": 28,
+      "source_family": "product-data-bom-release",
+      "source_title": "Product structure, part identity, configurations, revisioned BOM",
+      "minimum_credible_proof": "Stable item IDs, configured BOM, quantity/source/effectivity, version/revision distinction, where-used, and reproducible export.",
+      "architecture_action_source": "**BUILD—simplify** first product record; **INTEGRATE** later with authoritative PLM/ERP.",
+      "source_evidence_refs": [
+        "SW-03, SW-12",
+        "FU-01, FU-09",
+        "IN-04, IN-09",
+        "ON-03, ON-09"
+      ]
+    },
+    {
+      "parent_id": "CAD-005",
+      "source_row": 5,
+      "source_line": 29,
+      "source_family": "supply-chain-erp",
+      "source_title": "Make/buy, supplier question, sourcing state, cost and lead time",
+      "minimum_credible_proof": "Each BOM line has make/buy, source/confidence/as-of date, approved alternative state, estimate provenance, and explicit unknowns.",
+      "architecture_action_source": "**BUILD—simplify** decision/state fields; **INTEGRATE** live supplier/ERP data; **REJECT** fabricated quotes.",
+      "source_evidence_refs": [
+        "FU-10",
+        "IN-09, IN-10",
+        "ON-09"
+      ]
+    },
+    {
+      "parent_id": "CAD-006",
+      "source_row": 6,
+      "source_line": 30,
+      "source_family": "mes-quality",
+      "source_title": "Process plan, routing, tooling and work instructions",
+      "minimum_credible_proof": "Revision-bound operations, resources, inputs/outputs, media, safety/review gates, and change-impact warning on stale instructions.",
+      "architecture_action_source": "**BUILD—simplify** a low-volume plan/instruction flow; **INTEGRATE** CAM/MES; **DEFER** factory scheduling.",
+      "source_evidence_refs": [
+        "SW-08",
+        "FU-06, FU-10",
+        "IN-07",
+        "ON-06"
+      ]
+    },
+    {
+      "parent_id": "CAD-007",
+      "source_row": 7,
+      "source_line": 31,
+      "source_family": "mes-quality",
+      "source_title": "Build/WIP, serial-lot and as-built genealogy",
+      "minimum_credible_proof": "One synthetic unit records consumed revisions/lots, operator/agent, timestamps, deviations, and immutable links to instructions/results.",
+      "architecture_action_source": "**BUILD** traceable demo state; **INTEGRATE** MES later; **REJECT** machine/PLC control in hackathon scope.",
+      "source_evidence_refs": [
+        "FU-10"
+      ]
+    },
+    {
+      "parent_id": "CAD-008",
+      "source_row": 8,
+      "source_line": 32,
+      "source_family": "mes-quality",
+      "source_title": "Inspection, test, nonconformance and deviation",
+      "minimum_credible_proof": "Characteristics link to model/requirement; actuals retain instrument/method/unit/actor; failures block release; deviation needs named approval.",
+      "architecture_action_source": "**BUILD—simplify** evidence/gates; **INTEGRATE** CMM/test/QMS; **REJECT** certification inference.",
+      "source_evidence_refs": [
+        "SW-05, SW-09",
+        "FU-06, FU-10",
+        "IN-05, IN-07",
+        "ON-05, ON-09"
+      ]
+    },
+    {
+      "parent_id": "CAD-009",
+      "source_row": 9,
+      "source_line": 33,
+      "source_family": "product-data-bom-release",
+      "source_title": "Authorized release and immutable release packet",
+      "minimum_credible_proof": "Separate requested/authorized/applied/verified states; exact neutral geometry, drawing/PMI, BOM, process, inspection, approvals, hashes, runtimes, and parent revision.",
+      "architecture_action_source": "**BUILD** core release/receipt layer; **INTEGRATE** enterprise PLM/archive.",
+      "source_evidence_refs": [
+        "SW-12",
+        "FU-09",
+        "IN-09, IN-10",
+        "ON-09"
+      ]
+    },
+    {
+      "parent_id": "CAD-010",
+      "source_row": 10,
+      "source_line": 34,
+      "source_family": "requirements-operational-analysis",
+      "source_title": "Operational feedback back to requirement/design",
+      "minimum_credible_proof": "A field/test observation becomes a sourced finding, triggers triage, and produces an authorized requirement/design change without overwriting history.",
+      "architecture_action_source": "**BUILD** a minimal feedback/finding object; **INTEGRATE** service/QMS systems later.",
+      "source_evidence_refs": [
+        "FU-10",
+        "AR-02, AR-04"
+      ]
+    },
+    {
+      "parent_id": "CAD-011",
+      "source_row": 11,
+      "source_line": 40,
+      "source_family": "sketching",
+      "source_title": "2D sketch entities, trim/extend, projection, construction geometry",
+      "minimum_credible_proof": "Create/edit a golden sketch; entity IDs survive non-destructive edits and replay.",
+      "architecture_action_source": "**BUILD** bounded basics; **BORROW** solver/geometry primitives; **DEFER** long tail.",
+      "source_evidence_refs": [
+        "SW-01",
+        "FU-02",
+        "IN-02",
+        "ON-01"
+      ]
+    },
+    {
+      "parent_id": "CAD-012",
+      "source_row": 12,
+      "source_line": 41,
+      "source_family": "sketching",
+      "source_title": "Dimensions, geometric constraints, under/full/over states and diagnostics",
+      "minimum_credible_proof": "Solved, under-constrained, redundant, and contradictory fixtures report residual DOF and actionable conflicting constraints deterministically.",
+      "architecture_action_source": "**BUILD** solver boundary/diagnostics; **BORROW** compatible solver after license/robustness test.",
+      "source_evidence_refs": [
+        "SW-01",
+        "FU-02",
+        "IN-02",
+        "ON-01"
+      ]
+    },
+    {
+      "parent_id": "CAD-013",
+      "source_row": 13,
+      "source_line": 42,
+      "source_family": "sketching",
+      "source_title": "Advanced sketch patterns, blocks, splines and 3D sketching",
+      "minimum_credible_proof": "Create/edit each claimed construct; preserve associativity and constraints through pattern/member edits.",
+      "architecture_action_source": "**DEFER** except what the canonical bracket fixture needs.",
+      "source_evidence_refs": [
+        "SW-01",
+        "FU-02",
+        "IN-02",
+        "ON-01"
+      ]
+    },
+    {
+      "parent_id": "CAD-014",
+      "source_row": 14,
+      "source_line": 43,
+      "source_family": "parametric-part-modeling",
+      "source_title": "Parametric solid features: extrude/revolve/sweep/loft/hole/shell/draft/rib/pattern/mirror/boolean/fillet/chamfer",
+      "minimum_credible_proof": "Golden parts validate shape, volume, area, topology counts and tolerances before/after driving edits.",
+      "architecture_action_source": "**BORROW** exact kernel; **BUILD** feature graph for sketch, extrude and one edge treatment; **DEFER** breadth.",
+      "source_evidence_refs": [
+        "SW-01",
+        "FU-02",
+        "IN-02",
+        "ON-01"
+      ]
+    },
+    {
+      "parent_id": "CAD-015",
+      "source_row": 15,
+      "source_line": 44,
+      "source_family": "parametric-part-modeling",
+      "source_title": "Variables/equations, feature history, suppress/reorder, rollback and recompute",
+      "minimum_credible_proof": "Clean-state deterministic replay; failed downstream reference identifies operation and preserves last-valid artifact; rollback/restore is lossless.",
+      "architecture_action_source": "**BUILD** core operation graph, stable IDs, migration, diagnostics and last-valid recovery.",
+      "source_evidence_refs": [
+        "SW-01",
+        "FU-02",
+        "IN-02",
+        "ON-01"
+      ]
+    },
+    {
+      "parent_id": "CAD-016",
+      "source_row": 16,
+      "source_line": 45,
+      "source_family": "direct-surface-freeform-mesh",
+      "source_title": "Direct edit/push-pull/move or delete-heal face",
+      "minimum_credible_proof": "Edit an imported historyless B-rep; validate exact shape and explicit parameter/history record.",
+      "architecture_action_source": "**BORROW** kernel primitives; **DEFER** broad UI; never call render-mesh edits exact CAD.",
+      "source_evidence_refs": [
+        "SW-02",
+        "FU-02",
+        "IN-02",
+        "ON-02"
+      ]
+    },
+    {
+      "parent_id": "CAD-017",
+      "source_row": 17,
+      "source_line": 46,
+      "source_family": "direct-surface-freeform-mesh",
+      "source_title": "Surface/NURBS creation, trim/extend/knit/fill/thicken and continuity",
+      "minimum_credible_proof": "Rebuild a watertight fixture; report gaps and requested G0/G1/G2 continuity with tolerance checks.",
+      "architecture_action_source": "**BORROW** kernel primitives; **DEFER** professional authoring environment.",
+      "source_evidence_refs": [
+        "SW-02",
+        "FU-02",
+        "IN-03",
+        "ON-02"
+      ]
+    },
+    {
+      "parent_id": "CAD-018",
+      "source_row": 18,
+      "source_line": 47,
+      "source_family": "direct-surface-freeform-mesh",
+      "source_title": "Subdivision/T-Spline/freeform cage modeling",
+      "minimum_credible_proof": "Cage edits remain editable; conversion yields declared continuity/watertightness and survives downstream operations.",
+      "architecture_action_source": "**DEFER**; do not confuse desktop face deformation or mesh display with Sub-D authoring.",
+      "source_evidence_refs": [
+        "SW-02",
+        "FU-02",
+        "IN-03",
+        "ON-02"
+      ]
+    },
+    {
+      "parent_id": "CAD-019",
+      "source_row": 19,
+      "source_line": 48,
+      "source_family": "direct-surface-freeform-mesh",
+      "source_title": "Mesh repair/conversion, hybrid modeling, reverse engineering and point clouds",
+      "minimum_credible_proof": "Import, diagnose, repair and convert known defective meshes with measured deviation; point-cloud workflow names preprocessing and retained reference semantics.",
+      "architecture_action_source": "**INTEGRATE** import/reference; **BORROW** conversion where licensed; **DEFER** reverse-engineering suite.",
+      "source_evidence_refs": [
+        "SW-02",
+        "FU-02",
+        "IN-03",
+        "ON-02"
+      ]
+    },
+    {
+      "parent_id": "CAD-020",
+      "source_row": 20,
+      "source_line": 49,
+      "source_family": "configurations",
+      "source_title": "Configurations, model states, design variants and variant BOM",
+      "minimum_credible_proof": "One canonical model produces named variants, correct feature/component suppression, BOMs and release identity without hidden file forks.",
+      "architecture_action_source": "**BUILD** parameter/variant exploration and configuration schema; **DEFER** full family-table UX.",
+      "source_evidence_refs": [
+        "SW-03",
+        "FU-01, FU-02",
+        "IN-04",
+        "ON-03"
+      ]
+    },
+    {
+      "parent_id": "CAD-021",
+      "source_row": 21,
+      "source_line": 50,
+      "source_family": "assemblies-mechanisms",
+      "source_title": "Bottom-up, top-down, in-context and skeletal assembly design",
+      "minimum_credible_proof": "Assembly references update predictably; circular/stale contexts fail visibly; imported hierarchy retains stable component identity.",
+      "architecture_action_source": "**BUILD** product/assembly data model and viewer; **INTEGRATE** imported structure; **DEFER** full authoring.",
+      "source_evidence_refs": [
+        "SW-03",
+        "FU-03",
+        "IN-04",
+        "ON-03"
+      ]
+    },
+    {
+      "parent_id": "CAD-022",
+      "source_row": 22,
+      "source_line": 51,
+      "source_family": "assemblies-mechanisms",
+      "source_title": "Mates/joints, DOF, limits and mechanical relations",
+      "minimum_credible_proof": "Known mechanisms solve correct DOF and limits; invalid/overconstrained relations identify the conflict.",
+      "architecture_action_source": "**DEFER** full solver; **BUILD** typed relation schema only when required.",
+      "source_evidence_refs": [
+        "SW-03",
+        "FU-03",
+        "IN-04",
+        "ON-03"
+      ]
+    },
+    {
+      "parent_id": "CAD-023",
+      "source_row": 23,
+      "source_line": 52,
+      "source_family": "assemblies-mechanisms",
+      "source_title": "Kinematic mechanisms, drive/animate, springs/dampers/loads",
+      "minimum_credible_proof": "Sweep full range, detect singular/invalid states, and distinguish kinematic animation from force/dynamic simulation.",
+      "architecture_action_source": "**DEFER**; **INTEGRATE** validated motion solver later.",
+      "source_evidence_refs": [
+        "SW-03",
+        "FU-03",
+        "IN-04",
+        "ON-03"
+      ]
+    },
+    {
+      "parent_id": "CAD-024",
+      "source_row": 24,
+      "source_line": 53,
+      "source_family": "assemblies-mechanisms",
+      "source_title": "Interference/clearance, explode, assembly BOM and flexible subassemblies",
+      "minimum_credible_proof": "Known interference and clearance fixtures; exploded state and BOM remain revision/configuration-correct.",
+      "architecture_action_source": "**BUILD** viewer/BOM basics; **INTEGRATE** exact assembly solving; **DEFER** authoring breadth.",
+      "source_evidence_refs": [
+        "SW-03",
+        "FU-03",
+        "IN-04",
+        "ON-03"
+      ]
+    },
+    {
+      "parent_id": "CAD-025",
+      "source_row": 25,
+      "source_line": 54,
+      "source_family": "assemblies-mechanisms",
+      "source_title": "Large-assembly loading, simplification and performance",
+      "minimum_credible_proof": "Declare component/body/triangle target; measure load, rotate, select, update and memory; deferred loading cannot omit released structure silently.",
+      "architecture_action_source": "**DEFER** optimization breadth; set explicit performance envelope and fail honestly.",
+      "source_evidence_refs": [
+        "SW-03",
+        "FU-03",
+        "IN-01, IN-04",
+        "ON-03"
+      ]
+    },
+    {
+      "parent_id": "CAD-026",
+      "source_row": 26,
+      "source_line": 60,
+      "source_family": "drawings-documentation",
+      "source_title": "Associative drawings, sections/details, dimensions, symbols, tables, balloons, title/revision blocks",
+      "minimum_credible_proof": "Edit model/configuration and prove every view/table/balloon updates or becomes explicitly stale; export declared PDF/DWG.",
+      "architecture_action_source": "**BUILD** browser review/markup; **INTEGRATE/DEFER** production drawing generation.",
+      "source_evidence_refs": [
+        "SW-05",
+        "FU-04",
+        "IN-05",
+        "ON-05"
+      ]
+    },
+    {
+      "parent_id": "CAD-027",
+      "source_row": 27,
+      "source_line": 61,
+      "source_family": "mbd-pmi-gdt-quality",
+      "source_title": "GD&T: datums, FCFs, surface finish and weld symbols",
+      "minimum_credible_proof": "Author/render a toleranced fixture under an exact ASME/ISO revision; invalid syntax rejected; human interpretation and semantic data tested separately.",
+      "architecture_action_source": "**DEFER** authoring/standards validation; preserve/inspect imported metadata.",
+      "source_evidence_refs": [
+        "SW-05",
+        "FU-04",
+        "IN-05",
+        "ON-05",
+        "STD-02"
+      ]
+    },
+    {
+      "parent_id": "CAD-028",
+      "source_row": 28,
+      "source_line": 62,
+      "source_family": "mbd-pmi-gdt-quality",
+      "source_title": "Semantic PMI/MBD, inspection characteristics and tolerance analysis",
+      "minimum_credible_proof": "NIST/CAx-IF fixture round-trip preserves semantic and graphic PMI, views, units and validation properties; tolerance result has auditable chain.",
+      "architecture_action_source": "**INTEGRATE** PMI preservation/inspection; **DEFER** authoring/validation and tolerance solver.",
+      "source_evidence_refs": [
+        "SW-05",
+        "FU-01, FU-04",
+        "IN-05, IN-06",
+        "ON-05",
+        "STD-03"
+      ]
+    },
+    {
+      "parent_id": "CAD-029",
+      "source_row": 29,
+      "source_line": 63,
+      "source_family": "sheet-metal-fabrication",
+      "source_title": "Sheet metal, unfold/refold, flat patterns, bend rules/tables and DXF",
+      "minimum_credible_proof": "Folded-to-flat fixture validates neutral axis/bend allowance, corners, grain and DXF dimensions; round trip does not double-bend.",
+      "architecture_action_source": "**INTEGRATE** flat pattern/import/export first; **DEFER** authoring.",
+      "source_evidence_refs": [
+        "SW-04",
+        "FU-01, FU-06",
+        "IN-04",
+        "ON-04"
+      ]
+    },
+    {
+      "parent_id": "CAD-030",
+      "source_row": 30,
+      "source_line": 64,
+      "source_family": "structures-specialty-mechanical",
+      "source_title": "Weldments, frames, structural members, end treatments and cut lists",
+      "minimum_credible_proof": "Frame updates from skeleton; miters/end treatments and cut list lengths/quantities remain correct across revision.",
+      "architecture_action_source": "**DEFER**; **INTEGRATE** standard libraries/generators later.",
+      "source_evidence_refs": [
+        "SW-04",
+        "FU-03",
+        "IN-04",
+        "ON-04"
+      ]
+    },
+    {
+      "parent_id": "CAD-031",
+      "source_row": 31,
+      "source_line": 65,
+      "source_family": "structures-specialty-mechanical",
+      "source_title": "Mold/tooling: draft/undercut, parting, core/cavity, runners/cooling and plastics",
+      "minimum_credible_proof": "Known molded part yields valid split/core/cavity and draft/undercut report; analysis names external solver/version/benchmark.",
+      "architecture_action_source": "**DEFER** mold authoring; **INTEGRATE** validated plastics solver.",
+      "source_evidence_refs": [
+        "SW-09, SW-10",
+        "FU-07",
+        "IN-04, IN-08",
+        "ON-04, ON-07"
+      ]
+    },
+    {
+      "parent_id": "CAD-032",
+      "source_row": 32,
+      "source_line": 66,
+      "source_family": "routing-electromechanical",
+      "source_title": "Tube, pipe, hose and duct routing with fittings/cut lengths",
+      "minimum_credible_proof": "Connectivity graph, bend/min-radius checks, fittings, cut lengths and route BOM survive change/rebuild.",
+      "architecture_action_source": "**DEFER**; preserve imported structure and **INTEGRATE** specialist tools.",
+      "source_evidence_refs": [
+        "SW-04",
+        "FU-03",
+        "IN-05",
+        "ON-04"
+      ]
+    },
+    {
+      "parent_id": "CAD-033",
+      "source_row": 33,
+      "source_line": 67,
+      "source_family": "routing-electromechanical",
+      "source_title": "Cable/harness/electrical routing, connectors, wire lengths and nailboards",
+      "minimum_credible_proof": "Import connectivity, route physically, compute wire lengths/BOM, and generate a revision-bound nailboard with connector identity.",
+      "architecture_action_source": "**DEFER**; preserve imported structure and **INTEGRATE** ECAD/routing.",
+      "source_evidence_refs": [
+        "SW-04, SW-11",
+        "FU-03",
+        "IN-05, IN-09",
+        "ON-04, ON-08"
+      ]
+    },
+    {
+      "parent_id": "CAD-034",
+      "source_row": 34,
+      "source_line": 73,
+      "source_family": "interoperability",
+      "source_title": "STEP AP203/AP214/AP242 import/export",
+      "minimum_credible_proof": "Header records AP/version; NIST fixtures compare shape, units, hierarchy, names/colors, semantic/graphic PMI and validation properties in both directions.",
+      "architecture_action_source": "**BORROW** OCCT STEP; **BUILD** receipts/fixtures; **INTEGRATE** licensed translators; never claim all AP242 semantics.",
+      "source_evidence_refs": [
+        "SW-06",
+        "FU-04",
+        "IN-06",
+        "ON-06",
+        "STD-01, STD-03"
+      ]
+    },
+    {
+      "parent_id": "CAD-035",
+      "source_row": 35,
+      "source_line": 74,
+      "source_family": "interoperability",
+      "source_title": "IGES, Parasolid, ACIS/SAT, JT and native CAD references",
+      "minimum_credible_proof": "Per format/direction/version: shape validity, healing log, assembly/reference behavior, units, metadata and update semantics.",
+      "architecture_action_source": "**BORROW** open neutral support; **INTEGRATE** proprietary/licensed adapters; **DEFER** native editability.",
+      "source_evidence_refs": [
+        "SW-06",
+        "FU-04",
+        "IN-06",
+        "ON-06"
+      ]
+    },
+    {
+      "parent_id": "CAD-036",
+      "source_row": 36,
+      "source_line": 75,
+      "source_family": "interoperability",
+      "source_title": "DWG/DXF import/export",
+      "minimum_credible_proof": "State AutoCAD target version; test model/paper space, layers, blocks, text, linetypes, units, curves and sheet-metal flat geometry both directions.",
+      "architecture_action_source": "**INTEGRATE** mature adapter; **DEFER** full DWG authoring. DWG is proprietary, not neutral.",
+      "source_evidence_refs": [
+        "SW-06",
+        "FU-04",
+        "IN-06",
+        "ON-06",
+        "STD-08"
+      ]
+    },
+    {
+      "parent_id": "CAD-037",
+      "source_row": 37,
+      "source_line": 76,
+      "source_family": "interoperability",
+      "source_title": "STL/OBJ mesh exchange",
+      "minimum_credible_proof": "State binary/ASCII, units and tessellation tolerance; compare watertightness, normals, triangle count and deviation.",
+      "architecture_action_source": "**BUILD/BORROW** bounded export; treat as derivative, never geometry authority.",
+      "source_evidence_refs": [
+        "SW-02, SW-06",
+        "FU-02, FU-04",
+        "IN-06",
+        "ON-06",
+        "STD-06"
+      ]
+    },
+    {
+      "parent_id": "CAD-038",
+      "source_row": 38,
+      "source_line": 77,
+      "source_family": "interoperability",
+      "source_title": "3MF core and extensions",
+      "minimum_credible_proof": "Validate core conformance and list each supported extension/direction; materials, production, beam, slice, security and volumetric are separate claims.",
+      "architecture_action_source": "**INTEGRATE/BORROW** library; **DEFER** extensions not fixture-tested.",
+      "source_evidence_refs": [
+        "SW-06",
+        "FU-04",
+        "IN-06",
+        "ON-06",
+        "STD-07"
+      ]
+    },
+    {
+      "parent_id": "CAD-039",
+      "source_row": 39,
+      "source_line": 78,
+      "source_family": "visualization-communication",
+      "source_title": "glTF/GLB, USDZ and AR/VR delivery",
+      "minimum_credible_proof": "Scene/node/material/animation fixture plus device test; explicitly prove this is a derivative with no authoring/history semantics.",
+      "architecture_action_source": "**BORROW** viewer/export; **DEFER** AR authoring; **REJECT** glTF as canonical CAD.",
+      "source_evidence_refs": [
+        "SW-06, SW-07",
+        "FU-04, FU-05",
+        "IN-06",
+        "ON-08",
+        "STD-05"
+      ]
+    },
+    {
+      "parent_id": "CAD-040",
+      "source_row": 40,
+      "source_line": 79,
+      "source_family": "visualization-communication",
+      "source_title": "Rendering, PBR/ray tracing, animation and technical communication",
+      "minimum_credible_proof": "Reproducible scene/camera/material/light settings, render runtime, animation limits, and source-revision link.",
+      "architecture_action_source": "**BORROW** generic rendering; **BUILD** review/section/measure; **DEFER** photorealistic suite.",
+      "source_evidence_refs": [
+        "SW-07",
+        "FU-05",
+        "IN-06",
+        "ON-08"
+      ]
+    },
+    {
+      "parent_id": "CAD-041",
+      "source_row": 41,
+      "source_line": 85,
+      "source_family": "cam-subtractive",
+      "source_title": "2D/2.5D and 3-axis milling/drilling",
+      "minimum_credible_proof": "Stock/workholding/tool/library, feeds/speeds, rest material, gouge/collision checks, post identity and independent toolpath comparison.",
+      "architecture_action_source": "**BORROW** visual experiment only; **DEFER** production NC pending independent validation.",
+      "source_evidence_refs": [
+        "SW-08",
+        "FU-06",
+        "IN-07",
+        "ON-06"
+      ]
+    },
+    {
+      "parent_id": "CAD-042",
+      "source_row": 42,
+      "source_line": 86,
+      "source_family": "cam-subtractive",
+      "source_title": "3+2, simultaneous 4-axis and 5-axis machining",
+      "minimum_credible_proof": "Machine kinematics, singularities, limits, retract/rewind, fixtures and verified post on representative parts.",
+      "architecture_action_source": "**DEFER**; **INTEGRATE** validated CAM.",
+      "source_evidence_refs": [
+        "SW-08",
+        "FU-06",
+        "IN-07",
+        "ON-06"
+      ]
+    },
+    {
+      "parent_id": "CAD-043",
+      "source_row": 43,
+      "source_line": 87,
+      "source_family": "cam-subtractive",
+      "source_title": "Turning, mill-turn and Swiss",
+      "minimum_credible_proof": "Lathe/mill-turn setup, spindle/channel synchronization, stock transfer, holder collision and controller-specific post verification.",
+      "architecture_action_source": "**DEFER**; **INTEGRATE** validated CAM.",
+      "source_evidence_refs": [
+        "SW-08",
+        "FU-06",
+        "IN-07",
+        "ON-06"
+      ]
+    },
+    {
+      "parent_id": "CAD-044",
+      "source_row": 44,
+      "source_line": 88,
+      "source_family": "additive-manufacturing",
+      "source_title": "Additive orientation, supports, slicing/toolpaths, process simulation and machine output",
+      "minimum_credible_proof": "Name process/machine/material; validate orientation/support/slice/build file and extension semantics; benchmark process simulation separately.",
+      "architecture_action_source": "**BUILD** STL derivative only; **INTEGRATE** slicer; **DEFER** advanced additive.",
+      "source_evidence_refs": [
+        "SW-06, SW-09",
+        "FU-07",
+        "IN-07",
+        "ON-06",
+        "STD-07"
+      ]
+    },
+    {
+      "parent_id": "CAD-045",
+      "source_row": 45,
+      "source_line": 89,
+      "source_family": "additive-manufacturing",
+      "source_title": "2D/3D nesting and utilization reports",
+      "minimum_credible_proof": "Known sheet/build set reproduces orientation/grain/spacing constraints, quantity, utilization, remnant and DXF/NC handoff.",
+      "architecture_action_source": "**DEFER**; **INTEGRATE** specialist nesting.",
+      "source_evidence_refs": [
+        "SW-09",
+        "FU-06",
+        "IN-07",
+        "ON-06"
+      ]
+    },
+    {
+      "parent_id": "CAD-046",
+      "source_row": 46,
+      "source_line": 90,
+      "source_family": "cam-inspection-output",
+      "source_title": "Probing, part alignment and inspection",
+      "minimum_credible_proof": "Probe qualification, work offset/alignment, characteristic linkage, uncertainty, post support and captured actuals; distinguish manual/CMM/on-machine.",
+      "architecture_action_source": "**INTEGRATE** validated inspection; **DEFER** native cycles.",
+      "source_evidence_refs": [
+        "SW-09",
+        "FU-06",
+        "IN-07",
+        "ON-05"
+      ]
+    },
+    {
+      "parent_id": "CAD-047",
+      "source_row": 47,
+      "source_line": 91,
+      "source_family": "cam-inspection-output",
+      "source_title": "Toolpath/machine simulation, collision, post-processing and NC output",
+      "minimum_credible_proof": "Controller/machine/post pinned; independent backplot and collision suite; physical dry run under qualified review before any safety claim.",
+      "architecture_action_source": "**REJECT** unverified production NC and machine control; **INTEGRATE** validated providers later.",
+      "source_evidence_refs": [
+        "SW-08",
+        "FU-06",
+        "IN-07",
+        "ON-06"
+      ]
+    },
+    {
+      "parent_id": "CAD-048",
+      "source_row": 48,
+      "source_line": 97,
+      "source_family": "cae-simulation",
+      "source_title": "Linear static FEA",
+      "minimum_credible_proof": "Published benchmark, units/material/contact/load audit, mesh convergence, reactions and independent comparison with solver/runtime recorded.",
+      "architecture_action_source": "**INTEGRATE** solver; **BUILD** mass properties/simple checks only; no accuracy claim without benchmark.",
+      "source_evidence_refs": [
+        "SW-10",
+        "FU-07",
+        "IN-08",
+        "ON-07"
+      ]
+    },
+    {
+      "parent_id": "CAD-049",
+      "source_row": 49,
+      "source_line": 98,
+      "source_family": "cae-simulation",
+      "source_title": "Modal/frequency, buckling, fatigue and drop",
+      "minimum_credible_proof": "One accepted benchmark per named study; mode normalization/constraints and fatigue/drop assumptions explicit.",
+      "architecture_action_source": "**INTEGRATE/DEFER**; claim each study separately.",
+      "source_evidence_refs": [
+        "SW-10",
+        "FU-07",
+        "IN-08",
+        "ON-07"
+      ]
+    },
+    {
+      "parent_id": "CAD-050",
+      "source_row": 50,
+      "source_line": 99,
+      "source_family": "cae-simulation",
+      "source_title": "Steady/transient thermal and thermal stress",
+      "minimum_credible_proof": "Energy-balance and analytical benchmarks, temperature-dependent material data, contacts/convection/radiation and convergence.",
+      "architecture_action_source": "**INTEGRATE** validated solver; **DEFER** authoring.",
+      "source_evidence_refs": [
+        "SW-10",
+        "FU-07",
+        "IN-08",
+        "ON-07"
+      ]
+    },
+    {
+      "parent_id": "CAD-051",
+      "source_row": 51,
+      "source_line": 100,
+      "source_family": "cae-simulation",
+      "source_title": "Nonlinear static, linear/nonlinear dynamics and impact",
+      "minimum_credible_proof": "Benchmark large displacement/material/contact/time integration; solver tolerances and nonconvergence must fail visibly.",
+      "architecture_action_source": "**INTEGRATE/DEFER**; **REJECT** visually inferred validity.",
+      "source_evidence_refs": [
+        "SW-10",
+        "FU-07",
+        "IN-08",
+        "ON-07"
+      ]
+    },
+    {
+      "parent_id": "CAD-052",
+      "source_row": 52,
+      "source_line": 101,
+      "source_family": "cae-simulation",
+      "source_title": "Dynamic motion/multibody simulation",
+      "minimum_credible_proof": "Benchmark joints, mass/inertia, forces, contacts and energy; distinguish animation/kinematics from dynamics.",
+      "architecture_action_source": "**INTEGRATE/DEFER**.",
+      "source_evidence_refs": [
+        "SW-03, SW-10",
+        "FU-03, FU-07",
+        "IN-04, IN-08",
+        "ON-03, ON-07"
+      ]
+    },
+    {
+      "parent_id": "CAD-053",
+      "source_row": 53,
+      "source_line": 102,
+      "source_family": "cae-simulation",
+      "source_title": "General CFD and electronics cooling",
+      "minimum_credible_proof": "Canonical flow/heat benchmark, mesh independence, conservation, turbulence/boundary audit; electronics model/component power provenance.",
+      "architecture_action_source": "**INTEGRATE** validated providers; **DEFER** native workflow.",
+      "source_evidence_refs": [
+        "SW-10",
+        "FU-07",
+        "IN-08",
+        "ON-07"
+      ]
+    },
+    {
+      "parent_id": "CAD-054",
+      "source_row": 54,
+      "source_line": 103,
+      "source_family": "cae-simulation",
+      "source_title": "Plastics/injection and composites",
+      "minimum_credible_proof": "Published fill/pack/warp or laminate benchmark; material database/version and process assumptions explicit.",
+      "architecture_action_source": "**INTEGRATE/DEFER**.",
+      "source_evidence_refs": [
+        "SW-10",
+        "FU-07",
+        "IN-04, IN-08",
+        "ON-07"
+      ]
+    },
+    {
+      "parent_id": "CAD-055",
+      "source_row": 55,
+      "source_line": 104,
+      "source_family": "generative-design",
+      "source_title": "Topology/shape optimization and generative outcomes",
+      "minimum_credible_proof": "Loads/constraints/manufacturing methods/objectives pinned; compare outcomes; prove editability; do not rename parameter sweeps generative engineering.",
+      "architecture_action_source": "**DEFER** generative; **BUILD** bounded parameter/variant exploration without overclaim.",
+      "source_evidence_refs": [
+        "SW-10",
+        "FU-07",
+        "IN-08",
+        "ON-07"
+      ]
+    },
+    {
+      "parent_id": "CAD-056",
+      "source_row": 56,
+      "source_line": 105,
+      "source_family": "electronics",
+      "source_title": "Schematic capture, PCB layout/routing, libraries, DRC and manufacturing outputs",
+      "minimum_credible_proof": "Schematic-board synchronization, net/variant consistency, DRC, BOM, Gerber/drill/assembly outputs and revision-bound enclosure link.",
+      "architecture_action_source": "**REJECT** native ECAD authoring; **INTEGRATE** files/viewers/tools.",
+      "source_evidence_refs": [
+        "SW-11",
+        "FU-08",
+        "IN-09",
+        "ON-08"
+      ]
+    },
+    {
+      "parent_id": "CAD-057",
+      "source_row": 57,
+      "source_line": 106,
+      "source_family": "electronics",
+      "source_title": "SPICE and signal-integrity analysis",
+      "minimum_credible_proof": "Published circuit benchmark, model/library provenance, simulator/version and analysis settings; SI treated separately.",
+      "architecture_action_source": "**REJECT** native SPICE/SI; **INTEGRATE** established tools.",
+      "source_evidence_refs": [
+        "SW-11",
+        "FU-08",
+        "IN-09",
+        "ON-08"
+      ]
+    },
+    {
+      "parent_id": "CAD-058",
+      "source_row": 58,
+      "source_line": 107,
+      "source_family": "electronics",
+      "source_title": "MCAD/ECAD synchronization and enclosure/cooling handoff",
+      "minimum_credible_proof": "Round-trip board outline, component positions, keep-ins/outs, connector identity, conflicts and revision ownership; cooling is separately validated.",
+      "architecture_action_source": "**INTEGRATE**; preserve typed references and receipts.",
+      "source_evidence_refs": [
+        "SW-11",
+        "FU-08",
+        "IN-09",
+        "ON-08"
+      ]
+    },
+    {
+      "parent_id": "CAD-059",
+      "source_row": 59,
+      "source_line": 113,
+      "source_family": "product-data-lifecycle",
+      "source_title": "Automatic versions/history, compare and restore",
+      "minimum_credible_proof": "Every saved result has immutable parent, actor, timestamp and artifact hashes; compare/restore reproduces the exact state.",
+      "architecture_action_source": "**BUILD** core model history/provenance/restore.",
+      "source_evidence_refs": [
+        "SW-12",
+        "FU-09",
+        "IN-09, IN-10",
+        "ON-09"
+      ]
+    },
+    {
+      "parent_id": "CAD-060",
+      "source_row": 60,
+      "source_line": 114,
+      "source_family": "product-data-lifecycle",
+      "source_title": "Branch, propose, semantic diff, review, merge and deterministic replay",
+      "minimum_credible_proof": "Concurrent proposals never overwrite; noncommutative geometry conflicts are explicit; accepted operations replay cleanly with stable IDs.",
+      "architecture_action_source": "**BUILD** primary differentiator; **BORROW** presence only, not geometry merge.",
+      "source_evidence_refs": [
+        "SW-12",
+        "FU-01, FU-09",
+        "IN-10",
+        "ON-09"
+      ]
+    },
+    {
+      "parent_id": "CAD-061",
+      "source_row": 61,
+      "source_line": 115,
+      "source_family": "product-data-lifecycle",
+      "source_title": "Identity, permissions, search, part numbering, where-used and BOM control",
+      "minimum_credible_proof": "Role/object/state permission tests; immutable item identity; search/where-used and BOM rollup reflect exact revision/configuration.",
+      "architecture_action_source": "**BUILD—simplify** minimum controls; **INTEGRATE** enterprise PDM/PLM later.",
+      "source_evidence_refs": [
+        "SW-12",
+        "FU-09",
+        "IN-09, IN-10",
+        "ON-09, ON-10"
+      ]
+    },
+    {
+      "parent_id": "CAD-062",
+      "source_row": 62,
+      "source_line": 116,
+      "source_family": "product-data-lifecycle",
+      "source_title": "ECR/ECO, lifecycle, approval, release and PLM/ERP/MES APIs",
+      "minimum_credible_proof": "State machine, separation of duties, affected-items/where-used, signed approval, revision transition and idempotent integration receipt.",
+      "architecture_action_source": "**BUILD** bounded release gate; **INTEGRATE** enterprise transactions; **DEFER** full PLM.",
+      "source_evidence_refs": [
+        "SW-12",
+        "FU-09, FU-10",
+        "IN-10",
+        "ON-09"
+      ]
+    },
+    {
+      "parent_id": "CAD-063",
+      "source_row": 63,
+      "source_line": 117,
+      "source_family": "collaboration-review",
+      "source_title": "Presence, comments, markup, share/review, tasks and concurrent editing",
+      "minimum_credible_proof": "Two users edit/review; presence and comments are revision-bound; offline/stale client cannot silently overwrite; conflict is recoverable.",
+      "architecture_action_source": "**BORROW** presence/comments; **BUILD** semantic authorization/conflict layer.",
+      "source_evidence_refs": [
+        "SW-12",
+        "FU-01, FU-11",
+        "IN-10",
+        "ON-10"
+      ]
+    },
+    {
+      "parent_id": "CAD-064",
+      "source_row": 64,
+      "source_line": 118,
+      "source_family": "automation-extensibility",
+      "source_title": "Public API, webhooks, batch conversion and headless execution",
+      "minimum_credible_proof": "Versioned API contract, auth/scope, idempotency, rate/error semantics, pinned runtime and deterministic headless golden replay.",
+      "architecture_action_source": "**BUILD** typed operation API/receipts; **INTEGRATE** vendor APIs; **DEFER** generic compatibility.",
+      "source_evidence_refs": [
+        "SW-12",
+        "FU-10, FU-12",
+        "IN-10",
+        "ON-10"
+      ]
+    },
+    {
+      "parent_id": "CAD-065",
+      "source_row": 65,
+      "source_line": 119,
+      "source_family": "automation-extensibility",
+      "source_title": "Scripts, macros, custom features, rules, plug-ins and extensions",
+      "minimum_credible_proof": "Sandboxed/versioned extension manifest, permissions, deterministic fixture, migration and failure isolation; no arbitrary code in canonical record.",
+      "architecture_action_source": "**BUILD** constrained rules/typed operations; **INTEGRATE** ecosystems; **REJECT** ungoverned mutation.",
+      "source_evidence_refs": [
+        "SW-12",
+        "FU-01, FU-12",
+        "IN-10",
+        "ON-10"
+      ]
+    },
+    {
+      "parent_id": "CAD-066",
+      "source_row": 66,
+      "source_line": 120,
+      "source_family": "client-delivery",
+      "source_title": "Desktop, browser and mobile authoring/review",
+      "minimum_credible_proof": "Cold-user task on each claimed client; state/edit parity and client limitations documented; mobile review tested separately from authoring.",
+      "architecture_action_source": "**BUILD** browser workbench/mobile review; **DEFER** broad mobile authoring.",
+      "source_evidence_refs": [
+        "SW-12",
+        "FU-11",
+        "IN-01, IN-10",
+        "ON-10"
+      ]
+    },
+    {
+      "parent_id": "CAD-067",
+      "source_row": 67,
+      "source_line": 121,
+      "source_family": "reliability-security-admin",
+      "source_title": "Offline work, autosave, crash/disconnect recovery and backup",
+      "minimum_credible_proof": "Malformed operation, worker crash, disconnect, stale client and restore drill retain last-valid state and identify unsynced changes.",
+      "architecture_action_source": "**BUILD** last-valid recovery/audit; **BORROW** metadata offline; **DEFER** full offline geometry collaboration.",
+      "source_evidence_refs": [
+        "SW-12",
+        "FU-11",
+        "IN-01",
+        "ON-10"
+      ]
+    },
+    {
+      "parent_id": "CAD-068",
+      "source_row": 68,
+      "source_line": 122,
+      "source_family": "reliability-security-admin",
+      "source_title": "Security/admin: roles, SSO, encryption, tenant/region controls and audit export",
+      "minimum_credible_proof": "Threat model and control tests; certification/scope document tied to exact service/deployment; access/audit/export/revocation drills.",
+      "architecture_action_source": "**BUILD** fail-closed auth, privacy and audit; **INTEGRATE** identity; **DEFER** enterprise certifications/regions.",
+      "source_evidence_refs": [
+        "SW-12",
+        "FU-11",
+        "IN-10",
+        "ON-10"
+      ]
+    },
+    {
+      "parent_id": "CAD-069",
+      "source_row": 69,
+      "source_line": 123,
+      "source_family": "human-agent-governance",
+      "source_title": "Human/agent parity, mutation authorization and receipts",
+      "minimum_credible_proof": "Same typed operation for human/agent; requested, authorized, applied, verified and rolled-back states are distinct; local/cloud credentials scoped; denied action leaves no mutation.",
+      "architecture_action_source": "**BUILD** core differentiator; **REJECT** ambient or unaudited agent authority.",
+      "source_evidence_refs": [
+        "SW-10",
+        "FU-12",
+        "IN-10"
+      ]
+    }
+  ]
+}

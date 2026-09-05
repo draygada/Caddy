@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strafe.example/forge/atomic-capability-ledger.v1.schema.json",
+  "title": "Strafe Forge atomic capability-delivery ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_authority", "aggregation_rules", "records", "ledger_digest"],
+  "properties": {
+    "schema_version": {"const": "forge.atomic-capability-ledger/1"},
+    "source_authority": {"$ref": "#/$defs/sourceAuthority"},
+    "aggregation_rules": {"$ref": "#/$defs/aggregationRules"},
+    "records": {"type": "array", "minItems": 69, "items": {"$ref": "#/$defs/atomicRecord"}},
+    "ledger_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullableSha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "sourceAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_atlas_sha256", "research_annex_sha256", "parent_manifest"],
+      "properties": {
+        "canonical_atlas_sha256": {"$ref": "#/$defs/sha256"},
+        "research_annex_sha256": {"$ref": "#/$defs/sha256"},
+        "parent_manifest": {"const": "docs/research/capability-denominator.v1.json"}
+      }
+    },
+    "aggregationRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mandatory_failed", "mandatory_hold", "pass", "boundary_ceiling", "adapter_gate", "percentages_forbidden"],
+      "properties": {
+        "mandatory_failed": {"const": "FAILED"},
+        "mandatory_hold": {"const": "HOLD"},
+        "pass": {"const": "PASS_ONLY_WHEN_EVERY_MANDATORY_CHILD_MEETS_REQUIRED_TIER"},
+        "boundary_ceiling": {"const": "BOUNDARY_IMPLEMENTED_NEVER_SATISFIES_BEHAVIOR_TIER"},
+        "adapter_gate": {"const": "REAL_PINNED_DEPENDENCY_EXECUTION_AND_INDEPENDENT_DOMAIN_VERIFICATION_REQUIRED"},
+        "percentages_forbidden": {"const": true}
+      }
+    },
+    "atomicRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "atomic_id", "parent_id", "mandatory", "source_family", "source_row", "source_title",
+        "source_fragment", "capability_leaf", "interaction", "direction_profile", "actor", "outcome",
+        "prerequisites", "inputs", "outputs", "canonical_entities", "required_proof_tier",
+        "implementation", "execution_locus", "delivery", "dependency_license", "authority_owner", "executor_owner", "fidelity", "data_authority",
+        "persistence_semantics", "round_trip_semantics", "online_behavior", "offline_behavior",
+        "degraded_behavior", "security", "performance_envelope", "determinism", "failure_contract",
+        "replacement_seam", "ui_surfaces", "api_surfaces", "dependencies", "impact_edges",
+        "required_behavior", "positive_fixture", "negative_fixture", "degraded_offline_fixture",
+        "round_trip_fixture", "evidence", "candidate_evidence", "lifecycle_status", "proof_status", "evidence_class",
+        "deceptive_equivalence_flags", "claim_ceiling", "verdict"
+      ],
+      "properties": {
+        "atomic_id": {"type": "string", "pattern": "^CAD-[0-9]{3}\\.[A-Z0-9][A-Z0-9_.-]*$"},
+        "parent_id": {"type": "string", "pattern": "^CAD-[0-9]{3}$"},
+        "mandatory": {"type": "boolean"},
+        "source_family": {"type": "string", "minLength": 1},
+        "source_row": {"type": "integer", "minimum": 1, "maximum": 69},
+        "source_title": {"type": "string", "minLength": 1},
+        "source_fragment": {"type": "string", "minLength": 1},
+        "capability_leaf": {"type": "string", "minLength": 1},
+        "interaction": {"enum": ["AUTHOR", "EDIT", "VIEW", "IMPORT", "EXPORT", "AUTOMATE", "COMPUTE", "VALIDATE", "PERSIST", "RESTORE", "COLLABORATE"]},
+        "direction_profile": {"type": ["string", "null"]},
+        "actor": {"type": "string", "minLength": 1},
+        "outcome": {"type": "string", "minLength": 1},
+        "prerequisites": {"type": "array", "items": {"type": "string"}},
+        "inputs": {"type": "array", "items": {"type": "string"}},
+        "outputs": {"type": "array", "items": {"type": "string"}},
+        "canonical_entities": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "required_proof_tier": {"enum": ["BOUNDARY", "BEHAVIOR"]},
+        "implementation": {
+          "type": "object", "additionalProperties": false,
+          "required": ["class", "project", "version", "package_name", "resolved_path", "license_spdx", "license_file_sha256", "notice"],
+          "properties": {
+            "class": {"enum": ["UNASSIGNED", "NATIVE", "ADOPTED", "ADAPTER", "BOUNDARY"]},
+            "project": {"type": ["string", "null"]}, "version": {"type": ["string", "null"]},
+            "package_name": {"type": ["string", "null"]}, "resolved_path": {"type": ["string", "null"]},
+            "license_spdx": {"type": ["string", "null"]},
+            "license_file_sha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+            "notice": {"type": ["string", "null"]}
+          }
+        },
+        "execution_locus": {"enum": ["BROWSER", "SERVER", "HEADLESS", "DESKTOP_PLUGIN", "LOCAL_SERVICE", "REMOTE_SERVICE"]},
+        "delivery": {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "class", "entitlement", "platforms"],
+          "properties": {
+            "kind": {"enum": ["NATIVE", "ADOPTED", "PLUGIN", "SERVICE", "SIMULATED"]},
+            "class": {"enum": ["BUILT_IN", "BUNDLED", "OPTIONAL_MODULE", "PLUGIN", "FILE_ADAPTER", "SERVICE", "MANUAL", "SIMULATED"]},
+            "entitlement": {"type": "string"},
+            "platforms": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+          }
+        },
+        "dependency_license": {"type": "string", "minLength": 1},
+        "authority_owner": {"type": ["string", "null"]},
+        "executor_owner": {"type": ["string", "null"]},
+        "fidelity": {"enum": ["EXACT_BREP", "SEMANTIC", "PMI", "TESSELLATED", "DERIVED_MESH", "DOCUMENT", "METADATA", "BOUNDARY_ONLY"]},
+        "data_authority": {"enum": ["CANONICAL_FORGE", "DERIVED_PREVIEW", "IMPORTED_REFERENCE", "EXTERNAL_LIVE", "SYNTHETIC_NOTIONAL"]},
+        "persistence_semantics": {"type": "string"}, "round_trip_semantics": {"type": "string"},
+        "online_behavior": {"type": "string"}, "offline_behavior": {"type": "string"},
+        "degraded_behavior": {"type": "string"},
+        "security": {
+          "type": "object", "additionalProperties": false, "required": ["zone", "data_classes", "egress"],
+          "properties": {"zone": {"type": "string"}, "data_classes": {"type": "array", "items": {"type": "string"}}, "egress": {"enum": ["DENY", "LOCAL_ONLY", "EXPLICIT_AUTHORIZATION_REQUIRED"]}}
+        },
+        "performance_envelope": {
+          "type": "object", "additionalProperties": false,
+          "required": ["status", "latency_p95_ms", "model_size_limit", "memory_limit_mb"],
+          "properties": {"status": {"enum": ["UNPROVEN", "MEASURED"]}, "latency_p95_ms": {"type": ["integer", "null"]}, "model_size_limit": {"type": ["string", "null"]}, "memory_limit_mb": {"type": ["integer", "null"]}}
+        },
+        "determinism": {
+          "type": "object", "additionalProperties": false, "required": ["deterministic", "idempotent", "ordering"],
+          "properties": {"deterministic": {"type": "boolean"}, "idempotent": {"type": "boolean"}, "ordering": {"type": "string"}}
+        },
+        "failure_contract": {
+          "type": "object", "additionalProperties": false, "required": ["code", "condition", "state_preservation", "recovery"],
+          "properties": {"code": {"type": "string"}, "condition": {"type": "string"}, "state_preservation": {"type": "string"}, "recovery": {"type": "string"}}
+        },
+        "replacement_seam": {"type": "string"},
+        "ui_surfaces": {"type": "array", "items": {"type": "string"}},
+        "api_surfaces": {"type": "array", "items": {"type": "string"}},
+        "dependencies": {"type": "array", "items": {"type": "string"}},
+        "impact_edges": {"type": "array", "items": {"type": "string"}},
+        "required_behavior": {"type": "string"}, "positive_fixture": {"type": "string"},
+        "negative_fixture": {"type": "string"}, "degraded_offline_fixture": {"type": "string"},
+        "round_trip_fixture": {"type": "string"},
+        "evidence": {
+          "type": "object", "additionalProperties": false,
+          "required": ["source_pointer", "source_digest", "evidence_refs", "evidence_digests"],
+          "properties": {"source_pointer": {"type": "string"}, "source_digest": {"$ref": "#/$defs/sha256"}, "evidence_refs": {"type": "array", "items": {"type": "string"}}, "evidence_digests": {"type": "array", "items": {"$ref": "#/$defs/sha256"}}}
+        },
+        "candidate_evidence": {
+          "type": "object", "additionalProperties": false,
+          "required": ["candidate_hash", "candidate_clean", "command", "exit_status", "artifact_hashes", "provenance", "real_dependency_executed", "independent_domain_verification"],
+          "properties": {"candidate_hash": {"anyOf": [{"type": "string", "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"}, {"type": "null"}]}, "candidate_clean": {"type": ["boolean", "null"]}, "command": {"type": ["string", "null"]}, "exit_status": {"type": ["integer", "null"]}, "artifact_hashes": {"type": "array", "items": {"$ref": "#/$defs/sha256"}}, "provenance": {"type": ["string", "null"]}, "real_dependency_executed": {"type": "boolean"}, "independent_domain_verification": {"type": "boolean"}}
+        },
+        "lifecycle_status": {"enum": ["TARGET", "IMPLEMENTED", "DEMONSTRATED"]},
+        "proof_status": {"enum": ["TARGET", "IMPLEMENTED", "DEMONSTRATED"]},
+        "evidence_class": {"enum": ["PARENT_LINEAGE_RESEARCH_ONLY", "ADMITTED_CONTRACT", "IMMUTABLE_CANDIDATE", "INDEPENDENT_VERIFICATION"]},
+        "deceptive_equivalence_flags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["NATIVE_ADDON", "BREP_MESH", "PMI_GRAPHICS", "BUILTIN_PARTNER", "LOCAL_CLOUD", "AUTHOR_VIEW", "PROD_PLAN", "LIVE_SYNTH", "IMPORT_EDITABLE", "ANIMATION_DYNAMICS", "FORMAT_FIDELITY", "APPLIED_VERIFIED", "CRDT_GEOMETRY"]}
+        },
+        "claim_ceiling": {"type": "string"},
+        "verdict": {"enum": ["NATIVE_IMPLEMENTED", "ADOPTED_IMPLEMENTED", "ADAPTER_IMPLEMENTED", "BOUNDARY_IMPLEMENTED", "HOLD", "FAILED"]}
+      }
+    }
+  }
+}
