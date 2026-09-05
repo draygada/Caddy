@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { resolveStableEntity, stableTargets, validateRenderScene } from "./internal-scene.js";
+import { rebindStableTarget, resolveStableEntity, stableTargets, validateRenderScene } from "./internal-scene.js";
 
 const DEG_TO_RAD = Math.PI / 180;
 
@@ -254,17 +254,27 @@ export class WorkbenchViewer {
   }
 
   select(target, source = "api") {
-    this.selection = target;
+    const rebound = rebindStableTarget(this.sceneModel, target);
+    if (!rebound.ok) {
+      this.callbacks.onSelectionFailure({
+        code: rebound.code,
+        nodeId: target?.nodeId ?? null,
+        entityId: target?.entityId ?? null,
+      });
+      return false;
+    }
+    this.selection = rebound.target;
     const targets = stableTargets(this.sceneModel, this.visibleNodeIds);
-    this.keyboardIndex = Math.max(0, targets.findIndex((item) => sameTarget(item, target)));
+    this.keyboardIndex = Math.max(0, targets.findIndex((item) => sameTarget(item, this.selection)));
     this.updateHighlights();
-    this.callbacks.onSelect(target, { source });
+    this.callbacks.onSelect(this.selection, { source });
+    return true;
   }
 
   selectNode(nodeId, source = "tree") {
     const record = this.nodeObjects.get(nodeId);
     if (!record) return false;
-    this.select({
+    return this.select({
       nodeId: record.node.nodeId,
       nodeKind: record.node.kind,
       bodyId: record.node.bodyId ?? null,
@@ -274,7 +284,6 @@ export class WorkbenchViewer {
       startTriangle: 0,
       triangleCount: record.node.mesh.indices.length / 3,
     }, source);
-    return true;
   }
 
   clearSelection(source = "api") {
@@ -310,11 +319,14 @@ export class WorkbenchViewer {
   }
 
   addEntityOverlay(target, color, opacity, name) {
-    const record = this.nodeObjects.get(target.nodeId);
+    const rebound = rebindStableTarget(this.sceneModel, target);
+    if (!rebound.ok) return;
+    const currentTarget = rebound.target;
+    const record = this.nodeObjects.get(currentTarget.nodeId);
     if (!record) return;
     const source = record.node.mesh;
-    const start = target.startTriangle * 3;
-    const count = target.triangleCount * 3;
+    const start = currentTarget.startTriangle * 3;
+    const count = currentTarget.triangleCount * 3;
     const selectedIndices = Array.from(source.indices).slice(start, start + count);
     if (selectedIndices.length === 0) return;
 

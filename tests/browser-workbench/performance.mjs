@@ -18,6 +18,8 @@ for (let occurrence = 0; occurrence < repeatCount; occurrence += 1) {
     const node = structuredClone(source);
     node.nodeId = `body:perf-${occurrence}:${source.bodyId}`;
     node.bodyId = node.nodeId;
+    node.metadata.sourceDocumentId = "part:synthetic-performance-target";
+    node.metadata.sourceRevisionId = "part-rev:synthetic-performance-target";
     for (const range of node.mesh.entityRanges) {
       range.entityId = `${range.entityId}:perf-${occurrence}`;
       range.semanticReferenceId = `${range.semanticReferenceId}:perf-${occurrence}`;

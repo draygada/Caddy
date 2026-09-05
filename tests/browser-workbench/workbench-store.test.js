@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createInternalWorkbenchFixture } from "../../apps/browser-workbench/src/internal-fixture.js";
+import { resolveStableEntity } from "../../apps/browser-workbench/src/internal-scene.js";
 import { WorkbenchStore } from "../../apps/browser-workbench/src/workbench-store.js";
 
 function mediaQuery(matches = false) {
@@ -15,6 +16,18 @@ function mediaQuery(matches = false) {
       for (const listener of listeners) listener({ matches: next });
     },
   };
+}
+
+function reorderTriangleGroups(node) {
+  const oldIndices = node.mesh.indices;
+  const ranges = [...node.mesh.entityRanges].reverse();
+  node.mesh.indices = [];
+  node.mesh.entityRanges = ranges.map((range) => {
+    const nextRange = structuredClone(range);
+    nextRange.startTriangle = node.mesh.indices.length / 3;
+    node.mesh.indices.push(...oldIndices.slice(range.startTriangle * 3, (range.startTriangle + range.triangleCount) * 3));
+    return nextRange;
+  });
 }
 
 test("CURRENT is editable while in-flight, LAST_VALID, and STALE states are explicitly locked", () => {
@@ -77,6 +90,32 @@ test("visibility and isolation preserve PartDocument-scoped state", () => {
   store.showAllNodes();
   assert.equal(store.state.visibleNodeIds.size, fixture.document.scene.nodes.length);
   assert.equal(store.document.kind, "PART");
+});
+
+test("persisted entity selection rebinds after body and triangle-range reordering", () => {
+  const fixture = createInternalWorkbenchFixture();
+  const sourceNode = fixture.document.scene.nodes[0];
+  const sourceRange = sourceNode.mesh.entityRanges[0];
+  const resolved = resolveStableEntity(sourceNode, sourceRange.startTriangle);
+  assert.equal(resolved.ok, true);
+  const persisted = { kind: "entity", id: resolved.target.entityId, ...resolved.target };
+
+  fixture.document.scene.nodes.reverse();
+  const reorderedNode = fixture.document.scene.nodes.find((node) => node.bodyId === persisted.bodyId);
+  reorderTriangleGroups(reorderedNode);
+  const relocated = reorderedNode.mesh.entityRanges.find((range) => range.entityId === persisted.entityId);
+  assert.notEqual(relocated.startTriangle, persisted.startTriangle);
+  const staleOffsetResolution = resolveStableEntity(reorderedNode, persisted.startTriangle);
+  assert.equal(staleOffsetResolution.ok, true);
+  assert.notEqual(staleOffsetResolution.target.entityId, persisted.entityId);
+
+  const store = new WorkbenchStore(fixture, { mobileQuery: mediaQuery() });
+  const rebound = store.select(persisted);
+  assert.equal(rebound.entityId, persisted.entityId);
+  assert.equal(rebound.semanticReferenceId, persisted.semanticReferenceId);
+  assert.equal(rebound.startTriangle, relocated.startTriangle);
+  assert.equal(rebound.triangleCount, relocated.triangleCount);
+  assert.deepEqual(store.state.selection, rebound);
 });
 
 test("staged proposals leave the synthetic source snapshot immutable", () => {
