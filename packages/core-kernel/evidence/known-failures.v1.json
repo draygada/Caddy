@@ -1,0 +1,30 @@
+{
+  "schema_version": "forge.core-known-failures/1",
+  "cases": [
+    {"case": "noncanonical_decimal", "stable_code": "DECIMAL_INVALID", "proof": "tests/core-kernel/test_scalars.py::test_noncanonical_decimal_fails_closed"},
+    {"case": "parameter_cycle", "stable_code": "PARAMETER_CYCLE", "proof": "tests/core-kernel/test_scalars.py::test_expression_cycle_and_divide_by_zero_have_stable_codes"},
+    {"case": "parameter_divide_by_zero", "stable_code": "PARAMETER_DIVIDE_BY_ZERO", "proof": "tests/core-kernel/test_scalars.py::test_expression_cycle_and_divide_by_zero_have_stable_codes"},
+    {"case": "invalid_dimension_product", "stable_code": "PARAMETER_DIMENSION_INVALID", "proof": "tests/core-kernel/test_scalars.py::test_invalid_dimension_product_is_rejected"},
+    {"case": "duplicate_operation_or_descriptor", "stable_code": "DUPLICATE_ID", "proof": "tests/core-kernel/test_program.py and tests/core-kernel/test_registry.py"},
+    {"case": "unknown_operation", "stable_code": "OPERATION_UNKNOWN", "proof": "tests/core-kernel/test_registry.py::test_duplicate_unknown_version_payload_and_type_fail_stably"},
+    {"case": "unsupported_operation_version", "stable_code": "OPERATION_VERSION_UNSUPPORTED", "proof": "tests/core-kernel/test_registry.py::test_duplicate_unknown_version_payload_and_type_fail_stably"},
+    {"case": "invalid_operation_payload", "stable_code": "OPERATION_PAYLOAD_INVALID", "proof": "tests/core-kernel/test_registry.py::test_duplicate_unknown_version_payload_and_type_fail_stably"},
+    {"case": "parameter_slot_type_mismatch", "stable_code": "PARAMETER_TYPE_MISMATCH", "proof": "tests/core-kernel/test_registry.py::test_duplicate_unknown_version_payload_and_type_fail_stably"},
+    {"case": "missing_dependency", "stable_code": "DEPENDENCY_MISSING", "proof": "tests/core-kernel/test_program.py::test_invalid_operation_graphs_have_stable_codes"},
+    {"case": "dependency_cycle", "stable_code": "DEPENDENCY_CYCLE", "proof": "tests/core-kernel/test_program.py::test_invalid_operation_graphs_have_stable_codes"},
+    {"case": "dependency_order_invalid", "stable_code": "DEPENDENCY_ORDER_INVALID", "proof": "tests/core-kernel/test_program.py::test_invalid_operation_graphs_have_stable_codes"},
+    {"case": "semantic_reference_missing", "stable_code": "SEMANTIC_REFERENCE_MISSING", "proof": "tests/core-kernel/test_recompute.py::test_missing_reference_fails_consumer_and_blocks_downstream"},
+    {"case": "semantic_reference_deleted_by_occt_boolean", "stable_code": "SEMANTIC_REFERENCE_DELETED", "proof": "tests/core-kernel/test_semantic_references.py::test_real_occt_boolean_deleted_history_blocks_dependent_feature"},
+    {"case": "semantic_reference_ambiguous", "stable_code": "SEMANTIC_REFERENCE_AMBIGUOUS", "proof": "tests/core-kernel/test_semantic_references.py::test_semantic_resolution_exposes_ambiguous_entity"},
+    {"case": "forbidden_topology_ordinal", "stable_code": "OPERATION_INPUT_INVALID", "proof": "tests/core-kernel/test_semantic_references.py::test_persisted_semantic_reference_rejects_ordinal_or_index_identity"},
+    {"case": "invalid_fillet_radius", "stable_code": "OPERATION_HANDLER_FAILED", "proof": "tests/core-kernel/test_recompute.py::test_failed_edit_blocks_dependent_and_preserves_revision_bound_last_valid"},
+    {"case": "artifact_or_checkpoint_tamper", "stable_code": "ARTIFACT_HASH_MISMATCH_OR_CHECKPOINT_HASH_MISMATCH", "proof": "tests/core-kernel/test_persistence.py"},
+    {"case": "malformed_step_or_stl", "stable_code": "EXCHANGE_IMPORT_FAILED", "proof": "tests/core-kernel/test_exchange.py::test_malformed_exchange_fails_with_stable_diagnostics"}
+  ],
+  "unsupported_states": [
+    "constraint solver result states and DOF/conflict classification",
+    "worker timeout, cancellation, and crash supervision",
+    "general topological naming beyond bounded semantic roles and OCCT history",
+    "exact operations on mesh-only STL imports"
+  ]
+}

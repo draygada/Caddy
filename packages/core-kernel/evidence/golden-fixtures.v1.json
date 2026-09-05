@@ -1,0 +1,78 @@
+{
+  "schema_version": "forge.core-golden-fixtures/1",
+  "observed_at": "2026-09-05T17:09:37Z",
+  "synthetic_public_geometry_only": true,
+  "engine_manifest_hash": "ab9ccfd099b232ce0e2cd4e3fe593c6386d387b014397837906cd5a349ef5457",
+  "fixtures": [
+    {
+      "fixture_id": "synthetic-bracket-v1",
+      "proof": "tests/core-kernel/test_recompute.py::test_real_bracket_spine_and_semantic_selection",
+      "operation_path": ["sketch.rectangle@1", "solid.extrude@1", "solid.fillet@1"],
+      "geometry_hash": "0829a7dbdb77a4edeedf42ff7994958ef47740dddf7f94017fc94c80f494f3eb",
+      "operation_hashes": [
+        "8c833c585c0442848d70e6587b247dfa3a3dd281eb15d618be3ff9c7683319cd",
+        "85c545881e5f74be49336c5d5a33b612056306df30327aa86b472bf009c8edd2",
+        "12f19f2d6e12be6e08d4fd2d230b108761bc430dfd34b58cd60b21a015d86459"
+      ],
+      "semantic_fingerprint": "f9816bbcabbf15c34c0a53a002e1ef2ad64d92d10eca487d077471d859aeb76b",
+      "viewport_packet_hash": "53d2b3f18f27365151bbdefa7e425abdb43ff8a878fda65194b044db886bc098",
+      "bounds_mm": {"min": ["0", "0", "0"], "max": ["40", "20", "5"]},
+      "mass_properties": {"area_mm2": "2197.424777960769", "volume_mm3": "3998.926990816986"},
+      "topology_counts": {"VERTEX": 10, "EDGE": 15, "WIRE": 7, "FACE": 7, "SHELL": 1, "SOLID": 1},
+      "semantic_selection": {
+        "reference_id": "ref:vertical-edge",
+        "entity_id": "entity:c009ea79f5e7b3d732e50497e6e1272282114c5362df76d7275e7512114ae67b",
+        "status": "EXACT",
+        "lineage_event": "GENERATED"
+      }
+    },
+    {
+      "fixture_id": "synthetic-two-body-part-v1",
+      "proof": "tests/core-kernel/test_multibody.py::test_part_document_preserves_multiple_real_solid_bodies",
+      "geometry_hash": "f17efd4a6a77c7217e3180a0ec93a099efc84dc0194f9ae002fba96aae5e3ea2",
+      "semantic_fingerprint": "e4605f4998f77622f9fd15312f17e84e6d21794da8a8df772d1c1473970c2387",
+      "body_count": 2,
+      "body_ids": ["body:body:a", "body:body:b:move:0"],
+      "body_semantic_fingerprints": [
+        "72a4173b44a5b691c8f0b4a5b60db6424dad7809b219fc1496070623ae9eeda1",
+        "338be5df598be63d7e0e2e055b2c8bb458f6d5de982a1d92e03952d8257028fd"
+      ]
+    },
+    {
+      "fixture_id": "synthetic-box-step-stl-v1",
+      "proof": "tests/core-kernel/test_exchange.py",
+      "source_bounds_mm": ["0", "0", "0", "10", "5", "2"],
+      "source_area_mm2": "160",
+      "source_volume_mm3": "100",
+      "step": {
+        "schema": "AP242",
+        "declared_units": "millimetre",
+        "reimport_valid": true,
+        "bounds_area_volume_topology_match": true,
+        "byte_determinism_claimed": false
+      },
+      "stl": {
+        "encoding": "binary",
+        "triangle_count": 12,
+        "watertight": true,
+        "outward_signed_volume_mm3": "100",
+        "bounds_tolerance_mm": "0.05",
+        "import_fidelity": "MESH_ONLY"
+      }
+    }
+  ],
+  "fresh_process_determinism": {
+    "proof": "tests/core-kernel/test_determinism.py::test_three_clean_process_replays_are_semantically_identical",
+    "process_count": 3,
+    "python_hash_seeds": ["1", "7", "31337"],
+    "equal_fields": [
+      "geometry hash",
+      "engine manifest hash",
+      "ordered operation hashes/statuses",
+      "ordered transitions/codes",
+      "semantic resolution and lineage",
+      "part semantic fingerprint",
+      "part viewport packet hash"
+    ]
+  }
+}

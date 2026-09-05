@@ -1,23 +1,23 @@
 {
   "schema_version": "1.0.0",
-  "receipt_id": "forge-core-kernel-active-20260905T155529Z",
+  "receipt_id": "forge-core-kernel-rescue-20260905T184039Z",
   "lane": "core-kernel",
   "status": "ACTIVE",
   "mutation_admitted": true,
   "custodian_task_id": "01a0718a-175f-7121-a584-21f1b826aece",
   "writer": {
     "kind": "codex-task",
-    "task_id": "01a07246-b72d-7d50-9be9-0e64e1a8dd13",
-    "title": "FORGE 6H · core CAD kernel"
+    "task_id": "01a06ca5-4f06-75c0-817e-f219707102d4",
+    "title": "Core-kernel WIP rescue builder"
   },
-  "assigned_by_task_id": "01a07246-4cc4-71b3-9c92-33eedad62896",
+  "assigned_by_task_id": "01a06ca5-4f06-75c0-817e-f219707102d4",
   "branch": "lane/core-kernel",
   "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/core-kernel",
   "base_commit": "75c706248595cd0202a4557cb49910dc7b079800",
   "prepared_at": "2026-09-05T15:08:27Z",
-  "lease_acquired_at": "2026-09-05T15:55:29Z",
-  "renew_by": "2026-09-05T18:55:29Z",
-  "expires_at": "2026-09-05T21:55:29Z",
+  "lease_acquired_at": "2026-09-05T18:40:39Z",
+  "renew_by": "2026-09-05T19:40:39Z",
+  "expires_at": "2026-09-05T21:40:39Z",
   "exclusive_write_paths": [
     "packages/core-kernel/**",
     "tests/core-kernel/**",
@@ -33,20 +33,20 @@
   "activation_rule": "The integration owner must atomically replace writer, lease_acquired_at, renew_by, expires_at, and mutation_admitted before any product mutation; stale or unassigned is blocking.",
   "now_observation": {
     "schema_version": "1.0.0",
-    "observed_at": "2026-09-05T15:55:29Z",
+    "observed_at": "2026-09-05T18:40:39Z",
     "worktree_label": "forge/core-kernel",
     "task": {
-      "id": "01a07246-b72d-7d50-9be9-0e64e1a8dd13",
-      "title": "FORGE 6H · core CAD kernel",
+      "id": "01a06ca5-4f06-75c0-817e-f219707102d4",
+      "title": "Core-kernel WIP rescue builder",
       "evidence_class": "MEASURED",
-      "evidence_ref": "conversation:writer-assignment@2026-09-05T15:55:29Z"
+      "evidence_ref": "conversation:core-kernel-rescue-instruction@2026-09-05T18:40:39Z"
     },
     "actor": {
       "owner": {
-          "id": "01a07246-b72d-7d50-9be9-0e64e1a8dd13",
-          "title": "FORGE 6H · core CAD kernel",
+          "id": "01a06ca5-4f06-75c0-817e-f219707102d4",
+          "title": "Core-kernel WIP rescue builder",
           "evidence_class": "MEASURED",
-          "evidence_ref": "conversation:writer-assignment@2026-09-05T15:55:29Z"
+          "evidence_ref": "conversation:core-kernel-rescue-instruction@2026-09-05T18:40:39Z"
       },
       "model": {
         "id": null,
@@ -58,30 +58,21 @@
     "lane_state": {
       "value": "ACTIVE",
       "evidence_class": "MEASURED",
-      "evidence_ref": "receipt:forge-core-kernel-active-20260905T155529Z#status"
+      "evidence_ref": "receipt:forge-core-kernel-rescue-20260905T184039Z#status"
     },
     "current_action": {
-      "value": "Building the bounded PartDocument geometry kernel under exclusive lane custody.",
-      "evidence_class": "INFERRED",
-      "evidence_ref": "receipt:forge-core-kernel-active-20260905T155529Z#mutation_admitted"
+      "value": "Reconciling retired core-kernel WIP against committed PartDocument geometry contracts for a local salvage candidate.",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "conversation:core-kernel-rescue-instruction@2026-09-05T18:40:39Z"
     },
     "last_evidenced_change": {
-      "kind": "CUSTODY_ASSIGNED",
-      "occurred_at": "2026-09-05T15:55:29Z",
+      "kind": "CUSTODY_REASSIGNED_FOR_WIP_RESCUE",
+      "occurred_at": "2026-09-05T18:40:39Z",
       "evidence_class": "MEASURED",
-      "evidence_ref": "receipt:forge-core-kernel-active-20260905T155529Z"
+      "evidence_ref": "conversation:core-kernel-rescue-instruction@2026-09-05T18:40:39Z"
     },
     "blockers": [],
-    "checks": [
-      {
-        "name": "custody-scope",
-        "state": "PASSED",
-        "observed_at": "2026-09-05T15:14:51Z",
-        "candidate": null,
-        "evidence_class": "MEASURED",
-        "evidence_ref": "command:python3 tools/check_custody.py --lane core-kernel --base 75c706248595cd0202a4557cb49910dc7b079800"
-      }
-    ],
+    "checks": [],
     "release": {
       "state": "NONE",
       "candidate": null,
