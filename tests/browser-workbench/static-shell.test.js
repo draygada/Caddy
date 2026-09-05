@@ -39,7 +39,7 @@ test("candidate review path is honest, recoverable, and revision-pinned", async 
     readFile(path.join(appRoot, "src", "candidate.css"), "utf8"),
   ]);
   const surface = `${main}\n${runtime}\n${bootstrap}\n${client}\n${readme}`;
-  assert.match(runtime, /Selected CAD entity bound to immutable revision; review-readiness guardrail through Tripwire/);
+  assert.match(runtime, /CADdyDaddy binds a selected CAD entity to its immutable product revision and runs a review-readiness guardrail through Tripwire; Candidate 0\.1 returns insufficient evidence and requires human review, not a compliance determination\./);
   assert.match(surface, /insufficient evidence/i);
   assert.match(surface, /not a compliance determination|no compliance determination was made/i);
   assert.doesNotMatch(surface, /dated, review-only compliance|dated review support/i);
