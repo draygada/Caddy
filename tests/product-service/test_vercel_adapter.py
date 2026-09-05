@@ -175,6 +175,7 @@ def test_static_spa_routing_and_runtime_pins(vercel_bundle: tuple[Path, Path, di
         {"source": "/:path*", "destination": "/index.html"},
     ]
     excluded = config["functions"]["api/index.py"]["excludeFiles"]
+    assert len(excluded) <= 256
     for required in ("public/**", "tests/**", "governance/**", "docs/**", ".git/**", ".vercel/**", "features/tripwire/data/**"):
         assert required in excluded
     assert (bundle / ".python-version").read_text(encoding="utf-8") == "3.12\n"
