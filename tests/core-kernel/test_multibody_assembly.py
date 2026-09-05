@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from fractions import Fraction
 
+import pytest
+import strafe_forge_core.assembly as assembly_module
 from strafe_forge_core.assembly import (
     AssemblyEngine,
     AssemblyProgram,
@@ -118,6 +121,19 @@ def test_reusable_part_fixed_transform_hierarchy_bom_and_component_selection() -
     assert first.bom[0].part_geometry_hash == part.geometry_hash
     assert first.bom[0].part_artifact_id == part.current_artifact.artifact_id
     assert first.as_dict()["attempted_revision_id"] == "rev:assembly-fixture"
+    verification = first.current_artifact.verification
+    assert verification["status"] == "PASSED"
+    checks = {item["code"]: item for item in verification["checks"]}
+    assert set(checks) == {
+        "ASSEMBLY_SOURCE_SHAPE_VALID",
+        "ASSEMBLY_BREP_REIMPORT_VALID",
+        "ASSEMBLY_BREP_ROUNDTRIP_BOUNDS_MATCH",
+        "ASSEMBLY_BREP_ROUNDTRIP_TOPOLOGY_MATCH",
+        "ASSEMBLY_BREP_ROUNDTRIP_FINGERPRINT_MATCH",
+    }
+    assert checks["ASSEMBLY_BREP_ROUNDTRIP_FINGERPRINT_MATCH"]["observed"] == (
+        checks["ASSEMBLY_BREP_ROUNDTRIP_FINGERPRINT_MATCH"]["expected"]
+    )
 
     restored = deserialize_brep(first.current_artifact.content)
     assert topology_counts(restored)["SOLID"] == 4
@@ -149,3 +165,114 @@ def test_parent_visibility_hides_child_geometry_without_changing_bom() -> None:
     assert result.current_artifact is not None
     restored = deserialize_brep(result.current_artifact.content)
     assert topology_counts(restored)["SOLID"] == 2
+
+
+@pytest.mark.parametrize(
+    ("field_name", "forged_value"),
+    (
+        ("part_document_id", "part:forged"),
+        ("part_revision_id", "rev:forged"),
+        ("geometry_hash", "0" * 64),
+        ("artifact_id", "artifact:" + "1" * 64),
+        ("artifact_content_hash", "2" * 64),
+    ),
+)
+def test_assembly_rejects_forged_part_definition_metadata(
+    field_name: str,
+    forged_value: str,
+) -> None:
+    definition = PartDefinition.from_recompute("definition:multi", multibody_part())
+    forged = replace(definition, **{field_name: forged_value})
+    program = AssemblyProgram(
+        "assembly:forged",
+        "rev:assembly-forged",
+        {forged.definition_id: forged},
+        (
+            Component(
+                "component:forged",
+                forged.definition_id,
+                None,
+                FixedTransform(),
+                True,
+                "bom:forged",
+            ),
+        ),
+    )
+
+    result = AssemblyEngine(manifest()).evaluate(program)
+
+    assert result.status == "FAILED"
+    assert result.current_artifact is None
+    assert result.diagnostics[0].code == "PART_PROVENANCE_MISMATCH"
+
+
+def test_assembly_rejects_coordinated_revision_and_artifact_forgery() -> None:
+    definition = PartDefinition.from_recompute("definition:multi", multibody_part())
+    forged_source = replace(
+        definition.source_artifact,
+        source_revision_id="rev:forged",
+    )
+    forged = replace(
+        definition,
+        part_revision_id=forged_source.source_revision_id,
+        artifact_id=forged_source.artifact_id,
+        source_artifact=forged_source,
+    )
+    program = AssemblyProgram(
+        "assembly:coordinated-forgery",
+        "rev:assembly-coordinated-forgery",
+        {forged.definition_id: forged},
+        (
+            Component(
+                "component:forged",
+                forged.definition_id,
+                None,
+                FixedTransform(),
+                True,
+                "bom:forged",
+            ),
+        ),
+    )
+
+    result = AssemblyEngine(manifest()).evaluate(program)
+
+    assert result.status == "FAILED"
+    assert result.diagnostics[0].code == "PART_PROVENANCE_MISMATCH"
+
+
+def test_assembly_rejects_roundtrip_geometry_evidence_mismatch(monkeypatch) -> None:
+    definition = PartDefinition.from_recompute("definition:multi", multibody_part())
+    program = AssemblyProgram(
+        "assembly:evidence-mismatch",
+        "rev:assembly-evidence-mismatch",
+        {definition.definition_id: definition},
+        (
+            Component(
+                "component:evidence-mismatch",
+                definition.definition_id,
+                None,
+                FixedTransform(),
+                True,
+                "bom:evidence-mismatch",
+            ),
+        ),
+    )
+    real_topology_counts = assembly_module.topology_counts
+    call_count = 0
+
+    def mismatched_reimport_counts(shape):
+        nonlocal call_count
+        call_count += 1
+        counts = real_topology_counts(shape)
+        if call_count == 2:
+            counts = dict(counts)
+            counts["SOLID"] += 1
+        return counts
+
+    monkeypatch.setattr(assembly_module, "topology_counts", mismatched_reimport_counts)
+
+    result = AssemblyEngine(manifest()).evaluate(program)
+
+    assert result.status == "FAILED"
+    assert result.current_artifact is None
+    assert result.diagnostics[0].code == "ASSEMBLY_ARTIFACT_VERIFICATION_FAILED"
