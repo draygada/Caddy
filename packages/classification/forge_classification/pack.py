@@ -15,7 +15,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .records import canonical_bytes, sha256
+from .hashing import canonical_bytes, sha256
 
 ROMANS = (
     "I II III IV V VI VII VIII IX X XI XII XIII XIV XV XVI XVII XVIII XIX XX XXI".split()

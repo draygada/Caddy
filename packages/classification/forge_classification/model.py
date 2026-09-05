@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
-from .records import sha256
+from .hashing import sha256
 
 
 @dataclass(frozen=True)

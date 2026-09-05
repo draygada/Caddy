@@ -34,6 +34,8 @@ PART_REVISION = {
         "parameters": {
             "param:board_width": {"parameter_id": "param:board_width", "name": "board_width",
                                   "value_type": "LENGTH", "literal": "40", "expression": None},
+            "param:half": {"parameter_id": "param:half", "name": "half", "value_type": "LENGTH",
+                           "literal": None, "expression": {"kind": "PARAMETER", "parameter_id": "param:board_width"}},
         },
         "bodies": [{
             "body_id": "body:pcb", "name": "PCB", "root_operation_id": "op:x",
@@ -50,26 +52,12 @@ PART_REVISION = {
                    "engine_manifest_hash": "2" * 64},
 }
 
-
-def declared(facts, *, actor_type="HUMAN", level="DECLARED", artifact_refs=(), record_id="declared:fc:1"):
-    return {
-        "schema_version": "forge.record/1", "record_kind": "compliance.declared-facts.v1",
-        "record_id": record_id, "authority_domain": "compliance",
-        "actor": {"actor_id": "actor:charlie", "actor_type": actor_type, "alias": "founder"},
-        "source_confidence": {"level": level, "basis": "test", "observed_at": "2026-09-05T20:00:00Z"},
-        "provenance": {"adapter_id": "forge-native", "adapter_version": "1", "tool_identity": "forge@test",
-                       "input_record_refs": [], "artifact_refs": list(artifact_refs), "generated_at": "2026-09-05T20:00:00Z"},
-        "payload": {"part_revision_id": REV, "facts": facts},
-    }
-
-
-CIVIL_FACTS = declared([
-    {"path": "declared.military_use", "value": "false", "unit": None},
-    {"path": "declared.used_on", "value": "Kestrel civil survey drone", "unit": None},
-    {"path": "declared.civil_product", "value": "true", "unit": None},
-    {"path": "declared.mass_market", "value": "false", "unit": None},
-    {"path": "declared.designed_to_incorporate", "value": "none", "unit": None},
-])
+CIVIL_FACTS = {
+    "declared.military_use": "false",
+    "declared.used_on": "Kestrel civil survey drone",
+    "declared.civil_product": "true",
+    "declared.designed_to_incorporate": "none",
+}
 
 
 def cite(unit_key: str, quote: str) -> dict:
@@ -80,8 +68,7 @@ def cite(unit_key: str, quote: str) -> dict:
     return {"unit_key": unit.unit_key, "unit_sha256": unit.sha256, "quote": quote, "start": start, "end": start + len(quote)}
 
 
-def element(unit_key, disposition, *, quote=None, facts=("body.pcb.layout_target",), basis="stated",
-            missing=None, element_id=None):
+def element(unit_key, disposition, *, quote=None, facts=("body.pcb.layout_target",), basis="stated", element_id=None):
     return {
         "element_id": element_id or f"el:{unit_key}:{disposition}",
         "unit_key": unit_key,
@@ -89,7 +76,6 @@ def element(unit_key, disposition, *, quote=None, facts=("body.pcb.layout_target
         "basis": basis,
         "facts_relied_on": list(facts),
         "citation": cite(unit_key, quote) if quote else None,
-        "missing_fact": missing,
     }
 
 
@@ -98,10 +84,8 @@ def propose(*provisions, sd_read="Not specially designed: civil layout target de
             "specially_designed_read": sd_read, "no_usml_reasoning": ""}
 
 
-def advocate(provision, elements, *, intended_use=("Civil survey drone.", "end_use_nature")):
-    return {"provision": provision, "elements": elements, "case_for": f"The strongest honest case for {provision}.",
-            "intended_use_rationale": intended_use[0] if intended_use else None,
-            "intended_use_family": intended_use[1] if intended_use else None}
+def advocate(provision, elements):
+    return {"provision": provision, "elements": elements, "case_for": f"The strongest honest case for {provision}."}
 
 
 def judge(provision, ruling, elements, *, reason=None, challenge=None):
@@ -109,5 +93,9 @@ def judge(provision, ruling, elements, *, reason=None, challenge=None):
             "reason": reason or f"{provision}: {ruling.replace('_', ' ')}.", "challenge": challenge}
 
 
-def concerns(items=(), tensions=()):
-    return {"concerns": list(items), "legal_tensions": list(tensions)}
+def usml_negative():
+    return {
+        "usml_propose": [propose("USML XI(c)(2)")],
+        ("advocate", "USML XI(c)(2)"): [advocate("USML XI(c)(2)", [element("USML XI(c)(2)", "indeterminate")])],
+        ("judge", "USML XI(c)(2)"): [judge("USML XI(c)(2)", "knocked_out", [element("USML XI(c)(2)", "not_met", quote="Printed Circuit Boards")])],
+    }

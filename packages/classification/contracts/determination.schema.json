@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strafe.invalid/forge/classification/contracts/determination.schema.json",
+  "title": "Strafe Forge jurisdictional determination",
+  "description": "The engine's one output: the jurisdiction the order of review reaches on the facts given, the board of candidates it walked to get there, and the provenance. No numeric confidence exists anywhere in it; no filing recommendation; no human gate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "snapshot_sha256", "pack_sha256", "item", "determination", "candidates", "provenance"],
+  "properties": {
+    "schema_version": {"const": "forge-classification.determination/1"},
+    "snapshot_sha256": {"$ref": "#/$defs/hex64"},
+    "pack_sha256": {"$ref": "#/$defs/hex64"},
+    "item": {
+      "type": "object", "additionalProperties": false, "required": ["part_revision_id", "item_kind"],
+      "properties": {"part_revision_id": {"type": ["string", "null"]}, "item_kind": {"enum": ["commodity", "software", "technology"]}}
+    },
+    "determination": {
+      "type": "object", "additionalProperties": false,
+      "required": ["jurisdiction", "classification", "usml_step", "ccl_step", "basis", "open_candidates"],
+      "properties": {
+        "jurisdiction": {"enum": ["ITAR", "EAR", "EAR99", "UNDETERMINED"]},
+        "classification": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "usml_step": {"enum": ["supported", "negative", "undetermined", "undemonstrated"]},
+        "ccl_step": {"enum": ["specific_supported", "all_knocked_out", "undetermined", "not_reached"]},
+        "basis": {"type": "array", "items": {"type": "string"}},
+        "open_candidates": {"type": "array", "items": {"type": "string"}}
+      },
+      "allOf": [
+        {"if": {"properties": {"jurisdiction": {"const": "ITAR"}}}, "then": {"properties": {"usml_step": {"const": "supported"}, "classification": {"minItems": 1}}}},
+        {"if": {"properties": {"jurisdiction": {"enum": ["EAR", "EAR99"]}}}, "then": {"properties": {"usml_step": {"const": "negative"}}}},
+        {"if": {"properties": {"jurisdiction": {"const": "EAR99"}}}, "then": {"properties": {"ccl_step": {"const": "all_knocked_out"}, "classification": {"const": ["EAR99"]}}}},
+        {"if": {"properties": {"jurisdiction": {"const": "UNDETERMINED"}}}, "then": {"properties": {"usml_step": {"enum": ["undetermined", "undemonstrated"]}, "classification": {"maxItems": 0}}}}
+      ]
+    },
+    "candidates": {"type": "array", "items": {"$ref": "#/$defs/candidate"}},
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["model", "calls", "budget", "dropped_candidates", "reference_notes"],
+      "properties": {
+        "model": {"type": "string"},
+        "calls": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+          "required": ["stage", "provision", "prompt_sha256", "response_sha256", "cost_microusd"],
+          "properties": {"stage": {"type": "string"}, "provision": {"type": ["string", "null"]}, "prompt_sha256": {"$ref": "#/$defs/hex64"},
+                         "response_sha256": {"oneOf": [{"$ref": "#/$defs/hex64"}, {"type": "null"}]}, "cost_microusd": {"type": "integer", "minimum": 0}}}},
+        "budget": {"type": "object", "additionalProperties": false,
+          "required": ["calls_cap", "calls_used", "cost_cap_microusd", "cost_used_microusd"],
+          "properties": {"calls_cap": {"type": "integer", "minimum": 0}, "calls_used": {"type": "integer", "minimum": 0},
+                         "cost_cap_microusd": {"type": "integer", "minimum": 0}, "cost_used_microusd": {"type": "integer", "minimum": 0}}},
+        "dropped_candidates": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["provision", "reason"],
+                                                          "properties": {"provision": {"type": "string"}, "reason": {"type": "string"}}}},
+        "reference_notes": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  },
+  "$defs": {
+    "hex64": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "citation": {"type": "object", "additionalProperties": false, "required": ["unit_key", "unit_sha256", "start", "end", "quote"],
+      "properties": {"unit_key": {"type": "string", "minLength": 1}, "unit_sha256": {"$ref": "#/$defs/hex64"}, "start": {"type": "integer", "minimum": 0},
+                     "end": {"type": "integer", "minimum": 0}, "quote": {"type": "string", "minLength": 1}}},
+    "element": {"type": "object", "additionalProperties": false, "required": ["element_id", "unit_key", "disposition", "basis", "facts_relied_on", "citation"],
+      "properties": {"element_id": {"type": "string", "minLength": 1}, "unit_key": {"type": "string", "minLength": 1},
+                     "disposition": {"enum": ["met", "not_met", "indeterminate"]}, "basis": {"enum": ["stated", "inferred", "assumed"]},
+                     "facts_relied_on": {"type": "array", "items": {"type": "string"}},
+                     "citation": {"oneOf": [{"$ref": "#/$defs/citation"}, {"type": "null"}]}}},
+    "candidate": {"type": "object", "additionalProperties": false,
+      "required": ["candidate_id", "provision", "stage", "status", "origin", "why_considered", "why_rejected", "elements", "challenge", "reference_notes"],
+      "properties": {
+        "candidate_id": {"type": "string", "minLength": 1}, "provision": {"type": "string", "minLength": 1},
+        "stage": {"enum": ["usml_enumerated", "specially_designed_itar", "six_hundred_series", "specially_designed_ear", "other_ccl", "residual"]},
+        "status": {"enum": ["supported", "knocked_out", "undetermined", "not_reached"]},
+        "origin": {"enum": ["proposed", "floor"]},
+        "why_considered": {"type": "string"}, "why_rejected": {"type": ["string", "null"]},
+        "elements": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+        "challenge": {"oneOf": [{"type": "object", "additionalProperties": false, "required": ["text", "resolution"],
+                                 "properties": {"text": {"type": "string"}, "resolution": {"enum": ["sustained", "rejected"]}}}, {"type": "null"}]},
+        "reference_notes": {"type": "array", "items": {"type": "string"}}
+      },
+      "allOf": [{"if": {"properties": {"status": {"const": "knocked_out"}}},
+                 "then": {"properties": {"why_rejected": {"type": "string", "minLength": 1},
+                                         "elements": {"contains": {"type": "object", "properties": {"disposition": {"const": "not_met"}, "citation": {"type": "object"}}, "required": ["disposition", "citation"]}}}}}]
+    }
+  }
+}
