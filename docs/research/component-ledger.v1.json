@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0.0",
+  "observed_at": "2026-09-05T14:47:00Z",
+  "status": "bootstrap-screening-not-adoption",
+  "baseline": {
+    "path": "/Users/benjihuh/Programming/Strafe/CAD_CAPABILITY_ATLAS_2026.md",
+    "sha256": "c84b2726040b1e09847dda853818c75958a007b3d82bee3d89f83440d24f2877"
+  },
+  "legal_note": "License identifiers are technical screening, not legal advice. Exact release artifacts and transitive notices require review before adoption or distribution.",
+  "components": [
+    {
+      "name": "Open CASCADE Technology",
+      "version_evidence": "V8_0_0 is current upstream stable; OCP compatibility is currently on 7.9.3",
+      "license": "LGPL-2.1 with Open CASCADE exception 1.0; commercial terms available",
+      "disposition": "BORROWED_CANDIDATE",
+      "role": "authoritative server B-rep, topology history primitives, validation, tessellation, STEP/STL",
+      "sources": ["https://github.com/Open-Cascade-SAS/OCCT", "https://github.com/Open-Cascade-SAS/OCCT/blob/master/OCCT_LGPL_EXCEPTION.txt", "https://dev.opencascade.org/doc/overview/html/index.html"],
+      "unknowns": ["chosen pin", "cross-platform semantic determinism", "history completeness per modeling algorithm", "final distribution compliance"]
+    },
+    {
+      "name": "CadQuery OCP",
+      "version_evidence": "release 7.9.3.1 wraps OCCT 7.9.3",
+      "license": "Apache-2.0 wrapper; bundled OCCT retains LGPL-2.1 plus exception",
+      "disposition": "BORROWED_CANDIDATE",
+      "role": "first server binding spike",
+      "sources": ["https://github.com/CadQuery/OCP", "https://github.com/CadQuery/OCP/releases"],
+      "unknowns": ["required TNaming/BRepTools_History binding coverage", "reproducible wheel/SBOM", "Python worker cost"]
+    },
+    {
+      "name": "CadQuery",
+      "version_evidence": "active 2.x project",
+      "license": "Apache-2.0; OCCT transitive obligations",
+      "disposition": "DEFERRED_REFERENCE",
+      "role": "productive server API and golden-test reference, not canonical document model",
+      "sources": ["https://github.com/CadQuery/cadquery", "https://cadquery.readthedocs.io/en/stable/sketch.html"],
+      "unknowns": ["experimental sketch solver robustness", "operation-history stability", "topology lineage visibility"]
+    },
+    {
+      "name": "build123d",
+      "version_evidence": "active pre-1.0 project",
+      "license": "Apache-2.0; OCP/OCCT transitive obligations",
+      "disposition": "DEFERRED_REFERENCE",
+      "role": "typed modeling API and deterministic-construction inspiration",
+      "sources": ["https://github.com/gumyr/build123d", "https://github.com/gumyr/build123d/wiki/Roadmap"],
+      "unknowns": ["1.0 API stability", "persistent topology identity", "global sketch constraint coverage"]
+    },
+    {
+      "name": "FreeCAD and PlaneGCS",
+      "version_evidence": "active FreeCAD 1.1.x line",
+      "license": "FreeCAD/inspected PlaneGCS sources LGPL-2.1-or-later; audit bundled modules separately",
+      "disposition": "BORROWED_SOLVER_CANDIDATE",
+      "role": "constraint-solver bake-off and behavioral oracle; not whole-application embedding",
+      "sources": ["https://github.com/FreeCAD/FreeCAD", "https://github.com/FreeCAD/FreeCAD/tree/main/src/Mod/Sketcher/App/planegcs", "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/Topological_naming_problem.md"],
+      "unknowns": ["standalone extraction boundary", "stable diagnostics API", "scale/order determinism", "WASM wrapper license metadata and maintenance"]
+    },
+    {
+      "name": "SolveSpace/libslvs",
+      "version_evidence": "active repository with native and WASM builds",
+      "license": "GPL-3.0-or-later",
+      "disposition": "REJECTED_DEFAULT_COMPARATOR_ONLY",
+      "role": "strong constraint-solving comparator",
+      "sources": ["https://github.com/solvespace/solvespace", "https://github.com/solvespace/solvespace/blob/master/include/slvs.h"],
+      "unknowns": ["commercial/approved licensing route", "WASM parity and non-placeholder tests", "multi-solution canonicalization"]
+    },
+    {
+      "name": "Replicad",
+      "version_evidence": "active main branch; no stable release adoption recorded",
+      "license": "MIT core; OpenCascade.js/OCCT transitive LGPL obligations",
+      "disposition": "DEFERRED_PREVIEW",
+      "role": "worker-isolated browser preview experiment only",
+      "sources": ["https://github.com/sgenoud/replicad", "https://github.com/sgenoud/replicad/blob/main/packages/replicad-docs/docs/use-as-a-library.md"],
+      "unknowns": ["immutable dependency provenance", "bundle/cold start/memory", "native parity", "persistent topology mapping"]
+    },
+    {
+      "name": "OpenCascade.js",
+      "version_evidence": "original project's last listed release v1.1.1 (2020)",
+      "license": "LGPL-2.1 wrapper plus OCCT exception obligations",
+      "disposition": "REJECTED_ORIGINAL_DEFERRED_FORK_EVALUATION",
+      "role": "possible future browser kernel transport, never initial authority",
+      "sources": ["https://github.com/donalffons/opencascade.js", "https://github.com/taucad/opencascade.js"],
+      "unknowns": ["which maintained fork", "exact generated binding surface", "thread isolation headers", "supply-chain pin"]
+    },
+    {
+      "name": "JSCAD",
+      "version_evidence": "active project with v3 breaking-change track",
+      "license": "MIT",
+      "disposition": "REJECTED_GEOMETRY_AUTHORITY",
+      "role": "polygonal/CSG utility reference only",
+      "sources": ["https://github.com/jscad/OpenJSCAD.org"],
+      "unknowns": ["none material to first exact B-rep contract"]
+    },
+    {
+      "name": "Three.js",
+      "version_evidence": "active project; exact release not yet selected",
+      "license": "MIT",
+      "disposition": "BORROWED_CANDIDATE",
+      "role": "derived tessellation viewer through an adapter, initially WebGLRenderer",
+      "sources": ["https://github.com/mrdoob/three.js", "https://threejs.org/docs/pages/BufferGeometry.html"],
+      "unknowns": ["exact version", "large-model budget", "selection-buffer design", "browser matrix"]
+    },
+    {
+      "name": "Three.js WebGPURenderer",
+      "version_evidence": "officially experimental in current manual",
+      "license": "MIT",
+      "disposition": "DEFERRED",
+      "role": "future renderer backend behind adapter",
+      "sources": ["https://threejs.org/manual/en/webgpurenderer"],
+      "unknowns": ["feature parity", "performance crossover", "fallback behavior"]
+    },
+    {
+      "name": "OpenCAMLib",
+      "version_evidence": "upstream states LGPL since August 2018",
+      "license": "LGPL-2.1",
+      "disposition": "DEFERRED",
+      "role": "bounded visual drop-cutter/waterline experiments only",
+      "sources": ["https://github.com/aewallin/opencamlib"],
+      "unknowns": ["release cadence", "browser feature gaps", "production correctness corpus"]
+    },
+    {
+      "name": "Gmsh",
+      "version_evidence": "active 4.x project",
+      "license": "GPL-2.0-or-later with linking exception; commercial license available",
+      "disposition": "DEFERRED_EXTERNAL_ADAPTER",
+      "role": "future meshing pipeline",
+      "sources": ["https://gmsh.info/", "https://gmsh.info/doc/texinfo/gmsh.html"],
+      "unknowns": ["approved licensing/deployment boundary", "mesh reproducibility", "validation benchmarks"]
+    },
+    {
+      "name": "Yjs",
+      "version_evidence": "active project; exact release not yet selected",
+      "license": "MIT",
+      "disposition": "DEFERRED_METADATA_ONLY",
+      "role": "presence, cursors, comments, and offline metadata; never geometry merge authority",
+      "sources": ["https://github.com/yjs/yjs", "https://docs.yjs.dev/"],
+      "unknowns": ["provider/persistence choice", "authorization envelope", "retention/privacy"]
+    }
+  ]
+}

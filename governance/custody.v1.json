@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0.0",
+  "repository": {
+    "name": "Strafe Forge",
+    "root": "/Users/benjihuh/Programming/Strafe/strafe-forge",
+    "integration_branch": "main",
+    "handoff_task_id": "01a0718a-175f-7121-a584-21f1b826aece"
+  },
+  "shared_policy": {
+    "owner": "main-integrator-only",
+    "paths": [
+      ".github/**",
+      ".gitignore",
+      "AGENTS.md",
+      "README.md",
+      "docs/**",
+      "governance/custody.v1.json",
+      "tools/**",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pyproject.toml",
+      "uv.lock"
+    ],
+    "state_domains": [
+      "main and release refs",
+      "shared schemas and generated clients",
+      "root dependency resolution",
+      "deployment/provider/credential state",
+      "canonical fixture admission"
+    ]
+  },
+  "lanes": {
+    "core-kernel": {
+      "branch": "lane/core-kernel",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/core-kernel",
+      "write_allowlist": [
+        "packages/core-kernel/**",
+        "tests/core-kernel/**",
+        "governance/receipts/core-kernel.json"
+      ],
+      "handoff": "docs/handoff/core-kernel.md"
+    },
+    "browser-workbench": {
+      "branch": "lane/browser-workbench",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/browser-workbench",
+      "write_allowlist": [
+        "apps/browser-workbench/**",
+        "tests/browser-workbench/**",
+        "governance/receipts/browser-workbench.json"
+      ],
+      "handoff": "docs/handoff/browser-workbench.md"
+    },
+    "history-collaboration": {
+      "branch": "lane/history-collaboration",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/history-collaboration",
+      "write_allowlist": [
+        "packages/history-collaboration/**",
+        "tests/history-collaboration/**",
+        "governance/receipts/history-collaboration.json"
+      ],
+      "handoff": "docs/handoff/history-collaboration.md"
+    }
+  }
+}
+
