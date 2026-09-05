@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib.util
 import json
@@ -47,6 +48,8 @@ def vercel_bundle(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path,
 
 def test_entrypoint_and_handler_routes(vercel_bundle: tuple[Path, Path, dict]) -> None:
     bundle, _, _ = vercel_bundle
+    entrypoint = ast.parse((bundle / "api" / "index.py").read_text(encoding="utf-8"))
+    assert any(isinstance(node, ast.ClassDef) and node.name == "handler" for node in entrypoint.body)
     probe = r'''
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import http.client

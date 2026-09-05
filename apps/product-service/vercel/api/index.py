@@ -16,4 +16,8 @@ for _source in (
 from product_service.app import create_handler
 
 
-handler = create_handler(static_root=_BUNDLE_ROOT / "public")
+_CreatedHandler = create_handler(static_root=_BUNDLE_ROOT / "public")
+
+
+class handler(_CreatedHandler):
+    """Statically discoverable Vercel entrypoint for the configured handler."""
