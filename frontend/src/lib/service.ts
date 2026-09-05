@@ -3,6 +3,7 @@
 // outcome. Until the backend is reachable this module answers locally from
 // the synthetic rule table so the shell is usable, and reports `cached`.
 import { outcome, type Design, type Outcome } from './rules';
+import type { PackId } from './catalog';
 
 export type ServiceState = 'cached' | 'unreachable';
 
@@ -10,8 +11,8 @@ export interface EvaluateResult { outcome: Outcome; mode: ServiceState }
 
 export const service = {
   /** Synchronous today so the outcome renders in the same frame (Doherty: no spinner). */
-  evaluate(d: Design): Outcome {
-    return outcome(d);
+  evaluate(d: Design, pack: PackId = 'v2'): Outcome {
+    return outcome(d, pack);
   },
   /** Placeholder for GET /api/now; the store reads `serviceState` from the URL until this is wired. */
   async now(): Promise<{ mode: ServiceState }> {

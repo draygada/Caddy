@@ -14,7 +14,7 @@ const resolve = (parts = BASELINE_PARTS, qty = 1, mode: 'air' | 'ocean' = 'air')
 describe('sourcing lane (S1, S2)', () => {
   it('twelve lines follow the design; the motor has a cheaper blocked seller sorted last', () => {
     const { lines, out } = resolve();
-    expect(lines).toHaveLength(12);
+    expect(lines).toHaveLength(14);
     const motor = sortOffers(out['l-motor']);
     expect(motor).toHaveLength(2);
     expect(motor[0].offer.seller).toBe('T-Motor');
@@ -42,7 +42,7 @@ describe('sourcing lane (S1, S2)', () => {
   });
   it('the export gate is the engine cell verbatim: HG5700 blocks to Taiwan, the IMU baseline does not', () => {
     const parts = { ...BASELINE_PARTS, imu: 'hg5700' as const };
-    const o = outcome({ parts, attrs: { battery: { pack_wh: 1000, wh_kg: 260 }, thermal: { hz: 9, elements: 19200 }, imu: { bias: 0.01, arw: 0.002 }, fc: { tmin: -40, tmax: 85 } }, span: 3 });
+    const o = outcome({ parts, attrs: { battery: { pack_wh: 1000, wh_kg: 260 }, thermal: { hz: 9, elements: 19200 }, imu: { bias: 0.01, arw: 0.002 }, fc: { tmin: -40, tmax: 85 }, gnss: { gnss_speed: 500 }, datalink: { crypto_bits: 256 }, pod: {} }, span: 3 });
     const line = linesFor(parts).find((l) => l.id === 'l-imu')!;
     expect(gateFor(line, o, 'TW').blocks).toBe(true);
     expect(gateFor(line, o, 'US').blocks).toBe(false);

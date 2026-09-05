@@ -1,5 +1,5 @@
 import { useStore } from '../store';
-import { ECFR_DATE } from '../lib/catalog';
+import { PACKS } from '../lib/catalog';
 
 export function TopBar() {
   const theme = useStore((s) => s.theme);
@@ -15,7 +15,8 @@ export function TopBar() {
       <span className="text-muted text-[13px]">Kestrel</span>
       <div className="flex-1" />
       <div className="flex gap-[6px] items-center">
-        <span className="chip">Rule · eCFR {ECFR_DATE}</span>
+        <span className="chip">Rule · eCFR {PACKS[useStore.getState().pack].ecfr_date}</span>
+        <span className="chip">pack {useStore((s) => s.pack)}</span>
         <span className="chip">Cached</span>
       </div>
       <div className="w-px h-5 bg-line2" />

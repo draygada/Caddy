@@ -210,6 +210,24 @@ export function FeatureDialog() {
           <input aria-label="comment" value={text2} onChange={(e) => setText2(e.target.value)} placeholder="comment" className="field" />
         </Frame>
       );
+    case 'door3': {
+      const p = s.slotList;
+      return (
+        <Frame title="New from description" sub="Door 3 · a prompt becomes a slot list" onCancel={() => { s.patch({ slotList: null }); cancel(); }} onOk={p ? () => { s.acceptSlotList(text2.trim() || 'engineer'); s.closeDialog(); } : () => s.proposeSlots(text)} okLabel={p ? 'Accept · seeds the design' : 'Propose slots'} okDisabled={p ? false : !text.trim()}>
+          {!p && <textarea aria-label="description" value={text} onChange={(e) => setText(e.target.value)} rows={4} placeholder="a long-range survey drone with a thermal camera, GNSS, a datalink and a laser rangefinder pod" className="field py-2 font-sans" autoFocus />}
+          {p && (
+            <div className="grid gap-1 text-[13px]">
+              <div className="font-mono text-[12px] text-muted">proposed slot list · {p.slots.length} slots · {p.accepted} catalog parts · {p.slots.length - p.accepted} placeholders · {p.rejected} rejected</div>
+              {p.slots.map((sl, i) => <div key={i} className="grid grid-cols-[1fr_auto] gap-2"><span>{sl.role}{sl.mpn ? ' · ' + sl.mpn : ''}{sl.rejected ? <span className="text-red"> · {sl.rejected}</span> : sl.placeholder ? <span className="text-muted"> · placeholder · cannot fire · field empty</span> : ''}</span><span className="chip chip-sm">{sl.rejected ? 'rejected' : sl.placeholder ? 'placeholder' : 'catalog'}</span></div>)}
+              <input aria-label="attestor" value={text2} onChange={(e) => setText2(e.target.value)} placeholder="attestor · a series of human part_added events" className="field" />
+              <div className="text-[12px] text-muted">no jurisdiction, entry, origin or value field in the schema · the verifier rejects any MPN not in the catalog · geometry is not generated</div>
+            </div>
+          )}
+        </Frame>
+      );
+    }
+    case 'target':
+      return <Frame title="Design to a target" sub="in Reasoning" onCancel={cancel}><div className="text-[13px] text-muted">Open Reasoning → Design to a target.</div></Frame>;
     case 'named_view':
       return (
         <Frame title="Save named view" sub="current camera" onCancel={cancel} onOk={() => { s.saveNamedView(text); s.closeDialog(); }} okLabel="Save view">

@@ -12,6 +12,9 @@ import { Timeline } from './panels/Timeline';
 import { HelpOverlay } from './panels/HelpOverlay';
 import { DemoBar } from './panels/DemoBar';
 import { CommandBox } from './panels/CommandBox';
+import { Sources } from './panels/Sources';
+import { Record } from './panels/Record';
+import { Now } from './panels/Now';
 import { runCommand } from './commands';
 
 function useKeyboard() {
@@ -46,12 +49,19 @@ export default function App() {
   const unreachable = useStore((s) => s.serviceState === 'unreachable');
   const reasoningOpen = useStore((s) => s.reasoningOpen);
   const sourcingOpen = useStore((s) => s.sourcingOpen);
+  const sourcesOpen = useStore((s) => s.sourcesOpen);
+  const recordOpen = useStore((s) => s.recordOpen);
+  const declared = useStore((s) => s.declared);
+  const pack = useStore((s) => s.pack);
   const timelineOpen = useStore((s) => s.timelineOpen);
   const helpOpen = useStore((s) => s.helpOpen);
   const eventCount = useStore((s) => s.events.length);
   const openTimeline = useStore((s) => s.openTimeline);
-  const o = useMemo(() => service.evaluate({ parts, attrs, span }), [parts, attrs, span]);
+  const o = useMemo(() => service.evaluate({ parts, attrs, span, declared }, pack), [parts, attrs, span, declared, pack]);
+  const nowMode = useMemo(() => { try { return new URLSearchParams(location.search).get('now') === '1'; } catch { return false; } }, []);
   useKeyboard();
+
+  if (nowMode) return <div data-theme={theme} className="h-full bg-bg text-ink"><Now /></div>;
 
   return (
     <div data-theme={theme} className="h-full min-w-[1200px] flex flex-col bg-bg text-ink overflow-hidden">
@@ -73,6 +83,8 @@ export default function App() {
         </div>
         {reasoningOpen && <Reasoning o={o} />}
         {sourcingOpen && <Sourcing o={o} />}
+        {sourcesOpen && <Sources />}
+        {recordOpen && <Record />}
         <button
           onClick={openTimeline}
           aria-label="Open timeline"

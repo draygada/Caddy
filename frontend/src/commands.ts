@@ -55,6 +55,12 @@ export const COMMANDS: Command[] = [
   { id: 'select.face', label: 'Selection filter · Faces', group: 'select', run: (st) => st.patch({ selFilter: 'face' }) },
 
   { id: 'doc.source', label: 'Source this design…', group: 'document', run: (st) => st.patch({ sourcingOpen: true, reasoningOpen: false, timelineOpen: false }) },
+  { id: 'doc.sources', label: 'Sources · drop a datasheet, verifier, Call B', group: 'document', run: (st) => st.patch({ sourcesOpen: true }) },
+  { id: 'doc.record', label: '/record · printable design decision record', group: 'document', run: (st) => st.patch({ recordOpen: true }) },
+  { id: 'doc.door3', label: 'New from description… (Door 3)', group: 'create', run: (st) => st.openDialog('door3', null) },
+  { id: 'doc.target', label: 'Design to a target…', group: 'create', run: (st) => { st.openReasoning(); } },
+  { id: 'view.board', label: 'Board view · flight controller', group: 'view', run: (st) => { st.closeDialog(); st.patch({ viewMode: 'board' }); } },
+  { id: 'doc.now', label: '/now · Shipyard observation', group: 'document', run: () => { location.search = '?now=1'; } },
   { id: 'doc.version', label: 'Save version…', group: 'document', run: (st) => st.openDialog('save_version', null) },
   { id: 'doc.comment', label: 'Add comment…', group: 'document', run: (st) => st.openDialog('add_comment', null) },
   ...UNITS.map((u) => ({ id: 'doc.units.' + u, label: 'Units · ' + u, group: 'document' as CommandGroup, run: (st: WorkbenchState) => st.setUnits(u) })),
