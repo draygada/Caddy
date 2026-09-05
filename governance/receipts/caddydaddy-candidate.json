@@ -1,0 +1,102 @@
+{
+  "schema_version": "1.0.0",
+  "receipt_id": "forge-caddydaddy-candidate-20260905T190009Z",
+  "lane": "caddydaddy-candidate",
+  "status": "ACTIVE",
+  "mutation_admitted": true,
+  "custodian_task_id": "ship-caddydaddy-candidate-20260905",
+  "writer": {
+    "kind": "codex-task",
+    "task_id": "ship-caddydaddy-candidate-20260905",
+    "title": "CADdyDaddy integration-foundation builder"
+  },
+  "assigned_by_task_id": "ship-caddydaddy-candidate-20260905",
+  "branch": "ship/caddydaddy-candidate",
+  "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/caddydaddy-candidate",
+  "base_commit": "92241b9ca7c9df37cc48e55b4ea388cb21686bb4",
+  "prepared_at": "2026-09-05T19:00:09Z",
+  "lease_acquired_at": "2026-09-05T19:00:09Z",
+  "renew_by": "2026-09-05T20:00:09Z",
+  "expires_at": "2026-09-05T23:00:09Z",
+  "exclusive_write_paths": [
+    "features/tripwire/**",
+    "docs/adr/0002-caddydaddy-composition.md",
+    "docs/imports/tripwire-898f6167.json",
+    "packages/caddydaddy-contracts/schemas/compliance-input.v1.schema.json",
+    "packages/caddydaddy-contracts/schemas/compliance-observation.v1.schema.json",
+    "packages/caddydaddy-contracts/schemas/compliance-binding-receipt.v1.schema.json",
+    "packages/caddydaddy-contracts/test-vectors/compliance-contracts.v1.test-vectors.json",
+    "tests/contracts/test_caddydaddy_contracts.py",
+    "tests/provenance/test_tripwire_import.py",
+    "governance/custody.v1.json",
+    "governance/receipts/caddydaddy-candidate.json"
+  ],
+  "owned_responsibility": "Tripwire import and CADdyDaddy compliance-boundary architecture, provenance, contracts, vectors, and tests only",
+  "forbidden_responsibility": [
+    "runtime bridge or application shell",
+    "Tripwire source adaptation",
+    "rule-pack promotion or legal conclusions",
+    "merge, push, deploy, provider, domain, credential, external-send, or spending state"
+  ],
+  "activation_rule": "Valid only for this exact branch, worktree, base, and allowlist.",
+  "now_observation": {
+    "schema_version": "1.0.0",
+    "observed_at": "2026-09-05T19:00:09Z",
+    "worktree_label": "forge/caddydaddy-candidate",
+    "task": {
+      "id": "ship-caddydaddy-candidate-20260905",
+      "title": "CADdyDaddy integration-foundation builder",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "conversation:caddydaddy-ship-instruction@2026-09-05T19:00:09Z"
+    },
+    "actor": {
+      "owner": {
+        "id": "human:caddydaddy-composition-decision",
+        "title": "Human composition decision",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "conversation:caddydaddy-ship-instruction@2026-09-05T19:00:09Z"
+      },
+      "model": {
+        "id": null,
+        "title": null,
+        "evidence_class": "UNKNOWN",
+        "evidence_ref": null
+      }
+    },
+    "lane_state": {
+      "value": "ACTIVE",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "receipt:forge-caddydaddy-candidate-20260905T190009Z#status"
+    },
+    "current_action": {
+      "value": "Building the bounded local CADdyDaddy integration foundation.",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "conversation:caddydaddy-ship-instruction@2026-09-05T19:00:09Z"
+    },
+    "last_evidenced_change": {
+      "kind": "CUSTODY_ACQUIRED",
+      "occurred_at": "2026-09-05T19:00:09Z",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "receipt:forge-caddydaddy-candidate-20260905T190009Z"
+    },
+    "blockers": [
+      {
+        "id": "runtime-bridge-deferred",
+        "state": "HOLD",
+        "summary": "No Forge-to-Tripwire runtime bridge or CADdyDaddy shell exists.",
+        "clearer": "future integration owner",
+        "next_unblock": "Implement and independently verify the server bridge and shell against ADR-0002.",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "adr:0002#evidence-and-deferred-work"
+      }
+    ],
+    "checks": [],
+    "release": {
+      "state": "NONE",
+      "candidate": null,
+      "evidence_class": "MEASURED",
+      "evidence_ref": "conversation:no-deploy-authority@2026-09-05T19:00:09Z"
+    }
+  },
+  "handoff": "docs/adr/0002-caddydaddy-composition.md"
+}

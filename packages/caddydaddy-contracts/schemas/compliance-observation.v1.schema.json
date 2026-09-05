@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://caddydaddy.invalid/contracts/compliance-observation.v1.schema.json",
+  "title": "CADdyDaddy compliance observation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "observation_id", "observation_hash", "observed_at", "producer", "evaluation_state", "input_ref", "forge_revision_ref", "rule_pack", "findings", "review_requirement", "claim_ceiling", "legal_effect"],
+  "properties": {
+    "schema_version": {"const": "caddydaddy.compliance-observation/1"},
+    "observation_id": {"type": "string", "pattern": "^compliance-observation:[0-9a-f]{64}$"},
+    "observation_hash": {"$ref": "#/$defs/sha256"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "runtime", "source_commit"],
+      "properties": {
+        "system": {"const": "TRIPWIRE"},
+        "runtime": {"const": "SERVER"},
+        "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "evaluation_state": {"const": "SUCCEEDED"},
+    "input_ref": {"$ref": "#/$defs/inputRef"},
+    "forge_revision_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision_id", "content_hash"],
+      "properties": {
+        "revision_id": {"$ref": "#/$defs/stableId"},
+        "content_hash": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "rule_pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "content_hash"],
+      "properties": {
+        "state": {"const": "DRAFT_REVIEW_ONLY"},
+        "content_hash": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["finding_id", "node_id", "outcome", "rule_ids", "reason_codes"],
+        "properties": {
+          "finding_id": {"$ref": "#/$defs/stableId"},
+          "node_id": {"type": "string", "pattern": "^tripwire-node:[0-9a-f]{64}$"},
+          "outcome": {"enum": ["FLAGGED", "NOT_TRIGGERED", "INSUFFICIENT_EVIDENCE", "REVIEW_REQUIRED"]},
+          "rule_ids": {"type": "array", "items": {"$ref": "#/$defs/stableId"}},
+          "reason_codes": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        }
+      }
+    },
+    "review_requirement": {"const": "HUMAN_REVIEW_REQUIRED"},
+    "claim_ceiling": {"const": "REVIEW_SUPPORT_ONLY_NO_LEGAL_CONCLUSION"},
+    "legal_effect": {"const": "NONE"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "stableId": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:/-]{0,255}$"},
+    "inputRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projection_id", "projection_hash"],
+      "properties": {
+        "projection_id": {"type": "string", "pattern": "^compliance-input:[0-9a-f]{64}$"},
+        "projection_hash": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

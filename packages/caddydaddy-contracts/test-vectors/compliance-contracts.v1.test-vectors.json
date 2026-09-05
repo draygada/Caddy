@@ -1,0 +1,470 @@
+{
+  "schema_version": "caddydaddy.compliance-contract-test-vectors/1",
+  "canonicalization": "RFC8785",
+  "hash_algorithm": "SHA-256",
+  "fixture_domain": "ASCII object keys; no binary floating-point values; dimensional decimals are strings",
+  "identity_vectors": {
+    "primary": {
+      "preimage": {
+        "product_thread_id": "product-thread:kestrel",
+        "forge_record_id": "forge-record:wing-spar",
+        "occurrence_path": [
+          "occurrence:kestrel",
+          "occurrence:left-wing",
+          "occurrence:spar"
+        ]
+      },
+      "canonical_utf8": "{\"forge_record_id\":\"forge-record:wing-spar\",\"occurrence_path\":[\"occurrence:kestrel\",\"occurrence:left-wing\",\"occurrence:spar\"],\"product_thread_id\":\"product-thread:kestrel\"}",
+      "sha256": "db1bd8295ab8269fb5bdfa8cddad1fe9f12a5b2d5dfeffebb2aab09ac69a6725",
+      "node_id": "tripwire-node:db1bd8295ab8269fb5bdfa8cddad1fe9f12a5b2d5dfeffebb2aab09ac69a6725"
+    },
+    "alternate_occurrence": {
+      "preimage": {
+        "product_thread_id": "product-thread:kestrel",
+        "forge_record_id": "forge-record:wing-spar",
+        "occurrence_path": [
+          "occurrence:kestrel",
+          "occurrence:right-wing",
+          "occurrence:spar"
+        ]
+      },
+      "canonical_utf8": "{\"forge_record_id\":\"forge-record:wing-spar\",\"occurrence_path\":[\"occurrence:kestrel\",\"occurrence:right-wing\",\"occurrence:spar\"],\"product_thread_id\":\"product-thread:kestrel\"}",
+      "sha256": "7404609b284d81fe849189e7a864956390ad832eea98e95fafc1051f36caaedf",
+      "node_id": "tripwire-node:7404609b284d81fe849189e7a864956390ad832eea98e95fafc1051f36caaedf"
+    }
+  },
+  "documents": {
+    "input": {
+      "schema": "compliance-input.v1.schema.json",
+      "id_field": "projection_id",
+      "hash_field": "projection_hash",
+      "id_prefix": "compliance-input:",
+      "hash_preimage": {
+        "schema_version": "caddydaddy.compliance-input/1",
+        "product_thread_id": "product-thread:kestrel",
+        "created_at": "2026-09-05T19:00:09Z",
+        "producer": {
+          "system": "FORGE",
+          "runtime": "SERVER"
+        },
+        "forge_revision": {
+          "revision_id": "forge-revision:kestrel:42",
+          "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recompute_state": "SUCCEEDED",
+          "geometry_artifact_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "unit_conversion": {
+          "source_length_unit": "mm",
+          "target_length_unit": "m",
+          "exact_factor": "0.001"
+        },
+        "rule_pack": {
+          "state": "DRAFT_REVIEW_ONLY",
+          "content_hash": "ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f",
+          "source_ref": "features/tripwire/data/rules/rules.DRAFT.json"
+        },
+        "nodes": [
+          {
+            "node_id": "tripwire-node:db1bd8295ab8269fb5bdfa8cddad1fe9f12a5b2d5dfeffebb2aab09ac69a6725",
+            "identity_preimage": {
+              "product_thread_id": "product-thread:kestrel",
+              "forge_record_id": "forge-record:wing-spar",
+              "occurrence_path": [
+                "occurrence:kestrel",
+                "occurrence:left-wing",
+                "occurrence:spar"
+              ]
+            },
+            "forge_record_revision_id": "forge-record-revision:wing-spar:9",
+            "kind": "part",
+            "parent_node_id": null,
+            "business_fields": {
+              "mpn": "KST-SPAR-001",
+              "vendor": null,
+              "display_name": "Left wing spar"
+            },
+            "measurements": [
+              {
+                "name": "span",
+                "source_mm": "2500",
+                "projected_m": "2.5",
+                "exact_factor": "0.001"
+              }
+            ],
+            "tripwire_payload": {
+              "role": "structure",
+              "origin": "US",
+              "part_class": "airframe",
+              "attrs": {},
+              "items": [],
+              "declared": {}
+            }
+          }
+        ]
+      },
+      "canonical_utf8": "{\"created_at\":\"2026-09-05T19:00:09Z\",\"forge_revision\":{\"content_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"geometry_artifact_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"recompute_state\":\"SUCCEEDED\",\"revision_id\":\"forge-revision:kestrel:42\"},\"nodes\":[{\"business_fields\":{\"display_name\":\"Left wing spar\",\"mpn\":\"KST-SPAR-001\",\"vendor\":null},\"forge_record_revision_id\":\"forge-record-revision:wing-spar:9\",\"identity_preimage\":{\"forge_record_id\":\"forge-record:wing-spar\",\"occurrence_path\":[\"occurrence:kestrel\",\"occurrence:left-wing\",\"occurrence:spar\"],\"product_thread_id\":\"product-thread:kestrel\"},\"kind\":\"part\",\"measurements\":[{\"exact_factor\":\"0.001\",\"name\":\"span\",\"projected_m\":\"2.5\",\"source_mm\":\"2500\"}],\"node_id\":\"tripwire-node:db1bd8295ab8269fb5bdfa8cddad1fe9f12a5b2d5dfeffebb2aab09ac69a6725\",\"parent_node_id\":null,\"tripwire_payload\":{\"attrs\":{},\"declared\":{},\"items\":[],\"origin\":\"US\",\"part_class\":\"airframe\",\"role\":\"structure\"}}],\"producer\":{\"runtime\":\"SERVER\",\"system\":\"FORGE\"},\"product_thread_id\":\"product-thread:kestrel\",\"rule_pack\":{\"content_hash\":\"ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f\",\"source_ref\":\"features/tripwire/data/rules/rules.DRAFT.json\",\"state\":\"DRAFT_REVIEW_ONLY\"},\"schema_version\":\"caddydaddy.compliance-input/1\",\"unit_conversion\":{\"exact_factor\":\"0.001\",\"source_length_unit\":\"mm\",\"target_length_unit\":\"m\"}}",
+      "sha256": "3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a",
+      "document": {
+        "schema_version": "caddydaddy.compliance-input/1",
+        "product_thread_id": "product-thread:kestrel",
+        "created_at": "2026-09-05T19:00:09Z",
+        "producer": {
+          "system": "FORGE",
+          "runtime": "SERVER"
+        },
+        "forge_revision": {
+          "revision_id": "forge-revision:kestrel:42",
+          "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recompute_state": "SUCCEEDED",
+          "geometry_artifact_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "unit_conversion": {
+          "source_length_unit": "mm",
+          "target_length_unit": "m",
+          "exact_factor": "0.001"
+        },
+        "rule_pack": {
+          "state": "DRAFT_REVIEW_ONLY",
+          "content_hash": "ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f",
+          "source_ref": "features/tripwire/data/rules/rules.DRAFT.json"
+        },
+        "nodes": [
+          {
+            "node_id": "tripwire-node:db1bd8295ab8269fb5bdfa8cddad1fe9f12a5b2d5dfeffebb2aab09ac69a6725",
+            "identity_preimage": {
+              "product_thread_id": "product-thread:kestrel",
+              "forge_record_id": "forge-record:wing-spar",
+              "occurrence_path": [
+                "occurrence:kestrel",
+                "occurrence:left-wing",
+                "occurrence:spar"
+              ]
+            },
+            "forge_record_revision_id": "forge-record-revision:wing-spar:9",
+            "kind": "part",
+            "parent_node_id": null,
+            "business_fields": {
+              "mpn": "KST-SPAR-001",
+              "vendor": null,
+              "display_name": "Left wing spar"
+            },
+            "measurements": [
+              {
+                "name": "span",
+                "source_mm": "2500",
+                "projected_m": "2.5",
+                "exact_factor": "0.001"
+              }
+            ],
+            "tripwire_payload": {
+              "role": "structure",
+              "origin": "US",
+              "part_class": "airframe",
+              "attrs": {},
+              "items": [],
+              "declared": {}
+            }
+          }
+        ],
+        "projection_id": "compliance-input:3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a",
+        "projection_hash": "3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a"
+      }
+    },
+    "observation": {
+      "schema": "compliance-observation.v1.schema.json",
+      "id_field": "observation_id",
+      "hash_field": "observation_hash",
+      "id_prefix": "compliance-observation:",
+      "hash_preimage": {
+        "schema_version": "caddydaddy.compliance-observation/1",
+        "observed_at": "2026-09-05T19:00:10Z",
+        "producer": {
+          "system": "TRIPWIRE",
+          "runtime": "SERVER",
+          "source_commit": "898f6167e4305a4f86f3ebe4a473278ffbd56530"
+        },
+        "evaluation_state": "SUCCEEDED",
+        "input_ref": {
+          "projection_id": "compliance-input:3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a",
+          "projection_hash": "3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a"
+        },
+        "forge_revision_ref": {
+          "revision_id": "forge-revision:kestrel:42",
+          "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "rule_pack": {
+          "state": "DRAFT_REVIEW_ONLY",
+          "content_hash": "ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f"
+        },
+        "findings": [
+          {
+            "finding_id": "finding:wing-spar:review",
+            "node_id": "tripwire-node:db1bd8295ab8269fb5bdfa8cddad1fe9f12a5b2d5dfeffebb2aab09ac69a6725",
+            "outcome": "REVIEW_REQUIRED",
+            "rule_ids": [
+              "rule:9A012"
+            ],
+            "reason_codes": [
+              "DRAFT_RULE_PACK"
+            ]
+          }
+        ],
+        "review_requirement": "HUMAN_REVIEW_REQUIRED",
+        "claim_ceiling": "REVIEW_SUPPORT_ONLY_NO_LEGAL_CONCLUSION",
+        "legal_effect": "NONE"
+      },
+      "canonical_utf8": "{\"claim_ceiling\":\"REVIEW_SUPPORT_ONLY_NO_LEGAL_CONCLUSION\",\"evaluation_state\":\"SUCCEEDED\",\"findings\":[{\"finding_id\":\"finding:wing-spar:review\",\"node_id\":\"tripwire-node:db1bd8295ab8269fb5bdfa8cddad1fe9f12a5b2d5dfeffebb2aab09ac69a6725\",\"outcome\":\"REVIEW_REQUIRED\",\"reason_codes\":[\"DRAFT_RULE_PACK\"],\"rule_ids\":[\"rule:9A012\"]}],\"forge_revision_ref\":{\"content_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"revision_id\":\"forge-revision:kestrel:42\"},\"input_ref\":{\"projection_hash\":\"3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a\",\"projection_id\":\"compliance-input:3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a\"},\"legal_effect\":\"NONE\",\"observed_at\":\"2026-09-05T19:00:10Z\",\"producer\":{\"runtime\":\"SERVER\",\"source_commit\":\"898f6167e4305a4f86f3ebe4a473278ffbd56530\",\"system\":\"TRIPWIRE\"},\"review_requirement\":\"HUMAN_REVIEW_REQUIRED\",\"rule_pack\":{\"content_hash\":\"ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f\",\"state\":\"DRAFT_REVIEW_ONLY\"},\"schema_version\":\"caddydaddy.compliance-observation/1\"}",
+      "sha256": "49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e",
+      "document": {
+        "schema_version": "caddydaddy.compliance-observation/1",
+        "observed_at": "2026-09-05T19:00:10Z",
+        "producer": {
+          "system": "TRIPWIRE",
+          "runtime": "SERVER",
+          "source_commit": "898f6167e4305a4f86f3ebe4a473278ffbd56530"
+        },
+        "evaluation_state": "SUCCEEDED",
+        "input_ref": {
+          "projection_id": "compliance-input:3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a",
+          "projection_hash": "3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a"
+        },
+        "forge_revision_ref": {
+          "revision_id": "forge-revision:kestrel:42",
+          "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "rule_pack": {
+          "state": "DRAFT_REVIEW_ONLY",
+          "content_hash": "ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f"
+        },
+        "findings": [
+          {
+            "finding_id": "finding:wing-spar:review",
+            "node_id": "tripwire-node:db1bd8295ab8269fb5bdfa8cddad1fe9f12a5b2d5dfeffebb2aab09ac69a6725",
+            "outcome": "REVIEW_REQUIRED",
+            "rule_ids": [
+              "rule:9A012"
+            ],
+            "reason_codes": [
+              "DRAFT_RULE_PACK"
+            ]
+          }
+        ],
+        "review_requirement": "HUMAN_REVIEW_REQUIRED",
+        "claim_ceiling": "REVIEW_SUPPORT_ONLY_NO_LEGAL_CONCLUSION",
+        "legal_effect": "NONE",
+        "observation_id": "compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e",
+        "observation_hash": "49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e"
+      }
+    },
+    "bound_receipt": {
+      "schema": "compliance-binding-receipt.v1.schema.json",
+      "id_field": "receipt_id",
+      "hash_field": "receipt_hash",
+      "id_prefix": "compliance-binding-receipt:",
+      "hash_preimage": {
+        "schema_version": "caddydaddy.compliance-binding-receipt/1",
+        "recorded_at": "2026-09-05T19:00:11Z",
+        "product_thread_id": "product-thread:kestrel",
+        "forge_revision_id": "forge-revision:kestrel:42",
+        "cad_mutation_effect": "NONE",
+        "rule_pack_state": "DRAFT_REVIEW_ONLY",
+        "browser_role": "DISPLAY_ONLY",
+        "binding_status": "BOUND",
+        "forge_recompute": {
+          "state": "SUCCEEDED",
+          "geometry_artifact_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "diagnostic_code": null
+        },
+        "tripwire": {
+          "state": "SUCCEEDED",
+          "input_ref": {
+            "projection_id": "compliance-input:3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a",
+            "projection_hash": "3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a"
+          },
+          "observation_ref": {
+            "observation_id": "compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e",
+            "observation_hash": "49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e"
+          },
+          "diagnostic_code": null
+        },
+        "current_observation_ref": {
+          "observation_id": "compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e",
+          "observation_hash": "49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e"
+        },
+        "last_valid_observation_ref": null,
+        "compliance_claim_gate": "HUMAN_REVIEW_REQUIRED"
+      },
+      "canonical_utf8": "{\"binding_status\":\"BOUND\",\"browser_role\":\"DISPLAY_ONLY\",\"cad_mutation_effect\":\"NONE\",\"compliance_claim_gate\":\"HUMAN_REVIEW_REQUIRED\",\"current_observation_ref\":{\"observation_hash\":\"49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e\",\"observation_id\":\"compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e\"},\"forge_recompute\":{\"diagnostic_code\":null,\"geometry_artifact_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"state\":\"SUCCEEDED\"},\"forge_revision_id\":\"forge-revision:kestrel:42\",\"last_valid_observation_ref\":null,\"product_thread_id\":\"product-thread:kestrel\",\"recorded_at\":\"2026-09-05T19:00:11Z\",\"rule_pack_state\":\"DRAFT_REVIEW_ONLY\",\"schema_version\":\"caddydaddy.compliance-binding-receipt/1\",\"tripwire\":{\"diagnostic_code\":null,\"input_ref\":{\"projection_hash\":\"3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a\",\"projection_id\":\"compliance-input:3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a\"},\"observation_ref\":{\"observation_hash\":\"49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e\",\"observation_id\":\"compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e\"},\"state\":\"SUCCEEDED\"}}",
+      "sha256": "427d053bc2a9d6cc7acc6743e79b908092ac48c9173a6084fbbdfb4fe8b43146",
+      "document": {
+        "schema_version": "caddydaddy.compliance-binding-receipt/1",
+        "recorded_at": "2026-09-05T19:00:11Z",
+        "product_thread_id": "product-thread:kestrel",
+        "forge_revision_id": "forge-revision:kestrel:42",
+        "cad_mutation_effect": "NONE",
+        "rule_pack_state": "DRAFT_REVIEW_ONLY",
+        "browser_role": "DISPLAY_ONLY",
+        "binding_status": "BOUND",
+        "forge_recompute": {
+          "state": "SUCCEEDED",
+          "geometry_artifact_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "diagnostic_code": null
+        },
+        "tripwire": {
+          "state": "SUCCEEDED",
+          "input_ref": {
+            "projection_id": "compliance-input:3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a",
+            "projection_hash": "3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a"
+          },
+          "observation_ref": {
+            "observation_id": "compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e",
+            "observation_hash": "49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e"
+          },
+          "diagnostic_code": null
+        },
+        "current_observation_ref": {
+          "observation_id": "compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e",
+          "observation_hash": "49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e"
+        },
+        "last_valid_observation_ref": null,
+        "compliance_claim_gate": "HUMAN_REVIEW_REQUIRED",
+        "receipt_id": "compliance-binding-receipt:427d053bc2a9d6cc7acc6743e79b908092ac48c9173a6084fbbdfb4fe8b43146",
+        "receipt_hash": "427d053bc2a9d6cc7acc6743e79b908092ac48c9173a6084fbbdfb4fe8b43146"
+      }
+    },
+    "forge_failure_receipt": {
+      "schema": "compliance-binding-receipt.v1.schema.json",
+      "id_field": "receipt_id",
+      "hash_field": "receipt_hash",
+      "id_prefix": "compliance-binding-receipt:",
+      "hash_preimage": {
+        "schema_version": "caddydaddy.compliance-binding-receipt/1",
+        "recorded_at": "2026-09-05T19:00:11Z",
+        "product_thread_id": "product-thread:kestrel",
+        "forge_revision_id": "forge-revision:kestrel:43",
+        "cad_mutation_effect": "NONE",
+        "rule_pack_state": "DRAFT_REVIEW_ONLY",
+        "browser_role": "DISPLAY_ONLY",
+        "binding_status": "BLOCKED_FORGE_RECOMPUTE",
+        "forge_recompute": {
+          "state": "FAILED",
+          "geometry_artifact_hash": null,
+          "diagnostic_code": "RECOMPUTE_FAILED"
+        },
+        "tripwire": {
+          "state": "NOT_RUN",
+          "input_ref": null,
+          "observation_ref": null,
+          "diagnostic_code": "NOT_RUN_FORGE_RECOMPUTE_FAILED"
+        },
+        "current_observation_ref": null,
+        "last_valid_observation_ref": {
+          "observation_id": "compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e",
+          "observation_hash": "49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e"
+        },
+        "compliance_claim_gate": "BLOCKED"
+      },
+      "canonical_utf8": "{\"binding_status\":\"BLOCKED_FORGE_RECOMPUTE\",\"browser_role\":\"DISPLAY_ONLY\",\"cad_mutation_effect\":\"NONE\",\"compliance_claim_gate\":\"BLOCKED\",\"current_observation_ref\":null,\"forge_recompute\":{\"diagnostic_code\":\"RECOMPUTE_FAILED\",\"geometry_artifact_hash\":null,\"state\":\"FAILED\"},\"forge_revision_id\":\"forge-revision:kestrel:43\",\"last_valid_observation_ref\":{\"observation_hash\":\"49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e\",\"observation_id\":\"compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e\"},\"product_thread_id\":\"product-thread:kestrel\",\"recorded_at\":\"2026-09-05T19:00:11Z\",\"rule_pack_state\":\"DRAFT_REVIEW_ONLY\",\"schema_version\":\"caddydaddy.compliance-binding-receipt/1\",\"tripwire\":{\"diagnostic_code\":\"NOT_RUN_FORGE_RECOMPUTE_FAILED\",\"input_ref\":null,\"observation_ref\":null,\"state\":\"NOT_RUN\"}}",
+      "sha256": "1c79831f254fb2851d0a553ae8edf34547ea6c9472a01d3b318959f8140040bf",
+      "document": {
+        "schema_version": "caddydaddy.compliance-binding-receipt/1",
+        "recorded_at": "2026-09-05T19:00:11Z",
+        "product_thread_id": "product-thread:kestrel",
+        "forge_revision_id": "forge-revision:kestrel:43",
+        "cad_mutation_effect": "NONE",
+        "rule_pack_state": "DRAFT_REVIEW_ONLY",
+        "browser_role": "DISPLAY_ONLY",
+        "binding_status": "BLOCKED_FORGE_RECOMPUTE",
+        "forge_recompute": {
+          "state": "FAILED",
+          "geometry_artifact_hash": null,
+          "diagnostic_code": "RECOMPUTE_FAILED"
+        },
+        "tripwire": {
+          "state": "NOT_RUN",
+          "input_ref": null,
+          "observation_ref": null,
+          "diagnostic_code": "NOT_RUN_FORGE_RECOMPUTE_FAILED"
+        },
+        "current_observation_ref": null,
+        "last_valid_observation_ref": {
+          "observation_id": "compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e",
+          "observation_hash": "49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e"
+        },
+        "compliance_claim_gate": "BLOCKED",
+        "receipt_id": "compliance-binding-receipt:1c79831f254fb2851d0a553ae8edf34547ea6c9472a01d3b318959f8140040bf",
+        "receipt_hash": "1c79831f254fb2851d0a553ae8edf34547ea6c9472a01d3b318959f8140040bf"
+      }
+    },
+    "tripwire_failure_receipt": {
+      "schema": "compliance-binding-receipt.v1.schema.json",
+      "id_field": "receipt_id",
+      "hash_field": "receipt_hash",
+      "id_prefix": "compliance-binding-receipt:",
+      "hash_preimage": {
+        "schema_version": "caddydaddy.compliance-binding-receipt/1",
+        "recorded_at": "2026-09-05T19:00:11Z",
+        "product_thread_id": "product-thread:kestrel",
+        "forge_revision_id": "forge-revision:kestrel:42",
+        "cad_mutation_effect": "NONE",
+        "rule_pack_state": "DRAFT_REVIEW_ONLY",
+        "browser_role": "DISPLAY_ONLY",
+        "binding_status": "BLOCKED_TRIPWIRE_FAILURE",
+        "forge_recompute": {
+          "state": "SUCCEEDED",
+          "geometry_artifact_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "diagnostic_code": null
+        },
+        "tripwire": {
+          "state": "FAILED",
+          "input_ref": {
+            "projection_id": "compliance-input:3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a",
+            "projection_hash": "3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a"
+          },
+          "observation_ref": null,
+          "diagnostic_code": "TRIPWIRE_UNAVAILABLE"
+        },
+        "current_observation_ref": null,
+        "last_valid_observation_ref": {
+          "observation_id": "compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e",
+          "observation_hash": "49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e"
+        },
+        "compliance_claim_gate": "BLOCKED"
+      },
+      "canonical_utf8": "{\"binding_status\":\"BLOCKED_TRIPWIRE_FAILURE\",\"browser_role\":\"DISPLAY_ONLY\",\"cad_mutation_effect\":\"NONE\",\"compliance_claim_gate\":\"BLOCKED\",\"current_observation_ref\":null,\"forge_recompute\":{\"diagnostic_code\":null,\"geometry_artifact_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"state\":\"SUCCEEDED\"},\"forge_revision_id\":\"forge-revision:kestrel:42\",\"last_valid_observation_ref\":{\"observation_hash\":\"49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e\",\"observation_id\":\"compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e\"},\"product_thread_id\":\"product-thread:kestrel\",\"recorded_at\":\"2026-09-05T19:00:11Z\",\"rule_pack_state\":\"DRAFT_REVIEW_ONLY\",\"schema_version\":\"caddydaddy.compliance-binding-receipt/1\",\"tripwire\":{\"diagnostic_code\":\"TRIPWIRE_UNAVAILABLE\",\"input_ref\":{\"projection_hash\":\"3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a\",\"projection_id\":\"compliance-input:3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a\"},\"observation_ref\":null,\"state\":\"FAILED\"}}",
+      "sha256": "d4c095f8bdf29de4e962b3af388626065613466704c3f2e5fb14ab0050d8ce72",
+      "document": {
+        "schema_version": "caddydaddy.compliance-binding-receipt/1",
+        "recorded_at": "2026-09-05T19:00:11Z",
+        "product_thread_id": "product-thread:kestrel",
+        "forge_revision_id": "forge-revision:kestrel:42",
+        "cad_mutation_effect": "NONE",
+        "rule_pack_state": "DRAFT_REVIEW_ONLY",
+        "browser_role": "DISPLAY_ONLY",
+        "binding_status": "BLOCKED_TRIPWIRE_FAILURE",
+        "forge_recompute": {
+          "state": "SUCCEEDED",
+          "geometry_artifact_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "diagnostic_code": null
+        },
+        "tripwire": {
+          "state": "FAILED",
+          "input_ref": {
+            "projection_id": "compliance-input:3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a",
+            "projection_hash": "3a779c2deb5f32c1546cdadce4be8459d738ec966f9ca1322e4932d1cef6005a"
+          },
+          "observation_ref": null,
+          "diagnostic_code": "TRIPWIRE_UNAVAILABLE"
+        },
+        "current_observation_ref": null,
+        "last_valid_observation_ref": {
+          "observation_id": "compliance-observation:49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e",
+          "observation_hash": "49d9cc6d38d20344d69a770e95bfa190a89069558b21e88b0998d03684be1e8e"
+        },
+        "compliance_claim_gate": "BLOCKED",
+        "receipt_id": "compliance-binding-receipt:d4c095f8bdf29de4e962b3af388626065613466704c3f2e5fb14ab0050d8ce72",
+        "receipt_hash": "d4c095f8bdf29de4e962b3af388626065613466704c3f2e5fb14ab0050d8ce72"
+      }
+    }
+  }
+}

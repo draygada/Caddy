@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://caddydaddy.invalid/contracts/compliance-input.v1.schema.json",
+  "title": "CADdyDaddy compliance input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "projection_id", "projection_hash", "product_thread_id", "created_at", "producer", "forge_revision", "unit_conversion", "rule_pack", "nodes"],
+  "properties": {
+    "schema_version": {"const": "caddydaddy.compliance-input/1"},
+    "projection_id": {"type": "string", "pattern": "^compliance-input:[0-9a-f]{64}$"},
+    "projection_hash": {"$ref": "#/$defs/sha256"},
+    "product_thread_id": {"$ref": "#/$defs/stableId"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "runtime"],
+      "properties": {
+        "system": {"const": "FORGE"},
+        "runtime": {"const": "SERVER"}
+      }
+    },
+    "forge_revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision_id", "content_hash", "recompute_state", "geometry_artifact_hash"],
+      "properties": {
+        "revision_id": {"$ref": "#/$defs/stableId"},
+        "content_hash": {"$ref": "#/$defs/sha256"},
+        "recompute_state": {"const": "SUCCEEDED"},
+        "geometry_artifact_hash": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "unit_conversion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_length_unit", "target_length_unit", "exact_factor"],
+      "properties": {
+        "source_length_unit": {"const": "mm"},
+        "target_length_unit": {"const": "m"},
+        "exact_factor": {"const": "0.001"}
+      }
+    },
+    "rule_pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "content_hash", "source_ref"],
+      "properties": {
+        "state": {"const": "DRAFT_REVIEW_ONLY"},
+        "content_hash": {"$ref": "#/$defs/sha256"},
+        "source_ref": {"type": "string", "minLength": 1}
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/node"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "stableId": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:/-]{0,255}$"},
+    "nodeId": {"type": "string", "pattern": "^tripwire-node:[0-9a-f]{64}$"},
+    "decimal": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"},
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_thread_id", "forge_record_id", "occurrence_path"],
+      "properties": {
+        "product_thread_id": {"$ref": "#/$defs/stableId"},
+        "forge_record_id": {"$ref": "#/$defs/stableId"},
+        "occurrence_path": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/stableId"}
+        }
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source_mm", "projected_m", "exact_factor"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "source_mm": {"$ref": "#/$defs/decimal"},
+        "projected_m": {"$ref": "#/$defs/decimal"},
+        "exact_factor": {"const": "0.001"}
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "identity_preimage", "forge_record_revision_id", "kind", "parent_node_id", "business_fields", "measurements", "tripwire_payload"],
+      "properties": {
+        "node_id": {"$ref": "#/$defs/nodeId"},
+        "identity_preimage": {"$ref": "#/$defs/identity"},
+        "forge_record_revision_id": {"$ref": "#/$defs/stableId"},
+        "kind": {"enum": ["product", "assembly", "part"]},
+        "parent_node_id": {"oneOf": [{"$ref": "#/$defs/nodeId"}, {"type": "null"}]},
+        "business_fields": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mpn", "vendor", "display_name"],
+          "properties": {
+            "mpn": {"type": ["string", "null"]},
+            "vendor": {"type": ["string", "null"]},
+            "display_name": {"type": ["string", "null"]}
+          }
+        },
+        "measurements": {"type": "array", "items": {"$ref": "#/$defs/measurement"}},
+        "tripwire_payload": {
+          "type": "object",
+          "description": "Derived fields consumed by Tripwire; never canonical Forge state."
+        }
+      }
+    }
+  }
+}

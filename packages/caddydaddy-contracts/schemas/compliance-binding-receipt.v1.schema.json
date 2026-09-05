@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://caddydaddy.invalid/contracts/compliance-binding-receipt.v1.schema.json",
+  "title": "CADdyDaddy compliance binding receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "receipt_id", "receipt_hash", "recorded_at", "product_thread_id", "forge_revision_id", "binding_status", "forge_recompute", "tripwire", "current_observation_ref", "last_valid_observation_ref", "cad_mutation_effect", "compliance_claim_gate", "rule_pack_state", "browser_role"],
+  "properties": {
+    "schema_version": {"const": "caddydaddy.compliance-binding-receipt/1"},
+    "receipt_id": {"type": "string", "pattern": "^compliance-binding-receipt:[0-9a-f]{64}$"},
+    "receipt_hash": {"$ref": "#/$defs/sha256"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "product_thread_id": {"$ref": "#/$defs/stableId"},
+    "forge_revision_id": {"$ref": "#/$defs/stableId"},
+    "binding_status": {"enum": ["BOUND", "BLOCKED_FORGE_RECOMPUTE", "BLOCKED_TRIPWIRE_FAILURE"]},
+    "forge_recompute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "geometry_artifact_hash", "diagnostic_code"],
+      "properties": {
+        "state": {"enum": ["SUCCEEDED", "FAILED"]},
+        "geometry_artifact_hash": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "diagnostic_code": {"type": ["string", "null"]}
+      }
+    },
+    "tripwire": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "input_ref", "observation_ref", "diagnostic_code"],
+      "properties": {
+        "state": {"enum": ["NOT_RUN", "SUCCEEDED", "FAILED"]},
+        "input_ref": {"oneOf": [{"$ref": "#/$defs/inputRef"}, {"type": "null"}]},
+        "observation_ref": {"oneOf": [{"$ref": "#/$defs/observationRef"}, {"type": "null"}]},
+        "diagnostic_code": {"type": ["string", "null"]}
+      }
+    },
+    "current_observation_ref": {"oneOf": [{"$ref": "#/$defs/observationRef"}, {"type": "null"}]},
+    "last_valid_observation_ref": {"oneOf": [{"$ref": "#/$defs/observationRef"}, {"type": "null"}]},
+    "cad_mutation_effect": {"const": "NONE"},
+    "compliance_claim_gate": {"enum": ["HUMAN_REVIEW_REQUIRED", "BLOCKED"]},
+    "rule_pack_state": {"const": "DRAFT_REVIEW_ONLY"},
+    "browser_role": {"const": "DISPLAY_ONLY"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"binding_status": {"const": "BOUND"}}},
+      "then": {"properties": {
+        "forge_recompute": {"properties": {"state": {"const": "SUCCEEDED"}, "geometry_artifact_hash": {"$ref": "#/$defs/sha256"}, "diagnostic_code": {"type": "null"}}},
+        "tripwire": {"properties": {"state": {"const": "SUCCEEDED"}, "input_ref": {"$ref": "#/$defs/inputRef"}, "observation_ref": {"$ref": "#/$defs/observationRef"}, "diagnostic_code": {"type": "null"}}},
+        "current_observation_ref": {"$ref": "#/$defs/observationRef"},
+        "compliance_claim_gate": {"const": "HUMAN_REVIEW_REQUIRED"}
+      }}
+    },
+    {
+      "if": {"properties": {"binding_status": {"const": "BLOCKED_FORGE_RECOMPUTE"}}},
+      "then": {"properties": {
+        "forge_recompute": {"properties": {"state": {"const": "FAILED"}, "geometry_artifact_hash": {"type": "null"}, "diagnostic_code": {"type": "string", "minLength": 1}}},
+        "tripwire": {"properties": {"state": {"const": "NOT_RUN"}, "input_ref": {"type": "null"}, "observation_ref": {"type": "null"}, "diagnostic_code": {"type": "string", "minLength": 1}}},
+        "current_observation_ref": {"type": "null"},
+        "compliance_claim_gate": {"const": "BLOCKED"}
+      }}
+    },
+    {
+      "if": {"properties": {"binding_status": {"const": "BLOCKED_TRIPWIRE_FAILURE"}}},
+      "then": {"properties": {
+        "forge_recompute": {"properties": {"state": {"const": "SUCCEEDED"}, "geometry_artifact_hash": {"$ref": "#/$defs/sha256"}, "diagnostic_code": {"type": "null"}}},
+        "tripwire": {"properties": {"state": {"const": "FAILED"}, "input_ref": {"$ref": "#/$defs/inputRef"}, "observation_ref": {"type": "null"}, "diagnostic_code": {"type": "string", "minLength": 1}}},
+        "current_observation_ref": {"type": "null"},
+        "compliance_claim_gate": {"const": "BLOCKED"}
+      }}
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "stableId": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:/-]{0,255}$"},
+    "inputRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projection_id", "projection_hash"],
+      "properties": {
+        "projection_id": {"type": "string", "pattern": "^compliance-input:[0-9a-f]{64}$"},
+        "projection_hash": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "observationRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observation_id", "observation_hash"],
+      "properties": {
+        "observation_id": {"type": "string", "pattern": "^compliance-observation:[0-9a-f]{64}$"},
+        "observation_hash": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

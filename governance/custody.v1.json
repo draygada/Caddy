@@ -203,6 +203,25 @@
         "governance/receipts/operations-feedback.json"
       ],
       "handoff": "docs/handoff/operations-feedback.md"
+    },
+    "caddydaddy-candidate": {
+      "branch": "ship/caddydaddy-candidate",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/caddydaddy-candidate",
+      "worktree_label": "forge/caddydaddy-candidate",
+      "write_allowlist": [
+        "features/tripwire/**",
+        "docs/adr/0002-caddydaddy-composition.md",
+        "docs/imports/tripwire-898f6167.json",
+        "packages/caddydaddy-contracts/schemas/compliance-input.v1.schema.json",
+        "packages/caddydaddy-contracts/schemas/compliance-observation.v1.schema.json",
+        "packages/caddydaddy-contracts/schemas/compliance-binding-receipt.v1.schema.json",
+        "packages/caddydaddy-contracts/test-vectors/compliance-contracts.v1.test-vectors.json",
+        "tests/contracts/test_caddydaddy_contracts.py",
+        "tests/provenance/test_tripwire_import.py",
+        "governance/custody.v1.json",
+        "governance/receipts/caddydaddy-candidate.json"
+      ],
+      "handoff": "docs/adr/0002-caddydaddy-composition.md"
     }
   }
 }
