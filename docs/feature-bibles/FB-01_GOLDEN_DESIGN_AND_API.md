@@ -44,10 +44,13 @@ The browser calls same-origin `POST /api/evaluate`; the development server proxi
 
 It returns:
 
+The example below is a shape-only `SYNTHETIC_DEMO` fixture. It does not approve the named rule semantics or prove that frame rate alone establishes an entry. A live evaluator may return `stub: false` only after the signed P0 pack supplies every required positive condition, prerequisite, and exclusion.
+
 ```json
 {
   "request_id": 7,
-  "stub": false,
+  "stub": true,
+  "fixture_mode": "SYNTHETIC_DEMO",
   "design_revision": "sha256:...",
   "rule_pack_sha": "sha256:...",
   "destination_policy_sha": null,
@@ -65,17 +68,21 @@ It returns:
         "reason_for_control": ["NS2", "AT1"],
         "node_id": "nose_thermal",
         "cause_node_id": "nose_thermal",
-        "fact": {"attribute": "frame_rate_hz", "observed": 60, "unit": "Hz", "operator": ">", "threshold": 9},
-        "text": "verbatim pinned rule text",
+        "facts": [
+          {"attribute": "frame_rate_hz", "observed": 60, "unit": "Hz", "operator": ">", "threshold": 9},
+          {"attribute": "camera_prerequisite", "observed": "synthetic-present", "unit": null, "operator": "equals", "threshold": "approved-value-required"},
+          {"attribute": "camera_exclusion", "observed": "synthetic-not-applicable", "unit": null, "operator": "equals", "threshold": "approved-review-required"}
+        ],
+        "text": "shape-only pinned-text placeholder",
         "source_url": "https://www.ecfr.gov/...",
         "ecfr_date": "2026-09-01",
         "rule_effective": null,
-        "evidence": {"level": "verified", "sha256": "...", "span": [120, 184]}
+        "evidence": {"level": "synthetic", "sha256": "...", "span": [120, 184]}
       }],
       "propagated_tripwires": [],
       "unresolved_tripwires": [],
       "destinations": {"status": "not_evaluated", "reason": "P0 has no approved destination policy"},
-      "evidence_level": "verified"
+      "evidence_level": "synthetic"
     },
     "kestrel": {
       "state": "flag",
@@ -91,16 +98,19 @@ It returns:
         "node_id": "kestrel",
         "cause_node_id": "nose_thermal",
         "path": ["nose_thermal", "kestrel"],
-        "fact": {"attribute": "installed_descendant_entry", "observed": "6A003.b.4.b", "unit": null, "operator": "in", "threshold": ["6A003.b.3", "6A003.b.4.b", "6A008.d", "6A008.e", "6A008.f", "6A008.g", "6A008.h"]},
-        "text": "verbatim pinned rule text",
+        "facts": [
+          {"attribute": "bvlos", "observed": true, "unit": null, "operator": "equals", "threshold": true},
+          {"attribute": "installed_descendant_entry", "observed": "6A003.b.4.b", "unit": null, "operator": "in", "threshold": ["6A003.b.3", "6A003.b.4.b", "6A008.d", "6A008.e", "6A008.f", "6A008.g", "6A008.h"]}
+        ],
+        "text": "shape-only pinned-text placeholder",
         "source_url": "https://www.ecfr.gov/...",
         "ecfr_date": "2026-09-01",
         "rule_effective": "2026-08-13",
-        "evidence": {"level": "verified", "sha256": "...", "span": [220, 340]}
+        "evidence": {"level": "synthetic", "sha256": "...", "span": [220, 340]}
       }],
       "unresolved_tripwires": [],
       "destinations": {"status": "not_evaluated", "reason": "P0 has no approved destination policy"},
-      "evidence_level": "verified"
+      "evidence_level": "synthetic"
     }
   },
   "delta": {
@@ -118,7 +128,7 @@ It returns:
 
 Internal `evaluate()` may keep returning the determinations map; `backend/app.py` owns the envelope. The fixtures settle field names before parallel implementation starts. The echoed `request_id` and canonical `design_revision` are both required: one rejects browser response races and the other binds evidence to content.
 
-`direct_tripwires`, `propagated_tripwires`, and `unresolved_tripwires` use this same complete object. Every object carries its target `node_id`; `cause_node_id` names the originating node and may equal it for a direct finding. Propagated objects additionally require `path`; unresolved objects set `state: "cannot_evaluate"` and name the missing or incompatible fact. The separate `CCL-6A003.b.4.b-RS1` object, if retained, owns `reason_for_control: ["RS1"]`; the base `>9 Hz` object does not. `destinations` belongs to the node determination, not to each tripwire. The inspector renders these fields directly and never joins hidden legal data in React.
+`direct_tripwires`, `propagated_tripwires`, and `unresolved_tripwires` use this same complete object. Every object carries its target `node_id`; `cause_node_id` names the originating node and may equal it for a direct finding. `facts[]` exposes every positive condition, prerequisite, exclusion, and propagation fact used by the approved predicate; an absent required fact produces `cannot_evaluate`. Propagated objects additionally require `path`; unresolved objects name the missing or incompatible fact. The separate RS1 object, if retained by the signed pack, owns its approved reason code and prerequisite; no frame-rate atom is independently promoted as a complete camera finding. `destinations` belongs to the node determination, not to each tripwire. The inspector renders these fields directly and never joins hidden legal data in React.
 
 ## Acceptance
 
@@ -128,7 +138,7 @@ Internal `evaluate()` may keep returning the determinations map; `backend/app.py
 - Every visible part used by FB-03 resolves to exactly one node.
 - Baseline, F1, F3, F8, and missing-evidence responses validate against the documented API shape.
 - Reordering JSON object keys does not change the canonical design digest.
-- Frontend can render both response fixtures with no backend running.
+- Frontend can render every required response fixture with no backend running.
 - Baseline, F1, F3, F8, and missing-evidence fixtures exist; fixture metadata says `fixture`, never `live`.
 
 ## Falsifier

@@ -30,7 +30,7 @@ Each fired or unresolved tripwire includes:
 
 - `rule_id`, `jurisdiction`, `entry`, and reasons for control;
 - target `node_id` and optional source/ancestor node IDs;
-- `fact` with attribute, observed value/unit, operator, and threshold;
+- `facts[]` with every attribute, observed value/unit, operator, threshold, prerequisite, and exclusion used by the complete approved predicate;
 - `state`: `fired`, `not_fired`, or `cannot_evaluate`;
 - verbatim text, URL, eCFR content date, and rule effective date when present;
 - evidence level and source span/digest when present;
@@ -42,7 +42,7 @@ Do not return a generic boolean when a causal object can be returned.
 
 - F1 battery/endurance flips 9A012.a.1 → a.2 at the specified threshold.
 - F3 camera swap flags the camera and propagates 9A012.a.3 to the airframe.
-- F3 exact camera boundaries distinguish `>9`, `>60`, and `>111000` without collapsing the predicates.
+- If and only if the signed P0 pack retains the complete camera and RS1 predicates, F3 boundary tests distinguish the approved 9 Hz, 60 Hz, and 111,000-element branches without collapsing a prerequisite or exclusion. No individual threshold atom is acceptance evidence for a legal entry.
 - F2/F4/F5/F6 tests remain explicitly excluded, not skipped P0 checks or visible product claims.
 - F8 no-change edits report zero changed determinations.
 - Empty fields never fire; mismatched units never compare.
@@ -55,9 +55,9 @@ Do not return a generic boolean when a causal object can be returned.
 1. Reverse the jurisdiction evaluation order in a mutation; an order-of-review test must fail.
 2. Remove the missing-field guard; an empty-value fixture must become red.
 3. Remove child-to-parent propagation; F3 must fail on the airframe node.
-4. Change `>` to `>=` for the 9 Hz or 60 Hz camera branch; the exact-boundary test must fail.
+4. After the signed pack admits the complete camera predicates, change one approved `>` to `>=`; the exact-boundary test must fail without bypassing the other required facts.
 5. Admit a duplicate ID or graph cycle; semantic graph validation must fail before evaluation.
 
 ## Cut line
 
-Minimum engine for the demo is baseline plus F1, F3, F8, the camera parent-propagation path, missing-evidence questions, and the test-only order-of-review collision. If time tightens again, cut the RS1 `>60`/`>111000` branches before cutting F3's `>9 Hz` direct finding and `9A012.a.3` propagation. Additional rows or destination conclusions may be displayed only after their separate governed artifacts and exact tests pass.
+Minimum engine for the demo is baseline plus F1, F3, F8, the camera parent-propagation path, missing-evidence questions, and the test-only order-of-review collision, but F3 can leave visibly synthetic fixture mode only if the signed P0 pack admits a complete qualified-review-approved camera predicate. If time tightens again, cut the entire RS1 branch before the complete approved camera predicate and its 9A012.a.3 propagation; never retain a standalone frame-rate atom as the finding. Additional rows or destination conclusions may be displayed only after their separate governed artifacts and exact tests pass.

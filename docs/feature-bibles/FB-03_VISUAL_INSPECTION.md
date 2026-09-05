@@ -37,7 +37,7 @@ Each overview marker shows the slot, installed short MPN, and status. Interior l
 3. Toggle inspection mode → expose internal component anchors without pretending to be a full CAD editor.
 4. Toggle “show all parts” → label the inventory, including clear nodes.
 5. Toggle “show tripwires” → render only `question`, `watch`, and `flag` markers.
-6. Click a marker → show causal fact, threshold, rule entry, exact source text, source date, evidence state, propagation path, and destination table.
+6. Click a marker → show every causal fact/prerequisite, threshold, rule entry, exact source text, source date, evidence state, propagation path, and destination table.
 
 ## State mapping
 

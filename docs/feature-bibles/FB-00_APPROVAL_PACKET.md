@@ -80,10 +80,12 @@ That reviewer may also sign FB-00's final truth-pack receipt. Until then, no dra
 One path-isolated contract task may perform only the following before semantic approval:
 
 - generate candidate-only full-hash/raw-span receipts from the pinned XML and regenerate stale 9A012 candidate sections, without marking them approved;
-- implement graph admission tests for duplicate IDs, invalid root, dangling parents, and cycles;
-- implement canonical JSON hashing, request-ID echo/race rejection, fixture-duplication checks, and response-shape validation;
-- build a wholly synthetic, non-demo collision pack for USML → CCL → EAR99 ordering and missing-fact behavior;
+- author candidate schema changes plus invalid graph vectors for duplicate IDs, invalid root, dangling parents, and cycles; runtime validators and test code wait for their owning lane;
+- author canonical-JSON vectors, request-ID/race response vectors, fixture-duplication checks, and response-shape vectors without implementing backend or frontend runtime code;
+- author a wholly synthetic, non-demo collision input/output pack for USML → CCL → EAR99 ordering and missing-fact behavior; engine tests wait for FB-02;
 - produce a vendor-evidence gap ledger without inferring a classification.
+
+This prestage task is limited to Wave 0's exact `schemas/`, `data/demo/`, `data/rules/`, `backend/tests/fixtures/`, and `docs/api/` allowlist. It may not edit `backend/engine/`, `backend/tests/*.py`, `backend/app.py`, `frontend/`, or `vite.config.js`.
 
 Pinned inputs for that task:
 
