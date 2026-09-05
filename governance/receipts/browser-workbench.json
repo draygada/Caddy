@@ -1,18 +1,23 @@
 {
   "schema_version": "1.0.0",
-  "receipt_id": "forge-browser-workbench-prepared-20260905T150827Z",
+  "receipt_id": "forge-browser-workbench-active-20260905T155529Z",
   "lane": "browser-workbench",
-  "status": "PREPARED_UNASSIGNED",
-  "mutation_admitted": false,
+  "status": "ACTIVE",
+  "mutation_admitted": true,
   "custodian_task_id": "01a0718a-175f-7121-a584-21f1b826aece",
-  "writer": null,
+  "writer": {
+    "kind": "codex-task",
+    "task_id": "01a07246-bb6a-7f83-aedd-2da4b464a6ee",
+    "title": "FORGE 6H · browser CAD workbench"
+  },
+  "assigned_by_task_id": "01a07246-4cc4-71b3-9c92-33eedad62896",
   "branch": "lane/browser-workbench",
   "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/browser-workbench",
   "base_commit": "75c706248595cd0202a4557cb49910dc7b079800",
   "prepared_at": "2026-09-05T15:08:27Z",
-  "lease_acquired_at": null,
-  "renew_by": null,
-  "expires_at": null,
+  "lease_acquired_at": "2026-09-05T15:55:29Z",
+  "renew_by": "2026-09-05T18:55:29Z",
+  "expires_at": "2026-09-05T21:55:29Z",
   "exclusive_write_paths": [
     "apps/browser-workbench/**",
     "tests/browser-workbench/**",
@@ -28,20 +33,20 @@
   "activation_rule": "The integration owner must atomically replace writer, lease_acquired_at, renew_by, expires_at, and mutation_admitted before any product mutation; stale or unassigned is blocking.",
   "now_observation": {
     "schema_version": "1.0.0",
-    "observed_at": "2026-09-05T15:14:51Z",
+    "observed_at": "2026-09-05T15:55:29Z",
     "worktree_label": "forge/browser-workbench",
     "task": {
-      "id": null,
-      "title": null,
-      "evidence_class": "UNKNOWN",
-      "evidence_ref": null
+      "id": "01a07246-bb6a-7f83-aedd-2da4b464a6ee",
+      "title": "FORGE 6H · browser CAD workbench",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "conversation:writer-assignment@2026-09-05T15:55:29Z"
     },
     "actor": {
       "owner": {
-        "id": null,
-        "title": null,
-        "evidence_class": "UNKNOWN",
-        "evidence_ref": null
+          "id": "01a07246-bb6a-7f83-aedd-2da4b464a6ee",
+          "title": "FORGE 6H · browser CAD workbench",
+          "evidence_class": "MEASURED",
+          "evidence_ref": "conversation:writer-assignment@2026-09-05T15:55:29Z"
       },
       "model": {
         "id": null,
@@ -51,32 +56,22 @@
       }
     },
     "lane_state": {
-      "value": "PREPARED_UNASSIGNED",
+      "value": "ACTIVE",
       "evidence_class": "MEASURED",
-      "evidence_ref": "receipt:forge-browser-workbench-prepared-20260905T150827Z#status"
+      "evidence_ref": "receipt:forge-browser-workbench-active-20260905T155529Z#status"
     },
     "current_action": {
-      "value": "No product mutation is admitted; awaiting an exact writer and lease assignment.",
+      "value": "Building the bounded PartDocument browser workbench under exclusive lane custody.",
       "evidence_class": "INFERRED",
-      "evidence_ref": "receipt:forge-browser-workbench-prepared-20260905T150827Z#mutation_admitted"
+      "evidence_ref": "receipt:forge-browser-workbench-active-20260905T155529Z#mutation_admitted"
     },
     "last_evidenced_change": {
-      "kind": "CUSTODY_REPINNED",
-      "occurred_at": "2026-09-05T15:14:51Z",
+      "kind": "CUSTODY_ASSIGNED",
+      "occurred_at": "2026-09-05T15:55:29Z",
       "evidence_class": "MEASURED",
-      "evidence_ref": "receipt:forge-browser-workbench-prepared-20260905T150827Z"
+      "evidence_ref": "receipt:forge-browser-workbench-active-20260905T155529Z"
     },
-    "blockers": [
-      {
-        "id": "custody-writer-unassigned",
-        "state": "HOLD",
-        "summary": "No exact writer or live lease is assigned, so product mutation is blocked.",
-        "clearer": "main integration owner",
-        "next_unblock": "Atomically set writer, task evidence, lease times, status ACTIVE, and mutation_admitted true after confirming no competing owner.",
-        "evidence_class": "MEASURED",
-        "evidence_ref": "receipt:forge-browser-workbench-prepared-20260905T150827Z#activation_rule"
-      }
-    ],
+    "blockers": [],
     "checks": [
       {
         "name": "custody-scope",
