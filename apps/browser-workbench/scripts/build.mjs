@@ -47,7 +47,7 @@ const manifest = {
   application: packageJson.name,
   application_version: packageJson.version,
   candidate: "CADdyDaddy 0.1",
-  generated_from_core_at_runtime: true,
+  generated_from_core_at_runtime: false,
   geometry_authority: false,
   compliance_policy: "DRAFT_REVIEW_ONLY",
   runtime_dependencies: packageJson.dependencies,
