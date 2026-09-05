@@ -49,7 +49,7 @@ export function solveSketch(active: Record<string, boolean>): SketchResult {
     const dof = Math.max(0, TOTAL_DOF[e] - on.filter((c) => c.role === 'required').reduce((s, c) => s + c.dof, 0));
     let r: EntityResult;
     if (contradictory.length) r = { state: 'CONTRADICTORY', dof, code: 'SK-CON-' + (e === 'rect' ? '01' : '02'), guidance: 'two constraints cannot both hold: ' + contradictory.map((c) => c.label).join('; ') + '. Remove one; nothing is solved while they conflict.', implicated: contradictory.map((c) => c.id) };
-    else if (redundant.length) r = { state: 'REDUNDANT', dof, code: 'SK-RED-' + (e === 'rect' ? '01' : '02'), guidance: redundant.map((c) => c.label).join('; ') + ' — already implied. The sketch solves, but the duplicate will fight any future edit.', implicated: redundant.map((c) => c.id) };
+    else if (redundant.length) r = { state: 'REDUNDANT', dof, code: 'SK-RED-' + (e === 'rect' ? '01' : '02'), guidance: redundant.map((c) => c.label).join('; ') + ' · already implied. The sketch solves, but the duplicate will fight any future edit.', implicated: redundant.map((c) => c.id) };
     else if (missing.length) r = { state: 'UNDER_CONSTRAINED', dof, code: 'SK-UND-' + (e === 'rect' ? '01' : '02'), guidance: dof + ' degree' + (dof === 1 ? '' : 's') + ' of freedom left · add: ' + missing.map((c) => c.label).join('; '), implicated: missing.map((c) => c.id) };
     else r = { state: 'SOLVED', dof: 0, code: 'SK-OK', guidance: 'fully defined · every entity is fixed by a dimension or a geometric relation', implicated: [] };
     entities[e] = r;

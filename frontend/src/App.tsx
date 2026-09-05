@@ -7,6 +7,7 @@ import { Viewport } from './panels/Viewport';
 import { StatusPanel } from './panels/StatusPanel';
 import { SpecPanel } from './panels/SpecPanel';
 import { Reasoning } from './panels/Reasoning';
+import { Sourcing } from './panels/Sourcing';
 import { Timeline } from './panels/Timeline';
 import { HelpOverlay } from './panels/HelpOverlay';
 import { DemoBar } from './panels/DemoBar';
@@ -44,6 +45,7 @@ export default function App() {
   const demoBar = useStore((s) => s.demoBar);
   const unreachable = useStore((s) => s.serviceState === 'unreachable');
   const reasoningOpen = useStore((s) => s.reasoningOpen);
+  const sourcingOpen = useStore((s) => s.sourcingOpen);
   const timelineOpen = useStore((s) => s.timelineOpen);
   const helpOpen = useStore((s) => s.helpOpen);
   const eventCount = useStore((s) => s.events.length);
@@ -57,7 +59,7 @@ export default function App() {
       {unreachable && (
         <div role="status" className="flex-none px-4 py-2 border-b border-line2 bg-surface2 text-[14px] flex gap-3 items-center">
           <span className="chip">Cached</span>
-          <span>service not reachable — replaying the cached baseline · last outcome 2026-09-05 09:12</span>
+          <span>service not reachable · replaying the cached baseline · last outcome 2026-09-05 09:12</span>
         </div>
       )}
       <div className="flex-1 min-h-0 relative grid grid-cols-[340px_minmax(0,1fr)_400px_32px] gap-2 pt-2 pb-2 pl-2">
@@ -70,6 +72,7 @@ export default function App() {
           <SpecPanel o={o} />
         </div>
         {reasoningOpen && <Reasoning o={o} />}
+        {sourcingOpen && <Sourcing o={o} />}
         <button
           onClick={openTimeline}
           aria-label="Open timeline"

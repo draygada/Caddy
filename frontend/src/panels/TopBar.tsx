@@ -9,7 +9,7 @@ export function TopBar() {
   return (
     <div className="h-12 flex-none flex items-center gap-4 pl-4 pr-3 border-b border-line2 bg-surface">
       <button onClick={() => patch({ sel: null, timelineOpen: false, helpOpen: false })} title="Return to baseline" className="flex items-center gap-[10px] bg-transparent border-0 p-0 text-ink cursor-pointer min-h-6">
-        <img src="/logo.png" alt="" width={24} height={24} className="block w-6 h-6 rounded-[5px]" />
+        <img src="/logo.png" alt="" width={34} height={34} className="block w-[34px] h-[34px]" />
         <span className="font-bold tracking-[.01em]">Caddy</span>
       </button>
       <span className="text-muted text-[13px]">Kestrel</span>

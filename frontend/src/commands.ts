@@ -54,6 +54,7 @@ export const COMMANDS: Command[] = [
   { id: 'select.body', label: 'Selection filter · Bodies', group: 'select', run: (st) => st.patch({ selFilter: 'body', selFace: null }) },
   { id: 'select.face', label: 'Selection filter · Faces', group: 'select', run: (st) => st.patch({ selFilter: 'face' }) },
 
+  { id: 'doc.source', label: 'Source this design…', group: 'document', run: (st) => st.patch({ sourcingOpen: true, reasoningOpen: false, timelineOpen: false }) },
   { id: 'doc.version', label: 'Save version…', group: 'document', run: (st) => st.openDialog('save_version', null) },
   { id: 'doc.comment', label: 'Add comment…', group: 'document', run: (st) => st.openDialog('add_comment', null) },
   ...UNITS.map((u) => ({ id: 'doc.units.' + u, label: 'Units · ' + u, group: 'document' as CommandGroup, run: (st: WorkbenchState) => st.setUnits(u) })),

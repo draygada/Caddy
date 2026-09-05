@@ -10,6 +10,8 @@ import { countChanged, type Attrs, type Design, type Parts } from './lib/rules';
 import { service, type ServiceState } from './lib/service';
 import { CONSTRAINTS, SKETCH_DEFAULT, solveSketch } from './lib/sketch';
 import type { Unit } from './lib/units';
+import { defaultDecline, estimate, gateFor, linesFor, offersFor, rollup, tierFor, walk, type DeclineReason, type Line, type Mode, type OfferStatus, type ResolvedOffer, type ShipTo } from './lib/sourcing';
+import type { Outcome } from './lib/rules';
 import type { ViewName } from './lib/geometry';
 
 export type { Pos, Positions } from './lib/design';
@@ -33,6 +35,52 @@ export interface CameraHome { az: number; el: number; zoom: number }
 export interface Version { v: number; seq: number; comment: string; at: string }
 export interface Comment { id: string; seq: number; author: string; text: string; at: string }
 export interface Section { on: boolean; axis: 0 | 1 | 2; at: number }
+
+export type RoundStatus = 'opened' | 'offers_resolved' | 'screened' | 'costed' | 'selection_confirmed' | 'gated' | 'package_ready';
+export const ROUND_RAIL: { status: RoundStatus; label: string }[] = [
+  { status: 'opened', label: 'opened' }, { status: 'offers_resolved', label: 'offers' }, { status: 'screened', label: 'screened' }, { status: 'costed', label: 'costed' },
+  { status: 'selection_confirmed', label: 'selected' }, { status: 'gated', label: 'gated' }, { status: 'package_ready', label: 'packaged' },
+];
+export interface RoundSelection { offerId: string; attestor: string; seq: number; declined: { offerId: string; seller: string; reason: DeclineReason; statusAtDecline: OfferStatus }[] }
+export interface Declaration { personStatus: 'US person' | 'foreign person'; sharing: string; reference: string; attestor: string }
+/** Declared facts about the use case and the end user, asked before the search runs. Declared, badged, never inferred. */
+export interface Intake {
+  endUse: 'civil survey and mapping' | 'agriculture' | 'public safety' | 'infrastructure inspection' | 'defense-adjacent research' | 'other';
+  endUser: 'commercial operator' | 'university' | 'government agency (civil)' | 'military or defense prime' | 'unknown';
+  civilProduct: boolean;
+  bvlos: boolean;
+  usedOn: 'none' | 'in-production unlisted aircraft' | 'listed military aircraft';
+  notes: string;
+}
+export const INTAKE_DEFAULT: Intake = { endUse: 'civil survey and mapping', endUser: 'commercial operator', civilProduct: true, bvlos: false, usedOn: 'none', notes: '' };
+export type OrderState = 'DRAFT' | 'DISPATCH_PENDING' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'EXCEPTION' | 'DISPATCH_UNKNOWN' | 'CLOSED';
+export interface Order { key: string; packetHash: string; state: OrderState; receipt: string | null; attempts: number; trail: string[] }
+export interface Round {
+  id: string;
+  designSeq: number;
+  designHash: string;
+  shipTo: ShipTo;
+  qty: number;
+  mode: Mode;
+  intake: Intake;
+  status: RoundStatus;
+  lines: Line[];
+  offers: Record<string, ResolvedOffer[]>;
+  selections: Record<string, RoundSelection>;
+  references: Record<string, { ref: string; attestor: string }>;
+  declaration: Declaration | null;
+  pkg: { preEntry: string; diligence: string; exportRefs: string; at: string } | null;
+  pkgRefusal: string | null;
+  order: Order | null;
+  supersededBy: string | null;
+}
+/** Content fingerprint of the design snapshot, for round binding and staleness. Local stand-in for the service's canonical hash. */
+export function designHashOf(s: Snapshot): string {
+  const json = JSON.stringify([s.parts, s.attrs, s.pos, s.span, s.dims, s.features, s.geo]);
+  let h = 0;
+  for (let i = 0; i < json.length; i++) h = (h * 31 + json.charCodeAt(i)) >>> 0;
+  return hashOf(h);
+}
 
 export interface WorkbenchState extends Snapshot {
   theme: Theme;
@@ -90,6 +138,20 @@ export interface WorkbenchState extends Snapshot {
   dragging: boolean;
   dragPart: PartId | null;
   fieldMsg: Record<string, string>;
+  round: Round | null;
+  sourcingOpen: boolean;
+  injectException: boolean;
+
+  openRound: (shipTo: ShipTo, qty: number, mode: Mode, intake: Intake) => void;
+  refineRound: (p: Partial<Pick<Round, 'shipTo' | 'qty' | 'mode'>>) => void;
+  selectOffer: (lineId: string, offerId: string, attestor: string, reasons: Record<string, DeclineReason>) => string | null;
+  adjudicate: (lineId: string, offerId: string, role: 'analyst' | 'empowered_official', reason: string, rationale: string, attestor: string, action: 'false_positive' | 'resolve' | 'pin') => void;
+  setReference: (lineId: string, ref: string, attestor: string) => void;
+  declareTechData: (d: Declaration) => void;
+  buildPackage: (o: Outcome) => void;
+  sendOrder: () => void;
+  retrySend: () => void;
+  closeOrder: () => void;
 
   patch: (p: Partial<WorkbenchState>) => void;
   design: () => Design;
@@ -211,13 +273,136 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     timelineOpen: false, helpOpen: false, reasoningOpen: false, cmdOpen: false, recent: [],
     namedViews: [], homeView: { ...ISO },
     lane: 'all', copied: null, viewMode: 'model', grid: true, navMode: 'orbit', visualStyle: 'edges', hidden: {},
+    round: null, sourcingOpen: false, injectException: false,
+
+    openRound: (shipTo, qty, mode, intake) => {
+      const s = get();
+      const prev = s.round;
+      const id = 'r' + ((prev ? parseInt(prev.id.slice(1), 10) : 0) + 1);
+      const snap = pickSnapshot(s);
+      const designHash = designHashOf(snap);
+      const lines = linesFor(s.parts);
+      const controlled = (line: Line) => { const o = service.evaluate(design()); const node = line.slot ?? 'airframe'; return o.rules.some((r) => r.node === node); };
+      const offers: Record<string, ResolvedOffer[]> = {};
+      let screened = 0, est = 0;
+      for (const line of lines) {
+        offers[line.id] = offersFor(s.parts).filter((o) => o.lineId === line.id).map((offer) => {
+          const tier = tierFor(line, offer, controlled(line));
+          const tree = walk(offer, tier);
+          const ru = rollup(tree);
+          screened++;
+          const ladder = estimate(offer, line, qty, mode);
+          est++;
+          return { offer, tier, tree, status: ru.status, because: ru.because, ladder };
+        });
+      }
+      const round: Round = { id, designSeq: s.events.length, designHash, shipTo, qty, mode, intake, status: 'costed', lines, offers, selections: {}, references: {}, declaration: null, pkg: null, pkgRefusal: null, order: null, supersededBy: null };
+      set({ round: prev ? { ...round } : round, sourcingOpen: true });
+      if (prev) set((st) => ({ round: st.round })); // previous round is superseded by id in the log line below
+      const resolved = Object.values(offers).reduce((n, l) => n + l.length, 0);
+      const blocked = Object.values(offers).flat().filter((r) => r.status === 'review_blocked').length;
+      const review = Object.values(offers).flat().filter((r) => r.status === 'review_required').length;
+      append({ kind: 'round_opened', lane: 'sourcing', text: 'round ' + id + ' · ship-to ' + shipTo + ' · qty ' + qty + ' · ' + mode + (prev ? ' · supersedes ' + prev.id : ''), entry: 'bound to design state #' + s.events.length + ' · declared: ' + intake.endUse + ' · ' + intake.endUser + (intake.civilProduct ? ' · civil product' : ' · not declared civil') + (intake.bvlos ? ' · BVLOS' : '') + (intake.usedOn !== 'none' ? ' · used on ' + intake.usedOn : ''), intent: intake.notes });
+      append({ kind: 'offers_resolved', lane: 'sourcing', text: lines.length + ' lines · ' + resolved + ' offers from the committed catalog', entry: 'offers fixture · declared by distributors, unverified', intent: '' });
+      append({ kind: 'screening_rolled_up', lane: 'sourcing', text: screened + ' party trees walked and screened · ' + blocked + ' review blocked · ' + review + ' review required', entry: 'exact and suffix-normalised only · not fuzzy · worst node wins', intent: '', word: blocked ? 'review blocked' : review ? 'review required' : '', color: blocked ? 'var(--red)' : 'var(--amber)' });
+      append({ kind: 'cost_estimated', lane: 'sourcing', text: est + ' landed-cost ladders · ship-to ' + shipTo + ' · ' + mode, entry: 'estimate from declared tariff code and origin against a dated tariff table', intent: '' });
+    },
+    refineRound: (p) => {
+      const r = get().round; if (!r) return;
+      const shipTo = p.shipTo ?? r.shipTo, qty = p.qty ?? r.qty, mode = p.mode ?? r.mode;
+      const offers: Record<string, ResolvedOffer[]> = {};
+      let changed = 0;
+      for (const line of r.lines) offers[line.id] = (r.offers[line.id] || []).map((ro) => { const ladder = estimate(ro.offer, line, qty, mode); if (ladder.hash !== ro.ladder.hash) changed++; return { ...ro, ladder }; });
+      set({ round: { ...r, shipTo, qty, mode, offers, pkg: null, pkgRefusal: null, status: r.status === 'package_ready' || r.status === 'gated' ? 'selection_confirmed' : r.status } });
+      append({ kind: 'cost_estimated', lane: 'sourcing', text: 'refined · ' + (p.qty != null ? 'qty ' + qty : p.mode ? 'mode ' + mode : 'ship-to ' + shipTo), entry: 're-estimated ' + Object.values(offers).flat().length + ' ladders · ' + changed + ' changed · statuses unchanged', intent: '' });
+    },
+    selectOffer: (lineId, offerId, attestor, reasons) => {
+      const r = get().round; if (!r) return 'no round';
+      const list = r.offers[lineId] || [];
+      const chosen = list.find((x) => x.offer.id === offerId);
+      if (!chosen) return 'offer not found';
+      if (!attestor.trim()) return 'refused: attestor required · a selection is a human act';
+      if (chosen.status === 'review_blocked') return 'refused: review blocked · adjudicate the match first';
+      if (chosen.ladder.unverified) return 'refused: rate not verified on this estimate';
+      const declined = list.filter((x) => x.offer.id !== offerId).map((x) => ({ offerId: x.offer.id, seller: x.offer.seller, reason: reasons[x.offer.id] ?? defaultDecline(x, chosen), statusAtDecline: x.status }));
+      const seq = get().events.length + 1;
+      const selections = { ...r.selections, [lineId]: { offerId, attestor: attestor.trim(), seq, declined } };
+      const all = r.lines.every((l) => selections[l.id]);
+      set({ round: { ...r, selections, status: all ? 'selection_confirmed' : r.status, pkg: null } });
+      const line = r.lines.find((l) => l.id === lineId);
+      append({ kind: 'offer_selected', lane: 'sourcing', text: (line?.description ?? lineId) + ' · ' + chosen.offer.seller + (declined.length ? ' · declined: ' + declined.map((d) => d.seller + ' (' + d.reason + ')').join(', ') : ''), entry: 'status at selection ' + chosen.status + ' · per-unit landed ' + (chosen.ladder.perUnit ?? 0).toFixed(2) + ' USD · attestor ' + attestor.trim(), intent: '', word: declined.some((d) => d.reason === 'owner screened') ? 'declined · owner screened' : '', color: 'var(--ink)' });
+      return null;
+    },
+    adjudicate: (lineId, offerId, role, reason, rationale, attestor, action) => {
+      const r = get().round; if (!r || !attestor.trim()) return;
+      const offers = { ...r.offers, [lineId]: (r.offers[lineId] || []).map((x) => {
+        if (x.offer.id !== offerId) return x;
+        const status: OfferStatus = action === 'false_positive' ? 'review_required' : action === 'resolve' ? 'no_candidate_match' : 'review_blocked';
+        return { ...x, status, because: (action === 'pin' ? 'pinned review blocked by ' : action === 'false_positive' ? 'false positive recorded by ' : 'resolved by ') + role + ' · ' + reason, adjudicated: { role, reason, rationale, attestor, lowered: action !== 'pin' } };
+      }) };
+      set({ round: { ...r, offers } });
+      append({ kind: 'match_adjudicated', lane: 'sourcing', text: role + ' · ' + action.replace('_', ' ') + ' · ' + reason, entry: rationale + ' · list snapshot CSL@91f4e8 · attestor ' + attestor, intent: rationale });
+    },
+    setReference: (lineId, ref, attestor) => {
+      const r = get().round; if (!r) return;
+      set({ round: { ...r, references: { ...r.references, [lineId]: { ref, attestor } }, pkg: null } });
+      append({ kind: 'export_gate_evaluated', lane: 'sourcing', text: (r.lines.find((l) => l.id === lineId)?.description ?? lineId) + ' · authorization reference typed', entry: 'reference typed, not validated · attestor ' + attestor, intent: '' });
+    },
+    declareTechData: (d) => {
+      const r = get().round; if (!r) return;
+      set({ round: { ...r, declaration: d, pkg: null } });
+      append({ kind: 'technical_data_declared', lane: 'sourcing', text: d.personStatus + ' · ' + d.sharing, entry: (d.reference ? 'authorization reference typed, not validated' : 'no reference') + ' · 734.13 sentence printed · attestor ' + d.attestor, intent: '' });
+    },
+    buildPackage: (o) => {
+      const s = get(); const r = s.round; if (!r) return;
+      const refuse = (why: string) => { set({ round: { ...r, pkgRefusal: why, pkg: null } }); append({ kind: 'package_blocked', lane: 'sourcing', text: 'refused: ' + why, entry: 'no partial package', intent: '', word: 'blocked', color: 'var(--red)' }); };
+      if (designHashOf(pickSnapshot(s)) !== r.designHash) return refuse('design state changed since the round opened · open a new round');
+      const missing = r.lines.filter((l) => !r.selections[l.id]);
+      if (missing.length) return refuse(missing.length + ' line' + (missing.length > 1 ? 's' : '') + ' without a selection: ' + missing.map((l) => l.description.split(' · ')[0]).join(', '));
+      const blocked = r.lines.filter((l) => gateFor(l, o, r.shipTo).blocks && !r.references[l.id]);
+      if (blocked.length) return refuse('export gate blocks ' + blocked.map((l) => l.description.split(' · ')[0]).join(', ') + ' · type and attest an authorization reference');
+      if (r.shipTo !== 'US' && !r.declaration) return refuse('technical-data declaration missing for the ' + r.shipTo + ' assembler');
+      const at = now();
+      const pkg = { preEntry: hashOf(s.events.length * 3 + 1), diligence: hashOf(s.events.length * 3 + 2), exportRefs: hashOf(s.events.length * 3 + 3), at };
+      set({ round: { ...r, pkg, pkgRefusal: null, status: 'package_ready' } });
+      append({ kind: 'package_built', lane: 'sourcing', text: 'pre-entry lines ' + pkg.preEntry + ' · diligence record ' + pkg.diligence + ' · export references ' + pkg.exportRefs, entry: 'every bound blob re-read by hash · fixture manifests re-verified · locked disclaimers', intent: '' });
+    },
+    sendOrder: () => {
+      const s = get(); const r = s.round; if (!r || !r.pkg) return;
+      if (r.order && r.order.state !== 'DRAFT') return;
+      const key = 'idem-' + r.id + '-' + r.designHash.slice(0, 6) + '-' + r.shipTo + '-' + r.qty;
+      const packetHash = hashOf(s.events.length * 5 + 11);
+      const trail = ['packet created from ' + r.id + ' · design state #' + r.designSeq + ' · qty ' + r.qty + ' · recipient [placeholder]', 'dispatching through the synthetic adapter · key ' + key];
+      append({ kind: 'order_packet_created', lane: 'order', text: 'PURCHASE_ORDER · ' + r.lines.length + ' lines · qty ' + r.qty + ' · recipient [placeholder]', entry: 'packet ' + packetHash + ' · binds ' + r.pkg.preEntry + ' ' + r.pkg.diligence + ' ' + r.pkg.exportRefs + ' · approver ' + Object.values(r.selections)[0]?.attestor, intent: '' });
+      if (s.injectException) {
+        set({ round: { ...r, order: { key, packetHash, state: 'EXCEPTION', receipt: null, attempts: 1, trail: [...trail, 'adapter returned EXCEPTION · timeout after dispatch · reconcile before any retry'] } } });
+        append({ kind: 'order_exception', lane: 'order', text: 'SYNTHETIC adapter · exception fixture · lost response after dispatch', entry: 'state DISPATCH_UNKNOWN → EXCEPTION · the same key resolves to the original dispatch on retry · no second send', intent: '', word: 'exception', color: 'var(--red)' });
+        return;
+      }
+      const receipt = 'ack-' + hashOf(s.events.length * 7 + 5).slice(0, 8);
+      set({ round: { ...r, order: { key, packetHash, state: 'ACKNOWLEDGED', receipt, attempts: 1, trail: [...trail, 'acknowledged · receipt ' + receipt + ' · SYNTHETIC'] } } });
+      append({ kind: 'order_dispatched', lane: 'order', text: 'SYNTHETIC dispatch · exactly once · key ' + key, entry: 'packet ' + packetHash + ' · adapter synthetic · labelled SYNTHETIC', intent: '' });
+      append({ kind: 'order_acknowledged', lane: 'order', text: 'receipt ' + receipt + ' · recipient [placeholder]', entry: 'acknowledgement recorded on the same thread', intent: '' });
+    },
+    retrySend: () => {
+      const r = get().round; if (!r?.order) return;
+      const o = r.order;
+      const receipt = o.receipt ?? ('ack-' + hashOf(get().events.length * 7 + 5).slice(0, 8));
+      set({ round: { ...r, order: { ...o, attempts: o.attempts + 1, state: 'ACKNOWLEDGED', receipt, trail: [...o.trail, 'retry #' + (o.attempts + 1) + ' with the same key · adapter returned the first receipt ' + receipt + ' · no duplicate send'] } } });
+      append({ kind: o.state === 'EXCEPTION' ? 'order_acknowledged' : 'order_dispatched', lane: 'order', text: 'retry with idempotency key ' + o.key + ' · returned the original receipt ' + receipt, entry: 'no duplicate observable send effect · ' + (o.state === 'EXCEPTION' ? 'exception reconciled' : 'idempotent'), intent: '' });
+    },
+    closeOrder: () => {
+      const r = get().round; if (!r?.order || r.order.state !== 'ACKNOWLEDGED') return;
+      set({ round: { ...r, order: { ...r.order, state: 'CLOSED', trail: [...r.order.trail, 'received · inspected · closed'] } } });
+      append({ kind: 'order_closed', lane: 'order', text: 'received · inspected · closeout', entry: 'order lifecycle complete on the thread · SYNTHETIC', intent: '' });
+    },
 
     patch: (p) => set(p),
     design,
     snapshot,
     editable,
     toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
-    closeAll: () => set({ timelineOpen: false, helpOpen: false, reasoningOpen: false, cmdOpen: false, marking: null, dialog: null, preview: null }),
+    closeAll: () => set({ timelineOpen: false, helpOpen: false, reasoningOpen: false, sourcingOpen: false, cmdOpen: false, marking: null, dialog: null, preview: null }),
     openTimeline: () => set({ timelineOpen: true, helpOpen: false }),
     toggleTimeline: () => set((s) => ({ timelineOpen: !s.timelineOpen })),
     toggleHelp: () => set((s) => ({ helpOpen: !s.helpOpen, timelineOpen: false })),
@@ -303,12 +488,12 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       let v: number | null;
       let msg = '';
       if (text == null || text.trim() === '') {
-        if (!field.nullable) { set({ fieldMsg: { ...s.fieldMsg, [key]: 'required — ' + field.min + '–' + field.max + ' ' + field.unit } }); return; }
+        if (!field.nullable) { set({ fieldMsg: { ...s.fieldMsg, [key]: 'required · ' + field.min + '–' + field.max + ' ' + field.unit } }); return; }
         v = null; msg = 'cleared · not published';
       } else {
         const neg = /^\s*[−-]/.test(text);
         const parsed = parseDecimal(text.replace(/^\s*[−-]/, ''));
-        if (parsed == null) { set({ fieldMsg: { ...s.fieldMsg, [key]: 'not a number — accepted: ' + field.min + '–' + field.max + ' ' + field.unit } }); return; }
+        if (parsed == null) { set({ fieldMsg: { ...s.fieldMsg, [key]: 'not a number · accepted: ' + field.min + '–' + field.max + ' ' + field.unit } }); return; }
         v = neg ? -parsed : parsed;
         if (v < field.min) { v = field.min; msg = 'clamped to ' + field.min + ' ' + field.unit + ' (min)'; }
         else if (v > field.max) { v = field.max; msg = 'clamped to ' + field.max + ' ' + field.unit + ' (max)'; }
@@ -374,14 +559,14 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     confirm: (name) => {
       const s = get();
       const att = (name != null ? name : s.attestor).trim();
-      if (!att) { set({ confirmErr: 'refused: attestor required — a confirmation is a human act; type a name' }); document.getElementById('attestor')?.focus(); return; }
+      if (!att) { set({ confirmErr: 'refused: attestor required · a confirmation is a human act; type a name' }); document.getElementById('attestor')?.focus(); return; }
       const p = s.pending;
       if (!p) return;
       const unconfirmed = { ...s.unconfirmed };
       delete unconfirmed[p.slot];
       const events = s.events.map((e) => (e.seq === p.seq ? { ...e, word: 'confirmed by ' + att, color: 'var(--ink)' } : e));
       set({ events, unconfirmed, pending: null, confirmErr: '' });
-      append({ kind: 'swap_confirmed', text: 'swap_seq #' + p.seq + ' · attestor ' + att, entry: 'same function, performance, form and fit — compared and confirmed by the engineer', intent: s.intent || '(none typed)' });
+      append({ kind: 'swap_confirmed', text: 'swap_seq #' + p.seq + ' · attestor ' + att, entry: 'same function, performance, form and fit · compared and confirmed by the engineer', intent: s.intent || '(none typed)' });
     },
 
     leaveUnconfirmed: () => set({ pending: null, confirmErr: '' }),
@@ -389,7 +574,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     setSpan: (text) => {
       if (!editable()) return;
       const parsed = parseDecimal(text);
-      if (parsed == null) { set({ spanMsg: 'not a number — accepted formats: 3.4 · 3,4 · 3.4 m', spanErr: true }); return; }
+      if (parsed == null) { set({ spanMsg: 'not a number · accepted formats: 3.4 · 3,4 · 3.4 m', spanErr: true }); return; }
       let v = parsed, msg = '';
       if (v < SPAN_MIN) { v = SPAN_MIN; msg = 'clamped to 1.5 m (min)'; } else if (v > SPAN_MAX) { v = SPAN_MAX; msg = 'clamped to 6.0 m (max)'; }
       const s = get();
@@ -491,7 +676,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       acts[k]();
       set({ step: k + 1 });
     },
-    reset: () => set({ ...baseline() }),
+    reset: () => set({ ...baseline(), round: null, sourcingOpen: false }),
   };
 });
 
