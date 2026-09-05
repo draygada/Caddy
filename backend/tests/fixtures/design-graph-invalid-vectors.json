@@ -1,7 +1,8 @@
 {
   "artifact_status": "candidate_unapproved",
-  "purpose": "Declarative semantic graph-admission vectors only; no validator or test implementation is included in Wave 0.",
+  "purpose": "Declarative single-fault semantic graph-admission vectors only; no validator or test implementation is included in Wave 0.",
   "schema_expectation": "Each design is structurally valid against schemas/design.schema.json and must be rejected by semantic graph admission.",
+  "fault_model": "duplicate_node_id is assessed before ID-map construction; invalid_root is assessed on unique IDs; dangling_parent is assessed after a valid root; cycle is assessed only after unique IDs, a valid root, and resolved non-null parents.",
   "vectors": [
     {
       "id": "duplicate-node-id",
@@ -10,7 +11,8 @@
         "root": "synthetic-root",
         "nodes": [
           {"id": "synthetic-root", "kind": "product", "parent": null},
-          {"id": "synthetic-root", "kind": "part", "parent": "synthetic-root"}
+          {"id": "duplicate-part", "kind": "part", "parent": "synthetic-root"},
+          {"id": "duplicate-part", "kind": "part", "parent": "synthetic-root"}
         ]
       }
     },

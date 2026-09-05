@@ -16,7 +16,8 @@
       "value_usd": null,
       "part_class": "airframe",
       "attrs": {
-        "endurance_h": {"value": 2.5, "unit": "h", "source_url": null, "quote": "Synthetic scenario value; D2 is not approved.", "span": null, "doc_sha256": null, "extracted_by": "human"}
+        "endurance_h": {"value": 2.5, "unit": "h", "source_url": null, "quote": "Synthetic scenario value; D2 is not approved.", "span": null, "doc_sha256": null, "extracted_by": "human"},
+        "endurance_contract": {"value": "SYNTHETIC_DEMO_ONLY", "unit": null, "source_url": null, "quote": "Synthetic fixture contract marker; not engineering evidence.", "span": null, "doc_sha256": null, "extracted_by": "human"}
       },
       "items": [],
       "declared": {"bvlos": true},
@@ -262,8 +263,12 @@
       "attrs": {
         "frame_rate_hz": {"value": 9, "unit": "Hz", "source_url": null, "quote": "Synthetic scenario value; not vendor evidence or a complete camera predicate.", "span": null, "doc_sha256": null, "extracted_by": "human"},
         "fpa_elements": {"value": 19200, "unit": "elements", "source_url": null, "quote": "Synthetic scenario value; not vendor evidence.", "span": null, "doc_sha256": null, "extracted_by": "human"},
-        "fpa_6A002_a3_f_status": {"value": null, "unit": null, "source_url": null, "quote": "Missing; requires qualified evidence and review.", "span": null, "doc_sha256": null, "extracted_by": "human"},
-        "note_3_exclusions_reviewed": {"value": false, "unit": null, "source_url": null, "quote": "Not reviewed; frame rate alone cannot establish a camera result.", "span": null, "doc_sha256": null, "extracted_by": "human"}
+        "fpa_entry": {"value": null, "unit": null, "source_url": null, "quote": "Missing synthetic predicate input; requires qualified evidence and review.", "span": null, "doc_sha256": null, "extracted_by": "human"},
+        "note_3_a_exclusion_applies": {"value": null, "unit": null, "source_url": null, "quote": "Missing synthetic exclusion input; frame rate alone cannot establish a camera result.", "span": null, "doc_sha256": null, "extracted_by": "human"},
+        "note_3_b_exclusion_applies": {"value": null, "unit": null, "source_url": null, "quote": "Missing synthetic exclusion input; frame rate alone cannot establish a camera result.", "span": null, "doc_sha256": null, "extracted_by": "human"},
+        "note_3_c_exclusion_applies": {"value": null, "unit": null, "source_url": null, "quote": "Missing synthetic exclusion input; frame rate alone cannot establish a camera result.", "span": null, "doc_sha256": null, "extracted_by": "human"},
+        "civil_embedding": {"value": null, "unit": null, "source_url": null, "quote": "Missing synthetic RS branch input; not a destination or legal conclusion.", "span": null, "doc_sha256": null, "extracted_by": "human"},
+        "referenced_exemptions_review": {"value": null, "unit": null, "source_url": null, "quote": "Missing synthetic referenced-exemptions input; requires qualified review.", "span": null, "doc_sha256": null, "extracted_by": "human"}
       },
       "items": [],
       "declared": {},

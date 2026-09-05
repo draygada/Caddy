@@ -26,12 +26,12 @@ The candidate request schema is `schemas/evaluate-request.candidate.schema.json`
 
 `request_id` is an opaque non-negative integer allocated monotonically by the UI and echoed unchanged. `changed_node_id` is nullable for an initial load; when non-null, it must resolve to exactly one admitted design node. The complete design is posted. Rules, country-chart conclusions, and legal logic are not posted by the browser.
 
-Before evaluation, the design must independently pass `schemas/design.schema.json` and semantic graph admission. Admission rejects before building an ID map:
+Before evaluation, the design must independently pass `schemas/design.schema.json` and semantic graph admission. Admission checks duplicate IDs before building an ID map, then applies these fault classes:
 
 - `duplicate_node_id`: more than one `nodes[].id` has the same value;
 - `invalid_root`: `root` is missing, resolves to no node, resolves more than once, resolves to a non-product, or has a non-null parent;
 - `dangling_parent`: a non-null parent resolves to no node;
-- `cycle`: following parent links revisits a node or does not terminate at the root;
+- `cycle`: after IDs are unique, the root is valid, and all non-null parents resolve, following parent links revisits a node or does not terminate at the root;
 - `unsupported_input`: any `items[]` is nonempty in P0.
 
 Wave-0 declarative falsifiers are in `backend/tests/fixtures/design-graph-invalid-vectors.json`. Runtime validation and test code belong to later owning lanes.
@@ -43,7 +43,7 @@ Wave-0 declarative falsifiers are in `backend/tests/fixtures/design-graph-invali
 `backend/tests/fixtures/canonical-json-vectors.json` pins reordered-object equality and array-order inequality. For the committed canonical synthetic Kestrel fixture, the expected revision is:
 
 ```text
-sha256:fac39ef03be1ba8edbaa30b7cdcfab02e58ca14db00ade4c3c212049b23171dc
+sha256:a057a02e63ddf6ca1e613b8b8343ed58a4031cf943b996b93dbf0dd2a4724655
 ```
 
 The browser treats a valid-looking response with a revision other than its current design revision as a contract error. It must not repaint from that response.
@@ -77,6 +77,10 @@ Each determination contains `state`, `jurisdiction`, `entries`, all three tripwi
 - `problem` for an unresolved object, whose state is `cannot_evaluate`.
 
 Every fact object has `attribute`, `observed`, `unit`, `operator`, and `threshold`. A complete tripwire lists every positive condition, prerequisite, exclusion, and propagation fact used by that candidate predicate. Missing facts use `observed: null`, make the tripwire `cannot_evaluate`, and make the determination `question`; stale and unit-incompatible facts behave the same way. They never satisfy a rule and never render clear.
+
+Request fact binding is mechanical: except for the two result-derived attributes below, a response fact resolves by exact `attribute` name to the target node's `attrs[attribute].value` and matching `unit`, or to the target node's same-named `declared` value with a null unit. `established_entry` is derived only from an already-fired direct tripwire on the same node. `installed_descendant_entry` is derived only from an already-fired descendant entry plus the admitted parent path; it is null when that descendant result is unresolved. These derivations do not supply missing request facts or infer legal meaning.
+
+The camera direct shape requires all five request-bound facts shown in its object: `fpa_entry`, `frame_rate_hz`, and each of the three separate Note 3 exclusion fields. Its RS shape additionally requires request-bound `frame_rate_hz`, `fpa_elements`, `civil_embedding`, and `referenced_exemptions_review`, plus the result-derived `established_entry`. A null required input produces the unresolved shape. `frame_rate_hz` alone can never fire either camera object.
 
 ## Request races and contract errors
 

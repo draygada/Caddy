@@ -3,7 +3,7 @@
   "stub": true,
   "fixture_mode": "SYNTHETIC_DEMO",
   "artifact_status": "candidate_unapproved",
-  "design_revision": "sha256:ae55dc0b39980313d0e26894001e42ee0da51203d587c745d1fc02542c8b9fcc",
+  "design_revision": "sha256:f0b1fca50410c727bf899f7a68cbfda6c70c955b6f17640d989460f85d5eb6eb",
   "rule_pack_sha": "sha256:ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f",
   "rule_pack_status": "unapproved_input",
   "destination_policy_sha": null,

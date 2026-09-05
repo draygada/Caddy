@@ -10,7 +10,7 @@
     {"code": "duplicate_node_id", "rule": "Every nodes[].id is unique."},
     {"code": "invalid_root", "rule": "root resolves to exactly one node whose kind is product and whose parent is null or absent."},
     {"code": "dangling_parent", "rule": "Every non-null parent resolves to exactly one node."},
-    {"code": "cycle", "rule": "Following parent edges from any node terminates at root without revisiting a node."}
+    {"code": "cycle", "rule": "After node IDs are unique, root is valid, and every non-null parent resolves, following parent edges from any node terminates at root without revisiting a node."}
   ],
   "properties": {
     "artifact_status": { "type": "string", "const": "candidate_unapproved" },

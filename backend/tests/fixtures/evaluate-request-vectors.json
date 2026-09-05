@@ -10,7 +10,7 @@
       "changed_node_id": null,
       "mutations": [],
       "expected_response": "backend/tests/fixtures/evaluate-baseline.json",
-      "expected_design_revision": "sha256:fac39ef03be1ba8edbaa30b7cdcfab02e58ca14db00ade4c3c212049b23171dc"
+      "expected_design_revision": "sha256:a057a02e63ddf6ca1e613b8b8343ed58a4031cf943b996b93dbf0dd2a4724655"
     },
     {
       "id": "battery-flag-shape",
@@ -22,7 +22,7 @@
         {"path": "/nodes/0/attrs/endurance_h/value", "value": 3.25}
       ],
       "expected_response": "backend/tests/fixtures/evaluate-battery-flag.json",
-      "expected_design_revision": "sha256:73f29ea9b9b0818053e3ff3922a364621e6c4492716f22d9d67b3a0056094027"
+      "expected_design_revision": "sha256:90330f49cd53872fd7793de80ad7d3c14d381a56fba08a4afcfa1e9e8dc469db"
     },
     {
       "id": "camera-flag-shape",
@@ -32,11 +32,15 @@
         {"path": "/nodes/16/mpn", "value": "SYN-THERMAL-640"},
         {"path": "/nodes/16/attrs/frame_rate_hz/value", "value": 60},
         {"path": "/nodes/16/attrs/fpa_elements/value", "value": 327680},
-        {"path": "/nodes/16/attrs/fpa_6A002_a3_f_status/value", "value": "SYNTHETIC_PRESENT"},
-        {"path": "/nodes/16/attrs/note_3_exclusions_reviewed/value", "value": true}
+        {"path": "/nodes/16/attrs/fpa_entry/value", "value": "6A002.a.3.f"},
+        {"path": "/nodes/16/attrs/note_3_a_exclusion_applies/value", "value": false},
+        {"path": "/nodes/16/attrs/note_3_b_exclusion_applies/value", "value": false},
+        {"path": "/nodes/16/attrs/note_3_c_exclusion_applies/value", "value": false},
+        {"path": "/nodes/16/attrs/civil_embedding/value", "value": false},
+        {"path": "/nodes/16/attrs/referenced_exemptions_review/value", "value": "SYNTHETIC_NOT_APPLICABLE"}
       ],
       "expected_response": "backend/tests/fixtures/evaluate-camera-flag.json",
-      "expected_design_revision": "sha256:ae55dc0b39980313d0e26894001e42ee0da51203d587c745d1fc02542c8b9fcc"
+      "expected_design_revision": "sha256:f0b1fca50410c727bf899f7a68cbfda6c70c955b6f17640d989460f85d5eb6eb"
     },
     {
       "id": "no-change",
@@ -44,7 +48,7 @@
       "changed_node_id": "fc_board",
       "mutations": [],
       "expected_response": "backend/tests/fixtures/evaluate-no-change.json",
-      "expected_design_revision": "sha256:fac39ef03be1ba8edbaa30b7cdcfab02e58ca14db00ade4c3c212049b23171dc"
+      "expected_design_revision": "sha256:a057a02e63ddf6ca1e613b8b8343ed58a4031cf943b996b93dbf0dd2a4724655"
     },
     {
       "id": "missing-evidence",
@@ -53,11 +57,13 @@
       "mutations": [
         {"path": "/nodes/16/mpn", "value": "SYN-THERMAL-MISSING-EVIDENCE"},
         {"path": "/nodes/16/attrs/frame_rate_hz/value", "value": 60},
-        {"path": "/nodes/16/attrs/fpa_6A002_a3_f_status/value", "value": null},
-        {"path": "/nodes/16/attrs/note_3_exclusions_reviewed/value", "value": false}
+        {"path": "/nodes/16/attrs/fpa_entry/value", "value": null},
+        {"path": "/nodes/16/attrs/note_3_a_exclusion_applies/value", "value": false},
+        {"path": "/nodes/16/attrs/note_3_b_exclusion_applies/value", "value": null},
+        {"path": "/nodes/16/attrs/note_3_c_exclusion_applies/value", "value": null}
       ],
       "expected_response": "backend/tests/fixtures/evaluate-missing-evidence.json",
-      "expected_design_revision": "sha256:5514a9deff89d3195e6b29bb523bd7e724da9acef955ca7acd33ceec4bcbcd82"
+      "expected_design_revision": "sha256:b2b6616f7fd782afb2fc7de35e4e7700f3c8d7e2600d6b70c9f9c142e840bbbf"
     }
   ]
 }
