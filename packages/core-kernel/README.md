@@ -23,6 +23,10 @@ the integration-owned PartDocument/history wire contract.
   restore.
 - Content-addressed binary B-rep artifacts and deterministic derived viewport packets
   with semantic triangle ranges.
+- Reusable exact part definitions admitted from a successful recompute record, with
+  document identity cryptographically bound to the source artifact descriptor and BREP.
+- Fixed-transform assembly composition with component-level selection IDs and BREP
+  serialization/re-import evidence for validity, bounds, topology, and fingerprint.
 - Real STEP AP203/AP214/AP242 write/read and geometry comparison; real binary/ASCII STL
   parsing, write/read, watertightness, outward-orientation, and bounds checks.
 
@@ -34,6 +38,9 @@ From the repository worktree:
 uv sync --project packages/core-kernel --group dev --locked
 packages/core-kernel/.venv/bin/pytest tests/core-kernel -q
 uvx --from ruff==0.12.11 ruff check packages/core-kernel/src tests/core-kernel
+packages/core-kernel/.venv/bin/python tests/core-kernel/benchmark_core_kernel.py \
+  --warmups 1 --samples 50 \
+  --output packages/core-kernel/evidence/performance.v1.json
 ```
 
 The lock is platform-complete. The measured packet uses CPython 3.12.13 on macOS
@@ -55,7 +62,14 @@ The lock is platform-complete. The measured packet uses CPython 3.12.13 on macOS
 - Execution is directly in the calling process. Tests launch clean processes for replay
   and recovery, but a resource-limited crash/timeout worker supervisor is not included.
 - No container image is pinned. The manifest says `UNCONTAINERIZED` and evidence applies
-  only to the measured runtime until another platform is independently replayed.
+only to the measured runtime until another platform is independently replayed.
+- Assembly support is fixed transforms only, with component-level IDs only. It does not
+  implement or claim mates, configurations, kinematics, interference analysis, XDE
+  product structure, or BOM round-trip fidelity.
+- The benchmark evidence binds exact source, fixture-generator, harness, lockfile,
+  dependency, and runtime hashes. It excludes the generated evidence file and eventual
+  Git commit from its input-tree digest to avoid impossible self-reference. Measurements
+  are local observations, not a service SLO.
 - The selected OCP wheel is reproducibly hashed, but omits embedded license metadata and
   license files. Evaluation can continue from pinned upstream sources; distribution
   remains HOLD until the notice/source/relink packet is independently approved.

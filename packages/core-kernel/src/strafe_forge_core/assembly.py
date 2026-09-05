@@ -29,7 +29,36 @@ from .topology import (
     semantic_fingerprint,
     serialize_brep,
     shape_is_valid,
+    topology_counts,
 )
+
+
+def _part_source_record_hash(document_id: str, artifact: GeometryArtifact) -> str:
+    """Bind lane-local document identity to the admitted artifact descriptor/BREP."""
+
+    return sha256_hex(
+        {
+            "schema_version": "forge.admitted-part-source/1",
+            "document_id": document_id,
+            "artifact_id": artifact.artifact_id,
+            "artifact_descriptor": artifact.descriptor_preimage(),
+        }
+    )
+
+
+def _evidence_check(
+    code: str,
+    passed: bool,
+    observed: object,
+    expected: object,
+) -> dict[str, object]:
+    return {
+        "code": code,
+        "status": "PASSED" if passed else "FAILED",
+        "observed": observed,
+        "expected": expected,
+        "tolerance": None,
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +123,8 @@ class PartDefinition:
     artifact_id: str
     artifact_content_hash: str
     brep_bytes: bytes = field(repr=False, compare=False)
+    source_artifact: GeometryArtifact = field(repr=False, compare=False)
+    source_record_hash: str
     metadata: Mapping[str, str] = field(default_factory=dict)
     material_id: str | None = None
     mass_override_kg: str | None = None
@@ -113,6 +144,18 @@ class PartDefinition:
             raise KernelError(
                 "ARTIFACT_STALE", "Part definition requires a current successful BREP artifact"
             )
+        if (
+            artifact.artifact_kind != "BREP"
+            or artifact.source_revision_id != result.attempted_revision_id
+            or artifact.geometry_hash != result.geometry_hash
+            or artifact.engine_manifest_hash != result.engine_manifest_hash
+            or artifact.semantic_fingerprint is None
+            or not shape_is_valid(deserialize_brep(artifact.content))
+        ):
+            raise KernelError(
+                "PART_PROVENANCE_MISMATCH",
+                "Part definition source result and admitted BREP artifact disagree",
+            )
         return cls(
             definition_id=definition_id,
             part_document_id=result.document_id,
@@ -121,6 +164,8 @@ class PartDefinition:
             artifact_id=artifact.artifact_id,
             artifact_content_hash=artifact.content_hash,
             brep_bytes=artifact.content,
+            source_artifact=artifact,
+            source_record_hash=_part_source_record_hash(result.document_id, artifact),
             metadata=dict(metadata or {}),
             material_id=material_id,
             mass_override_kg=mass_override_kg,
@@ -134,6 +179,7 @@ class PartDefinition:
             "geometry_hash": self.geometry_hash,
             "artifact_id": self.artifact_id,
             "artifact_content_hash": self.artifact_content_hash,
+            "source_record_hash": self.source_record_hash,
             "metadata": dict(self.metadata),
             "material_id": self.material_id,
             "mass_override_kg": self.mass_override_kg,
@@ -206,6 +252,8 @@ class AssemblyProgram:
                     definition.artifact_id.removeprefix("artifact:")
                 )
                 or not is_sha256_hex(definition.artifact_content_hash)
+                or not isinstance(definition.source_artifact, GeometryArtifact)
+                or not is_sha256_hex(definition.source_record_hash)
                 or not isinstance(definition.metadata, Mapping)
                 or not all(
                     isinstance(item_key, str) and isinstance(item_value, str)
@@ -225,6 +273,25 @@ class AssemblyProgram:
                     raise KernelError(
                         "OPERATION_INPUT_INVALID", "Mass override cannot be negative"
                     )
+            source = definition.source_artifact
+            expected_source_record_hash = _part_source_record_hash(
+                definition.part_document_id,
+                source,
+            )
+            if (
+                source.artifact_kind != "BREP"
+                or source.semantic_fingerprint is None
+                or definition.source_record_hash != expected_source_record_hash
+                or definition.part_revision_id != source.source_revision_id
+                or definition.geometry_hash != source.geometry_hash
+                or definition.artifact_id != source.artifact_id
+                or definition.artifact_content_hash != source.content_hash
+                or definition.brep_bytes != source.content
+            ):
+                raise KernelError(
+                    "PART_PROVENANCE_MISMATCH",
+                    f"Part source provenance mismatch {definition.definition_id!r}",
+                )
             if sha256_bytes(definition.brep_bytes) != definition.artifact_content_hash:
                 raise KernelError(
                     "ARTIFACT_HASH_MISMATCH",
@@ -515,6 +582,59 @@ class AssemblyEngine:
         fingerprint, _ = semantic_fingerprint(
             composed_shape, units=dict(program.units), exact_entities=exact_entities
         )
+        brep_content = serialize_brep(composed_shape)
+        reimported_shape = deserialize_brep(brep_content)
+        reimported_fingerprint, _ = semantic_fingerprint(
+            reimported_shape,
+            units=dict(program.units),
+            exact_entities=exact_entities,
+        )
+        source_bounds = [canonical_decimal(value) for value in exact_bounds(composed_shape)]
+        reimported_bounds = [
+            canonical_decimal(value) for value in exact_bounds(reimported_shape)
+        ]
+        source_topology = topology_counts(composed_shape)
+        reimported_topology = topology_counts(reimported_shape)
+        checks = [
+            _evidence_check(
+                "ASSEMBLY_SOURCE_SHAPE_VALID",
+                shape_is_valid(composed_shape),
+                str(shape_is_valid(composed_shape)).lower(),
+                "true",
+            ),
+            _evidence_check(
+                "ASSEMBLY_BREP_REIMPORT_VALID",
+                shape_is_valid(reimported_shape),
+                str(shape_is_valid(reimported_shape)).lower(),
+                "true",
+            ),
+            _evidence_check(
+                "ASSEMBLY_BREP_ROUNDTRIP_BOUNDS_MATCH",
+                source_bounds == reimported_bounds,
+                reimported_bounds,
+                source_bounds,
+            ),
+            _evidence_check(
+                "ASSEMBLY_BREP_ROUNDTRIP_TOPOLOGY_MATCH",
+                source_topology == reimported_topology,
+                reimported_topology,
+                source_topology,
+            ),
+            _evidence_check(
+                "ASSEMBLY_BREP_ROUNDTRIP_FINGERPRINT_MATCH",
+                fingerprint == reimported_fingerprint,
+                reimported_fingerprint,
+                fingerprint,
+            ),
+        ]
+        verification_status = (
+            "PASSED" if all(check["status"] == "PASSED" for check in checks) else "FAILED"
+        )
+        if verification_status != "PASSED":
+            raise KernelError(
+                "ASSEMBLY_ARTIFACT_VERIFICATION_FAILED",
+                "Assembly BREP failed serialized/reimported geometry checks",
+            )
         artifact = GeometryArtifact(
             artifact_kind="BREP",
             source_revision_id=program.assembly_revision_id,
@@ -522,20 +642,9 @@ class AssemblyEngine:
             producing_operation_id=None,
             engine_manifest_hash=self.manifest.manifest_hash,
             media_type="application/vnd.opencascade.brep",
-            content=serialize_brep(composed_shape),
+            content=brep_content,
             semantic_fingerprint=fingerprint,
-            verification={
-                "status": "PASSED",
-                "checks": [
-                    {
-                        "code": "ASSEMBLY_BREP_VALID",
-                        "status": "PASSED",
-                        "observed": "true",
-                        "expected": "true",
-                        "tolerance": None,
-                    }
-                ],
-            },
+            verification={"status": verification_status, "checks": checks},
         )
         grouped: dict[str, list[Component]] = {}
         for component in program.components:

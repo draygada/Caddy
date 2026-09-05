@@ -1,27 +1,198 @@
 {
-  "schema_version": "forge.core-performance-evidence/1",
-  "observed_at": "2026-09-05T18:55:38.551468Z",
-  "runtime_manifest": "packages/core-kernel/evidence/runtime-manifest.v1.json",
-  "method": {
-    "clock": "time.perf_counter_ns",
-    "warmup_iterations": 1,
-    "measured_iterations": 50,
-    "process": "single process, sequential, OCCT parallel algorithms disabled; measured without a concurrent test or benchmark process",
-    "scope": "kernel-call latency only; excludes interpreter startup, IPC, storage, network, and browser rendering"
-  },
-  "distributions": {
-    "bracket_recompute_warm": {
-      "minimum_ms": 43.066,
-      "median_ms": 45.297,
-      "p95_ms": 47.33,
-      "maximum_ms": 48.671
+  "bindings": {
+    "code_and_fixture_generator": {
+      "algorithm": "sha256(canonical-json(sorted relative-path -> file-sha256 map))",
+      "files": {
+        "packages/core-kernel/src/strafe_forge_core/__init__.py": "297c7fec4a9284c4909940348aa3781e80b1fd437f22e5005a263cf935391ec6",
+        "packages/core-kernel/src/strafe_forge_core/artifacts.py": "7e6c49bce0ca0890ba74bdb12503d76b3b26c6d21cdda70168f13b4326c71e22",
+        "packages/core-kernel/src/strafe_forge_core/assembly.py": "4baa39864aec9ae805481891e132c098d02b58eeededd52e1a66890ce83643f4",
+        "packages/core-kernel/src/strafe_forge_core/canonical.py": "ada2e0134d0e6ba6d6db7adae841a2642c9c780313b6bc68301df7b7cd366269",
+        "packages/core-kernel/src/strafe_forge_core/diagnostics.py": "b7ebec6a8809974f808c53e969941a02bc8b6f62ff52976fe269a0596ea507a3",
+        "packages/core-kernel/src/strafe_forge_core/engine.py": "1da2da30ee5e37732e18a590ecb691e188c74591e5c1bff6c8e279a04807c55d",
+        "packages/core-kernel/src/strafe_forge_core/exchange.py": "cef8044f1d91d2767b02d515a356c86ff6b30adc34bd3c594c0054941cea04ab",
+        "packages/core-kernel/src/strafe_forge_core/ocp_operations.py": "3522fc6f83f69395585a82fb47968d5f16bc255ebae9a4b428e88f1175f847ba",
+        "packages/core-kernel/src/strafe_forge_core/persistence.py": "f6d9c1cc211e8be514880b2c7d4797b2362c5ae8fc0e92d506643bcb4f4b4ba0",
+        "packages/core-kernel/src/strafe_forge_core/program.py": "591f5314c5af112db01c5960813caa46c60f4920d578ecd67cd82f4f234b2b1c",
+        "packages/core-kernel/src/strafe_forge_core/registry.py": "e3290eda4ce7eccdd9a7d45407d0c1f82778f92f6bf47b8b82cafb33251f49a2",
+        "packages/core-kernel/src/strafe_forge_core/scalars.py": "e066678801ad37769f0dddec86bf5be5c08619375c5cb1159933c29b6ac2c5e7",
+        "packages/core-kernel/src/strafe_forge_core/topology.py": "e94dc53b61fb24b598d742a4b97680b7e9483e54302e2b6c15d463baf73ec88f",
+        "packages/core-kernel/src/strafe_forge_core/viewport.py": "47e636b1f2a035b9e7a55d4ae0a1c7082ea9bd46d185c0208fc03c4b298d17e0",
+        "tests/core-kernel/benchmark_core_kernel.py": "eb595344899e26625e7c893027927c938d730ae61ff830b81878712042a03b70",
+        "tests/core-kernel/kernel_cases.py": "002a6513462455b48a996a6fd82ac31841db79542c60ca7ab7f948d8d5c81a5a"
+      },
+      "self_reference_policy": "The generated performance JSON and Git commit are excluded. The digest binds the exact source, fixture generator, and harness bytes measured without asking an output file or its eventual commit to hash itself.",
+      "tree_sha256": "474421f47f67cd5aa20e41efc863c5dbc1a7edd048fe56fccaa2f928cf7db4ae"
     },
-    "two_component_multibody_assembly_warm": {
-      "minimum_ms": 2.833,
-      "median_ms": 2.918,
-      "p95_ms": 3.037,
-      "maximum_ms": 3.321
+    "runtime_and_dependencies": {
+      "dependencies": {
+        "cadquery-ocp-novtk": "7.9.3.1",
+        "jsonschema": "4.25.1",
+        "rfc8785": "0.1.4",
+        "strafe-forge-core-kernel": "0.1.0"
+      },
+      "dependencies_sha256": "cf368c7407fad8e44c7ef3721956b48714826e2e96fc2af8605cfc60c08da201",
+      "engine_manifest_hash": "ab9ccfd099b232ce0e2cd4e3fe593c6386d387b014397837906cd5a349ef5457",
+      "lockfile": {
+        "path": "packages/core-kernel/uv.lock",
+        "sha256": "6867117385dd2c0dc793f4f7230bfcc865997135e04908378b3ec76912be0103"
+      },
+      "runtime": {
+        "machine": "arm64",
+        "platform": "macOS-26.5.2-arm64-arm-64bit",
+        "python_executable": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/core-kernel/packages/core-kernel/.venv/bin/python",
+        "python_implementation": "CPython",
+        "python_version": "3.12.13"
+      },
+      "runtime_sha256": "a8ba3a90568821521ccbee943f4edc67cfb429364a1af5a9517c23c0f203e174"
     }
   },
-  "claim_ceiling": "One measured local arm64 runtime; no large-model, concurrency, cold-start, container, cross-platform, or service-SLO claim"
+  "claim_ceiling": "Local observational benchmark only. It is not a service SLO and makes no cold-start, concurrency, load, container, cross-platform, tail-latency, or production claim.",
+  "command": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/core-kernel/packages/core-kernel/.venv/bin/python tests/core-kernel/benchmark_core_kernel.py --warmups 1 --samples 50 --output packages/core-kernel/evidence/performance.v1.json",
+  "distributions": {
+    "bracket_recompute_warm": {
+      "fixture": {
+        "document_id": "part:bracket",
+        "geometry_hash": "0829a7dbdb77a4edeedf42ff7994958ef47740dddf7f94017fc94c80f494f3eb",
+        "identity": "kernel_cases.bracket_program(default arguments)",
+        "source_revision_id": "rev:bracket"
+      },
+      "raw_samples_ns": [
+        125619750,
+        133142708,
+        128217125,
+        125418417,
+        120922750,
+        118544333,
+        118880875,
+        121845375,
+        110729000,
+        102448417,
+        116616084,
+        116117417,
+        121589542,
+        119425250,
+        124537875,
+        122914958,
+        117323666,
+        138369833,
+        123134167,
+        116444416,
+        110611084,
+        123633542,
+        133522792,
+        113740917,
+        114455500,
+        110112166,
+        113926292,
+        115183583,
+        121128958,
+        121180667,
+        115495792,
+        117239750,
+        117635250,
+        115085917,
+        120795958,
+        124660000,
+        117037959,
+        118060041,
+        114790833,
+        131536458,
+        118159042,
+        119880417,
+        157720667,
+        161879292,
+        141220375,
+        116746042,
+        117143542,
+        106353042,
+        111826916,
+        112495917
+      ],
+      "sample_count": 50,
+      "summary_ms": {
+        "maximum": 161.879292,
+        "minimum": 102.448417,
+        "p50_nearest_rank": 118.159042,
+        "p95_nearest_rank": 141.220375
+      }
+    },
+    "two_component_multibody_assembly_warm": {
+      "fixture": {
+        "assembly_geometry_hash": "200c9ed4a9fa773f31e76067ff340f52cd8611e588533f04e06b9c6690c5ad41",
+        "identity": "two fixed components of a two-solid source part",
+        "source_artifact_id": "artifact:0f0339a3a83c0c9bcfed5de2272f5ebf8e324a85bee48553a8f9cc3be448a108",
+        "source_part_geometry_hash": "69b6266074df7e76cfb7275bd9587c381c530fbec6c8e4ac8dc9cbe0ea4525a6",
+        "source_record_hash": "f843e07bcb964d5696c17548d81ed09ec2d7f1eddb8b7f16bab60dfd587039e6"
+      },
+      "raw_samples_ns": [
+        31392750,
+        29034834,
+        27984167,
+        27715375,
+        25985291,
+        27023166,
+        28515583,
+        25628333,
+        27160333,
+        28724167,
+        27602958,
+        27369000,
+        26793250,
+        26353416,
+        28056958,
+        25859417,
+        26577500,
+        26449250,
+        25958167,
+        26173167,
+        25563750,
+        27429542,
+        33279458,
+        34680750,
+        30068333,
+        33403125,
+        32155375,
+        33010709,
+        34808084,
+        32410375,
+        33837833,
+        30827292,
+        29901250,
+        31636167,
+        36539083,
+        41365459,
+        38450666,
+        44186708,
+        34949958,
+        33213625,
+        33118042,
+        32015500,
+        37777125,
+        51136333,
+        44746792,
+        43670625,
+        37444292,
+        37127875,
+        29218875,
+        27773167
+      ],
+      "sample_count": 50,
+      "summary_ms": {
+        "maximum": 51.136333,
+        "minimum": 25.56375,
+        "p50_nearest_rank": 30.068333,
+        "p95_nearest_rank": 44.186708
+      }
+    }
+  },
+  "method": {
+    "clock": "time.perf_counter_ns",
+    "measured_iterations_per_fixture": 50,
+    "percentile_definition": "Nearest-rank over samples sorted ascending: percentile p selects the one-based rank ceil(p * sample_count); p50 and p95 are reported.",
+    "process": "single process, sequential, OCCT parallel algorithms disabled; no concurrent test or benchmark process",
+    "scope": "kernel-call latency only; excludes interpreter startup, IPC, storage, network, and browser rendering",
+    "warmup_iterations": 1
+  },
+  "observed_at": "2026-09-05T19:27:59.453869Z",
+  "schema_version": "forge.core-performance-evidence/2"
 }
