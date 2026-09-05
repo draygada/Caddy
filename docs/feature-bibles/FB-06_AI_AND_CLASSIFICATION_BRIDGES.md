@@ -1,5 +1,7 @@
 # FB-06 — Bounded AI and classification bridges
 
+Status: roadmap; explicitly excluded from the hackathon P0 critical path.
+
 Owner lane: integrations. Priority: P2 and fully cuttable.
 
 ## Outcome

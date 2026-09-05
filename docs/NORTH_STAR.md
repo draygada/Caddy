@@ -23,19 +23,19 @@ If the screen cannot communicate those four facts, the feature is not done.
 
 ## The canonical demo loop
 
-1. Open the preloaded Kestrel fixed-wing drone in inspection mode.
+1. Open the preloaded Kestrel fixed-wing drone as a CAD-style assembly model in inspection mode. This demo does not claim native CAD import or dimensional CAD accuracy.
 2. Select a visible component. The model, BOM row, and inspector all identify the same `node_id`.
-3. Make one bounded edit: swap a camera or gyro, change battery capacity, or stretch wing span.
+3. Make one bounded edit: change battery capacity or swap the thermal camera.
 4. Run the deterministic evaluator. No model call occurs on this path.
 5. Render the result in context:
    - the changed component is marked;
    - affected ancestors are marked separately;
    - the panel names the before/after fact and threshold;
    - the panel shows the rule entry, verbatim source text, content date, and evidence state;
-   - destination consequences remain explicitly bounded by the checks the demo does not model.
+   - destination consequences say `not evaluated` unless a separately approved policy artifact exists.
 6. Reverse the change. The relevant flag clears and the change remains in the audit timeline.
 
-The shortest winning run is three edits: battery/endurance, thermal-camera swap with parent propagation, and gyro/range interaction.
+The winning run is two substantive edits plus a control: F1 battery/endurance, F3 thermal-camera swap with parent propagation, then F8 no-change to prove the system does not manufacture a visual delta. F2 span/range and the gyro path are excluded from P0 until their derived formulas and unresolved facts are governed.
 
 ## Product promises
 
@@ -75,7 +75,7 @@ The `hackathon-dc-2026/bible/` set describes an earlier agent-gate concept. It i
 
 ## Definition of hackathon success
 
-The project is demo-ready when a clean local start can perform the three-edit canonical loop, every visible claim resolves to deterministic output or pinned evidence, the required automated and visual checks pass, and the entire run succeeds with network access disabled.
+The project is demo-ready when a clean local start can perform the F1/F3/F8 canonical loop, every visible claim resolves to deterministic output or pinned evidence, the required automated and visual checks pass, and the entire run succeeds with network access disabled. A draft rule file, skipped F1/F3/F8 check, exact destination badge without approved policy, or fixture presented as live evaluation is a HOLD.
 
 ## The sentence to hold onto
 

@@ -1,5 +1,7 @@
 # FB-05 — Audit timeline, replay, and tamper proof
 
+Status: roadmap; explicitly excluded from the hackathon P0 critical path.
+
 Owner lane: audit. Priority: P1.
 
 ## Outcome

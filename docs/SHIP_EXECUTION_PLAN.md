@@ -10,16 +10,17 @@ The current Shipyard Helm candidate is an evidence projection and synthetic cont
 
 ## Fleet topology
 
-Maximum useful live topology for this small repository:
+The live broker currently has two workers. Use waves; do not pretend four listed roles can all run concurrently.
 
-| Slot | Role | Bible | Mutates? | Verification |
+| Wave | Role | Bible | Mutates? | Verification |
 |---|---|---|---|---|
-| 1 | engine builder | FB-01/FB-02 | backend/data lane | fresh non-builder on candidate |
-| 2 | visual builder | FB-03 | frontend lane | visual + contract verifier |
-| 3 | integration owner | FB-04 then FB-05 | serialized integration | full-suite verifier |
-| 4 | adversarial verifier | current candidate only | no | owns GO/HOLD evidence |
+| 0 | truth/contract owner | FB-00 then FB-01 | governed data/contract lane | fresh read-only contract verifier |
+| 1A | engine builder | FB-02 | backend engine lane | fresh opposite profile on candidate |
+| 1B | visual builder | FB-03 | frontend lane | fresh opposite profile on candidate |
+| 2 | integration owner | FB-04 | serialized integration | fresh full-suite verifier |
+| 3 | final adversarial verifier | FB-07 candidate only | no | owns GO/HOLD evidence |
 
-FB-06 starts only after Slot 3 has a verified FB-04 candidate. Do not run two sessions against `backend/app.py` or `frontend/src/App.jsx` at once.
+FB-05 and FB-06 are outside the hackathon critical path. Do not run two sessions against `backend/app.py` or `frontend/src/App.jsx` at once.
 
 ## Session packet template
 
@@ -39,19 +40,19 @@ Return: candidate commit, changed-file list, command output, unresolved items.
 Your output claims nothing—a blinded verifier decides what is true.
 ```
 
-The verifier gets the bible, immutable candidate, fixtures, and falsifier—never the builder transcript or rationale.
+The verifier gets the bible, immutable candidate, fixtures, and falsifier—never the builder transcript or rationale. Use a new `create_session`; do not use `handoff_session`, because handoff injects the parent transcript and defeats blindness.
 
 ## Dispatch order
 
-1. Register `/Users/benjihuh/Programming/tripwire` as a broker workspace using the existing explicit workspace configuration path; verify it is neither the live console checkout nor inside it.
-2. Prove the collaboration broker idle before any restart needed for configuration.
-3. Create isolated worktrees from the plan commit and write a narrow `.lane` in each.
-4. Dispatch engine and visual builders in parallel.
-5. Dispatch fresh verifiers when candidates exist; do not ask builders whether their own work is correct.
-6. Integrate one candidate at a time; run fast tests/build after each.
-7. Dispatch FB-04 on the integrated base.
-8. Run FB-07 from a fresh clone and emit GO/HOLD evidence.
-9. Archive completed sessions only after their candidate/evidence pointers are recorded.
+1. Write a private external `workspaces.json` that preserves the existing `strafe` alias and adds `tripwire`, `tw-engine`, `tw-visual`, `tw-integration`, and `tw-verify`; keep secrets in Keychain, never in that file.
+2. Persist its path as `STRAFE_OPERATOR_WORKSPACES_FILE` in the managed launch configuration. Prove the collaboration broker has zero active sessions, then restart only through its exact-PID managed lifecycle.
+3. Verify collaboration mode, `test_mode=false`, Sol/Opus readiness, every intended alias, historical session preservation, and a 200 response from `/api/operator/now`. Current live runtime predates disk HEAD and returns 404 there, so this verification is mandatory.
+4. Create isolated worktrees from the immutable plan commit and write a narrow `.lane` in each. The hook is commit-time protection, not a write sandbox.
+5. Clear FB-00 and verify FB-01 before engine dispatch. A visual builder may work against labeled golden fixtures in parallel; it may not claim live evaluation.
+6. Dispatch engine and visual builders under the two-worker limit.
+7. Create fresh verifier sessions on candidate-pinned disposable verifier worktrees. Manually require a different profile; never use handoff for acceptance.
+8. Integrate one verified candidate at a time; run fast tests/build after each. Dispatch FB-04 only on the integrated base.
+9. Run FB-07 from a fresh clone and emit GO/HOLD evidence. Archive completed sessions only after candidate/evidence pointers are recorded. Do not start roadmap lanes until that verdict exists.
 
 ## Evidence SHIP should display
 
@@ -79,3 +80,8 @@ Prompts, transcript bodies, provider-native IDs, workspace roots, credentials, a
 - A candidate changes frozen schemas without integration-owner presence.
 - Any path requires secrets, live spend, deployment, or external communication not named by current authority.
 - SHIP observation is mistaken for permission to mutate a source session.
+- A verifier is created by transcript-bearing handoff rather than as a fresh candidate-bound session.
+
+## Current dispatch verdict
+
+HOLD. As observed on 2026-09-05, only the `strafe` workspace is registered, the live process is runtime-skewed from console HEAD, Tripwire has no isolated worktrees, and approved `data/rules/rules.P0.json` is absent. These are setup/truth blockers, not reasons to let builders improvise.
