@@ -2,6 +2,8 @@ import { useStore, fieldKey } from '../store';
 import { CATALOG, CMP_KEYS, CRYPTO_OPTIONS, KEY_GROUPS, PALETTE, RULES_EVALUATED, SLOT_LABEL, type PartId } from '../lib/catalog';
 import type { Outcome } from '../lib/rules';
 import { partOf, specAttrsOf } from '../lib/viewmodel';
+import { fmtNum, fromUnit, toUnit } from '../lib/units';
+import { parseDecimal } from '../lib/hash';
 import { NumField } from './NumField';
 
 export function SpecPanel({ o }: { o: Outcome }) {
@@ -14,6 +16,9 @@ export function SpecPanel({ o }: { o: Outcome }) {
   const showNoChange = !!(s.lastDiff && s.lastDiff.changed === 0);
   const pending = s.pending;
   const unconfirmedSeq = slot ? s.unconfirmed[slot] : undefined;
+  const readOnly = s.viewSeq != null;
+  const u = s.units;
+  const commitSpan = (text: string) => { const p = parseDecimal(text); if (p == null) { s.setSpan(text); return; } s.setSpan(String(fromUnit(p, u))); };
 
   return (
     <div data-panel="spec" className="panel flex-1 flex flex-col min-h-0">
@@ -23,6 +28,7 @@ export function SpecPanel({ o }: { o: Outcome }) {
         {slot && !pid && <span className="chip">empty</span>}
       </div>
       <div className="overflow-auto min-h-0">
+        {readOnly && <div role="status" className="px-3 py-2 border-b border-line2 text-[13px] text-amber font-semibold">replaying #{s.viewSeq} · read-only · <button onClick={() => s.viewAt(null)} className="underline">back to live</button> or restore from the timeline</div>}
         {showNoChange && (
           <div role="status" className="px-3 py-[10px] border-b border-line2">
             <div className="flex justify-between items-center gap-2">
@@ -77,7 +83,7 @@ export function SpecPanel({ o }: { o: Outcome }) {
         {slot && pid && (
           <div className="px-3 py-[10px] border-b border-line2 grid gap-1">
             <label htmlFor={slot + '.model'} className="text-[13px] text-muted">model · choosing another one is a swap and needs an attestation</label>
-            <select id={slot + '.model'} value={pid} onChange={(e) => s.swap(slot, e.target.value as PartId)} className="field text-[14px]">
+            <select id={slot + '.model'} value={pid} disabled={readOnly} onChange={(e) => s.swap(slot, e.target.value as PartId)} className="field text-[14px] disabled:opacity-50">
               {PALETTE[slot].map((id) => <option key={id} value={id}>{CATALOG[id].name}{CATALOG[id].real === false ? ' (synthetic)' : ''}</option>)}
             </select>
             <div className="text-[13px] text-muted flex flex-wrap gap-x-3 gap-y-1 items-center">
@@ -103,10 +109,10 @@ export function SpecPanel({ o }: { o: Outcome }) {
         {sel === 'airframe' && (
           <>
             <div className="px-3 py-[10px] border-b border-line2">
-              <label htmlFor="span" className="block text-[13px] text-muted mb-1">span · 1.5–6.0 m · accepts 3.4 · 3,4 · 3.4 m</label>
+              <label htmlFor="span" className="block text-[13px] text-muted mb-1">span · {fmtNum(1.5, u)}–{fmtNum(6.0, u)} {u} · accepts 3.4 · 3,4 · 3.4 {u}</label>
               <div className="flex gap-2 items-center">
-                <input id="span" name="span" inputMode="decimal" value={s.spanText} onChange={(e) => s.patch({ spanText: e.target.value })} onBlur={() => s.setSpan(s.spanText)} onKeyDown={(e) => { if (e.key === 'Enter') s.setSpan((e.target as HTMLInputElement).value); }} aria-describedby="span-msg" className="field w-[120px] font-mono text-[16px] font-semibold" />
-                <span className="text-[14px] text-muted">m · Enter applies</span>
+                <input id="span" name="span" inputMode="decimal" key={u + s.span} defaultValue={toUnit(s.span, u).toFixed(u === 'mm' ? 0 : 2)} disabled={readOnly} onBlur={(e) => commitSpan(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') commitSpan((e.target as HTMLInputElement).value); }} aria-describedby="span-msg" className="field w-[120px] font-mono text-[16px] font-semibold disabled:opacity-50" />
+                <span className="text-[14px] text-muted">{u} · Enter applies</span>
               </div>
               <div id="span-msg" role="status" className="text-[13px] min-h-[18px] mt-1" style={{ color: s.spanErr ? 'var(--red)' : 'var(--muted)' }}>{s.spanMsg}</div>
             </div>
@@ -126,7 +132,7 @@ export function SpecPanel({ o }: { o: Outcome }) {
                 <label htmlFor={key} className="text-[13px] text-muted">{a.field.label}</label>
                 <span className="chip chip-sm" style={{ color: a.levelColor }}>{a.level}</span>
               </div>
-              <NumField id={key} value={a.value} dp={a.field.dp} unit={a.field.unit} min={a.field.min} max={a.field.max} nullable={a.field.nullable} disabled={!pid} msg={s.fieldMsg[key]} onCommit={(text) => s.setAttr(slot, a.field, text)} />
+              <NumField id={key} value={a.value} dp={a.field.dp} unit={a.field.unit} min={a.field.min} max={a.field.max} nullable={a.field.nullable} disabled={!pid || readOnly} msg={s.fieldMsg[key]} onCommit={(text) => s.setAttr(slot, a.field, text)} />
               <div className="text-[13px] text-muted">source: {a.source}</div>
             </div>
           );

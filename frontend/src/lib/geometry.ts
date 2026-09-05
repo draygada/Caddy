@@ -4,7 +4,7 @@
 import { CATALOG, type Dims, type Node, type PartId, type Slot } from './catalog';
 
 export type Vec3 = [number, number, number];
-export interface Face { pts: Vec3[]; n: Vec3; slot: string; fill?: string; late?: boolean }
+export interface Face { pts: Vec3[]; n: Vec3; slot: string; fill?: string; late?: boolean; /** stable-within-solid face index */ fi?: number; /** body id for body-level selection (plate / flange / slot) */ body?: string; /** produced by a section cut */ cut?: boolean }
 export interface Solid { slot: string; faces: Face[]; c?: Vec3; pid?: PartId }
 export interface Projector {
   ox: number;
@@ -18,7 +18,7 @@ export interface Projector {
   ca: number;
   sa: number;
 }
-export interface ProjectedFace { pts: string; fill: string; d: number; slot: string }
+export interface ProjectedFace { pts: string; fill: string; d: number; slot: string; fi: number; body: string; cut: boolean }
 export interface ThumbFace { pts: string; fill: string; stroke: string; dash: string }
 
 export const K = 1.2247;
@@ -86,7 +86,7 @@ export function renderSolid<T extends object = Record<never, never>>(
     if (f.late) d += 100;
     const nx = f.n[0] * pr.ca - f.n[1] * pr.sa;
     const fill = f.fill || (f.n[2] > 0.5 ? 'var(--m1)' : f.n[2] < -0.5 ? 'var(--m3)' : nx < 0 ? 'var(--m2)' : 'var(--m3)');
-    const base: ProjectedFace = { pts: f.pts.map((p) => pr.pt(p[0], p[1], p[2]).map((v) => v.toFixed(1)).join(',')).join(' '), fill, d, slot: solid.slot };
+    const base: ProjectedFace = { pts: f.pts.map((p) => pr.pt(p[0], p[1], p[2]).map((v) => v.toFixed(1)).join(',')).join(' '), fill, d, slot: solid.slot, fi: f.fi ?? -1, body: f.body ?? solid.slot, cut: !!f.cut };
     out.push(Object.assign(base, deco ? deco(solid.slot, f) : ({} as T)));
   }
   out.sort((a, b) => a.d - b.d);
@@ -197,3 +197,70 @@ export const CUBE_NAMES: Record<string, [string, ViewName]> = {
 };
 export const isSlot = (s: string): s is Slot => s === 'battery' || s === 'thermal' || s === 'imu' || s === 'fc';
 export const isNode = (s: string): s is Node => s === 'airframe' || s === 'battery' || s === 'thermal' || s === 'imu' || s === 'fc';
+
+/** Number faces within a solid so a selection can name one (index is stable for the same shape, not a durable topology id). */
+export function indexFaces(solid: Solid, body?: string): Solid {
+  return { ...solid, faces: solid.faces.map((f, i) => ({ ...f, fi: i, body: body ?? f.body ?? solid.slot })) };
+}
+
+/** Prism from a counter-clockwise 2D outline between z0 and z1, with outward side normals. */
+export function prismFaces(outline: [number, number][], z0: number, z1: number, slot: string): Face[] {
+  const top: Face = { pts: outline.map(([x, y]) => [x, y, z1] as Vec3), n: [0, 0, 1], slot };
+  const bot: Face = { pts: outline.map(([x, y]) => [x, y, z0] as Vec3), n: [0, 0, -1], slot };
+  const sides: Face[] = outline.map(([x, y], i) => {
+    const [x2, y2] = outline[(i + 1) % outline.length];
+    const ex = x2 - x, ey = y2 - y, len = Math.hypot(ex, ey) || 1;
+    return { pts: [[x, y, z0], [x2, y2, z0], [x2, y2, z1], [x, y, z1]] as Vec3[], n: [ey / len, -ex / len, 0], slot };
+  });
+  return [top, bot, ...sides];
+}
+
+/** Rectangle outline with optional corner fillet (arc) or chamfer (single cut). */
+export function plateOutline(L: number, W: number, fillet: number, chamfer: number): [number, number][] {
+  const r = Math.min(fillet, L / 2 - 0.01, W / 2 - 0.01), c = Math.min(chamfer, L / 2 - 0.01, W / 2 - 0.01);
+  const corners: [number, number, number, number][] = [[0, 0, 1, 1], [L, 0, -1, 1], [L, W, -1, -1], [0, W, 1, -1]];
+  const out: [number, number][] = [];
+  for (const [cx, cy, sx, sy] of corners) {
+    if (r > 0) {
+      const ox = cx + sx * r, oy = cy + sy * r;
+      const a0 = Math.atan2(-sy, -sx);
+      const dir = sx * sy > 0 ? 1 : -1;
+      for (let k = 0; k <= 5; k++) { const a = a0 + dir * (k / 5) * (Math.PI / 2); out.push([ox + r * Math.cos(a), oy + r * Math.sin(a)]); }
+    } else if (c > 0) {
+      const p1: [number, number] = [cx, cy + sy * c], p2: [number, number] = [cx + sx * c, cy];
+      if (sx * sy > 0) out.push(p1, p2); else out.push(p2, p1);
+    } else out.push([cx, cy]);
+  }
+  return out;
+}
+
+/** Sutherland–Hodgman clip of every face against the half-space p[axis] <= at. Faces that were cut are flagged. */
+export function clipFaces(faces: Face[], axis: 0 | 1 | 2, at: number): Face[] {
+  const out: Face[] = [];
+  for (const f of faces) {
+    const inside = (p: Vec3) => p[axis] <= at;
+    if (f.pts.every(inside)) { out.push(f); continue; }
+    if (!f.pts.some(inside)) continue;
+    const pts: Vec3[] = [];
+    for (let i = 0; i < f.pts.length; i++) {
+      const a = f.pts[i], b = f.pts[(i + 1) % f.pts.length];
+      const ia = inside(a), ib = inside(b);
+      if (ia) pts.push(a);
+      if (ia !== ib) {
+        const t = (at - a[axis]) / (b[axis] - a[axis]);
+        pts.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]);
+      }
+    }
+    if (pts.length >= 3) out.push({ ...f, pts, cut: true });
+  }
+  return out;
+}
+
+export interface Bounds3 { min: Vec3; max: Vec3 }
+export function bounds3(solid: Solid): Bounds3 {
+  const min: Vec3 = [Infinity, Infinity, Infinity], max: Vec3 = [-Infinity, -Infinity, -Infinity];
+  for (const f of solid.faces) for (const p of f.pts) for (let i = 0; i < 3; i++) { if (p[i] < min[i]) min[i] = p[i]; if (p[i] > max[i]) max[i] = p[i]; }
+  return { min, max };
+}
+export const boundsVolume = (b: Bounds3) => Math.max(0, (b.max[0] - b.min[0]) * (b.max[1] - b.min[1]) * (b.max[2] - b.min[2]));
+export const boundsCenter = (b: Bounds3): Vec3 => [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];

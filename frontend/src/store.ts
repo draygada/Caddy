@@ -4,36 +4,57 @@ import {
   SLOTS, SLOT_LABEL, SPAN_BASELINE, SPAN_MAX, SPAN_MIN,
   type CmpKey, type Dims, type Feature, type FieldSpec, type Lane, type Node, type PartAttrs, type PartId, type Slot, type TimelineEvent,
 } from './lib/catalog';
+import { GEO0, type Geo, type Pos, type Positions, type Snapshot } from './lib/design';
 import { hashOf, parseDecimal } from './lib/hash';
 import { countChanged, type Attrs, type Design, type Parts } from './lib/rules';
 import { service, type ServiceState } from './lib/service';
+import { CONSTRAINTS, SKETCH_DEFAULT, solveSketch } from './lib/sketch';
+import type { Unit } from './lib/units';
 import type { ViewName } from './lib/geometry';
 
+export type { Pos, Positions } from './lib/design';
 export type Theme = 'light' | 'dark';
-export type ViewMode = 'model' | 'sheet';
+export type ViewMode = 'model' | 'sheet' | 'sketch';
 export type NavMode = 'orbit' | 'pan' | 'zoom';
 export type VisualStyle = 'shaded' | 'edges' | 'wireframe';
-export interface Pos { x: number; y: number }
-export type Positions = Record<Slot, Pos>;
+export type SelFilter = 'component' | 'body' | 'face';
+/** body ids: a slot, or one of the airframe's two bodies */
+export type BodyId = Slot | 'plate' | 'flange';
+export const BODY_LABEL: Record<BodyId, string> = { plate: 'Base plate', flange: 'Flange', battery: 'Battery pack', thermal: 'Thermal sensor', imu: 'IMU', fc: 'Flight controller' };
+export const isBodyId = (s: string): s is BodyId => s in BODY_LABEL;
+export const nodeOfBody = (b: BodyId): Node => (b === 'plate' || b === 'flange' ? 'airframe' : b);
 
+export type DialogKind = 'extrude' | 'hole' | 'fillet' | 'chamfer' | 'move' | 'measure' | 'section' | 'sketch' | 'properties' | 'save_version' | 'add_comment' | 'named_view';
+export interface Dialog { kind: DialogKind; target: BodyId | null }
+export interface Preview { dims?: Dims; geo?: Geo; pos?: Positions }
 export interface Pending { slot: Slot; from: PartId; to: PartId; seq: number; changed: CmpKey[] }
+export interface NamedView { id: string; name: string; az: number; el: number; zoom: number; pan: { x: number; y: number } }
+export interface CameraHome { az: number; el: number; zoom: number }
+export interface Version { v: number; seq: number; comment: string; at: string }
+export interface Comment { id: string; seq: number; author: string; text: string; at: string }
+export interface Section { on: boolean; axis: 0 | 1 | 2; at: number }
 
-export interface WorkbenchState {
+export interface WorkbenchState extends Snapshot {
   theme: Theme;
   serviceState: ServiceState;
   demoBar: boolean;
+  units: Unit;
   sel: Node | null;
-  hover: Node | null;
-  parts: Parts;
-  /** editable instance attributes per slot; {} when the slot is empty */
-  attrs: Attrs;
-  pos: Positions;
-  span: number;
+  hover: BodyId | null;
+  selFilter: SelFilter;
+  selBody: BodyId | null;
+  selFace: { body: BodyId; fi: number } | null;
   spanText: string;
   spanMsg: string;
   spanErr: boolean;
   events: TimelineEvent[];
-  unconfirmed: Partial<Record<Slot, number>>;
+  /** timeline marker: null = live, otherwise the seq being viewed (read-only) */
+  viewSeq: number | null;
+  liveStash: Snapshot | null;
+  versions: Version[];
+  comments: Comment[];
+  namedViews: NamedView[];
+  homeView: CameraHome;
   pending: Pending | null;
   attestor: string;
   intent: string;
@@ -42,6 +63,14 @@ export interface WorkbenchState {
   timelineOpen: boolean;
   helpOpen: boolean;
   reasoningOpen: boolean;
+  cmdOpen: boolean;
+  recent: string[];
+  dialog: Dialog | null;
+  preview: Preview | null;
+  marking: { x: number; y: number; target: BodyId | null } | null;
+  measure: { a: BodyId | null; b: BodyId | null };
+  isolated: BodyId | null;
+  section: Section;
   lane: Lane;
   keysOpen: boolean;
   lastDiff: { changed: number; reeval: number } | null;
@@ -57,19 +86,15 @@ export interface WorkbenchState {
   grid: boolean;
   navMode: NavMode;
   visualStyle: VisualStyle;
-  /** browser eye toggles: body id → hidden */
   hidden: Record<string, boolean>;
   dragging: boolean;
   dragPart: PartId | null;
-  dims: Dims;
-  features: Feature[];
-  extrudeText: string;
-  extrudeMsg: string;
-  /** per-field message after an edit (clamped / applied / not a number) */
   fieldMsg: Record<string, string>;
 
   patch: (p: Partial<WorkbenchState>) => void;
   design: () => Design;
+  snapshot: () => Snapshot;
+  editable: () => boolean;
   toggleTheme: () => void;
   closeAll: () => void;
   openTimeline: () => void;
@@ -77,11 +102,16 @@ export interface WorkbenchState {
   toggleHelp: () => void;
   openReasoning: () => void;
   setView: (name: ViewName) => void;
-  /** snap the camera to look along a direction (ViewCube face / edge / corner) */
   setViewDir: (dir: [number, number, number]) => void;
   fit: () => void;
   toggleHidden: (id: string) => void;
+  isolate: (id: BodyId | null) => void;
   select: (slot: Node) => void;
+  pick: (body: BodyId, fi: number) => void;
+  openDialog: (kind: DialogKind, target?: BodyId | null) => void;
+  closeDialog: () => void;
+  setPreview: (p: Preview | null) => void;
+  openMarking: (x: number, y: number, target: BodyId | null) => void;
   swap: (slot: Slot, pid: PartId, at?: Pos) => void;
   place: (slot: Slot, pid: PartId, at?: Pos) => void;
   removePart: (slot: Slot) => void;
@@ -93,7 +123,18 @@ export interface WorkbenchState {
   confirm: (name?: string) => void;
   leaveUnconfirmed: () => void;
   setSpan: (text: string) => void;
-  applyExtrude: () => void;
+  applyExtrude: (target: Node, value: number) => string;
+  applyGeo: (patch: Partial<Geo>, kind: Feature['kind'], label: string) => void;
+  toggleConstraint: (id: string) => void;
+  setTint: (slot: Slot, color: string | null) => void;
+  setUnits: (u: Unit) => void;
+  saveNamedView: (name: string) => void;
+  setHome: () => void;
+  saveVersion: (comment: string) => void;
+  addComment: (author: string, text: string) => void;
+  pickMeasure: (body: BodyId) => void;
+  viewAt: (seq: number | null) => void;
+  restoreHere: () => void;
   toggleOpen: (id: string) => void;
   copy: (key: string | number, text: string) => void;
   rederiveLog: () => void;
@@ -101,16 +142,13 @@ export interface WorkbenchState {
   reset: () => void;
 }
 
-const ISO: [number, number] = [Math.PI / 4, 0.6155];
+const ISO: CameraHome = { az: Math.PI / 4, el: 0.6155, zoom: 0.7 };
+const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
 
 function readUrl(): { theme: Theme; demoBar: boolean; serviceState: ServiceState } {
   try {
     const q = new URLSearchParams(location.search);
-    return {
-      theme: q.get('theme') === 'dark' ? 'dark' : 'light',
-      demoBar: q.get('demo') === '1',
-      serviceState: q.get('service') === 'unreachable' ? 'unreachable' : 'cached',
-    };
+    return { theme: q.get('theme') === 'dark' ? 'dark' : 'light', demoBar: q.get('demo') === '1', serviceState: q.get('service') === 'unreachable' ? 'unreachable' : 'cached' };
   } catch {
     return { theme: 'light', demoBar: false, serviceState: 'cached' };
   }
@@ -119,77 +157,67 @@ function readUrl(): { theme: Theme; demoBar: boolean; serviceState: ServiceState
 const attrsFor = (parts: Parts): Attrs => Object.fromEntries(SLOTS.map((s) => [s, parts[s] ? { ...CATALOG[parts[s] as PartId].attrs } : {}])) as Attrs;
 const posFor = (span: number): Positions => Object.fromEntries(SLOTS.map((s) => [s, DEFAULT_POS[s](span)])) as Positions;
 
-const baseline = () => ({
-  sel: null as Node | null,
-  hover: null as Node | null,
-  parts: { ...BASELINE_PARTS },
-  attrs: attrsFor(BASELINE_PARTS),
-  pos: posFor(SPAN_BASELINE),
-  span: SPAN_BASELINE,
-  spanText: SPAN_BASELINE.toFixed(1),
-  spanMsg: '',
-  spanErr: false,
-  events: SEED_EVENTS.slice().reverse(),
-  unconfirmed: {} as Partial<Record<Slot, number>>,
-  pending: null as Pending | null,
-  attestor: '',
-  intent: '',
-  confirmErr: '',
-  open: {} as Record<string, boolean>,
-  lastDiff: null as { changed: number; reeval: number } | null,
-  lastKind: null as string | null,
-  rederive: null as { line: string; detail: string } | null,
-  step: 0,
-  keysOpen: false,
-  az: ISO[0],
-  el: ISO[1],
-  zoom: 0.7,
-  pan: { x: 0, y: 0 },
-  dims: { ...DIMS0 },
-  features: SEED_FEATURES.slice(),
-  extrudeText: '',
-  extrudeMsg: '',
-  fieldMsg: {} as Record<string, string>,
-  dragging: false,
-  dragPart: null as PartId | null,
+const baselineSnapshot = (): Snapshot => ({
+  parts: { ...BASELINE_PARTS }, attrs: attrsFor(BASELINE_PARTS), pos: posFor(SPAN_BASELINE), span: SPAN_BASELINE, dims: { ...DIMS0 }, features: SEED_FEATURES.slice(), geo: { ...GEO0 }, sketch: { ...SKETCH_DEFAULT }, tint: {}, unconfirmed: {},
 });
+const pickSnapshot = (s: Snapshot): Snapshot => ({ parts: s.parts, attrs: s.attrs, pos: s.pos, span: s.span, dims: s.dims, features: s.features, geo: s.geo, sketch: s.sketch, tint: s.tint, unconfirmed: s.unconfirmed });
+
+const baseline = () => {
+  const snap = baselineSnapshot();
+  return {
+    ...snap,
+    sel: null as Node | null, hover: null as BodyId | null, selBody: null as BodyId | null, selFace: null as { body: BodyId; fi: number } | null,
+    spanText: SPAN_BASELINE.toFixed(1), spanMsg: '', spanErr: false,
+    events: SEED_EVENTS.map((e) => ({ ...e, snap })).reverse(),
+    viewSeq: null as number | null, liveStash: null as Snapshot | null,
+    versions: [{ v: 1, seq: 3, comment: 'baseline · Kestrel, twelve parts', at: '2026-09-05 09:12' }] as Version[],
+    comments: [] as Comment[],
+    pending: null as Pending | null, attestor: '', intent: '', confirmErr: '',
+    open: {} as Record<string, boolean>, lastDiff: null as { changed: number; reeval: number } | null, lastKind: null as string | null,
+    rederive: null as { line: string; detail: string } | null, step: 0, keysOpen: false,
+    az: ISO.az, el: ISO.el, zoom: ISO.zoom, pan: { x: 0, y: 0 },
+    dialog: null as Dialog | null, preview: null as Preview | null, marking: null as WorkbenchState['marking'], measure: { a: null, b: null } as WorkbenchState['measure'],
+    isolated: null as BodyId | null, section: { on: false, axis: 0, at: 1.5 } as Section,
+    fieldMsg: {} as Record<string, string>, dragging: false, dragPart: null as PartId | null,
+  };
+};
 
 const fmt = (v: number | null | undefined, dp: number) => (v == null ? 'not published' : v.toFixed(dp));
 
 export const useStore = create<WorkbenchState>()((set, get) => {
+  const snapshot = (): Snapshot => pickSnapshot(get());
   const append = (ev: Partial<TimelineEvent> & { kind: string; text: string; entry: string }) => {
     set((s) => {
       const seq = s.events.length + 1;
-      const full: TimelineEvent = { seq, lane: 'design', intent: '', word: '', color: 'var(--ink)', ...ev, hash: hashOf(seq) };
+      const full: TimelineEvent = { seq, lane: 'design', intent: '', word: '', color: 'var(--ink)', ...ev, hash: hashOf(seq), snap: pickSnapshot(s) };
       return { events: [full, ...s.events] };
     });
   };
   const changedRows = (from: PartId, to: PartId): CmpKey[] => CMP_KEYS.filter((k) => CATALOG[from].cmp[k] !== CATALOG[to].cmp[k]);
   const design = (): Design => { const s = get(); return { parts: s.parts, attrs: s.attrs, span: s.span }; };
+  const editable = () => get().viewSeq == null;
   const summary = (before: ReturnType<typeof service.evaluate>, after: ReturnType<typeof service.evaluate>, node: Node) => {
     const changed = countChanged(before, after);
     const firedOn = after.rules.filter((r) => (r.node === node || r.node === 'airframe') && !before.keys.includes(r.entry)).map((r) => r.entry);
     return { changed, entry: firedOn.length ? firedOn.join(' · ') : 're-evaluated ' + RULES_EVALUATED + ' · ' + changed + ' changed' };
   };
+  const nextFeature = (s: WorkbenchState) => 'f' + (s.features.length + 1);
 
   return {
     ...readUrl(),
     ...baseline(),
-    timelineOpen: false,
-    helpOpen: false,
-    reasoningOpen: false,
-    lane: 'all',
-    copied: null,
-    viewMode: 'model',
-    grid: true,
-    navMode: 'orbit',
-    visualStyle: 'edges',
-    hidden: {},
+    units: 'm',
+    selFilter: 'component',
+    timelineOpen: false, helpOpen: false, reasoningOpen: false, cmdOpen: false, recent: [],
+    namedViews: [], homeView: { ...ISO },
+    lane: 'all', copied: null, viewMode: 'model', grid: true, navMode: 'orbit', visualStyle: 'edges', hidden: {},
 
     patch: (p) => set(p),
     design,
+    snapshot,
+    editable,
     toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
-    closeAll: () => set({ timelineOpen: false, helpOpen: false, reasoningOpen: false }),
+    closeAll: () => set({ timelineOpen: false, helpOpen: false, reasoningOpen: false, cmdOpen: false, marking: null, dialog: null, preview: null }),
     openTimeline: () => set({ timelineOpen: true, helpOpen: false }),
     toggleTimeline: () => set((s) => ({ timelineOpen: !s.timelineOpen })),
     toggleHelp: () => set((s) => ({ helpOpen: !s.helpOpen, timelineOpen: false })),
@@ -198,12 +226,11 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     setView: (name) => {
       const s = get();
       const V: Record<ViewName, [number, number]> = {
-        iso: ISO, top: [s.az, 1.55], bottom: [s.az, -1.55], front: [0, 0.02], back: [Math.PI, 0.02], right: [Math.PI / 2, 0.02], left: [-Math.PI / 2, 0.02],
+        iso: [s.homeView.az, s.homeView.el], top: [s.az, 1.55], bottom: [s.az, -1.55], front: [0, 0.02], back: [Math.PI, 0.02], right: [Math.PI / 2, 0.02], left: [-Math.PI / 2, 0.02],
       };
       const v = V[name];
-      set({ az: v[0], el: v[1], pan: { x: 0, y: 0 }, ...(name === 'iso' ? { zoom: 0.7 } : {}) });
+      set({ az: v[0], el: v[1], pan: { x: 0, y: 0 }, ...(name === 'iso' ? { zoom: s.homeView.zoom } : {}) });
     },
-
     setViewDir: (dir) => {
       const [x, y, z] = dir;
       const len = Math.hypot(x, y, z) || 1;
@@ -213,10 +240,24 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     },
     fit: () => set((s) => ({ pan: { x: 0, y: 0 }, zoom: Math.max(0.3, Math.min(2, +(2.1 / s.span).toFixed(2))) })),
     toggleHidden: (id) => set((s) => ({ hidden: { ...s.hidden, [id]: !s.hidden[id] } })),
+    isolate: (id) => set({ isolated: id }),
 
-    select: (slot) => set((s) => ({ sel: slot, confirmErr: '', extrudeText: s.dims[slot].toFixed(2), extrudeMsg: '', fieldMsg: {} })),
+    select: (slot) => set({ sel: slot, selBody: slot === 'airframe' ? 'plate' : slot, selFace: null, confirmErr: '', fieldMsg: {} }),
+    pick: (body, fi) => {
+      const s = get();
+      const node = nodeOfBody(body);
+      if (s.dialog?.kind === 'measure') { get().pickMeasure(body); return; }
+      if (s.selFilter === 'face') set({ sel: node, selBody: body, selFace: { body, fi }, confirmErr: '' });
+      else if (s.selFilter === 'body') set({ sel: node, selBody: body, selFace: null, confirmErr: '' });
+      else set({ sel: node, selBody: body === 'flange' ? 'plate' : body, selFace: null, confirmErr: '', fieldMsg: {} });
+    },
+    openDialog: (kind, target) => set((s) => ({ dialog: { kind, target: target === undefined ? (s.selBody ?? (s.sel === 'airframe' ? 'plate' : s.sel)) : target }, marking: null, cmdOpen: false, preview: null, measure: kind === 'measure' ? { a: null, b: null } : s.measure, viewMode: kind === 'sketch' ? 'sketch' : s.viewMode === 'sketch' ? 'model' : s.viewMode })),
+    closeDialog: () => set((s) => ({ dialog: null, preview: null, viewMode: s.viewMode === 'sketch' ? 'model' : s.viewMode })),
+    setPreview: (p) => set({ preview: p }),
+    openMarking: (x, y, target) => set({ marking: { x, y, target }, cmdOpen: false }),
 
     place: (slot, pid, at) => {
+      if (!editable()) return;
       const s = get();
       if (s.parts[slot]) { get().swap(slot, pid, at); return; }
       const before = service.evaluate(design());
@@ -224,12 +265,12 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const attrs: Attrs = { ...s.attrs, [slot]: { ...CATALOG[pid].attrs } };
       const after = service.evaluate({ parts, attrs, span: s.span });
       const { changed, entry } = summary(before, after, slot);
-      const pos = at ? { ...s.pos, [slot]: at } : s.pos;
-      set({ parts, attrs, pos, sel: slot, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: CATALOG[pid].name + ' placed', extrudeText: s.dims[slot].toFixed(2), extrudeMsg: '', dragPart: null, fieldMsg: {} });
+      set({ parts, attrs, pos: at ? { ...s.pos, [slot]: at } : s.pos, sel: slot, selBody: slot, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: CATALOG[pid].name + ' placed', dragPart: null, fieldMsg: {} });
       append({ kind: 'part_placed', text: SLOT_LABEL[slot] + ' · ' + CATALOG[pid].name + (CATALOG[pid].real === false ? ' · SYNTHETIC' : ''), entry, intent: '' });
     },
 
     removePart: (slot) => {
+      if (!editable()) return;
       const s = get();
       const pid = s.parts[slot];
       if (!pid) return;
@@ -244,7 +285,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       append({ kind: 'part_removed', text: SLOT_LABEL[slot] + ' · ' + CATALOG[pid].name + ' → empty', entry: 're-evaluated ' + RULES_EVALUATED + ' · ' + changed + ' changed · rows on this slot now cannot fire', intent: '' });
     },
 
-    moveTo: (slot, at) => set((s) => ({ pos: { ...s.pos, [slot]: at } })),
+    moveTo: (slot, at) => { if (editable()) set((s) => ({ pos: { ...s.pos, [slot]: at } })); },
     commitMove: (slot, from) => {
       const s = get();
       const to = s.pos[slot];
@@ -253,6 +294,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     },
 
     setAttr: (slot, field, text) => {
+      if (!editable()) return;
       const s = get();
       const pid = s.parts[slot];
       if (!pid) return;
@@ -262,10 +304,10 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       let msg = '';
       if (text == null || text.trim() === '') {
         if (!field.nullable) { set({ fieldMsg: { ...s.fieldMsg, [key]: 'required — ' + field.min + '–' + field.max + ' ' + field.unit } }); return; }
-        v = null; msg = 'cleared · not published · the rule cannot fire on this field';
+        v = null; msg = 'cleared · not published';
       } else {
-        const parsed = parseDecimal(text.replace(/^[−-]/, (m) => (m ? '-' : '')).replace(/^-/, ''));
         const neg = /^\s*[−-]/.test(text);
+        const parsed = parseDecimal(text.replace(/^\s*[−-]/, ''));
         if (parsed == null) { set({ fieldMsg: { ...s.fieldMsg, [key]: 'not a number — accepted: ' + field.min + '–' + field.max + ' ' + field.unit } }); return; }
         v = neg ? -parsed : parsed;
         if (v < field.min) { v = field.min; msg = 'clamped to ' + field.min + ' ' + field.unit + ' (min)'; }
@@ -276,11 +318,13 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const attrs: Attrs = { ...s.attrs, [slot]: { ...s.attrs[slot], [field.key]: v } as PartAttrs };
       const after = service.evaluate({ parts: s.parts, attrs, span: s.span });
       const { changed, entry } = summary(before, after, slot);
-      set({ attrs, fieldMsg: { ...s.fieldMsg, [key]: msg || ('applied · ' + entry) }, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: SLOT_LABEL[slot] + ' · ' + field.label + ' ' + fmt(old, field.dp) + ' → ' + fmt(v, field.dp) + (field.unit ? ' ' + field.unit : ''), keysOpen: false });
-      append({ kind: 'attr_changed', text: SLOT_LABEL[slot] + ' · ' + field.label + ' ' + fmt(old, field.dp) + ' → ' + fmt(v, field.dp) + (field.unit ? ' ' + field.unit : ''), entry: entry + ' · typed in the spec, not from a datasheet', intent: '' });
+      const label = SLOT_LABEL[slot] + ' · ' + field.label + ' ' + fmt(old, field.dp) + ' → ' + fmt(v, field.dp) + (field.unit ? ' ' + field.unit : '');
+      set({ attrs, fieldMsg: { ...s.fieldMsg, [key]: msg || ('applied · ' + entry) }, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: label, keysOpen: false });
+      append({ kind: 'attr_changed', text: label, entry: entry + ' · typed in the spec, not from a datasheet', intent: '' });
     },
 
     setCrypto: (slot, value) => {
+      if (!editable()) return;
       const s = get();
       const old = s.attrs[slot].crypto || 'none';
       if (old === value) return;
@@ -289,6 +333,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     },
 
     swap: (slot, pid, at) => {
+      if (!editable()) return;
       const s = get();
       const cur = s.parts[slot];
       if (!cur) { get().place(slot, pid, at); return; }
@@ -305,15 +350,14 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       set({
         parts, attrs, pos: at ? { ...s.pos, [slot]: at } : s.pos,
         lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: from.name + ' → ' + to.name,
-        pending: { slot, from: cur, to: pid, seq, changed: rows },
-        unconfirmed: { ...s.unconfirmed, [slot]: seq },
-        attestor: '', intent: '', confirmErr: '', keysOpen: false, sel: slot, extrudeText: s.dims[slot].toFixed(2), dragPart: null, fieldMsg: {},
+        pending: { slot, from: cur, to: pid, seq, changed: rows }, unconfirmed: { ...s.unconfirmed, [slot]: seq },
+        attestor: '', intent: '', confirmErr: '', keysOpen: false, sel: slot, selBody: slot, dragPart: null, fieldMsg: {},
       });
       append({
-        kind: 'part_swapped',
+        kind: 'part_swapped', slot,
         text: SLOT_LABEL[slot] + ' · ' + from.name + ' → ' + to.name + (to.real === false ? ' · SYNTHETIC' : ''),
         entry: (firedOn.length ? firedOn.join(' · ') : 're-evaluated ' + RULES_EVALUATED + ' · ' + changed + ' changed') + ' · changed: ' + (rows.length ? rows.join(', ') : 'none'),
-        word: 'unconfirmed · confirmed_by: null', color: 'var(--amber)', slot,
+        word: 'unconfirmed · confirmed_by: null', color: 'var(--amber)',
       });
     },
 
@@ -324,17 +368,13 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const cur = s.parts[slot];
       if (!ev || seq == null || !cur) return;
       const prev = (Object.keys(CATALOG) as PartId[]).find((k) => CATALOG[k].slot === slot && k !== cur && ev.text.includes(CATALOG[k].name + ' →')) || cur;
-      set({ sel: slot, pending: { slot, from: prev, to: cur, seq, changed: changedRows(prev, cur) }, confirmErr: '' });
+      set({ sel: slot, selBody: slot, pending: { slot, from: prev, to: cur, seq, changed: changedRows(prev, cur) }, confirmErr: '' });
     },
 
     confirm: (name) => {
       const s = get();
       const att = (name != null ? name : s.attestor).trim();
-      if (!att) {
-        set({ confirmErr: 'refused: attestor required — a confirmation is a human act; type a name' });
-        document.getElementById('attestor')?.focus();
-        return;
-      }
+      if (!att) { set({ confirmErr: 'refused: attestor required — a confirmation is a human act; type a name' }); document.getElementById('attestor')?.focus(); return; }
       const p = s.pending;
       if (!p) return;
       const unconfirmed = { ...s.unconfirmed };
@@ -347,6 +387,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     leaveUnconfirmed: () => set({ pending: null, confirmErr: '' }),
 
     setSpan: (text) => {
+      if (!editable()) return;
       const parsed = parseDecimal(text);
       if (parsed == null) { set({ spanMsg: 'not a number — accepted formats: 3.4 · 3,4 · 3.4 m', spanErr: true }); return; }
       let v = parsed, msg = '';
@@ -356,67 +397,100 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const before = service.evaluate(design()), after = service.evaluate({ parts: s.parts, attrs: s.attrs, span: v });
       const changed = countChanged(before, after);
       const old = s.span;
-      // keep bodies on the plate when it shrinks
       const pos = { ...s.pos };
       for (const sl of SLOTS) pos[sl] = { x: Math.min(pos[sl].x, v - 0.3), y: pos[sl].y };
-      set({
-        span: v, spanText: v.toFixed(1), spanErr: false, pos,
-        spanMsg: msg || ('applied · cruise_W ' + after.cruiseW.toFixed(0) + ' W · range ' + (after.range ?? 0).toFixed(0) + ' km'),
-        lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: 'span ' + old.toFixed(1) + ' → ' + v.toFixed(1) + ' m', keysOpen: false,
-      });
+      set({ span: v, spanText: v.toFixed(1), spanErr: false, pos, spanMsg: msg || ('applied · cruise_W ' + after.cruiseW.toFixed(0) + ' W · range ' + (after.range ?? 0).toFixed(0) + ' km'), lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: 'span ' + old.toFixed(1) + ' → ' + v.toFixed(1) + ' m', keysOpen: false });
       const crossed = after.range != null && before.range != null && after.range >= 300 && before.range < 300;
       append({ kind: 'attr_changed', text: 'airframe · span ' + old.toFixed(1) + ' m → ' + v.toFixed(1) + ' m', entry: crossed ? '9A012 MT · range ' + (after.range ?? 0).toFixed(0) + ' km ≥ 300 km' : 're-evaluated ' + RULES_EVALUATED + ' · ' + changed + ' changed', intent: '' });
     },
 
-    applyExtrude: () => {
+    applyExtrude: (target, value) => {
+      if (!editable()) return 'viewing history · restore to edit';
       const s = get();
-      const slot = s.sel;
-      if (!slot) return;
-      const parsed = parseDecimal(s.extrudeText);
-      if (parsed == null) { set({ extrudeMsg: 'not a number — e.g. 0.45' }); return; }
-      let v = parsed, msg = '';
+      let v = value, msg = '';
       if (v < EXTRUDE_MIN) { v = EXTRUDE_MIN; msg = 'clamped to 0.02 m'; } else if (v > EXTRUDE_MAX) { v = EXTRUDE_MAX; msg = 'clamped to 1.5 m'; }
-      const old = s.dims[slot];
-      if (v === old) { set({ extrudeMsg: 'unchanged', extrudeText: v.toFixed(2) }); return; }
-      const n = 'f' + (s.features.length + 1);
-      const tgt = slot === 'airframe' ? 'flange' : SLOT_LABEL[slot];
-      set({
-        dims: { ...s.dims, [slot]: v }, extrudeText: v.toFixed(2), extrudeMsg: msg || 'applied · 0 rules changed',
-        features: s.features.concat([{ n, text: 'extrude · ' + tgt + ' height ' + old.toFixed(2) + ' → ' + v.toFixed(2) + ' m' }]),
-      });
+      const old = s.dims[target];
+      if (Math.abs(v - old) < 1e-6) return 'unchanged';
+      const n = nextFeature(s);
+      const tgt = target === 'airframe' ? 'flange' : SLOT_LABEL[target];
+      set({ dims: { ...s.dims, [target]: v }, features: s.features.concat([{ n, text: 'extrude · ' + tgt + ' height ' + old.toFixed(2) + ' → ' + v.toFixed(2) + ' m', kind: 'extrude' }]) });
       append({ kind: 'feature_added', text: n + ' · extrude ' + tgt + ' height ' + old.toFixed(2) + ' → ' + v.toFixed(2) + ' m', entry: 'geometry only · no rule reads this dimension · re-evaluated ' + RULES_EVALUATED + ' · 0 changed', intent: '' });
+      return msg || 'applied · 0 rules changed';
+    },
+
+    applyGeo: (patch, kind, label) => {
+      if (!editable()) return;
+      const s = get();
+      const n = nextFeature(s);
+      set({ geo: { ...s.geo, ...patch }, features: s.features.concat([{ n, text: label, kind }]) });
+      append({ kind: 'feature_added', text: n + ' · ' + label, entry: 'geometry only · re-evaluated ' + RULES_EVALUATED + ' · 0 changed', intent: '' });
+    },
+
+    toggleConstraint: (id) => {
+      if (!editable()) return;
+      const s = get();
+      const sketch = { ...s.sketch, [id]: !s.sketch[id] };
+      const r = solveSketch(sketch);
+      const def = CONSTRAINTS.find((c) => c.id === id);
+      set({ sketch });
+      append({ kind: 'constraint_' + (sketch[id] ? 'added' : 'removed'), text: 'plate sketch · ' + (def?.label ?? id), entry: r.overall + ' · ' + r.entities.rect.code + ' / ' + r.entities.holes.code + ' · ' + r.dof + ' DOF', intent: '', word: r.overall === 'SOLVED' ? '' : r.overall, color: r.overall === 'CONTRADICTORY' ? 'var(--red)' : r.overall === 'REDUNDANT' ? 'var(--amber)' : 'var(--focus)' });
+    },
+
+    setTint: (slot, color) => set((s) => { const tint = { ...s.tint }; if (color) tint[slot] = color; else delete tint[slot]; return { tint }; }),
+    setUnits: (u) => set({ units: u }),
+    saveNamedView: (name) => set((s) => ({ namedViews: s.namedViews.concat([{ id: 'nv' + Date.now(), name: name.trim() || 'View ' + (s.namedViews.length + 1), az: s.az, el: s.el, zoom: s.zoom, pan: s.pan }]) })),
+    setHome: () => set((s) => ({ homeView: { az: s.az, el: s.el, zoom: s.zoom } })),
+    saveVersion: (comment) => {
+      const s = get();
+      const v = s.versions.length + 1;
+      const seq = s.events.length + 1;
+      set({ versions: s.versions.concat([{ v, seq, comment, at: now() }]) });
+      append({ kind: 'version_saved', text: 'v' + v + ' · ' + (comment || '(no comment)'), entry: 'design hash pinned at #' + seq + ' · every earlier event remains', intent: comment });
+    },
+    addComment: (author, text) => {
+      const s = get();
+      set({ comments: s.comments.concat([{ id: 'c' + Date.now(), seq: s.events.length, author, text, at: now() }]) });
+      append({ kind: 'comment_added', lane: 'proposal', text: author + ': ' + text, entry: 'comment on state #' + s.events.length, intent: '' });
+    },
+    pickMeasure: (body) => set((s) => (s.measure.a == null || s.measure.b != null ? { measure: { a: body, b: null } } : { measure: { a: s.measure.a, b: body } })),
+
+    viewAt: (seq) => {
+      const s = get();
+      const latest = s.events.length;
+      if (seq == null || seq >= latest) {
+        if (s.liveStash) set({ ...s.liveStash, liveStash: null, viewSeq: null, dialog: null, preview: null });
+        else set({ viewSeq: null });
+        return;
+      }
+      const ev = s.events.find((e) => e.seq === seq);
+      if (!ev?.snap) return;
+      const stash = s.liveStash ?? pickSnapshot(s);
+      set({ ...ev.snap, liveStash: stash, viewSeq: seq, dialog: null, preview: null, pending: null });
+    },
+    restoreHere: () => {
+      const s = get();
+      if (s.viewSeq == null) return;
+      const from = s.viewSeq, latest = s.events.length;
+      set({ liveStash: null, viewSeq: null });
+      append({ kind: 'state_restored', text: 'restored the design as of #' + from, entry: 'supersedes #' + (from + 1) + '–#' + latest + ' · nothing deleted · undo is supersede', intent: '' });
     },
 
     toggleOpen: (id) => set((s) => ({ open: { ...s.open, [id]: !s.open[id] } })),
-
-    copy: (key, text) => {
-      try { void navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ }
-      set({ copied: key });
-      setTimeout(() => set({ copied: null }), 1200);
-    },
-
-    rederiveLog: () => {
-      const n = get().events.length;
-      set({ rederive: { line: n + ' events · chain intact', detail: n + '/' + n + ' signatures valid · derived state == displayed state · pack v1 · ' + ((Date.now() % 37) + 9) + ' ms' } });
-    },
+    copy: (key, text) => { try { void navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ } set({ copied: key }); setTimeout(() => set({ copied: null }), 1200); },
+    rederiveLog: () => { const n = get().events.length; set({ rederive: { line: n + ' events · chain intact', detail: n + '/' + n + ' signatures valid · derived state == displayed state · pack v1 · ' + ((Date.now() % 37) + 9) + ' ms' } }); },
 
     advance: () => {
       const a = get();
       const k = a.step;
       if (k >= SCENARIO.length - 1) return;
       const acts: (() => void)[] = [
-        () => a.select('battery'),
-        () => a.swap('battery', 'amprius'),
-        () => a.confirm('benji'),
-        () => { a.select('airframe'); get().setSpan('3.4'); },
-        () => { a.select('thermal'); get().swap('thermal', 'boson'); },
-        () => { a.select('imu'); get().swap('imu', 'hg5700'); },
-        () => { a.select('fc'); get().swap('fc', 'h753'); },
+        () => a.select('battery'), () => a.swap('battery', 'amprius'), () => a.confirm('benji'),
+        () => { a.select('airframe'); get().setSpan('3.4'); }, () => { a.select('thermal'); get().swap('thermal', 'boson'); },
+        () => { a.select('imu'); get().swap('imu', 'hg5700'); }, () => { a.select('fc'); get().swap('fc', 'h753'); },
       ];
       acts[k]();
       set({ step: k + 1 });
     },
-
     reset: () => set({ ...baseline() }),
   };
 });

@@ -1,5 +1,6 @@
 // Lane-local synthetic fixture shaped like the service's design/catalog/rules
 // documents. Nothing here is live; every number is declared, dated, and cached.
+import type { Snapshot } from './design';
 
 export type Slot = 'battery' | 'thermal' | 'imu' | 'fc';
 export type Node = Slot | 'airframe';
@@ -146,8 +147,6 @@ export const KEY_GROUPS: { name: string; keys: string[] }[] = [
 
 export const RULES_EVALUATED = 37;
 export const ECFR_DATE = '2026-09-01';
-export const DESIGN_HASH_SHORT = '7b41c9e2…';
-export const DESIGN_HASH_FULL = '7b41c9e2d0a6f314';
 
 export type Lane = 'all' | 'design' | 'proposal' | 'sourcing' | 'order';
 export const LANES: Lane[] = ['all', 'design', 'proposal', 'sourcing', 'order'];
@@ -165,6 +164,8 @@ export interface TimelineEvent {
   color: string;
   hash?: string;
   slot?: Slot;
+  /** design state after this event; the timeline marker replays to it */
+  snap?: Snapshot;
 }
 
 export const SEED_EVENTS: TimelineEvent[] = [
@@ -173,13 +174,15 @@ export const SEED_EVENTS: TimelineEvent[] = [
   { seq: 3, lane: 'design', kind: 'fixture_manifest', text: 'catalog@a91f · chart@3c02 · rules@7d19', entry: 'retrieved 2026-09-04', intent: 'no network on the change path', word: '', color: 'var(--ink)' },
 ];
 
-export interface Feature { n: string; text: string }
+export interface Feature { n: string; text: string; kind?: 'sketch' | 'extrude' | 'hole' | 'fillet' | 'chamfer' }
 export const SEED_FEATURES: Feature[] = [
-  { n: 'f1', text: 'base plate · span × 1.2 × 0.08 m' },
-  { n: 'f2', text: 'flange · 0.08 × 1.2 × 0.80 m' },
-  { n: 'f3', text: '4 holes ⌀ 0.14 m · plate' },
-  { n: 'f4', text: '2 holes ⌀ 0.14 m · flange' },
+  { n: 'f1', text: 'base plate · span × 1.2 × 0.08 m', kind: 'sketch' },
+  { n: 'f2', text: 'flange · 0.08 × 1.2 × 0.80 m', kind: 'extrude' },
+  { n: 'f3', text: '4 holes ⌀ 0.14 m · plate', kind: 'hole' },
+  { n: 'f4', text: '2 holes ⌀ 0.14 m · flange', kind: 'hole' },
 ];
+export const PLATE_W = 1.2;
+export const PLATE_T = 0.08;
 
 export type Dims = Record<Node, number>;
 export const DIMS0: Dims = { battery: 0.35, imu: 0.1, fc: 0.03, thermal: 0.3, airframe: 0.8 };
@@ -207,7 +210,10 @@ export const SHORTCUTS: { key: string; what: string }[] = [
   { key: 'shift + drag', what: 'pan' },
   { key: 'wheel', what: 'zoom 30–200 %' },
   { key: 'view cube', what: 'drag it to orbit; click a face to snap: Top · Bottom · Front · Back · Right · Left' },
-  { key: 'F', what: 'reset to the 70 % isometric' },
+  { key: 'S', what: 'command box · every command, searchable, recent pinned' },
+  { key: 'right-click', what: 'marking menu on the body under the cursor' },
+  { key: 'E · M · H · I', what: 'extrude · move · hole · measure' },
+  { key: 'F', what: 'home view' },
   { key: 'L', what: 'timeline' },
   { key: 'Esc', what: 'close' },
   { key: '→ / Space', what: 'advance the demo (?demo=1)' },
