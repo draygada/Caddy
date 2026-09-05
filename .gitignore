@@ -20,4 +20,4 @@ coverage/
 *.stl
 *.glb
 *.gltf
-
+.release-evidence/

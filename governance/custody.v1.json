@@ -222,6 +222,23 @@
         "governance/receipts/caddydaddy-candidate.json"
       ],
       "handoff": "docs/adr/0002-caddydaddy-composition.md"
+    },
+    "caddydaddy-release-evidence": {
+      "branch": "lane/caddydaddy-release-evidence",
+      "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/caddydaddy-release-evidence",
+      "worktree_label": "forge/caddydaddy-release-evidence",
+      "write_allowlist": [
+        ".gitignore",
+        "docs/governance/candidate-integration-release-evidence.md",
+        "governance/custody.v1.json",
+        "governance/receipts/caddydaddy-release-evidence.json",
+        "governance/schemas/candidate-integration-release-receipt.v1.schema.json",
+        "governance/templates/candidate-integration-release-receipt.v1.template.json",
+        "tools/check_release_diff_hygiene.py",
+        "tools/generate_candidate_integration_release_receipt.py",
+        "tests/governance/test_release_evidence.py"
+      ],
+      "handoff": "docs/governance/candidate-integration-release-evidence.md"
     }
   }
 }
