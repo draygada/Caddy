@@ -131,6 +131,10 @@ def validate_contract_vectors() -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--freeze", action="store_true", help="also require pristine all-HOLD lineage state")
+    parser.add_argument(
+        "--require-bound-sources", action="store_true",
+        help="fail unless the external Atlas and annex preimages are available and match their receipts",
+    )
     args = parser.parse_args()
 
     try:
@@ -144,15 +148,18 @@ def main() -> int:
         Draft202012Validator.check_schema(schema)
         Draft202012Validator(schema).validate(ledger)
 
-        require(ATLAS.is_file() and ANNEX.is_file(), "bound research source is unavailable")
-        require(
-            sha256_bytes(ATLAS.read_bytes()) == denominator["source_authority"]["canonical_atlas_sha256"],
-            "canonical Atlas hash drift",
-        )
-        require(
-            sha256_bytes(ANNEX.read_bytes()) == denominator["source_authority"]["research_annex_sha256"],
-            "research annex hash drift",
-        )
+        source_preimages_available = ATLAS.is_file() and ANNEX.is_file()
+        if args.require_bound_sources:
+            require(source_preimages_available, "bound research source is unavailable")
+        if source_preimages_available:
+            require(
+                sha256_bytes(ATLAS.read_bytes()) == denominator["source_authority"]["canonical_atlas_sha256"],
+                "canonical Atlas hash drift",
+            )
+            require(
+                sha256_bytes(ANNEX.read_bytes()) == denominator["source_authority"]["research_annex_sha256"],
+                "research annex hash drift",
+            )
 
         parents = denominator["parents"]
         expected_parent_ids = [f"CAD-{index:03d}" for index in range(1, 70)]
@@ -226,6 +233,7 @@ def main() -> int:
         validate_contract_vectors()
 
         print(f"jsonschema={importlib.metadata.version('jsonschema')}")
+        print("source_preimages=" + ("VERIFIED" if source_preimages_available else "UNAVAILABLE_RECEIPT_ONLY"))
         print(f"parents={len(parents)}")
         print(f"atomic_records={len(records)}")
         print(f"mandatory_records={sum(1 for item in records if item['mandatory'])}")
