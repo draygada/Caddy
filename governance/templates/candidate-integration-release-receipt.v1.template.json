@@ -1,0 +1,78 @@
+{
+  "schema_version": "forge.candidate-integration-release-receipt/1",
+  "receipt_id": "${receipt_id}",
+  "receipt_hash": "${receipt_hash}",
+  "generated_at": "${generated_at}",
+  "repository": {
+    "name": "${repository_name}",
+    "root": "${repository_root}",
+    "git_common_dir": "${git_common_dir}",
+    "object_format": "${git_object_format}"
+  },
+  "candidate": {
+    "branch": "${candidate_branch}",
+    "full_hash": "${candidate_full_hash}",
+    "tree_hash": "${candidate_tree_hash}",
+    "clean_tracked_worktree": true
+  },
+  "tripwire_import": {
+    "provenance_manifest_path": "docs/imports/tripwire-898f6167.json",
+    "provenance_manifest_sha256": "${tripwire_provenance_manifest_sha256}",
+    "source_commit": {
+      "oid": "${tripwire_source_commit}",
+      "content_sha256": "${tripwire_source_commit_content_sha256}"
+    },
+    "source_root_tree": {
+      "oid": "${tripwire_source_root_tree}",
+      "content_sha256": "${tripwire_source_root_tree_content_sha256}"
+    },
+    "import_commit": "${tripwire_import_commit}",
+    "import_prefix": "features/tripwire",
+    "candidate_prefix_tree": "${candidate_tripwire_prefix_tree}",
+    "byte_identity": "PROVEN"
+  },
+  "authorization": {
+    "quote": "${authorization_quote}",
+    "scope": "${authorization_scope}"
+  },
+  "sanitized_bundle": {
+    "declaration": "SANITIZED",
+    "manifest": {
+      "name": "${sanitized_bundle_manifest_name}",
+      "bytes": "${sanitized_bundle_manifest_bytes}",
+      "sha256": "${sanitized_bundle_manifest_sha256}"
+    },
+    "archive": {
+      "name": "${sanitized_bundle_archive_name}",
+      "bytes": "${sanitized_bundle_archive_bytes}",
+      "sha256": "${sanitized_bundle_archive_sha256}"
+    }
+  },
+  "target": {
+    "project": "${target_project}",
+    "alias": "${target_alias}",
+    "mutation_effect": "NONE"
+  },
+  "claim_ceiling": "${claim_ceiling}",
+  "boundaries": {
+    "spend_authority": "NOT_GRANTED",
+    "real_data": "PROHIBITED",
+    "public_git": "PROHIBITED",
+    "deployment": "PROHIBITED",
+    "provider_mutation": "PROHIBITED",
+    "credential_use": "PROHIBITED"
+  },
+  "checks": [
+    {
+      "name": "${check_name}",
+      "status": "PASS",
+      "evidence": "${check_evidence}"
+    }
+  ],
+  "rollback": {
+    "instruction": "${rollback_instruction}"
+  },
+  "exclusions": [
+    "${exclusion}"
+  ]
+}

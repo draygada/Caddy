@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strafe.local/schemas/candidate-integration-release-receipt.v1.schema.json",
+  "title": "Candidate integration custody and release receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "receipt_id",
+    "receipt_hash",
+    "generated_at",
+    "repository",
+    "candidate",
+    "tripwire_import",
+    "authorization",
+    "sanitized_bundle",
+    "target",
+    "claim_ceiling",
+    "boundaries",
+    "checks",
+    "rollback",
+    "exclusions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "forge.candidate-integration-release-receipt/1"
+    },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^candidate-integration-release-receipt:[0-9a-f]{64}$"
+    },
+    "receipt_hash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "root", "git_common_dir", "object_format"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "root": {"type": "string", "minLength": 1},
+        "git_common_dir": {"type": "string", "minLength": 1},
+        "object_format": {"enum": ["sha1", "sha256"]}
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch", "full_hash", "tree_hash", "clean_tracked_worktree"],
+      "properties": {
+        "branch": {"type": "string", "minLength": 1},
+        "full_hash": {"$ref": "#/$defs/gitOid"},
+        "tree_hash": {"$ref": "#/$defs/gitOid"},
+        "clean_tracked_worktree": {"const": true}
+      }
+    },
+    "tripwire_import": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provenance_manifest_path",
+        "provenance_manifest_sha256",
+        "source_commit",
+        "source_root_tree",
+        "import_commit",
+        "import_prefix",
+        "candidate_prefix_tree",
+        "byte_identity"
+      ],
+      "properties": {
+        "provenance_manifest_path": {"const": "docs/imports/tripwire-898f6167.json"},
+        "provenance_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "source_commit": {"$ref": "#/$defs/gitObjectEvidence"},
+        "source_root_tree": {"$ref": "#/$defs/gitObjectEvidence"},
+        "import_commit": {"$ref": "#/$defs/gitOid"},
+        "import_prefix": {"const": "features/tripwire"},
+        "candidate_prefix_tree": {"$ref": "#/$defs/gitOid"},
+        "byte_identity": {"const": "PROVEN"}
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["quote", "scope"],
+      "properties": {
+        "quote": {"type": "string", "minLength": 1},
+        "scope": {"type": "string", "minLength": 1}
+      }
+    },
+    "sanitized_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["declaration", "manifest", "archive"],
+      "properties": {
+        "declaration": {"const": "SANITIZED"},
+        "manifest": {"$ref": "#/$defs/fileEvidence"},
+        "archive": {"$ref": "#/$defs/fileEvidence"}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project", "alias", "mutation_effect"],
+      "properties": {
+        "project": {"type": "string", "minLength": 1},
+        "alias": {"type": "string", "minLength": 1},
+        "mutation_effect": {"const": "NONE"}
+      }
+    },
+    "claim_ceiling": {
+      "type": "string",
+      "minLength": 1
+    },
+    "boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "spend_authority",
+        "real_data",
+        "public_git",
+        "deployment",
+        "provider_mutation",
+        "credential_use"
+      ],
+      "properties": {
+        "spend_authority": {"const": "NOT_GRANTED"},
+        "real_data": {"const": "PROHIBITED"},
+        "public_git": {"const": "PROHIBITED"},
+        "deployment": {"const": "PROHIBITED"},
+        "provider_mutation": {"const": "PROHIBITED"},
+        "credential_use": {"const": "PROHIBITED"}
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status", "evidence"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "status": {"const": "PASS"},
+          "evidence": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instruction"],
+      "properties": {
+        "instruction": {"type": "string", "minLength": 1}
+      }
+    },
+    "exclusions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "gitOid": {
+      "type": "string",
+      "oneOf": [
+        {"pattern": "^[0-9a-f]{40}$"},
+        {"pattern": "^[0-9a-f]{64}$"}
+      ]
+    },
+    "gitObjectEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["oid", "content_sha256"],
+      "properties": {
+        "oid": {"$ref": "#/$defs/gitOid"},
+        "content_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "fileEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "bytes", "sha256"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}
