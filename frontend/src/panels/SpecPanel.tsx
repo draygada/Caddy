@@ -119,8 +119,8 @@ export function SpecPanel({ o }: { o: Outcome }) {
             <div aria-live="polite" className="px-3 py-[10px] border-b border-line2 grid gap-[6px]">
               <div className="text-[13px] text-muted">derived · usable pack fraction 0.80 · cruise 90 km/h (declared)</div>
               <div className="font-mono text-[14px]">cruise_W = 200 + 120 × (3.0/{s.span.toFixed(1)})² = <b>{o.cruiseW.toFixed(0)} W</b></div>
-              <div className="font-mono text-[14px]">endurance = <b>{o.endurance != null ? o.endurance.toFixed(2) : '—'} h</b> <span className="text-muted">· pack_Wh × 0.80 / cruise_W</span></div>
-              <div className="font-mono text-[14px]">range = <b>{o.range != null ? o.range.toFixed(0) : '—'} km</b> <span className="text-muted">· endurance × 90 km/h</span></div>
+              <div className="font-mono text-[14px]">endurance = <b>{o.endurance != null ? o.endurance.toFixed(2) : '·'} h</b> <span className="text-muted">· pack_Wh × 0.80 / cruise_W</span></div>
+              <div className="font-mono text-[14px]">range = <b>{o.range != null ? o.range.toFixed(0) : '·'} km</b> <span className="text-muted">· endurance × 90 km/h</span></div>
             </div>
           </>
         )}

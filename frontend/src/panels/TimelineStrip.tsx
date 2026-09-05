@@ -6,6 +6,8 @@ const ICON: Record<string, (p: { width?: number; height?: number }) => ReactElem
   design_opened: Doc, rule_pack_pinned: Gear, fixture_manifest: Folder, part_swapped: Component, part_placed: Component, part_removed: Component,
   part_moved: Pan, attr_changed: Feature, feature_added: Body, swap_confirmed: Check, state_restored: Doc, version_saved: Doc, comment_added: Doc,
   constraint_added: Sketch, constraint_removed: Sketch,
+  round_opened: Folder, offers_resolved: Folder, screening_rolled_up: Gear, cost_estimated: Feature, offer_selected: Check, match_adjudicated: Gear, export_gate_evaluated: Gear, technical_data_declared: Doc, package_built: Body, package_blocked: Body,
+  order_packet_created: Doc, order_dispatched: Pan, order_acknowledged: Check, order_exception: Doc, order_closed: Check,
 };
 
 /** Fusion-style timeline: one icon per operation, oldest left, and a marker you drag to replay the design to that point. */

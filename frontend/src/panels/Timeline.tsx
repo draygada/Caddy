@@ -53,7 +53,7 @@ export function Timeline() {
         <div className="px-[14px] py-[10px] border-t border-line2 grid gap-2">
           <div className="flex gap-2 items-center">
             <button onClick={rederiveLog} className="btn btn-lg px-[14px]">Re-derive</button>
-            <span className="text-[13px] text-muted">replays the log through the rules; nothing is deletable — undo is supersede.</span>
+            <span className="text-[13px] text-muted">replays the log through the rules; nothing is deletable · undo is supersede.</span>
           </div>
           {rederive && (
             <>

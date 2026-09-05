@@ -46,8 +46,8 @@ export function outcome(d: Design): Outcome {
   const add = (r: Rule) => { rules.push(r); if (r.cols) cols[r.node].push(r.cols); };
 
   if (!wh || endurance == null || range == null) {
-    cannot.push({ id: 'c-bat', node: 'battery', entry: '9A012.a.2', text: 'cannot fire — field empty (pack energy)' });
-    cannot.push({ id: 'c-bat2', node: 'battery', entry: '3A001.e.1.b', text: 'cannot fire — field empty (cell energy density)' });
+    cannot.push({ id: 'c-bat', node: 'battery', entry: '9A012.a.2', text: 'cannot fire · field empty (pack energy)' });
+    cannot.push({ id: 'c-bat2', node: 'battery', entry: '3A001.e.1.b', text: 'cannot fire · field empty (cell energy density)' });
   } else {
     if (endurance >= 3) add({ id: 'r1', node: 'airframe', entry: '9A012.a.2', kind: 'CCL', reason: 'NS Column 1 · endurance crossed 3.0 h', number: 'endurance ' + f2(endurance) + ' h ≥ 3.0 h', sentence: '“Unmanned aerial vehicles” having any of the following: … a.2. An endurance of 3 hours or greater;', ecfr: ECFR_DATE, eff: '2026-08-13', fr: '91 FR 52501, published 2026-08-14 · NS1 line was 1 h; the 30 min tier removed', url: 'ecfr.gov/…/part-774/supplement-1 · 9A012', atoms: ['pack_wh ' + wh.toLocaleString() + ' × 0.80 / cruise_W ' + cruiseW.toFixed(0) + ' W = ' + f2(endurance) + ' h (declared simplification)'], cols: 'NS1' });
     if (range >= 300) add({ id: 'r2', node: 'airframe', entry: '9A012 MT', kind: 'CCL', reason: 'MT · range crossed 300 km, regardless of payload', number: 'range ' + range.toFixed(0) + ' km ≥ 300 km', sentence: 'Capable of a range of 300 km or greater, regardless of payload.', ecfr: ECFR_DATE, eff: '2026-08-13', fr: '742.5(a)(2) 500 kg line kept separate · STA barred, 740.20(b)(2)(iii)', url: 'ecfr.gov/…/part-774/supplement-1 · 9A012 MT', atoms: ['range = ' + f2(endurance) + ' h × 90 km/h (declared cruise speed) = ' + range.toFixed(0) + ' km'], cols: 'MT' });
@@ -55,7 +55,7 @@ export function outcome(d: Design): Outcome {
   }
 
   if (th.hz == null) {
-    cannot.push({ id: 'c-th', node: 'thermal', entry: '6A003.b.4.b', text: 'cannot fire — field empty (frame rate)' });
+    cannot.push({ id: 'c-th', node: 'thermal', entry: '6A003.b.4.b', text: 'cannot fire · field empty (frame rate)' });
   } else {
     if (th.hz > 9) {
       add({ id: 'r3', node: 'thermal', entry: '6A003.b.4.b', kind: 'CCL', reason: 'NS Column 2 · frame rate crossed 9 Hz', number: 'frame rate ' + th.hz + ' Hz > 9 Hz', sentence: 'b.4.b. Having a frame rate of more than 9 Hz;', ecfr: ECFR_DATE, eff: '2020-10-05', fr: '85 FR 62583', url: 'ecfr.gov/…/part-774/supplement-1 · 6A003', atoms: ['hz ' + th.hz + ' · source: datasheet bytes 2210–2214'], cols: 'NS2' });
@@ -66,8 +66,8 @@ export function outcome(d: Design): Outcome {
   }
 
   if (imu.bias == null) {
-    cannot.push({ id: 'c-imu', node: 'imu', entry: '7A002.a.1.a', text: imu.inrun != null ? 'cannot fire — one-month bias stability not published (vendor quotes in-run bias instability ' + imu.inrun + ' °/h, not the field the rule reads)' : 'cannot fire — field empty (bias stability)' });
-    cannot.push({ id: 'c-mt', node: 'imu', entry: '7A102.a MT', text: 'cannot fire — drift-rate stability (1 σ) not published' });
+    cannot.push({ id: 'c-imu', node: 'imu', entry: '7A002.a.1.a', text: imu.inrun != null ? 'cannot fire · one-month bias stability not published (vendor quotes in-run bias instability ' + imu.inrun + ' °/h, not the field the rule reads)' : 'cannot fire · field empty (bias stability)' });
+    cannot.push({ id: 'c-mt', node: 'imu', entry: '7A102.a MT', text: 'cannot fire · drift-rate stability (1 σ) not published' });
   } else {
     const bias = imu.bias;
     if (bias < 0.5) {
@@ -78,15 +78,15 @@ export function outcome(d: Design): Outcome {
   }
   const arw = imu.arw;
   if (arw == null) {
-    cannot.push({ id: 'c-arw', node: 'imu', entry: '7A002.a.1.b', text: 'cannot fire — angle random walk not published' });
+    cannot.push({ id: 'c-arw', node: 'imu', entry: '7A002.a.1.b', text: 'cannot fire · angle random walk not published' });
   } else if (arw < 0.001) {
-    add({ id: 'r6u', node: 'imu', entry: 'USML XII(e)(12)(i)', kind: 'USML', reason: 'defense article · ARW under 0.001 °/√h', number: 'ARW ' + arw + ' °/√h < 0.001 °/√h', sentence: '(i) Gyroscopes … having an angle random walk of less than 0.001 degrees per square root hour;', ecfr: ECFR_DATE, eff: '2023-09-14', fr: '22 CFR 121.1 · CN: DENIAL — 126.1(d)(1)', url: 'ecfr.gov/…/title-22/part-121 · XII(e)', atoms: ['arw ' + arw + ' · SYNTHETIC part; the row is a fixture'], cols: 'USML' });
-    add({ id: 'r6see', node: 'airframe', entry: '120.11(c) see-through', kind: 'USML', reason: 'contains defense article; DDTC approval for the incorporated part', number: 'propagated from IMU', sentence: 'A defense article incorporated into a civil item remains a defense article.', ecfr: ECFR_DATE, eff: '2022-09-06', fr: '22 CFR 120.11(c) · P2 see-through', url: 'ecfr.gov/…/title-22/part-120 · 120.11', atoms: ['VIII(a)(5) only via declared designed_to_incorporate — not declared'], cols: 'USML' });
+    add({ id: 'r6u', node: 'imu', entry: 'USML XII(e)(12)(i)', kind: 'USML', reason: 'defense article · ARW under 0.001 °/√h', number: 'ARW ' + arw + ' °/√h < 0.001 °/√h', sentence: '(i) Gyroscopes … having an angle random walk of less than 0.001 degrees per square root hour;', ecfr: ECFR_DATE, eff: '2023-09-14', fr: '22 CFR 121.1 · CN: DENIAL · 126.1(d)(1)', url: 'ecfr.gov/…/title-22/part-121 · XII(e)', atoms: ['arw ' + arw + ' · SYNTHETIC part; the row is a fixture'], cols: 'USML' });
+    add({ id: 'r6see', node: 'airframe', entry: '120.11(c) see-through', kind: 'USML', reason: 'contains defense article; DDTC approval for the incorporated part', number: 'propagated from IMU', sentence: 'A defense article incorporated into a civil item remains a defense article.', ecfr: ECFR_DATE, eff: '2022-09-06', fr: '22 CFR 120.11(c) · P2 see-through', url: 'ecfr.gov/…/title-22/part-120 · 120.11', atoms: ['VIII(a)(5) only via declared designed_to_incorporate · not declared'], cols: 'USML' });
   } else if (arw <= 0.0035) {
     add({ id: 'r6', node: 'imu', entry: '7A002.a.1.b', kind: 'CCL', reason: 'NS Column 1 · angle random walk at or under 0.0035 °/√h', number: 'ARW ' + arw + ' °/√h ≤ 0.0035 °/√h', sentence: 'a.1.b. An angle random walk of 0.0035° per square root hour or less;', ecfr: ECFR_DATE, eff: '2024-04-15', fr: '89 FR 27430', url: 'ecfr.gov/…/part-774/supplement-1 · 7A002', atoms: ['arw ' + arw + ' · source: datasheet p.3'], cols: 'NS1' });
   }
 
-  if (fc.tmin == null || fc.tmax == null) cannot.push({ id: 'c-fc', node: 'fc', entry: '3A001.a.2', text: 'cannot fire — field empty (temperature grade)' });
+  if (fc.tmin == null || fc.tmax == null) cannot.push({ id: 'c-fc', node: 'fc', entry: '3A001.a.2', text: 'cannot fire · field empty (temperature grade)' });
   else if (fc.tmax > 125 || fc.tmin < -55) add({ id: 'r7', node: 'fc', entry: '3A001.a.2', kind: 'CCL', reason: 'NS Column 2 · rated for operation outside −55 °C … +125 °C', number: 'operating range ' + fc.tmin + ' … ' + fc.tmax + ' °C', sentence: 'a.2. Integrated circuits … rated for operation at an ambient temperature above 398 K (125 °C) or below 218 K (−55 °C);', ecfr: ECFR_DATE, eff: '2024-04-15', fr: '89 FR 27430 · synthetic fixture row; check the exact chapeau before relying on it', url: 'ecfr.gov/…/part-774/supplement-1 · 3A001', atoms: ['tmin ' + fc.tmin + ' · tmax ' + fc.tmax + ' · typed in the spec'], cols: 'NS2' });
 
   const merged = {} as Record<Node, DestCell[]>;

@@ -58,7 +58,7 @@ export const CATALOG: Record<PartId, Part> = {
   boson: { slot: 'thermal', name: 'Thermal sensor · 60 Hz · 640×512', mpn: '20640A012-6PAAX', vendor: 'Teledyne FLIR', origin: 'US', real: true, stock: 'in stock · 4 wk', attrs: { hz: 60, px: '640×512', elements: 327680 }, cmp: { function: 'LWIR imaging core', performance: '60 Hz · 640×512', form: '21×21×11 mm · 7.5 g', fit: 'Boson 80-pin' } },
   icm: { slot: 'imu', name: 'IMU · MEMS, consumer grade', mpn: 'ICM-42688-P', vendor: 'TDK InvenSense', origin: 'US', real: true, stock: 'in stock · 1 wk', attrs: { bias: null, arw: null, inrun: 0.17 }, cmp: { function: '6-axis inertial', performance: 'in-run bias instability 0.17 °/h · one-month bias stability not published', form: 'LGA 2.5×3 mm', fit: 'SPI on carrier' } },
   hg5700: { slot: 'imu', name: 'IMU · navigation grade', mpn: 'HG5700AB03', vendor: 'Honeywell', origin: 'US', real: true, stock: 'quote · 12 wk', attrs: { bias: 0.01, arw: 0.002 }, cmp: { function: '6-axis inertial', performance: 'bias stability 0.01 °/h · ARW 0.002 °/√h', form: '50 mm module · 65 g', fit: 'SPI on carrier' } },
-  imung: { slot: 'imu', name: 'IMU · synthetic fixture', mpn: 'IMU-NG-1', vendor: 'synthetic vendor', origin: '—', real: false, stock: 'fixture', attrs: { bias: 0.003, arw: 0.0008 }, cmp: { function: '6-axis inertial', performance: 'bias stability 0.003 °/h · ARW 0.0008 °/√h', form: '40 mm module · 48 g', fit: 'SPI on carrier' } },
+  imung: { slot: 'imu', name: 'IMU · synthetic fixture', mpn: 'IMU-NG-1', vendor: 'synthetic vendor', origin: '·', real: false, stock: 'fixture', attrs: { bias: 0.003, arw: 0.0008 }, cmp: { function: '6-axis inertial', performance: 'bias stability 0.003 °/h · ARW 0.0008 °/√h', form: '40 mm module · 48 g', fit: 'SPI on carrier' } },
   h743: { slot: 'fc', name: 'Flight controller · no crypto', mpn: 'STM32H743VIT6', vendor: 'STMicroelectronics', origin: 'MY', real: true, stock: 'in stock · 1 wk', attrs: { tmin: -40, tmax: 85, crypto: 'none' }, cmp: { function: 'flight-control MCU', performance: '480 MHz · 2 MB flash', form: 'LQFP-100', fit: 'FC carrier' } },
   h753: { slot: 'fc', name: 'Flight controller · AES-256', mpn: 'STM32H753VIT6', vendor: 'STMicroelectronics', origin: 'MY', real: true, stock: 'in stock · 1 wk', attrs: { tmin: -40, tmax: 85, crypto: 'AES-256 · declared mass-market' }, cmp: { function: 'flight-control MCU', performance: '480 MHz · 2 MB flash · AES-256', form: 'LQFP-100', fit: 'FC carrier' } },
 };
@@ -197,10 +197,10 @@ export const SCENARIO: string[] = [
   'Baseline: Kestrel, twelve parts, every column NLR (list-based). Three IMU rows cannot fire and say so.',
   'Battery slot selected; the palette shows the packs that fit it. Click one or drag it onto the bracket.',
   'Amprius pack: endurance 3.25 h crosses 3.0 h; 9A012.a.2 fires; Germany STA, Taiwan and Vietnam LIC.',
-  'Confirm: same function, performance, form and fit — attestor benji; the amber leaves the label, the spec and the timeline.',
+  'Confirm: same function, performance, form and fit · attestor benji; the amber leaves the label, the spec and the timeline.',
   'Span 3.4 m: cruise W falls to 293 W, range 319 km crosses 300 km; MT fires regardless of payload; the strip stops changing.',
   'Boson+ 640 at 60 Hz: 6A003.b.4.b fires and pulls 9A012.a.3 onto the airframe.',
-  'HG5700: one-month bias stability 0.01 °/h — the first IMU red; 7A002.a.1.a → 7A003.d.1 → 9A012.a.5; STA barred.',
+  'HG5700: one-month bias stability 0.01 °/h · the first IMU red; 7A002.a.1.a → 7A003.d.1 → 9A012.a.5; STA barred.',
   'H743 → H753: re-evaluated 37 rules · 0 changed. The zero is as loud as the red.',
 ];
 

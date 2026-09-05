@@ -1,4 +1,4 @@
-# frontend — CADdy Daddy / Tripwire shell
+# frontend · CADdy Daddy / Tripwire shell
 
 React 19 · TypeScript · Tailwind CSS v4 · Vite · zustand · vitest. Built from the Claude Design handoff (`CADdy Daddy.dc.html`) and `docs/ux/tripwire_ux_flows_and_laws_2026-09-05.md`, flows A–E plus the timeline, help overlay and demo caption bar.
 
@@ -34,6 +34,17 @@ URL switches: `?demo=1` shows the caption bar (→ / Space advances the eight-st
 - **Named views**: Home, Top, Front, Right plus saved cameras; "set" makes the current camera the home view.
 - **Units**: Document settings › Units switches m / mm / in across the span input, dimension label, dialogs, sheet and measure readouts (storage stays in metres).
 
+## Sourcing lane (F-13 to F-16, local fixtures)
+
+"Source this design" in Product status opens the sourcing flow, part by part rather than as a dashboard:
+
+1. **Before the search runs**: declared facts about the use case and the end user (what the product is for, who the end user is, where it ships, whether the pod is used on an aircraft, civil-product and BVLOS declarations, units, transport). They print on the round and beside every pick; they never change what the rule engine computed.
+2. **The pipeline** runs visibly: resolve offers from the committed catalog, walk owners (seller and manufacturer, full walk where controlled, foreign or flagged), screen every name against the Consolidated Screening List snapshot (exact and suffix-normalised only), estimate landed cost per offer against a dated tariff table. No model on this path.
+3. **Part by part** (twelve lines: four follow the placed components, eight are the fixed BOM): "This is your battery pack", its manufacturer ECCN and its export gate for the ship-to; "Where you can get it" with offers sorted status first and landed cost second, blocked visible and last; "Price against regulation" comparing the cheapest landed offer with the cheapest offer free of a review flag; and "If you pick X", the consequences of that seller: gate, screening status, duty layers and MPF minimum, the federal-buyer flag on PRC origin, declared-fact notes. Owners and the landed-cost ladder expand on the card. Picking records every other offer as declined with a reason code and its status at decline; review blocked refuses a pick until an analyst or empowered official adjudicates. A blocked export gate asks for a typed, attested authorization reference ("reference typed, not validated").
+4. **Review**: your picks with gates and landed cost; the technical-data declaration for a foreign assembler (734.13 sentence printed); "Build the package" (refuses on a missing pick, an unlifted gate, a missing declaration, or a design state that changed since the round opened; otherwise three hashes, locked disclaimers, first-run checklist, warnings); "Send the order" through a synthetic adapter exactly once, retry returns the first receipt, an exception fixture shows the lost-response path.
+
+Everything lives in `src/lib/sourcing.ts` (pure functions over fixtures) and the round state machine in the store; the backend's `open_round · resolve · select · adjudicate · declare · build_package · send` verbs replace them.
+
 ## Where the backend plugs in
 
 `src/lib/service.ts` remains the browser side of the design-simulator seam. `service.evaluate()` answers locally from `src/lib/rules.ts`, a synthetic copy of the rule table, so Diego's CAD and product-status interactions stay responsive without being presented as authoritative.
@@ -42,13 +53,13 @@ URL switches: `?demo=1` shows the caption bar (→ / Space advances the eight-st
 
 ## Layout
 
-- `src/store.ts` — zustand store: shell state, selection, swap/confirm, span, extrude, demo scenario, timeline log.
-- `src/lib/catalog.ts` — the fixture: parts, palette order, destination chart cells, key groups, seed events, scenario copy.
-- `src/lib/rules.ts` — synthetic outcome engine over a `Design` (`parts`, editable `attrs`, `span`); to be replaced by the service.
-- `src/lib/geometry.ts` — SVG axonometric renderer for the bracket and slot bodies (derived preview, never geometry truth).
-- `src/lib/viewmodel.ts` — pure derivations: slot status words, overall status, needs-attention list, destinations strip, spec fields, flag cards.
-- `src/panels/*` — TopBar, Browser (tree, eyes, drag-to-place), Viewport (+ drawing sheet, view cube, body move, drop placement), StatusPanel, SpecPanel (editable fields via NumField, swap card, span, no-change banner), Reasoning (attention, destinations, flags), Timeline, HelpOverlay, DemoBar.
-- `tests/rules.test.ts` — F1–F4, F8 flips, edited-spec and empty-slot cases, and the Postel span parser.
+- `src/store.ts` · zustand store: shell state, selection, swap/confirm, span, extrude, demo scenario, timeline log.
+- `src/lib/catalog.ts` · the fixture: parts, palette order, destination chart cells, key groups, seed events, scenario copy.
+- `src/lib/rules.ts` · synthetic outcome engine over a `Design` (`parts`, editable `attrs`, `span`); to be replaced by the service.
+- `src/lib/geometry.ts` · SVG axonometric renderer for the bracket and slot bodies (derived preview, never geometry truth).
+- `src/lib/viewmodel.ts` · pure derivations: slot status words, overall status, needs-attention list, destinations strip, spec fields, flag cards.
+- `src/panels/*` · TopBar, Browser (tree, eyes, drag-to-place), Viewport (+ drawing sheet, view cube, body move, drop placement), StatusPanel, SpecPanel (editable fields via NumField, swap card, span, no-change banner), Reasoning (attention, destinations, flags), Timeline, HelpOverlay, DemoBar.
+- `tests/rules.test.ts` · F1–F4, F8 flips, edited-spec and empty-slot cases, and the Postel span parser.
 
 ## Claim ceiling
 

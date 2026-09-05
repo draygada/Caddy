@@ -16,7 +16,10 @@ export function StatusPanel({ o }: { o: Outcome }) {
     <div data-panel="status" aria-live="polite" className="panel flex-none">
       <div className="panel-head">
         <div className="panel-title">Product status <span className="sub">· Kestrel, as designed</span></div>
-        <button onClick={openReasoning} className="btn">Reasoning · {attentionCount}</button>
+        <span className="flex gap-1">
+          <button onClick={openReasoning} className="btn">Reasoning · {attentionCount}</button>
+          <button onClick={() => useStore.getState().patch({ sourcingOpen: true })} className="btn btn-primary">Source this design</button>
+        </span>
       </div>
       <div className="p-3 grid gap-1 border-b border-line2">
         <span className="status-word text-[20px] justify-self-start" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>
