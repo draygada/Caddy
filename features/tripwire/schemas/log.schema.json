@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tripwire.local/schemas/log.schema.json",
+  "title": "log.jsonl — append-only, hash-chained, Ed25519-signed",
+  "description": "THE_BUILD.md §3.6. One JSON object per line. hash = sha256(prev || canonical_json); sig = Ed25519(hash). 22 CFR 122.5(a): nothing may be altered once recorded without recording all changes, who made them, and when.",
+  "type": "object",
+  "required": ["seq", "ts", "actor", "prev", "kind", "hash", "sig"],
+  "properties": {
+    "seq": { "type": "integer", "minimum": 0 },
+    "ts": { "type": "string", "format": "date-time" },
+    "actor": { "type": "string" },
+    "prev": { "type": ["string", "null"] },
+    "kind": {
+      "enum": ["part_added", "attr_changed", "part_swapped", "flag_declared",
+               "determination_requested", "conflict", "item_added", "item_changed"],
+      "description": "item_added/item_changed ADDED with items[]."
+    },
+    "node": { "type": ["string", "null"] },
+    "item": { "type": ["string", "null"], "description": "ADDED with items[]. Set when the event concerns an item rather than the node itself." },
+    "before": {},
+    "after": {},
+    "source": {
+      "type": ["object", "null"],
+      "properties": {
+        "sha256": { "type": ["string", "null"] },
+        "span": { "type": ["array", "null"], "items": { "type": "integer" } },
+        "quote": { "type": ["string", "null"] }
+      }
+    },
+    "intent": { "type": ["string", "null"], "description": "one line typed by the designer" },
+    "comparison": {
+      "type": ["object", "null"],
+      "description": "ADDED per Charlie's parts handoff R4: inheritance is a compared-and-confirmed event, never a copied value. There is no regulatory basis for carrying a predecessor's classification forward (15 CFR 748.3(a); 748.3(b)(3); 734.3(d)).",
+      "properties": {
+        "function": { "type": ["string", "null"] },
+        "performance": { "type": ["string", "null"] },
+        "form": { "type": ["string", "null"] },
+        "fit": { "type": ["string", "null"] },
+        "confirmed_by": { "type": ["string", "null"] },
+        "confirmed_at": { "type": ["string", "null"] }
+      }
+    },
+    "engine": {
+      "type": "object",
+      "properties": {
+        "rule_pack_sha": { "type": ["string", "null"] },
+        "ecfr_date": { "type": ["string", "null"] },
+        "fired": { "type": "array" }
+      }
+    },
+    "columns": { "type": "array" },
+    "hash": { "type": "string" },
+    "sig": { "type": "string" }
+  }
+}

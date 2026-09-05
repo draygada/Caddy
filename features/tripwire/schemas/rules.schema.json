@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tripwire.local/schemas/rules.schema.json",
+  "title": "rules.json — one object per row, MT branch and release note",
+  "description": "THE_BUILD.md §3.3. Operators are copied from the regulation's own wording: 'less (better) than' => '<'; 'less (better) than or equal to' => '<='; 'equal to or greater than' => '>='; 'equal to or less than' => '<='. An empty measured field cannot fire; the row prints cannot_fire_text. Evaluation order is hard-coded USML -> CCL -> EAR99 and is NOT expressed here.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/rule"
+  },
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "required": [
+        "id",
+        "jurisdiction",
+        "entry",
+        "url",
+        "ecfr_date"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "jurisdiction": {
+          "enum": [
+            "ITAR",
+            "EAR",
+            "USG_ADVISORY"
+          ]
+        },
+        "entry": {
+          "type": "string"
+        },
+        "applies_to": {
+          "type": "object",
+          "properties": {
+            "part_class": {
+              "type": [
+                "string",
+                "array",
+                "null"
+              ]
+            },
+            "role": {
+              "type": [
+                "string",
+                "array",
+                "null"
+              ]
+            },
+            "item_kind": {
+              "enum": [
+                "commodity",
+                "software",
+                "technology",
+                null
+              ],
+              "description": "ADDED with items[]. Null means the row applies to the part node itself."
+            }
+          }
+        },
+        "when": {
+          "$ref": "#/$defs/clause"
+        },
+        "mt": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "when": {
+              "$ref": "#/$defs/clause"
+            },
+            "entry": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cannot_fire_text": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "reasons": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "enum": [
+              "NS1",
+              "NS2",
+              "MT1",
+              "RS1",
+              "RS2",
+              "AT1",
+              "AT2",
+              "CC1",
+              "CC2",
+              "CC3",
+              "NP1",
+              "NP2",
+              "CB1",
+              "CB2",
+              "CB3",
+              "FC1",
+              "EI"
+            ]
+          }
+        },
+        "reasons_if_mt": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "sta": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "para": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "barred": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "barred_if_mt": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        },
+        "lvs_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "gbs": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "VERBATIM from the committed eCFR XML. Verified by tools/verify_rules_draft.py. Null only for non-eCFR rows, which must still carry a url."
+        },
+        "url": {
+          "type": "string"
+        },
+        "ecfr_date": {
+          "type": "string",
+          "const": "2026-09-01"
+        },
+        "rule_effective": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "2026-08-13 on 9A012 entries (91 FR 52501). Never the XML's internal CITA line."
+        },
+        "cannot_fire_text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provenance": {
+          "type": "object",
+          "properties": {
+            "build_md_row": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "candidate_text_section": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "clause": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "all": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/atomOrClause"
+          }
+        },
+        "any": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/atomOrClause"
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/atomOrClause"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/atomOrClause"
+              }
+            }
+          ],
+          "description": "§3.3 says 'not of atoms' — plural — so a list is accepted and means NOT(all of them)."
+        }
+      }
+    },
+    "atomOrClause": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/atom"
+        },
+        {
+          "$ref": "#/$defs/clause"
+        }
+      ]
+    },
+    "atom": {
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "attr",
+            "op",
+            "threshold"
+          ]
+        },
+        {
+          "required": [
+            "declared",
+            "equals"
+          ]
+        },
+        {
+          "required": [
+            "any_descendant"
+          ]
+        },
+        {
+          "required": [
+            "ancestor"
+          ]
+        },
+        {
+          "required": [
+            "part_class_in"
+          ]
+        },
+        {
+          "required": [
+            "any_item"
+          ]
+        }
+      ],
+      "properties": {
+        "attr": {
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "=="
+          ]
+        },
+        "threshold": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "declared": {
+          "type": "string"
+        },
+        "equals": {
+          "type": [
+            "boolean",
+            "string",
+            "null"
+          ]
+        },
+        "any_descendant": {
+          "type": "object",
+          "properties": {
+            "entry_in": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "jurisdiction": {
+              "type": "string"
+            }
+          }
+        },
+        "ancestor": {
+          "type": "object",
+          "properties": {
+            "jurisdiction": {
+              "type": "string"
+            }
+          }
+        },
+        "part_class_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "any_item": {
+          "type": "object",
+          "description": "ADDED with items[]. Matches when any item on this node satisfies the inner clause.",
+          "properties": {
+            "item_kind": {
+              "enum": [
+                "commodity",
+                "software",
+                "technology"
+              ]
+            },
+            "when": {
+              "$ref": "#/$defs/clause"
+            }
+          }
+        }
+      }
+    }
+  }
+}

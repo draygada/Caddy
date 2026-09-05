@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Lane guard. Harness-agnostic on purpose: it runs for Codex, Claude, an Odyssey
+# safe-mode slot (where PreToolUse hooks do not fire), and a human in a hurry alike.
+# One `.lane` file per worktree, written once at 10:00. Kill switch: rm .lane
+set -u
+LANE="$(cat .lane 2>/dev/null || true)"
+[ -z "$LANE" ] && exit 0
+BAD="$(git diff --cached --name-only | grep -Ev "^($LANE)(/|$)" || true)"
+if [ -n "$BAD" ]; then
+  echo "lane '$LANE' may not write these paths:" >&2
+  echo "$BAD" | sed 's/^/  /' >&2
+  echo "(edit .lane, or commit from the owning worktree)" >&2
+  exit 1
+fi
+exit 0
