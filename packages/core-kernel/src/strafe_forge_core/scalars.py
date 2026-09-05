@@ -261,4 +261,3 @@ def resolve_parameters(
     parameters: Mapping[str, Mapping[str, Any]],
 ) -> dict[str, ResolvedValue]:
     return ParameterEvaluator(parameters).resolve_all()
-

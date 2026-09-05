@@ -20,4 +20,3 @@ def test_three_clean_process_replays_are_semantically_identical() -> None:
         )
         observations.append(json.loads(output))
     assert observations[0] == observations[1] == observations[2]
-

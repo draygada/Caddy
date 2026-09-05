@@ -44,4 +44,3 @@ class KernelError(Exception):
     @property
     def code(self) -> str:
         return self.diagnostic.code
-

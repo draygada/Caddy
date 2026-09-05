@@ -75,4 +75,3 @@ def test_duplicate_unknown_version_payload_and_type_fail_stably() -> None:
     with pytest.raises(KernelError) as caught:
         registry.execute("test.echo", 1, wrong)
     assert caught.value.code == "PARAMETER_TYPE_MISMATCH"
-

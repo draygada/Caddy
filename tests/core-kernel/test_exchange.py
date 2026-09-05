@@ -81,4 +81,3 @@ def test_malformed_exchange_fails_with_stable_diagnostics() -> None:
     )
     assert stl.status == "FAILED"
     assert stl.diagnostics[0].code == "EXCHANGE_IMPORT_FAILED"
-

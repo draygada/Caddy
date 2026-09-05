@@ -121,4 +121,3 @@ def test_invalid_dimension_product_is_rejected() -> None:
     with pytest.raises(KernelError) as caught:
         resolve_parameters(parameters)
     assert caught.value.code == "PARAMETER_DIMENSION_INVALID"
-
