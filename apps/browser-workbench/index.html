@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0d10" />
+    <meta
+      name="description"
+      content="Strafe Forge browser CAD workbench — interaction shell for typed part proposals and derived geometry review."
+    />
+    <title>Forge · Browser workbench</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/three.module.js",
+          "three/addons/": "./vendor/three/addons/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#viewport-region">Skip to viewport</a>
+    <div class="workbench" id="workbench" data-ready="false">
+      <header class="app-header" aria-label="Document toolbar">
+        <div class="brand-lockup">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M5 8.5 16 2l11 6.5v15L16 30 5 23.5Z" />
+            <path d="m10 11.4 6-3.5 6 3.5v3.9l-6 3.5-6-3.5Zm0 7.1 6 3.5 6-3.5v3.9l-6 3.5-6-3.5Z" />
+          </svg>
+          <span class="brand-word">FORGE</span>
+        </div>
+
+        <div class="document-crumbs" aria-label="Document location">
+          <button class="icon-button compact-only" type="button" data-action="toggle-model" aria-label="Toggle model tree">
+            <span data-icon="panel-left" aria-hidden="true"></span>
+          </button>
+          <div class="document-title-wrap">
+            <span class="document-eyebrow" id="document-kind-label">DOCUMENT</span>
+            <button class="document-title" type="button" data-action="open-command-palette" aria-label="Open PartDocument commands">
+              <span id="document-name">Loading workbench</span>
+              <span data-icon="chevron-down" aria-hidden="true"></span>
+            </button>
+          </div>
+          <span class="save-state" id="save-state" aria-live="polite">Opening…</span>
+        </div>
+
+        <button class="command-trigger" type="button" data-action="open-command-palette" aria-label="Open command palette">
+          <span data-icon="search" aria-hidden="true"></span>
+          <span class="command-trigger-label">Commands</span>
+          <kbd>⌘ K</kbd>
+        </button>
+
+        <div class="header-actions">
+          <div class="truth-chip" id="authority-chip" title="Browser presentation authority">
+            <span class="truth-dot" aria-hidden="true"></span>
+            <span>TARGET · SYNTHETIC</span>
+          </div>
+          <button class="toolbar-button" type="button" data-action="import" aria-label="Import neutral file">
+            <span data-icon="upload" aria-hidden="true"></span>
+            <span class="wide-label">Import</span>
+          </button>
+          <button class="toolbar-button" type="button" data-action="open-export" aria-haspopup="dialog">
+            <span data-icon="download" aria-hidden="true"></span>
+            <span class="wide-label">Export</span>
+          </button>
+          <button class="primary-action" type="button" data-action="recompute" id="recompute-button">
+            <span data-icon="play" aria-hidden="true"></span>
+            <span>Recompute</span>
+          </button>
+          <button class="avatar-button" type="button" data-action="actor-menu" aria-label="Actor and authorization details">BH</button>
+          <button class="icon-button compact-only" type="button" data-action="toggle-properties" aria-label="Toggle properties panel">
+            <span data-icon="panel-right" aria-hidden="true"></span>
+          </button>
+        </div>
+      </header>
+
+      <div class="work-area">
+        <aside class="panel model-panel" id="model-panel" aria-label="Model and feature tree">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">STRUCTURE</span>
+              <h1>Model</h1>
+            </div>
+            <div class="panel-heading-actions">
+              <button class="icon-button" type="button" data-action="collapse-tree" aria-label="Collapse model tree">
+                <span data-icon="collapse" aria-hidden="true"></span>
+              </button>
+              <button class="icon-button" type="button" data-action="model-menu" aria-label="Model menu">
+                <span data-icon="more" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+          <div class="panel-search-wrap">
+            <span data-icon="search" aria-hidden="true"></span>
+            <input id="tree-search" type="search" autocomplete="off" placeholder="Filter features" aria-label="Filter model tree" />
+            <kbd>/</kbd>
+          </div>
+          <div class="tree-scroll" id="model-tree-content" role="tree" aria-label="Part document objects">
+            <div class="skeleton skeleton-tree" aria-hidden="true"></div>
+          </div>
+          <div class="panel-footer model-footer">
+            <button class="add-feature-button" type="button" data-action="open-add-operation">
+              <span data-icon="plus" aria-hidden="true"></span>
+              <span>Add registered operation</span>
+            </button>
+          </div>
+        </aside>
+
+        <main class="canvas-stack" id="viewport-region">
+          <section class="viewport-region" aria-label="Derived 3D geometry viewport">
+            <div class="viewport-canvas" id="viewport-canvas" tabindex="0" role="application" aria-label="3D part viewport. Use arrow keys to move through semantic entities and Enter to select.">
+              <div class="viewport-loading" id="viewport-loading">
+                <span class="loading-cube" aria-hidden="true"></span>
+                <span>Preparing derived preview</span>
+              </div>
+            </div>
+
+            <div class="viewport-topbar">
+              <div class="view-toolbar" role="toolbar" aria-label="Camera controls">
+                <button class="view-button is-active" type="button" data-view="perspective" aria-pressed="true">Perspective</button>
+                <span class="toolbar-divider" aria-hidden="true"></span>
+                <button class="icon-button" type="button" data-view="front" aria-label="Front view"><span data-icon="view-front" aria-hidden="true"></span></button>
+                <button class="icon-button" type="button" data-view="top" aria-label="Top view"><span data-icon="view-top" aria-hidden="true"></span></button>
+                <button class="icon-button" type="button" data-view="right" aria-label="Right view"><span data-icon="view-right" aria-hidden="true"></span></button>
+                <button class="icon-button" type="button" data-view="fit" aria-label="Fit part in view"><span data-icon="fit" aria-hidden="true"></span></button>
+              </div>
+              <div class="viewport-actions">
+                <button class="icon-button frosted" type="button" data-action="toggle-wireframe" aria-label="Toggle edge display" aria-pressed="true">
+                  <span data-icon="wireframe" aria-hidden="true"></span>
+                </button>
+                <button class="icon-button frosted" type="button" data-action="viewport-settings" aria-label="Viewport settings">
+                  <span data-icon="sliders" aria-hidden="true"></span>
+                </button>
+              </div>
+            </div>
+
+            <div class="revision-banner" id="revision-banner" role="status" aria-live="polite" hidden></div>
+            <div class="selection-hud" id="selection-hud" aria-live="polite" hidden></div>
+
+            <div class="viewport-corner viewport-meta" id="viewport-meta">
+              <span class="render-indicator"><i aria-hidden="true"></i><span id="renderer-label">Renderer pending</span></span>
+              <span class="meta-divider" aria-hidden="true"></span>
+              <span id="mesh-stats">—</span>
+            </div>
+            <div class="viewport-corner axis-cube" id="axis-cube" aria-label="View orientation">
+              <span class="axis-y">Y</span>
+              <span class="axis-x">X</span>
+              <span class="axis-z">Z</span>
+              <span class="axis-origin" aria-hidden="true"></span>
+            </div>
+            <div class="viewport-watermark">DERIVED PREVIEW · NOT GEOMETRY AUTHORITY</div>
+          </section>
+
+          <section class="bottom-panel" id="bottom-panel" aria-label="History and diagnostics">
+            <div class="bottom-panel-tabs" role="tablist" aria-label="Workbench details">
+              <button type="button" role="tab" id="timeline-tab" aria-controls="timeline-panel" aria-selected="true" data-bottom-tab="timeline">
+                <span data-icon="history" aria-hidden="true"></span>
+                Timeline
+              </button>
+              <button type="button" role="tab" id="diagnostics-tab" aria-controls="diagnostics-panel" aria-selected="false" data-bottom-tab="diagnostics">
+                <span data-icon="diagnostic" aria-hidden="true"></span>
+                Diagnostics
+                <span class="tab-count" id="diagnostic-count">0</span>
+              </button>
+              <button type="button" role="tab" id="selection-tab" aria-controls="selection-panel" aria-selected="false" data-bottom-tab="selection">
+                <span data-icon="cursor" aria-hidden="true"></span>
+                Selection
+              </button>
+              <span class="bottom-panel-spacer"></span>
+              <label class="fixture-state-control">
+                <span>Evidence state</span>
+                <select id="fixture-scenario" aria-label="Synthetic evidence state">
+                  <option value="current">Current</option>
+                  <option value="queued">Queued</option>
+                  <option value="running">Running</option>
+                  <option value="failed">Failed edit</option>
+                  <option value="stale">Stale result</option>
+                  <option value="worker-crashed">Worker crashed</option>
+                </select>
+              </label>
+              <button class="icon-button" type="button" data-action="toggle-bottom-panel" aria-label="Collapse history and diagnostics">
+                <span data-icon="chevron-down" aria-hidden="true"></span>
+              </button>
+            </div>
+            <div class="bottom-panel-body">
+              <div role="tabpanel" id="timeline-panel" aria-labelledby="timeline-tab" data-panel="timeline">
+                <div class="skeleton skeleton-timeline" aria-hidden="true"></div>
+              </div>
+              <div role="tabpanel" id="diagnostics-panel" aria-labelledby="diagnostics-tab" data-panel="diagnostics" hidden></div>
+              <div role="tabpanel" id="selection-panel" aria-labelledby="selection-tab" data-panel="selection" hidden></div>
+            </div>
+          </section>
+        </main>
+
+        <aside class="panel properties-panel" id="properties-panel" aria-label="Selection properties">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">INSPECTOR</span>
+              <h2>Properties</h2>
+            </div>
+            <div class="panel-heading-actions">
+              <button class="icon-button" type="button" data-action="pin-properties" aria-label="Pin properties panel" aria-pressed="true">
+                <span data-icon="pin" aria-hidden="true"></span>
+              </button>
+              <button class="icon-button" type="button" data-action="properties-menu" aria-label="Properties menu">
+                <span data-icon="more" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+          <div class="properties-scroll" id="properties-content">
+            <div class="skeleton skeleton-properties" aria-hidden="true"></div>
+          </div>
+          <div class="panel-footer property-footer" id="property-footer"></div>
+        </aside>
+      </div>
+
+      <footer class="status-bar" aria-label="Workbench status">
+        <div class="status-left">
+          <span class="status-item" id="adapter-status"><i class="status-light" aria-hidden="true"></i>Adapter pending</span>
+          <span class="status-item" id="document-units">—</span>
+          <span class="status-item" id="selection-status">Nothing selected</span>
+        </div>
+        <div class="status-right">
+          <button type="button" class="status-button" data-action="keyboard-help"><span data-icon="keyboard" aria-hidden="true"></span>Shortcuts</button>
+          <span class="status-item" id="revision-status">Revision —</span>
+        </div>
+      </footer>
+
+      <nav class="mobile-nav" aria-label="Mobile workbench sections">
+        <button type="button" data-mobile-panel="model" aria-pressed="false"><span data-icon="tree" aria-hidden="true"></span><span>Model</span></button>
+        <button type="button" data-mobile-panel="viewport" aria-pressed="true"><span data-icon="cube" aria-hidden="true"></span><span>View</span></button>
+        <button type="button" data-mobile-panel="properties" aria-pressed="false"><span data-icon="sliders" aria-hidden="true"></span><span>Details</span></button>
+        <button type="button" data-mobile-panel="history" aria-pressed="false"><span data-icon="history" aria-hidden="true"></span><span>History</span></button>
+      </nav>
+
+      <div class="palette-backdrop" id="command-palette" hidden>
+        <section class="command-palette" role="dialog" aria-modal="true" aria-labelledby="command-palette-title">
+          <h2 class="visually-hidden" id="command-palette-title">Command palette</h2>
+          <div class="palette-search">
+            <span data-icon="search" aria-hidden="true"></span>
+            <input id="command-search" type="search" autocomplete="off" placeholder="Type a command or registered operation…" aria-label="Search commands" />
+            <kbd>ESC</kbd>
+          </div>
+          <div class="command-results" id="command-results" role="listbox" aria-label="Commands"></div>
+          <div class="palette-footer">
+            <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+            <span><kbd>↵</kbd> Run</span>
+            <span class="palette-scope"><i aria-hidden="true"></i>Schema-driven registry</span>
+          </div>
+        </section>
+      </div>
+
+      <div class="modal-backdrop" id="exchange-modal" hidden>
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="exchange-title">
+          <div class="modal-heading">
+            <div>
+              <span class="panel-kicker">SERVER-AUTHORITATIVE EXCHANGE</span>
+              <h2 id="exchange-title">Export neutral artifact</h2>
+            </div>
+            <button class="icon-button" type="button" data-action="close-export" aria-label="Close export dialog"><span data-icon="close" aria-hidden="true"></span></button>
+          </div>
+          <div id="exchange-content"></div>
+        </section>
+      </div>
+
+      <input id="import-input" type="file" accept=".step,.stp,.stl" hidden />
+      <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+    </div>
+
+    <noscript>This workbench requires JavaScript to display derived geometry and typed proposals.</noscript>
+    <script type="module" src="./src/bootstrap.js"></script>
+  </body>
+</html>

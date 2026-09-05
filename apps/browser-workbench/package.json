@@ -1,0 +1,21 @@
+{
+  "name": "@strafe-forge/browser-workbench",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "dev": "npm run build && node scripts/serve.mjs",
+    "serve": "node scripts/serve.mjs",
+    "test": "node --test ../../tests/browser-workbench/*.test.js",
+    "test:perf": "node ../../tests/browser-workbench/performance.mjs",
+    "verify": "npm run check && npm test && npm run build"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  }
+}
