@@ -186,7 +186,10 @@ a { color: #e4bc72; }
 .inspector-title code { display: block; margin-top: 3px; color: #81939a; font: 7px var(--mono); }
 .selected-summary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: #10191f; }
 .selected-summary p { margin: 0; color: #98a6ab; font-size: 8px; line-height: 1.4; }
-.evidence-jump { min-width: 49px; display: grid; grid-template-columns: auto auto; align-items: center; gap: 4px; padding: 5px 6px; border: 1px solid #806334; background: #251f15; color: #e7bd73; font: 600 6px var(--mono); letter-spacing: .06em; cursor: pointer; }
+.evidence-jump { min-width: 94px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px; padding: 4px 6px; border: 1px solid #806334; background: #251f15; color: #e7bd73; text-align: left; cursor: pointer; }
+.evidence-jump strong, .evidence-jump small { display: block; white-space: nowrap; }
+.evidence-jump strong { font: 600 6px var(--mono); letter-spacing: .02em; }
+.evidence-jump small { margin-top: 2px; color: #a99778; font: 5px var(--mono); letter-spacing: .03em; }
 .evidence-jump b { font-size: 10px; line-height: .7; }
 .evidence-jump:hover { border-color: var(--gold); background: #312718; }
 .state-badge { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid currentColor; font: 700 6px var(--mono); letter-spacing: .06em; white-space: nowrap; }

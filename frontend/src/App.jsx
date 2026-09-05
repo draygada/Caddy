@@ -285,7 +285,11 @@ function Inspector({ state, onSelect }) {
   const determination = state.response.determinations[state.selectedNodeId]
   const directness = directnessFor(determination)
   const directCount = determination.direct_tripwires.length
-  const hasEvidence = directCount + determination.propagated_tripwires.length + determination.unresolved_tripwires.length > 0
+  const firstEvidence = [
+    ...determination.direct_tripwires,
+    ...determination.propagated_tripwires,
+    ...determination.unresolved_tripwires,
+  ][0]
   React.useEffect(() => {
     if (inspectorScroll.current) inspectorScroll.current.scrollTop = 0
   }, [state.scenarioId, state.selectedNodeId])
@@ -305,7 +309,7 @@ function Inspector({ state, onSelect }) {
   return (
     <aside className="panel inspector-panel" aria-label="Selected node inspector" data-selected-node={node.id}>
       <div className="inspector-title"><span className="overline">SELECTED NODE</span><h2>{presentation.label}</h2><code>{node.id}</code></div>
-      <div className="selected-summary"><StateBadge state={state.evaluationStatus === 'confirmed' ? directness : state.evaluationStatus} count={directCount} /><p>{STATUS[directness].description}</p>{hasEvidence && <button type="button" className="evidence-jump" data-testid="evidence-jump" aria-controls="inspector-content" onClick={showEvidence}><span>SOURCE</span><b aria-hidden="true">↓</b></button>}</div>
+      <div className="selected-summary"><StateBadge state={state.evaluationStatus === 'confirmed' ? directness : state.evaluationStatus} count={directCount} /><p>{STATUS[directness].description}</p>{firstEvidence && <button type="button" className="evidence-jump" data-testid="evidence-jump" data-rule-id={firstEvidence.rule_id} data-source-id="eCFR" aria-label={`Show source evidence for ${firstEvidence.rule_id} from eCFR dated ${firstEvidence.ecfr_date}`} aria-controls="inspector-content" onClick={showEvidence}><span><strong>{firstEvidence.rule_id}</strong><small>eCFR · {firstEvidence.ecfr_date}</small></span><b aria-hidden="true">↓</b></button>}</div>
       <dl className="node-meta"><div><dt>KIND / ROLE</dt><dd>{node.kind} / {node.role}</dd></div><div><dt>SYNTHETIC MPN</dt><dd>{node.mpn}</dd></div><div><dt>ARTIFACT STATUS</dt><dd>{FIXTURE_META.artifactStatus}</dd></div><div><dt>APPROVAL</dt><dd>{FIXTURE_META.approvalStatus}</dd></div></dl>
       <div className="inspector-scroll" id="inspector-content" ref={inspectorScroll}>
         {state.evaluationStatus !== 'confirmed' && <div className="stale-card"><strong>LAST RESULT IS STALE</strong><p>Checking a local stub. The confirmed fixture remains visible but must not be read as current or clear.</p></div>}

@@ -14,6 +14,13 @@ const APP_URL = `http://127.0.0.1:${APP_PORT}/`
 const DEBUG_URL = `http://127.0.0.1:${DEBUG_PORT}`
 const SCENARIOS = ['baseline', 'f1', 'f3', 'f8', 'missing']
 const EXPECTED_TRIPWIRES = { baseline: 1, f1: 1, f3: 2, f8: 2, missing: 1 }
+const EXPECTED_FIRST_EVIDENCE = {
+  baseline: { ruleId: 'CCL-9A012.a.1', sourceId: 'eCFR', date: '2026-09-01' },
+  f1: { ruleId: 'CCL-9A012.a.2', sourceId: 'eCFR', date: '2026-09-01' },
+  f3: { ruleId: 'CCL-6A003.b.4.b', sourceId: 'eCFR', date: '2026-09-01' },
+  f8: { ruleId: 'CCL-9A012.a.1', sourceId: 'eCFR', date: '2026-09-01' },
+  missing: { ruleId: 'CCL-7A002.a.1.a', sourceId: 'eCFR', date: '2026-09-01' },
+}
 const VIEWPORTS = [
   { width: 1280, height: 720, mobile: false },
   { width: 1920, height: 1080, mobile: false },
@@ -160,10 +167,16 @@ const sourceBeforeExpression = String.raw`(() => {
   const evidence = scroller.querySelector('.evidence-block')
   if (!jump || !evidence) return null
   const jumpRect = jump.getBoundingClientRect()
+  const ruleRect = jump.querySelector('strong').getBoundingClientRect()
+  const sourceRect = jump.querySelector('small').getBoundingClientRect()
   const evidenceRect = evidence.getBoundingClientRect()
   const scrollerRect = scroller.getBoundingClientRect()
   return {
     jumpVisible: jumpRect.top >= inspector.top && jumpRect.bottom <= inspector.bottom,
+    identityVisible: ruleRect.width > 0 && ruleRect.height > 0 && sourceRect.width > 0 && sourceRect.height > 0,
+    visibleText: jump.innerText.replace(/\s+/g, ' ').trim(),
+    ruleId: jump.dataset.ruleId,
+    sourceId: jump.dataset.sourceId,
     initialSourceOffset: evidenceRect.top - scrollerRect.bottom,
     scrollerTop: scrollerRect.top,
     scrollerBottom: scrollerRect.bottom,
@@ -186,13 +199,30 @@ const sourceAfterExpression = String.raw`(() => {
 
 async function verifySourceAffordance(client, scenarioId) {
   const before = await client.evaluate(sourceBeforeExpression)
+  const expected = EXPECTED_FIRST_EVIDENCE[scenarioId]
   assert.ok(before, `${scenarioId}: evidence jump and evidence block must exist`)
-  assert.equal(before.jumpVisible, true, `${scenarioId}: SOURCE jump must be initially visible`)
-  await client.evaluate(`document.querySelector('[data-testid="evidence-jump"]').click()`)
+  assert.equal(before.jumpVisible, true, `${scenarioId}: evidence identity control must be initially visible`)
+  assert.equal(before.identityVisible, true, `${scenarioId}: rule and source identity must render visibly`)
+  assert.equal(before.ruleId, expected.ruleId, `${scenarioId}: evidence control must identify the first rule`)
+  assert.equal(before.sourceId, expected.sourceId, `${scenarioId}: evidence control must identify the source`)
+  assert.ok(before.visibleText.includes(expected.ruleId), `${scenarioId}: visible control text must contain the first rule ID`)
+  assert.ok(before.visibleText.includes(`${expected.sourceId} · ${expected.date}`), `${scenarioId}: visible control text must contain source identity and date`)
+  const focused = await client.evaluate(String.raw`(() => {
+    const jump = document.querySelector('[data-testid="evidence-jump"]')
+    jump.focus()
+    return document.activeElement === jump
+  })()`)
+  assert.equal(focused, true, `${scenarioId}: evidence identity control must accept keyboard focus`)
+  await client.send('Input.dispatchKeyEvent', {
+    type: 'keyDown', key: 'Enter', code: 'Enter', keyIdentifier: 'Enter', text: '\r', unmodifiedText: '\r', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13,
+  })
+  await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', keyIdentifier: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 })
   await delay(20)
   const after = await client.evaluate(sourceAfterExpression)
-  assert.equal(after.fullyVisible, true, `${scenarioId}: SOURCE jump must reveal the full first evidence block`)
-  return { scenarioId, ...before, ...after }
+  assert.equal(after.fullyVisible, true, `${scenarioId}: keyboard activation must reveal the full first evidence block`)
+  const focusRetained = await client.evaluate(`document.activeElement === document.querySelector('[data-testid="evidence-jump"]')`)
+  assert.equal(focusRetained, true, `${scenarioId}: keyboard activation must retain focus on the control`)
+  return { scenarioId, ...before, ...after, focused, focusRetained }
 }
 
 async function verifyMarkerContinuity(client) {
@@ -372,7 +402,7 @@ async function run() {
       process.stdout.write(`${result.viewport} ${result.scenarioId}: locations=${result.locationCount}, tripwires=${result.tripwireCount}, max-overlap=${result.maximumOverlapArea.toFixed(2)}px², min-clearance=${result.minimumClearance.toFixed(2)}px\n`)
     }
     for (const result of sourceResults) {
-      process.stdout.write(`1280x720 ${result.scenarioId} source: initial-offset=${result.initialSourceOffset.toFixed(2)}px, jump-visible=${result.jumpVisible}, revealed=${result.fullyVisible}\n`)
+      process.stdout.write(`1280x720 ${result.scenarioId} source: identity=${result.ruleId}/${result.sourceId}, initial-offset=${result.initialSourceOffset.toFixed(2)}px, visible=${result.identityVisible}, keyboard-focus=${result.focused && result.focusRetained}, revealed=${result.fullyVisible}\n`)
     }
     process.stdout.write(`F3→F8 marker continuity: pending=${continuity.pending.sameNodes}, confirmed=${continuity.confirmed.sameNodes}, stale-visible=${continuity.pending.staleVisible}, pending-click=${continuity.pending.clickedNode}\n`)
     process.stdout.write(`Click synchronization: ${JSON.stringify(clicks)}\n`)
