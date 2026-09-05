@@ -1,0 +1,3 @@
+# `not_reached` is a candidate status, added to the three-status vocabulary of the 2026-08-10 contract
+
+The CCL is walked stage by stage and a later stage is analysed only when the earlier one closes negative; a candidate in a stage the order of review never reached has no ruling. Recording it as `knocked_out` would render "we did not analyse this" as "this does not apply", and `undetermined` would be a lie about facts. So the determination carries `not_reached` with no reason. (Revised 2026-09-05 with ADR-0006: the four statuses are now `supported`, `knocked_out`, `undetermined`, `not_reached`.)
