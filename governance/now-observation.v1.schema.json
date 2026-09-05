@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strafe.invalid/forge/governance/now-observation.v1.schema.json",
+  "title": "Strafe Forge browser-safe lane observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "observed_at",
+    "worktree_label",
+    "task",
+    "actor",
+    "lane_state",
+    "current_action",
+    "last_evidenced_change",
+    "blockers",
+    "checks",
+    "release"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "worktree_label": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]*$"},
+    "task": {"$ref": "#/$defs/nullableObservedIdentity"},
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "model"],
+      "properties": {
+        "owner": {"$ref": "#/$defs/nullableObservedIdentity"},
+        "model": {"$ref": "#/$defs/nullableObservedIdentity"}
+      }
+    },
+    "lane_state": {"$ref": "#/$defs/observedValue"},
+    "current_action": {"$ref": "#/$defs/observedValue"},
+    "last_evidenced_change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "occurred_at", "evidence_class", "evidence_ref"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "occurred_at": {"type": "string", "format": "date-time"},
+        "evidence_class": {"$ref": "#/$defs/evidenceClass"},
+        "evidence_ref": {"$ref": "#/$defs/safeRef"}
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "state", "summary", "clearer", "next_unblock", "evidence_class", "evidence_ref"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "state": {"enum": ["HOLD", "BLOCKED"]},
+          "summary": {"type": "string", "minLength": 1},
+          "clearer": {"type": "string", "minLength": 1},
+          "next_unblock": {"type": "string", "minLength": 1},
+          "evidence_class": {"$ref": "#/$defs/evidenceClass"},
+          "evidence_ref": {"$ref": "#/$defs/safeRef"}
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "state", "observed_at", "candidate", "evidence_class", "evidence_ref"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "state": {"enum": ["RUNNING", "PASSED", "FAILED", "UNKNOWN"]},
+          "observed_at": {"type": "string", "format": "date-time"},
+          "candidate": {"type": ["string", "null"]},
+          "evidence_class": {"$ref": "#/$defs/evidenceClass"},
+          "evidence_ref": {"$ref": "#/$defs/safeRef"}
+        }
+      }
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "candidate", "evidence_class", "evidence_ref"],
+      "properties": {
+        "state": {"enum": ["NONE", "PREVIEW", "REQUESTED", "AUTHORIZED", "APPLIED", "VERIFIED", "REJECTED", "ROLLED_BACK", "UNKNOWN"]},
+        "candidate": {"type": ["string", "null"]},
+        "evidence_class": {"$ref": "#/$defs/evidenceClass"},
+        "evidence_ref": {"$ref": "#/$defs/safeRef"}
+      }
+    }
+  },
+  "$defs": {
+    "evidenceClass": {"enum": ["MEASURED", "INFERRED", "UNKNOWN"]},
+    "safeRef": {"type": ["string", "null"], "pattern": "^(?!/|.*(?:/Users/|file://|\\\\)).*$"},
+    "observedValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "evidence_class", "evidence_ref"],
+      "properties": {
+        "value": {"type": ["string", "null"]},
+        "evidence_class": {"$ref": "#/$defs/evidenceClass"},
+        "evidence_ref": {"$ref": "#/$defs/safeRef"}
+      }
+    },
+    "nullableObservedIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "evidence_class", "evidence_ref"],
+      "properties": {
+        "id": {"type": ["string", "null"]},
+        "title": {"type": ["string", "null"]},
+        "evidence_class": {"$ref": "#/$defs/evidenceClass"},
+        "evidence_ref": {"$ref": "#/$defs/safeRef"}
+      }
+    }
+  }
+}

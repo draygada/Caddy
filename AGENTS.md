@@ -35,6 +35,8 @@ This file governs the entire Strafe Forge repository.
 - Shared root files, root lockfiles, shared schemas, generated clients, release refs, and deployment state are single-integrator paths. Propose shared-contract changes inside the lane handoff; do not edit them from a lane.
 - Before handoff, run `python3 tools/check_custody.py --lane <lane> --base <receipt.base_commit>` and attach its output, Git status, candidate commit, tests, remaining unknowns, and rollback instructions.
 - A worktree or branch name is not custody by itself. Never take over a stale receipt silently.
+- Keep the receipt's `now_observation` browser-safe and evidence-linked under `docs/contracts/now-observation.md`. Update it only for a material source observation, not as a synthetic heartbeat. Preserve `MEASURED`, `INFERRED`, and `UNKNOWN`; do not put absolute paths, prompts, transcript bodies, secrets, or sensitive snippets in that object.
+- Shipyard's Now view is a read-only projection of source receipts. Build is intended plan/design. Neither queued work nor a plan can be promoted to observed progress, and Now never becomes a second state or authorization authority.
 
 ## Verification expectations
 

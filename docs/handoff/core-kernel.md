@@ -13,6 +13,8 @@ Prove the smallest geometry-only, server-authoritative path from a normalized co
 
 The receipt is deliberately `PREPARED_UNASSIGNED`. Before mutation, the integration owner must set one exact writer/task identity, acquisition time, renewal/expiry, and confirm no competing state-domain owner.
 
+The same receipt's `now_observation` is the only lane-authored browser-safe status subset. Update it only with a material source observation, preserve `MEASURED | INFERRED | UNKNOWN`, and let it become stale when no evidence arrives. Do not project the absolute worktree path.
+
 ## Bounded first packet
 
 1. Create a reproducible spike manifest for OCP `7.9.3.1` / OCCT `7.9.3`; do not float dependencies.

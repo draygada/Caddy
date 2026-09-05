@@ -19,6 +19,8 @@ The product architecture is the closed-loop product thread:
 
 Forge owns this thread. Shipyard consumes immutable Forge/verification receipts to visualize progress, blockers, authority, evidence, and verification; it is not a writer or alternate product ledger.
 
+Shipyard's top-level **Now** (`LIVE NOW`) view is a current, observation-first projection. It is intentionally separate from Build: Build records intended scope, architecture, and roadmap; Now reports sourced execution reality even when those disagree. Forge supplies generic evidence-linked lane observations, but source Git/custody/test/release receipts remain authoritative. Missing telemetry renders `UNKNOWN`, elapsed telemetry renders `STALE`, and partial source coverage renders `PARTIAL`; neither a plan nor model activity advances status.
+
 ## Decision
 
 Use one server-authoritative geometry path for the first vertical slice:
@@ -105,6 +107,8 @@ Replicad/OpenCascade.js may later run in a Web Worker for speculative preview. A
 A change is a typed proposal against an exact base revision with explicit preconditions. Geometry proposals serialize through validation. Disjoint parameter/metadata proposals may be automatically mergeable only when dependency analysis proves commutativity and replay succeeds. Conflicts are semantic objects, not last-writer-wins overwrites.
 
 Presence and comments may converge independently. Every mutation moves through distinct `REQUESTED`, `AUTHORIZED`, `APPLIED`, `VERIFIED`, and optionally `ROLLED_BACK` records.
+
+Immediate controls exposed by a Now projection must route through Helm's authorization lifecycle. A control request is not application, and application is not verification. Forge observations may report those exact states but grant no authority. Browser-safe projections use logical checkout labels and relative evidence references; raw worktree paths, transcripts, prompts, secrets, and sensitive snippets remain source-side only.
 
 The product thread, rather than a CAD file, is the unifying record. CAD revisions and artifacts are typed nodes within it. The north star is informed only by Anduril's public ArsenalOS/Arsenal descriptions; this decision implies no affiliation, compatibility, equivalence, or knowledge of proprietary internals.
 

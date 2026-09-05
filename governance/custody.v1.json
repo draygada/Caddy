@@ -15,6 +15,7 @@
       "README.md",
       "docs/**",
       "governance/custody.v1.json",
+      "governance/now-observation.v1.schema.json",
       "tools/**",
       "package.json",
       "pnpm-lock.yaml",
@@ -29,10 +30,18 @@
       "canonical fixture admission"
     ]
   },
+  "observation_policy": {
+    "contract": "docs/contracts/now-observation.md",
+    "schema": "governance/now-observation.v1.schema.json",
+    "authority": "source Git, custody, test, verification, and release receipts; never the Now projection",
+    "freshness": "computed by the consumer at read time; never inferred from plans, queued messages, filenames, branch names, or model activity",
+    "privacy": "project only the receipt now_observation object plus separately observed public-safe identifiers; never project worktree, prompts, transcript bodies, secrets, or private path fields"
+  },
   "lanes": {
     "core-kernel": {
       "branch": "lane/core-kernel",
       "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/core-kernel",
+      "worktree_label": "forge/core-kernel",
       "write_allowlist": [
         "packages/core-kernel/**",
         "tests/core-kernel/**",
@@ -43,6 +52,7 @@
     "browser-workbench": {
       "branch": "lane/browser-workbench",
       "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/browser-workbench",
+      "worktree_label": "forge/browser-workbench",
       "write_allowlist": [
         "apps/browser-workbench/**",
         "tests/browser-workbench/**",
@@ -53,6 +63,7 @@
     "history-collaboration": {
       "branch": "lane/history-collaboration",
       "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/history-collaboration",
+      "worktree_label": "forge/history-collaboration",
       "write_allowlist": [
         "packages/history-collaboration/**",
         "tests/history-collaboration/**",
@@ -62,4 +73,3 @@
     }
   }
 }
-

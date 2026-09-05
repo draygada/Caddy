@@ -13,6 +13,8 @@ Prove a focused interaction-only browser shell that edits a typed draft, renders
 
 The receipt is deliberately `PREPARED_UNASSIGNED`. One exact writer/task identity and expiry must be assigned before mutation.
 
+The same receipt's `now_observation` is the only lane-authored browser-safe status subset. Update it only with a material source observation, preserve `MEASURED | INFERRED | UNKNOWN`, and let it become stale when no evidence arrives. Do not project the absolute worktree path. This lane does not implement Shipyard's top-level Now tab.
+
 ## Bounded first packet
 
 1. Use Three.js behind a small viewer adapter with WebGL fallback; WebGPU is an enhancement, not the compatibility floor.

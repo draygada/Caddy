@@ -40,7 +40,9 @@ The exact acceptance contract is [docs/contracts/first-target.md](docs/contracts
 - `DEFERRED`: browser-side OCCT/Replicad as a non-authoritative latency preview; Yjs for presence/comments; PMI, CAM, meshing, and FEA adapters.
 - `REJECTED` for the first contract: mesh/CSG as exact-model authority, whole-FreeCAD embedding, silent CRDT merging of B-rep operations, and dual authoritative browser/server kernels.
 
-The decision and reversal conditions are in [docs/adr/0001-kernel-reuse-and-runtime-boundary.md](docs/adr/0001-kernel-reuse-and-runtime-boundary.md). The sourced component ledger is in [docs/research/component-ledger.v1.json](docs/research/component-ledger.v1.json).
+The decision and reversal conditions are in [docs/adr/0001-kernel-reuse-and-runtime-boundary.md](docs/adr/0001-kernel-reuse-and-runtime-boundary.md). The sourced component ledger is in [docs/research/component-ledger.v1.json](docs/research/component-ledger.v1.json); the comparative evaluation and exact observed repository heads are in [docs/research/reuse-evaluation.md](docs/research/reuse-evaluation.md) and [docs/research/repository-snapshots.v1.json](docs/research/repository-snapshots.v1.json).
+
+Forge emits evidence-linked lane observations for Shipyard's top-level **Now** (`LIVE NOW`) view under [docs/contracts/now-observation.md](docs/contracts/now-observation.md). Now is observed execution; the Build document is plan/design. Neither view is a second product-thread, progress, authorization, or release authority.
 
 ## Custodied lanes
 
@@ -50,4 +52,4 @@ The decision and reversal conditions are in [docs/adr/0001-kernel-reuse-and-runt
 | Browser workbench | `lane/browser-workbench` | `/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/browser-workbench` | `apps/browser-workbench/**`, `tests/browser-workbench/**` |
 | History/collaboration | `lane/history-collaboration` | `/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/history-collaboration` | `packages/history-collaboration/**`, `tests/history-collaboration/**` |
 
-Each lane also owns only its exact receipt path. Root configuration, root dependency locks, shared contracts, architecture, deployment, and integration refs remain main-integrator custody. Run `python3 tools/check_custody.py --lane <lane> --base <bootstrap-sha>` before a handoff.
+Each lane also owns only its exact receipt path. That receipt carries a browser-safe `now_observation` subset; its private `worktree` value must never enter a browser bundle. Root configuration, root dependency locks, shared contracts, architecture, deployment, and integration refs remain main-integrator custody. Run `python3 tools/check_custody.py --lane <lane> --base <bootstrap-sha>` before a handoff.

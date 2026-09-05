@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "observed_at": "2026-09-05T15:00:00Z",
+  "method": "git ls-remote --symref <authoritative-repository> HEAD",
+  "warning": "Branch heads are observation receipts, not immutable dependency selections. Adoption requires an exact tag/commit, artifact hash, build manifest, SBOM, and license notice set.",
+  "repositories": [
+    {"name": "OCCT", "url": "https://github.com/Open-Cascade-SAS/OCCT.git", "default_branch": "master", "head": "3d097a0328e71b826377d4814ab05ec3c3d23871"},
+    {"name": "FreeCAD", "url": "https://github.com/FreeCAD/FreeCAD.git", "default_branch": "main", "head": "5986d3145cf6ea0ad6bbcab8205677c7bf390fa4"},
+    {"name": "CadQuery", "url": "https://github.com/CadQuery/cadquery.git", "default_branch": "master", "head": "98b8eefc570919e8d2a2add5bafd90f3b2bee5dd"},
+    {"name": "OCP", "url": "https://github.com/CadQuery/OCP.git", "default_branch": "master", "head": "b0495a71d10168b96cef8043ac39020a3fa45372"},
+    {"name": "build123d", "url": "https://github.com/gumyr/build123d.git", "default_branch": "dev", "head": "a7a50bfb48f6a6dbaf58740e820bb76a8c7d349d"},
+    {"name": "Replicad", "url": "https://github.com/sgenoud/replicad.git", "default_branch": "main", "head": "e4b05f67dc4e2393a876ce8c5064a9c93db05bf1"},
+    {"name": "OpenCascade.js", "url": "https://github.com/donalffons/opencascade.js.git", "default_branch": "master", "head": "5ff2b750ba4b9a9fdfbff8842712cbb562e78ce7"},
+    {"name": "taucad/opencascade.js", "url": "https://github.com/taucad/opencascade.js.git", "default_branch": "main", "head": "73b236f26ff2eb441a74adc5804d14b905049124"},
+    {"name": "JSCAD", "url": "https://github.com/jscad/OpenJSCAD.org.git", "default_branch": "master", "head": "f245ea3a5072024b789f276c6fb9ce6c3eb3fd0d"},
+    {"name": "SolveSpace", "url": "https://github.com/solvespace/solvespace.git", "default_branch": "master", "head": "952c11c0497e01e5b0ea5308c9f1e85bbe7efa02"},
+    {"name": "Three.js", "url": "https://github.com/mrdoob/three.js.git", "default_branch": "dev", "head": "c4ffe022f2a4f982b42b7da5af79a87066a138ae"},
+    {"name": "PlaneGCS-WASM wrapper", "url": "https://github.com/Salusoft89/planegcs.git", "default_branch": "main", "head": "ee9b156da9827a91a56a888a53520f63d5cffaa6"},
+    {"name": "Yjs", "url": "https://github.com/yjs/yjs.git", "default_branch": "main", "head": "e313e7c8d7615929fc3bdf6ae5b8bcc14df77861"},
+    {"name": "OpenCAMLib", "url": "https://github.com/aewallin/opencamlib.git", "default_branch": "master", "head": "95b036fe28ce6d77c97b98e5fbc337904ae49560"},
+    {"name": "STEPcode", "url": "https://github.com/stepcode/stepcode.git", "default_branch": "develop", "head": "9baa5dadaa1dcfcdc623220d865d36d61ea351e9"},
+    {"name": "Netgen", "url": "https://github.com/NGSolve/netgen.git", "default_branch": "master", "head": "51d9ce468feafc4dc748b8413e7e37e38675a514"},
+    {"name": "CalculiX", "url": "https://github.com/Dhondtguido/CalculiX.git", "default_branch": "master", "head": "3593817a4a7658eb8af9e9827fbe98f9552fbd44"},
+    {"name": "Elmer", "url": "https://github.com/ElmerCSC/elmerfem.git", "default_branch": "devel", "head": "6ba39bc158ca9296e403b40ba169eb5a70c13d07"},
+    {"name": "Gmsh", "url": "https://gitlab.onelab.info/gmsh/gmsh.git", "default_branch": "master", "head": "097c15186f589a696fa5e7db5684e2fe8975004d"}
+  ]
+}
