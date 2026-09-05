@@ -5,8 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set
 
+from .canonical import digest_json
 from .errors import DiagnosticError, require
 from .events import AppendOnlyEventLog, HistoryEvent
+from .safety import validate_persistence_safety
 from .storage import ImmutableObjectStore
 
 
@@ -68,7 +70,8 @@ class RevisionSnapshotStore:
         known = self.pointers()
         missing = [parent for parent in parents if parent not in known]
         require(not missing, "PARENT_REVISION_MISSING", "parent revision is not stored", missing=missing)
-        digest = self.objects.put("revisions", snapshot)
+        validate_persistence_safety(snapshot)
+        digest = digest_json(snapshot)
         proposed = RevisionPointer(revision_id, record_kind, digest, parents)
         existing = known.get(revision_id)
         if existing is not None:
@@ -79,6 +82,8 @@ class RevisionSnapshotStore:
                     details={"revision_id": revision_id},
                 )
             return existing
+        stored_digest = self.objects.put("revisions", snapshot)
+        require(stored_digest == digest, "HASH_MISMATCH", "immutable store returned an unexpected digest")
         self.log.append(
             SNAPSHOT_STORED,
             "REVISION",
@@ -151,4 +156,3 @@ class RevisionSnapshotStore:
             if event.value["event_type"] == REVISION_RELEASED
             and (revision_id is None or event.value["payload"]["revision_id"] == revision_id)
         ]
-

@@ -17,6 +17,7 @@ from .safety import validate_persistence_safety
 from .reviews import ReviewLedger
 from .dispatch import DispatchOutcome, SimulatedDispatchInterruption, SyntheticDispatchJournal
 from .revisions import RevisionPointer, RevisionSnapshotStore
+from .graph import Hierarchy, OrderedGraph, validate_hierarchy, validate_ordered_dag
 
 __all__ = [
     "AppendOnlyEventLog",
@@ -27,6 +28,7 @@ __all__ = [
     "DispatchOutcome",
     "EventSourcedBranches",
     "HistoryEvent",
+    "Hierarchy",
     "ImmutableObjectStore",
     "MetadataStream",
     "MergeAssessment",
@@ -34,6 +36,7 @@ __all__ = [
     "ReviewLedger",
     "RevisionPointer",
     "RevisionSnapshotStore",
+    "OrderedGraph",
     "SimulatedDispatchInterruption",
     "SyntheticDispatchJournal",
     "canonical_bytes",
@@ -42,4 +45,6 @@ __all__ = [
     "assess_merge",
     "parse_json",
     "validate_persistence_safety",
+    "validate_hierarchy",
+    "validate_ordered_dag",
 ]

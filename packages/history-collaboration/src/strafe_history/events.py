@@ -19,6 +19,11 @@ from .canonical import canonical_bytes, digest_json, parse_json
 from .errors import DiagnosticError, require
 from .safety import validate_persistence_safety
 
+try:  # POSIX hosts are the supported local persistence target for this candidate.
+    import fcntl
+except ImportError:  # pragma: no cover - exercised only on unsupported hosts.
+    fcntl = None
+
 
 _UTC_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$")
 _EVENT_PROTOCOL = "forge.history-event/1"
@@ -134,25 +139,50 @@ class AppendOnlyEventLog:
         self._lock = threading.RLock()
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
+    def _decode(self, payload: bytes) -> List[HistoryEvent]:
+        if len(payload) > self.max_bytes:
+            raise DiagnosticError("EVENT_LOG_TOO_LARGE", "event log exceeds configured read limit")
+        if payload and not payload.endswith(b"\n"):
+            raise DiagnosticError("EVENT_LOG_TRUNCATED", "event log has a partial final record")
+        events: List[HistoryEvent] = []
+        previous: Optional[str] = None
+        for sequence, raw_line in enumerate(payload.splitlines()):
+            if not raw_line:
+                raise DiagnosticError("EVENT_LOG_EMPTY_RECORD", "event log contains an empty record")
+            value = parse_json(raw_line, require_canonical=True)
+            event = validate_event(value, sequence, previous)
+            events.append(event)
+            previous = event.event_hash
+        return events
+
+    @staticmethod
+    def _flock(descriptor: int, operation: int) -> None:
+        if fcntl is None:
+            raise DiagnosticError("EVENT_LOCK_UNAVAILABLE", "POSIX file locking is required for the event store")
+        fcntl.flock(descriptor, operation)
+
+    @staticmethod
+    def _read_descriptor(descriptor: int) -> bytes:
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        chunks = []
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                return b"".join(chunks)
+            chunks.append(chunk)
+
     def read_all(self) -> List[HistoryEvent]:
         with self._lock:
             if not self.path.exists():
                 return []
-            payload = self.path.read_bytes()
-            if len(payload) > self.max_bytes:
-                raise DiagnosticError("EVENT_LOG_TOO_LARGE", "event log exceeds configured read limit")
-            if payload and not payload.endswith(b"\n"):
-                raise DiagnosticError("EVENT_LOG_TRUNCATED", "event log has a partial final record")
-            events: List[HistoryEvent] = []
-            previous: Optional[str] = None
-            for sequence, raw_line in enumerate(payload.splitlines()):
-                if not raw_line:
-                    raise DiagnosticError("EVENT_LOG_EMPTY_RECORD", "event log contains an empty record")
-                value = parse_json(raw_line, require_canonical=True)
-                event = validate_event(value, sequence, previous)
-                events.append(event)
-                previous = event.event_hash
-            return events
+            descriptor = os.open(str(self.path), os.O_RDONLY)
+            try:
+                self._flock(descriptor, fcntl.LOCK_SH)
+                return self._decode(self._read_descriptor(descriptor))
+            finally:
+                if fcntl is not None:
+                    fcntl.flock(descriptor, fcntl.LOCK_UN)
+                os.close(descriptor)
 
     def append(
         self,
@@ -164,22 +194,24 @@ class AppendOnlyEventLog:
         payload: Any,
     ) -> HistoryEvent:
         with self._lock:
-            current = self.read_all()
-            sequence = len(current)
-            previous = current[-1].event_hash if current else None
-            event = build_event(
-                sequence=sequence,
-                previous_event_hash=previous,
-                event_type=event_type,
-                aggregate_type=aggregate_type,
-                aggregate_id=aggregate_id,
-                occurred_at=occurred_at,
-                provenance=provenance,
-                payload=payload,
-            )
-            line = canonical_bytes(event.value) + b"\n"
-            descriptor = os.open(str(self.path), os.O_APPEND | os.O_CREAT | os.O_WRONLY, 0o600)
+            descriptor = os.open(str(self.path), os.O_RDWR | os.O_CREAT, 0o600)
             try:
+                self._flock(descriptor, fcntl.LOCK_EX)
+                current = self._decode(self._read_descriptor(descriptor))
+                sequence = len(current)
+                previous = current[-1].event_hash if current else None
+                event = build_event(
+                    sequence=sequence,
+                    previous_event_hash=previous,
+                    event_type=event_type,
+                    aggregate_type=aggregate_type,
+                    aggregate_id=aggregate_id,
+                    occurred_at=occurred_at,
+                    provenance=provenance,
+                    payload=payload,
+                )
+                line = canonical_bytes(event.value) + b"\n"
+                os.lseek(descriptor, 0, os.SEEK_END)
                 view = memoryview(line)
                 written = 0
                 while written < len(line):
@@ -189,6 +221,8 @@ class AppendOnlyEventLog:
                     written += count
                 os.fsync(descriptor)
             finally:
+                if fcntl is not None:
+                    fcntl.flock(descriptor, fcntl.LOCK_UN)
                 os.close(descriptor)
             return event
 

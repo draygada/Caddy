@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 import tempfile
+import concurrent.futures
 import unittest
 from pathlib import Path
 
@@ -118,7 +119,28 @@ class AppendOnlyEventLogTests(unittest.TestCase):
             with self.assertRaisesRegex(DiagnosticError, "EVENT_LOG_TRUNCATED"):
                 log.read_all()
 
+    def test_separate_log_instances_serialize_concurrent_appenders(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "history.jsonl"
+
+            def append(index: int) -> str:
+                event = AppendOnlyEventLog(path).append(
+                    "CONCURRENT_EVENT",
+                    "FIXTURE",
+                    "fixture:{0:02d}".format(index),
+                    "2026-09-05T16:00:{0:02d}Z".format(index),
+                    self.PROVENANCE,
+                    {"index": index},
+                )
+                return event.event_id
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                event_ids = list(executor.map(append, range(20)))
+            replay = AppendOnlyEventLog(path).read_all()
+            self.assertEqual([event.sequence for event in replay], list(range(20)))
+            self.assertEqual(len(set(event_ids)), 20)
+            self.assertEqual({event.value["payload"]["index"] for event in replay}, set(range(20)))
+
 
 if __name__ == "__main__":
     unittest.main()
-

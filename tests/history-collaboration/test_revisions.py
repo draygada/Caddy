@@ -43,6 +43,8 @@ class RevisionSnapshotTests(unittest.TestCase):
             self.assertEqual(first, repeated)
             with self.assertRaisesRegex(DiagnosticError, "REVISION_IMMUTABILITY_VIOLATION"):
                 store.persist("rev:one", "FIXTURE", {"record_id": "part:one", "value": "changed"}, [], PROVENANCE, "2026-09-05T16:00:02Z")
+            object_files = list((Path(directory) / "objects" / "revisions").glob("*/*.json"))
+            self.assertEqual(len(object_files), 1)
 
     def test_missing_parent_fails_before_storage_event(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -65,4 +67,3 @@ class RevisionSnapshotTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

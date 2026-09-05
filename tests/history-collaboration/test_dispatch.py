@@ -76,6 +76,15 @@ class SyntheticDispatchTests(unittest.TestCase):
             self.assertFalse(outcome.duplicate)
             self.assertEqual(self.effect_count(adapter), 1)
 
+    def test_exception_after_effect_reconciles_to_original_effect(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            adapter = self.make_adapter(directory)
+            with self.assertRaisesRegex(SimulatedDispatchInterruption, "EXCEPTION_AFTER_EFFECT"):
+                adapter.dispatch(REQUEST, SERVICE, "2026-09-05T16:00:00Z", fault="EXCEPTION_AFTER_EFFECT")
+            replayed = self.make_adapter(directory).dispatch(REQUEST, SERVICE, "2026-09-05T16:00:01Z")
+            self.assertTrue(replayed.duplicate)
+            self.assertEqual(self.effect_count(adapter), 1)
+
     def test_idempotency_conflict_external_recipient_and_agent_authorizer_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             adapter = self.make_adapter(directory)
@@ -101,4 +110,3 @@ class SyntheticDispatchTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
