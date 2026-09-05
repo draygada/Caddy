@@ -6,10 +6,11 @@
     <meta name="theme-color" content="#0b0d10" />
     <meta
       name="description"
-      content="Strafe Forge browser CAD workbench — interaction shell for typed part proposals and derived geometry review."
+      content="CADdyDaddy Candidate 0.1: bounded browser CAD and dated review-only compliance at design click."
     />
-    <title>Forge · Browser workbench</title>
+    <title>CADdyDaddy · Candidate 0.1</title>
     <link rel="stylesheet" href="./src/styles.css" />
+    <link rel="stylesheet" href="./src/candidate.css" />
     <script type="importmap">
       {
         "imports": {
@@ -28,7 +29,7 @@
             <path d="M5 8.5 16 2l11 6.5v15L16 30 5 23.5Z" />
             <path d="m10 11.4 6-3.5 6 3.5v3.9l-6 3.5-6-3.5Zm0 7.1 6 3.5 6-3.5v3.9l-6 3.5-6-3.5Z" />
           </svg>
-          <span class="brand-word">FORGE</span>
+          <span class="brand-word">CADdyDaddy</span>
         </div>
 
         <div class="document-crumbs" aria-label="Document location">
@@ -54,7 +55,7 @@
         <div class="header-actions">
           <div class="truth-chip" id="authority-chip" title="Browser presentation authority">
             <span class="truth-dot" aria-hidden="true"></span>
-            <span>TARGET · SYNTHETIC</span>
+            <span>DRAFT_REVIEW_ONLY</span>
           </div>
           <button class="toolbar-button" type="button" data-action="import" aria-label="Import neutral file">
             <span data-icon="upload" aria-hidden="true"></span>
@@ -68,7 +69,7 @@
             <span data-icon="play" aria-hidden="true"></span>
             <span>Recompute</span>
           </button>
-          <button class="avatar-button" type="button" data-action="actor-menu" aria-label="Actor and authorization details">BH</button>
+          <button class="avatar-button" type="button" data-action="actor-menu" aria-label="Candidate scope details">C0</button>
           <button class="icon-button compact-only" type="button" data-action="toggle-properties" aria-label="Toggle properties panel">
             <span data-icon="panel-right" aria-hidden="true"></span>
           </button>
@@ -168,17 +169,6 @@
                 Selection
               </button>
               <span class="bottom-panel-spacer"></span>
-              <label class="fixture-state-control">
-                <span>Evidence state</span>
-                <select id="fixture-scenario" aria-label="Synthetic evidence state">
-                  <option value="current">Current</option>
-                  <option value="queued">Queued</option>
-                  <option value="running">Running</option>
-                  <option value="failed">Failed edit</option>
-                  <option value="stale">Stale result</option>
-                  <option value="worker-crashed">Worker crashed</option>
-                </select>
-              </label>
               <button class="icon-button" type="button" data-action="toggle-bottom-panel" aria-label="Collapse history and diagnostics">
                 <span data-icon="chevron-down" aria-hidden="true"></span>
               </button>

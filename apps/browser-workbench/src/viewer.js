@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { rebindStableTarget, resolveStableEntity, stableTargets, validateRenderScene } from "./internal-scene.js";
+import { rebindStableTarget, resolveStableEntity, stableTargets, validateRenderScene } from "./scene-contract.js";
 
 const DEG_TO_RAD = Math.PI / 180;
 

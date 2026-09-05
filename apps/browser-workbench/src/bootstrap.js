@@ -1,7 +1,8 @@
 const moduleGraph = [
   "./icons.js",
-  "./internal-scene.js",
-  "./internal-fixture.js",
+  "./scene-contract.js",
+  "./compliance-client.js",
+  "./runtime-candidate.js",
   "./schema-form.js",
   "./workbench-store.js",
   "three",

@@ -1,0 +1,8 @@
+.candidate-claim { display: grid; gap: 8px; margin: 14px 0 4px; padding: 13px; border: 1px solid rgba(117,169,220,.28); border-radius: 5px; background: linear-gradient(145deg,rgba(117,169,220,.11),rgba(224,184,104,.05)); }
+.candidate-claim span,.review-only-banner strong { color: var(--info); font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em; }
+.candidate-claim strong { color: var(--text); font-size: 11px; line-height: 1.5; }
+.candidate-claim p,.compliance-card p { margin: 0; color: var(--text-muted); font-size: 9px; line-height: 1.45; }
+.review-only-banner { display: grid; gap: 4px; margin: 8px 0 12px; padding: 10px; border-left: 2px solid var(--warning); background: var(--warning-dim); color: var(--text-muted); font-size: 9px; }
+.review-only-banner strong { color: var(--warning); }
+.compliance-action { width: 100%; min-height: 36px; border: 1px solid rgba(117,169,220,.42); border-radius: 4px; background: rgba(117,169,220,.12); color: var(--text); font: 650 10px var(--font-ui); cursor: pointer; }
+.compliance-action:hover { border-color: var(--info); background: rgba(117,169,220,.2); }

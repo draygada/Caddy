@@ -1,21 +1,23 @@
-# Forge browser workbench
+# CADdyDaddy browser workbench
 
-This lane provides a browser-side PartDocument authoring and review surface. The 3D scene, multiple
-Part bodies, ordered operations, typed parameters, stable selection, and exact display-state truth
-share one workbench.
+Candidate 0.1 is a local, review-only browser surface over a server-executed core-kernel result. The
+runtime loads one deterministic fixed-transform demo through `/api/candidate`; the checked-in browser
+fixture remains source-only test data and is excluded from the built application.
 
-## Evidence ceiling
+## Integrated boundary
 
-The checked-in fixture and render model are **TARGET / SYNTHETIC code-level evidence only**. Focused
-Node tests exercise render-model validation, stable-ID mapping, typed proposal handling, and synthetic
-state transitions. They do not provide browser-rendered interaction or presentation evidence,
-responsive or accessibility evidence, memory evidence, external-SLO evidence, a core CAD kernel,
-B-rep authority, exchange correctness, AssemblyDocument support, product-thread behavior, or
-compatibility with a shared wire contract.
+Selecting a mapped geometry entity supplies an exact product thread, Forge record, occurrence path,
+record revision, and product revision to `/api/compliance-at-design-click`. The service invokes the
+imported Tripwire evaluator through `packages/compliance-bridge`, and the browser independently checks
+the returned observation and receipt hashes before rendering them.
 
-The earlier cross-lane draft was superseded. Until the integration owner supplies an admitted
-successor commit and exact receipt, this lane intentionally contains no final shared wire types or
-adapter. `src/internal-scene.js` is a private presentation model, not a protocol proposal.
+Claim ceiling: "CADdyDaddy combines one bounded browser CAD workflow with a dated, review-only
+compliance-at-design-click evaluation on the same immutable product revision."
+
+Positioning only: "We're closing the loop from idea to execution for high-stakes industries."
+
+This candidate does not claim complete CAD, mates, kinematics, interference, authoritative compliance,
+legal approval, controlled-data handling, ordering, deployment, or production readiness.
 
 ## Run and verify
 

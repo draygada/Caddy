@@ -1,5 +1,6 @@
 import { hydrateIcons, icon } from "./icons.js";
-import { createInternalWorkbenchFixture } from "./internal-fixture.js";
+import { createComplianceRequest, validateComplianceResponse } from "./compliance-client.js";
+import { loadProductCandidate } from "./runtime-candidate.js";
 import { escapeAttribute, escapeHtml, renderSchemaForm, updateSchemaValue } from "./schema-form.js";
 import { WorkbenchViewer } from "./viewer.js";
 import { WorkbenchStore } from "./workbench-store.js";
@@ -7,14 +8,15 @@ import { WorkbenchStore } from "./workbench-store.js";
 const root = document.querySelector("#workbench");
 const viewportHost = document.querySelector("#viewport-canvas");
 const query = new URLSearchParams(window.location.search);
-const fixture = createInternalWorkbenchFixture();
+const fixture = await loadProductCandidate();
 const store = new WorkbenchStore(fixture, {
-  evidenceStateKey: query.get("scenario") ?? "current",
+  evidenceStateKey: "current",
 });
 
 let treeSearch = "";
 let toastCounter = 0;
 let rendererDetails = { mode: "pending", reason: null };
+let complianceReview = { phase: "IDLE", entityId: null, payload: null, diagnostic: null };
 
 hydrateIcons(document);
 store.state.selection = { kind: "document", id: store.document.documentId };
@@ -91,14 +93,20 @@ function renderHeader() {
     "3D part viewport. Use arrow keys to move through semantic entities and Enter to select.",
   );
   const saveState = document.querySelector("#save-state");
-  saveState.textContent = store.draftCount > 0 ? `${store.draftCount} staged proposal${store.draftCount === 1 ? "" : "s"}` : "Read-only source snapshot";
+  saveState.textContent = "Immutable core revision";
   saveState.classList.toggle("has-draft", store.draftCount > 0);
 
   const authorityChip = document.querySelector("#authority-chip");
-  authorityChip.innerHTML = '<span class="truth-dot" aria-hidden="true"></span><span>TARGET · SYNTHETIC</span>';
-  authorityChip.title = `${fixture.adapterLabel}; browser interaction evidence only`;
+  authorityChip.innerHTML = '<span class="truth-dot" aria-hidden="true"></span><span>DRAFT_REVIEW_ONLY</span>';
+  authorityChip.title = `${fixture.adapterLabel}; local review support only`;
+
+  for (const selector of ["[data-action='import']", "[data-action='open-export']"]) {
+    const control = document.querySelector(selector);
+    if (control) control.hidden = true;
+  }
 
   const button = document.querySelector("#recompute-button");
+  button.hidden = fixture.capabilities?.recompute !== true;
   const inFlight = ["QUEUED", "RUNNING"].includes(store.evidenceState.recomputeStatus);
   button.disabled = store.state.mobileReviewOnly || store.state.busy || inFlight || (!store.evidenceState.editable && store.draftCount > 0);
   button.title = inFlight
@@ -122,6 +130,7 @@ function renderTree() {
   content.setAttribute("aria-label", "Part body, feature, and parameter tree");
   content.innerHTML = designTree();
   const addButton = document.querySelector("[data-action='open-add-operation']");
+  addButton.hidden = fixture.capabilities?.authoring !== true;
   addButton.disabled = !store.canEdit;
   addButton.title = store.canEdit ? "Add any compatible registered operation" : editBlockReason();
 }
@@ -215,6 +224,7 @@ function documentProperties() {
     parameters: store.document.parameters?.length ?? 0,
   };
   return `${propertyHero("body", store.document.label, store.document.documentId)}
+    <div class="candidate-claim"><span>LOCAL CANDIDATE 0.1</span><strong>${escapeHtml(fixture.candidate.claim)}</strong><p>${escapeHtml(fixture.candidate.positioning)}</p></div>
     ${editabilityNotice()}
     <section class="property-section">
       <div class="property-section-heading"><h4>Identity & contents</h4><span class="state-badge" data-state="${escapeAttribute(store.evidenceState.displayState)}">${escapeHtml(store.evidenceState.displayState)}</span></div>
@@ -231,9 +241,11 @@ function documentProperties() {
     <section class="property-section">
       <div class="property-section-heading"><h4>Provenance</h4></div>
       ${readoutList([
-        ["Presentation", fixture.evidenceCeiling],
+        ["Candidate", fixture.candidate.status],
         ["Adapter", fixture.adapterLabel],
-        ["Geometry authority", "No — derived display"],
+        ["Policy", fixture.candidate.policyState],
+        ["Claim ceiling", fixture.candidate.claimCeiling],
+        ["Geometry authority", "Core-kernel artifact; browser is derived display"],
       ])}
     </section>`;
 }
@@ -321,11 +333,40 @@ function entityProperties(selection) {
       ["Source artifact", store.evidenceState.sourceArtifactId],
       ["Mapping source", "Derived triangle range → stable IDs"],
     ])}</section>
-    <div class="notice-card"><strong>Display indices are not identity</strong><span>The hit triangle was used only to resolve this stable entity, semantic reference, feature, and body.</span></div>`;
+    <div class="notice-card"><strong>Display indices are not identity</strong><span>The hit triangle was used only to resolve this stable entity, semantic reference, feature, and body.</span></div>
+    ${compliancePanel(selection)}`;
+}
+
+function compliancePanel(selection) {
+  const binding = store.document.complianceBindings?.[selection.entityId];
+  if (!binding) return '<div class="notice-card is-danger"><strong>Compliance check blocked</strong><span>No exact record binding exists for this entity.</span></div>';
+  const review = complianceReview.entityId === selection.entityId ? complianceReview : { phase: "IDLE" };
+  if (review.phase === "RUNNING") return '<section class="property-section compliance-card"><div class="property-section-heading"><h4>Compliance at design click</h4><span class="status-badge" data-status="RUNNING">EVALUATING</span></div><p>Binding the selected entity to the immutable product revision and Tripwire evaluator.</p><button class="secondary-action" type="button" disabled>Review running</button></section>';
+  if (review.phase === "BOUND") {
+    const payload = review.payload;
+    const finding = payload.evidence.finding;
+    const receipt = payload.binding_receipt;
+    return `<section class="property-section compliance-card"><div class="property-section-heading"><h4>Compliance at design click</h4><span class="status-badge" data-status="PENDING">HUMAN REVIEW</span></div><div class="review-only-banner"><strong>DRAFT_REVIEW_ONLY</strong><span>Review support, not legal approval.</span></div>${readoutList([
+      ["Evidence outcome", finding.outcome], ["Reason codes", finding.reason_codes.join(", ")], ["Policy state", payload.policy_state],
+      ["Review gate", payload.human_review_requirement], ["Receipt", receipt.receipt_id], ["Receipt hash", receipt.receipt_hash], ["Observed", payload.observation.observed_at],
+    ])}<div class="notice-card"><strong>No legal conclusion</strong><span>${escapeHtml(payload.claim_ceiling)}. Legal effect: NONE.</span></div><button class="secondary-action" type="button" data-action="run-compliance-check">Run again on this revision</button></section>`;
+  }
+  if (review.phase === "BLOCKED") {
+    const diagnostic = review.diagnostic ?? { code: "COMPLIANCE_BLOCKED", message: "The response could not be safely bound." };
+    const receipt = review.payload?.binding_receipt;
+    return `<section class="property-section compliance-card"><div class="property-section-heading"><h4>Compliance at design click</h4><span class="status-badge" data-status="BLOCKED">BLOCKED</span></div>${readoutList([["Diagnostic", diagnostic.code], ["Policy state", "BLOCKED"], ["Receipt", receipt?.receipt_id ?? "Not accepted"]])}<div class="notice-card is-danger"><strong>No cleared result is displayed</strong><span>${escapeHtml(diagnostic.message)}</span></div><button class="secondary-action" type="button" data-action="run-compliance-check">Retry exact binding</button></section>`;
+  }
+  return `<section class="property-section compliance-card"><div class="property-section-heading"><h4>Compliance at design click</h4><span class="status-badge" data-status="PENDING">DRAFT REVIEW</span></div>${readoutList([
+    ["Product thread", binding.request.product_thread_id], ["Forge record", binding.request.forge_record_id], ["Occurrence", binding.request.occurrence_path.join(" / ")], ["Revision", binding.request.forge_revision_id],
+  ])}<div class="review-only-banner"><strong>DRAFT_REVIEW_ONLY</strong><span>Invokes Tripwire for dated review support on this immutable revision. It is not legal approval.</span></div><button class="compliance-action" type="button" data-action="run-compliance-check">Run review-only compliance check</button></section>`;
 }
 
 function renderPropertyFooter() {
   const footer = document.querySelector("#property-footer");
+  if (fixture.capabilities?.complianceAtDesignClick) {
+    footer.innerHTML = '<div class="review-mode-footer"><span data-icon="cursor" aria-hidden="true"></span><span><strong>Immutable review workflow</strong>Select mapped geometry to run the bound draft compliance check.</span></div>';
+    return;
+  }
   if (store.state.mobileReviewOnly) {
     footer.innerHTML = '<div class="review-mode-footer"><span data-icon="lock" aria-hidden="true"></span><span><strong>Review-only viewport</strong>Authoring controls are locked on mobile.</span></div>';
     return;
@@ -362,7 +403,8 @@ function renderBottomPanel() {
   const count = document.querySelector("#diagnostic-count");
   count.textContent = String(store.evidenceState.diagnostics.length);
   count.classList.toggle("has-errors", store.evidenceState.diagnostics.some((item) => item.severity === "ERROR"));
-  document.querySelector("#fixture-scenario").value = store.state.evidenceStateKey;
+  const scenario = document.querySelector("#fixture-scenario");
+  if (scenario) scenario.value = store.state.evidenceStateKey;
 }
 
 function timelineMarkup() {
@@ -386,7 +428,7 @@ function timelineMarkup() {
 
 function diagnosticsMarkup() {
   if (store.evidenceState.diagnostics.length === 0) {
-    return '<div class="empty-state"><span data-icon="check" aria-hidden="true"></span><strong>No diagnostics in this result</strong><span>The synthetic current-state fixture contains no reported warnings or errors.</span></div>';
+    return '<div class="empty-state"><span data-icon="check" aria-hidden="true"></span><strong>No core diagnostics in this result</strong><span>The admitted core-kernel execution succeeded for the displayed immutable revision.</span></div>';
   }
   return `<div class="diagnostic-list">${store.evidenceState.diagnostics.map((item) => `<button class="diagnostic-row" type="button" data-diagnostic-id="${escapeAttribute(item.diagnosticId)}">
     <span class="diagnostic-icon">${icon(item.severity === "ERROR" ? "error" : "warning")}</span><span class="diagnostic-body"><strong>${escapeHtml(humanize(item.code))}</strong><span>${escapeHtml(item.message)}</span></span><span class="diagnostic-target">${escapeHtml(item.operationId ?? item.relatedIds.join(", ") ?? "Document")}</span><code class="diagnostic-code">${escapeHtml(item.code)}</code>
@@ -443,7 +485,7 @@ function renderViewportMeta() {
 
 function renderStatusBar() {
   const adapter = document.querySelector("#adapter-status");
-  adapter.innerHTML = `<i class="status-light ${store.evidenceState.adapterOnline ? "is-online" : "is-offline"}" aria-hidden="true"></i>${escapeHtml(store.evidenceState.adapterOnline ? fixture.adapterLabel : "Synthetic worker unavailable")}`;
+  adapter.innerHTML = `<i class="status-light ${store.evidenceState.adapterOnline ? "is-online" : "is-offline"}" aria-hidden="true"></i>${escapeHtml(store.evidenceState.adapterOnline ? fixture.adapterLabel : "Core adapter unavailable")}`;
   document.querySelector("#document-units").textContent = `${store.document.units.length} · ${store.document.units.angle}`;
   const selection = store.state.selection;
   document.querySelector("#selection-status").textContent = selection?.kind === "entity" ? shortId(selection.entityId) : selection?.kind === "node" ? shortId(selection.nodeId) : selection ? humanize(selection.kind) : "Nothing selected";
@@ -660,6 +702,7 @@ async function handleAction(action, button) {
     case "close-export": store.patch({ exportOpen: false }, "export"); break;
     case "stage-export": stageExport(); break;
     case "recompute": await simulateRecompute(); break;
+    case "run-compliance-check": await runComplianceCheck(); break;
     case "open-diagnostics": store.setBottomTab("diagnostics"); if (store.state.mobileReviewOnly) store.setMobilePanel("history"); break;
     case "clear-drafts": {
       const restoreCurrent = !store.evidenceState.editable && store.draftCount > 0;
@@ -680,7 +723,7 @@ async function handleAction(action, button) {
     case "isolate-node": store.isolateNode(button.dataset.nodeId); break;
     case "show-all-nodes": store.showAllNodes(); break;
     case "keyboard-help": showToast("Keyboard navigation", "⌘K commands · / tree filter · viewport arrows browse stable entities · Enter selects · Esc clears.", "info", 6500); break;
-    case "actor-menu": showToast("Actor context", "Fixture actor only. Authorization remains an external source-owned record.", "info"); break;
+    case "actor-menu": showToast("Candidate context", "Local Candidate 0.1. Review support only; no external action or legal approval.", "info"); break;
     default: break;
   }
 }
@@ -714,6 +757,7 @@ function stageSchemaControl(control) {
 }
 
 async function simulateRecompute() {
+  if (fixture.capabilities?.recompute !== true) return;
   if (store.state.busy || store.state.mobileReviewOnly) return;
   const invalid = Object.values(store.state.drafts.parameters).some((value) => Number(value) <= 0);
   store.setBusy(true);
@@ -733,6 +777,36 @@ async function simulateRecompute() {
   store.setBusy(false);
 }
 
+async function runComplianceCheck() {
+  const selection = store.state.selection;
+  let request;
+  try {
+    request = createComplianceRequest(store.document, selection, store.evidenceState.displayedRevisionId);
+  } catch (error) {
+    complianceReview = { phase: "BLOCKED", entityId: selection?.entityId ?? null, payload: null, diagnostic: { code: error.code ?? "SELECTION_BINDING_INVALID", message: error.message } };
+    renderProperties();
+    hydrateIcons(document.querySelector("#properties-panel"));
+    return;
+  }
+  complianceReview = { phase: "RUNNING", entityId: selection.entityId, payload: null, diagnostic: null };
+  renderProperties();
+  hydrateIcons(document.querySelector("#properties-panel"));
+  try {
+    const response = await fetch("/api/compliance-at-design-click", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(request) });
+    const payload = await response.json();
+    const validated = await validateComplianceResponse(payload, request);
+    complianceReview = validated.displayState === "BOUND"
+      ? { phase: "BOUND", entityId: selection.entityId, payload, diagnostic: null }
+      : { phase: "BLOCKED", entityId: selection.entityId, payload, diagnostic: payload.diagnostic };
+    showToast(validated.displayState === "BOUND" ? "Review evidence bound" : "Compliance check blocked", validated.displayState === "BOUND" ? "DRAFT_REVIEW_ONLY evidence is ready for human review." : payload.diagnostic?.code ?? "No result was accepted.", validated.displayState === "BOUND" ? "info" : "danger");
+  } catch (error) {
+    complianceReview = { phase: "BLOCKED", entityId: selection.entityId, payload: null, diagnostic: { code: error.code ?? "COMPLIANCE_RESPONSE_REJECTED", message: error.message ?? "The response could not be safely bound." } };
+    showToast("Compliance response rejected", complianceReview.diagnostic.code, "danger");
+  }
+  renderProperties();
+  hydrateIcons(document.querySelector("#properties-panel"));
+}
+
 function stageExport() {
   if (store.evidenceState.displayState !== "CURRENT" || store.evidenceState.recomputeStatus !== "SUCCEEDED") return;
   const format = store.state.exportFormat;
@@ -741,6 +815,7 @@ function stageExport() {
 }
 
 function handleImportFile(file) {
+  if (fixture.capabilities?.import !== true) return;
   if (!file) return;
   if (store.state.mobileReviewOnly) {
     showToast("Import blocked", "Mobile layout is review-only.", "danger");
@@ -762,10 +837,6 @@ function filteredCommands() {
     command("view:top", "View · Top", "Align the camera to the top datum.", "Viewport", "view-top", "2"),
     command("view:show-all", "Visibility · Show all", "Restore every PartDocument body.", "Viewport", "eye", ""),
     command("panel:diagnostics", "Open diagnostics", "Review stable codes and blocked dependents.", "Review", "diagnostic", ""),
-    command("state:current", "Evidence fixture · Current", "Show a matching succeeded display state.", "Evidence fixtures", "check", "TARGET"),
-    command("state:failed", "Evidence fixture · Failed / last-valid", "Show attempted and producing revisions distinctly.", "Evidence fixtures", "error", "TARGET"),
-    command("state:stale", "Evidence fixture · Stale", "Block authoring on an older displayed artifact.", "Evidence fixtures", "warning", "TARGET"),
-    command("state:worker-crashed", "Evidence fixture · Worker crashed", "Exercise recovery without false success.", "Evidence fixtures", "refresh", "TARGET"),
   ];
   const descriptorCommands = fixture.descriptors.map((descriptor) => ({
     id: `add:${descriptor.registryKey}`,

@@ -1,5 +1,5 @@
 import { schemaDefault } from "./schema-form.js";
-import { rebindStableTarget } from "./internal-scene.js";
+import { rebindStableTarget } from "./scene-contract.js";
 
 export class WorkbenchStore {
   constructor(fixture, options = {}) {

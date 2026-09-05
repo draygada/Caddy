@@ -1,0 +1,40 @@
+{
+  "schema_version": "caddydaddy.sanitized-bundle/1",
+  "candidate": "0.1",
+  "required_trees": [
+    "apps/browser-workbench/dist",
+    "apps/product-service/product_service",
+    "packages/core-kernel/src/strafe_forge_core",
+    "packages/compliance-bridge/compliance_bridge"
+  ],
+  "required_files": [
+    "apps/product-service/README.md",
+    "apps/product-service/bundle-manifest.v1.json",
+    "apps/browser-workbench/THIRD_PARTY_NOTICES.md",
+    "packages/core-kernel/pyproject.toml",
+    "packages/core-kernel/uv.lock",
+    "packages/core-kernel/THIRD_PARTY_NOTICES.md",
+    "packages/caddydaddy-contracts/schemas/compliance-input.v1.schema.json",
+    "packages/caddydaddy-contracts/schemas/compliance-observation.v1.schema.json",
+    "packages/caddydaddy-contracts/schemas/compliance-binding-receipt.v1.schema.json",
+    "features/tripwire/backend/engine/evaluate.py"
+  ],
+  "excluded": [
+    "features/tripwire/data/**",
+    "features/tripwire/data/catalog/consolidated_screening_list.csv",
+    "features/tripwire/data/catalog/PX4_PARTS_DATABASE.csv",
+    "packages/history-collaboration/**",
+    "governance/**",
+    "docs/**",
+    "tests/**",
+    ".git/**",
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/*.pyo",
+    "**/.env*",
+    "**/*credential*",
+    "**/*secret*",
+    "apps/browser-workbench/src/internal-fixture.js",
+    "apps/browser-workbench/src/internal-scene.js"
+  ]
+}
