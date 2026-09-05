@@ -100,7 +100,7 @@ export function Sourcing({ o }: { o: Outcome }) {
     return (
       <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
         {header}
-        <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start justify-center" style={{ gridTemplateColumns: 'minmax(0,560px) minmax(0,420px)' }}>
+        <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start justify-center" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))' }}>
           <div className="panel">
             <div className="panel-head"><div className="panel-title">Before the search runs</div><span className="text-[12px] text-muted">declared facts · badged, never inferred</span></div>
             <div className="p-3 grid gap-3 text-[13px]">
@@ -171,7 +171,7 @@ export function Sourcing({ o }: { o: Outcome }) {
           <button onClick={() => { s.openRound(r.shipTo, r.qty, r.mode, r.intake); setK(null); }} className="btn btn-primary">Open round r{parseInt(r.id.slice(1), 10) + 1}</button>
         </div>
       )}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-line2 bg-surface">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-line2 bg-surface">
         <span className="font-mono text-[13px] font-bold whitespace-nowrap">{done ? 'review' : 'part ' + (k + 1) + ' of ' + n}</span>
         <div className="flex-1 flex gap-[3px]">
           {r.lines.map((l, i) => <button key={l.id} onClick={() => setK(i)} title={l.description} className="h-2 flex-1 rounded-[2px] border-0 cursor-pointer" style={{ background: i === k ? 'var(--focus)' : r.selections[l.id] ? 'var(--accent)' : 'var(--m2)' }} />)}
@@ -183,7 +183,7 @@ export function Sourcing({ o }: { o: Outcome }) {
       </div>
 
       {!done && line && gate && (
-        <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start" style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.5fr)' }}>
+        <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))' }}>
           <div className="grid gap-3 content-start">
             <div className="panel">
               <div className="panel-head"><div className="panel-title">This is your {slot ? GENERIC_NAME[slot as Slot].toLowerCase() : line.description.split(' · ')[0].toLowerCase()}</div><span className="text-[12px] text-muted">× {line.qtyPerUnit * r.qty}</span></div>
@@ -323,7 +323,7 @@ export function Sourcing({ o }: { o: Outcome }) {
       )}
 
       {done && (
-        <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start" style={{ gridTemplateColumns: 'minmax(0,1.2fr) minmax(0,1fr)' }}>
+        <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))' }}>
           <div className="panel">
             <div className="panel-head"><div className="panel-title">Your picks <span className="sub">· {selectedCount} of {n}</span></div></div>
             <div className="grid text-[13px]">
