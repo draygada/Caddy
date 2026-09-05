@@ -28,6 +28,10 @@ ENVELOPE_SCHEMA_VERSION = "forge-classification.envelope/1"
 TOP_K = 8
 
 
+class ModelUnavailable(Exception):
+    """Both proposal calls abstained: there is no analysis to record, so nothing is recorded."""
+
+
 class Insufficient(Exception):
     def __init__(self, band: str, missing_fields: list[str], blocking_fields: list[str]):
         super().__init__(f"readiness {band}: blocking={blocking_fields} missing={missing_fields}")
@@ -285,6 +289,12 @@ class _Run:
         elements, notes = reconcile.normalise_elements(judge_response.get("elements"), pack=self.pack,
                                                        allowed=reconcile.JUDGE_DISPOSITIONS, who="judge", default_unit=provision)
         cand["reference_notes"].extend(notes)
+        # An open question the advocate named survives the judge: a ruling that drops it cannot make it disappear.
+        judged_ids = {e["element_id"] for e in elements}
+        for el in case:
+            if el["missing_fact"] and el["element_id"] not in judged_ids:
+                elements.append({**el, "disposition": "indeterminate", "citation": None})
+                cand["reference_notes"].append(f"element {el['element_id']} carried from the advocate: the judge did not address its missing fact")
         challenge = judge_response.get("challenge")
         if not (isinstance(challenge, dict) and challenge.get("resolution") in ("sustained", "rejected")):
             challenge = None
@@ -324,9 +334,13 @@ def classify(snapshot: FactSnapshot, pack: ReferencePack, model: ModelClient, bu
     run = _Run(snapshot, pack, model, budget, progress)
 
     # W1 — USML proposal (retry once, then the step is undemonstrated)
-    usml = run.proposals(run.call("usml_propose", _usml_propose_prompt(snapshot, pack, retry=False)), list_name="USML")
+    first = run.call("usml_propose", _usml_propose_prompt(snapshot, pack, retry=False))
+    usml = run.proposals(first, list_name="USML")
     if not usml:
-        usml = run.proposals(run.call("usml_propose", _usml_propose_prompt(snapshot, pack, retry=True)), list_name="USML")
+        second = run.call("usml_propose", _usml_propose_prompt(snapshot, pack, retry=True))
+        usml = run.proposals(second, list_name="USML")
+        if isinstance(first, Abstain) and isinstance(second, Abstain):
+            raise ModelUnavailable(f"usml_propose: {first.reason}; retry: {second.reason}")
     for cand in usml:
         run.analyse(cand)
 

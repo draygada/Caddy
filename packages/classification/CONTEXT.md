@@ -52,7 +52,7 @@ The candidate's place in the order of review: `usml_enumerated`, `specially_desi
 _Avoid_: verdict, result, decision
 
 **Knockout / negative finding**:
-A candidate ruled out on a cited element failure. `knocked_out` is the schema value; on any surface an outsider sees the words are "ruled out" or "negative finding".
+A candidate ruled out on a cited element failure. `knocked_out` is the schema value; any surface that renders the board for an outsider says "ruled out" or "negative finding". Rendering (a memo) is outside this lane.
 _Avoid_: "knocked out" in prose, rejected, eliminated
 
 **Pursuit**:
@@ -79,7 +79,7 @@ _Avoid_: confidence, score, percentage
 When the claim class is ambiguous, which instrument the ambiguity calls for: `cj` (jurisdiction is the question), `ccats` (the entry is the question), `counsel`.
 
 **Concern**:
-An adversarial reading of the stated use that surfaces on the memo and can reach no candidate's status. Has no path to a disposition by construction.
+An adversarial reading of the stated use that surfaces on the board and can reach no candidate's status. Has no path to a disposition by construction.
 
 **Legal tension**:
 One of the shortcuts the analysis records for counsel and never applies: strictest regime supersedes, whole-regime dismissal, destination as classification, use as dispositive.
