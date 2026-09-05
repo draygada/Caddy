@@ -10,9 +10,15 @@ The current denominator and claim ceiling live outside this repository at:
 
 `/Users/benjihuh/Programming/Strafe/CAD_CAPABILITY_ATLAS_2026.md`
 
-The bootstrap observed SHA-256 is `c84b2726040b1e09847dda853818c75958a007b3d82bee3d89f83440d24f2877`. See [docs/BASELINE.md](docs/BASELINE.md) for the binding and drift rule. Do not copy the denominator into this repository.
+The bootstrap observed SHA-256 is `1f231b57dd2cb7fbe1cb427725d00890b6c9454ee25dba90a55a767bdcc44cb2`. See [docs/BASELINE.md](docs/BASELINE.md) for the binding and drift rule. Do not copy the denominator into this repository.
 
 Forge's unifying object is a versioned product thread from requirement/scenario through design, product structure, process/work order, assembly/inspection/test, and immutable release evidence. CAD is one governed module in that thread, not the whole product. Anduril ArsenalOS is a public-principles inspiration only; Forge claims no affiliation, compatibility, equivalence, or knowledge of proprietary internals.
+
+The initial market is a small manufacturer, supplier, new program, or engineering team forming its operating institution before it has an integrated PLM/ERP/MES/simulation/compliance organization. The wedge is zero-to-first-controlled-release for low-volume/high-mix work, beginning with an RFQ, requirement packet, drawing, imported model, or rough concept. Integrations are incremental; neutral artifacts and explicit human gates remain first-class.
+
+“We’re closing the loop from idea to execution for high-stakes industries” is approved positioning. It does not make any individual feature proven. The loop is `idea/need -> requirements -> engineering model -> product structure -> sourcing/process -> authorized order send-off -> build -> inspect/test -> authorized release -> operational feedback`. Forge owns its versioned product thread; Shipyard may visualize progress, blockers, authority, evidence, and verification without becoming a source of product truth.
+
+The hackathon order proof is synthetic/local only: an RFQ, purchase order, or internal work order binds the exact approved design/BOM revision, recipient, quantity, hashed attachments, approvals, idempotency key, dispatch/acknowledgment/exception state, delivery/receiving, inspection, and closeout. Any real external send is a separately authorized communication.
 
 ## First target contract
 

@@ -11,6 +11,14 @@ The first contract combines exact solid modeling, constraints, feature replay, s
 
 The canonical capability denominator and claim ceiling are referenced in `docs/BASELINE.md` and are not reproduced here.
 
+Forge's initial customer is forming an engineering/manufacturing institution: a small manufacturer, supplier, new program, or engineering team with an RFQ or design need but without an integrated enterprise stack. The architecture must make a first controlled release traceable before it tries to replace incumbent PLM/ERP/MES systems. Low-volume/high-mix work, neutral interchange, explicit unknowns, and incremental adapters are the compatibility baseline.
+
+The product architecture is the closed-loop product thread:
+
+`idea/need -> requirements -> engineering model -> product structure -> sourcing/process -> authorized order send-off -> build -> inspect/test -> authorized release -> operational feedback`
+
+Forge owns this thread. Shipyard consumes immutable Forge/verification receipts to visualize progress, blockers, authority, evidence, and verification; it is not a writer or alternate product ledger.
+
 ## Decision
 
 Use one server-authoritative geometry path for the first vertical slice:
@@ -45,6 +53,8 @@ Forge owns:
 - evidence classification and the boundary between current, last-valid, stale, and failed results.
 
 The history/collaboration lane owns the initial schema for these records and the cross-stage chain from requirement/scenario through design, BOM/supply, process/work order, assembly/inspection/test, and immutable release evidence. The core-kernel lane owns geometry execution and geometry evidence only. The browser-workbench lane owns interaction and presentation only.
+
+The first product-thread schema accepts sourced RFQ/requirements/drawings/imported models, records notional versus observed BOM/make-buy/supply/process/inspection state, and packages neutral release artifacts. It also defines an order envelope tied to an exact approved design/BOM revision, recipient, quantity, content-addressed attachments, approvals, idempotency key, dispatch lifecycle, acknowledgment/exception, delivery/receiving, inspection, and closeout. It may identify missing evidence and route a human decision. It may not claim a live external integration or make a legal, export-control, certification, safety, or manufacturing-release conclusion automatically.
 
 ### Borrowed responsibilities
 
@@ -97,6 +107,12 @@ A change is a typed proposal against an exact base revision with explicit precon
 Presence and comments may converge independently. Every mutation moves through distinct `REQUESTED`, `AUTHORIZED`, `APPLIED`, `VERIFIED`, and optionally `ROLLED_BACK` records.
 
 The product thread, rather than a CAD file, is the unifying record. CAD revisions and artifacts are typed nodes within it. The north star is informed only by Anduril's public ArsenalOS/Arsenal descriptions; this decision implies no affiliation, compatibility, equivalence, or knowledge of proprietary internals.
+
+The market wedge is institution formation: `source packet -> authorized order send-off -> first controlled, manufacturable, verifiable release`. This does not enlarge the kernel. Supply, order, process, quality, and compliance records remain history/provenance nodes or authorized external-adapter observations; the kernel still returns geometry facts only.
+
+Order send-off uses a transactional outbox-style state machine and adapter idempotency contract. The local proof injects pre-dispatch failure, post-dispatch/lost-response failure, retry, duplicate request, adapter exception, and reconciliation. A repeated idempotency key must return the original dispatch identity rather than create another observable send effect. `UNKNOWN` cannot be treated as failed or retried blindly. The synthetic adapter grants no authority for a real communication.
+
+Operational feedback creates a sourced proposal against an exact released revision; it cannot silently mutate the released artifact or skip requirements/change review. “We’re closing the loop from idea to execution for high-stakes industries” is valid positioning, while each concrete capability remains evidence-bounded. Nothing in this ADR asserts certification, regulatory approval, universal coverage, safe production output, or validated solver accuracy.
 
 ## Alternatives evaluated
 

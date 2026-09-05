@@ -1,10 +1,10 @@
 {
   "schema_version": "1.0.0",
-  "observed_at": "2026-09-05T14:47:00Z",
+  "observed_at": "2026-09-05T14:58:49Z",
   "status": "bootstrap-screening-not-adoption",
   "baseline": {
     "path": "/Users/benjihuh/Programming/Strafe/CAD_CAPABILITY_ATLAS_2026.md",
-    "sha256": "c84b2726040b1e09847dda853818c75958a007b3d82bee3d89f83440d24f2877"
+    "sha256": "1f231b57dd2cb7fbe1cb427725d00890b6c9454ee25dba90a55a767bdcc44cb2"
   },
   "legal_note": "License identifiers are technical screening, not legal advice. Exact release artifacts and transitive notices require review before adoption or distribution.",
   "components": [
