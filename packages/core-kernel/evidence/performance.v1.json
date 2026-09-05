@@ -1,0 +1,27 @@
+{
+  "schema_version": "forge.core-performance-evidence/1",
+  "observed_at": "2026-09-05T18:55:38.551468Z",
+  "runtime_manifest": "packages/core-kernel/evidence/runtime-manifest.v1.json",
+  "method": {
+    "clock": "time.perf_counter_ns",
+    "warmup_iterations": 1,
+    "measured_iterations": 50,
+    "process": "single process, sequential, OCCT parallel algorithms disabled; measured without a concurrent test or benchmark process",
+    "scope": "kernel-call latency only; excludes interpreter startup, IPC, storage, network, and browser rendering"
+  },
+  "distributions": {
+    "bracket_recompute_warm": {
+      "minimum_ms": 43.066,
+      "median_ms": 45.297,
+      "p95_ms": 47.33,
+      "maximum_ms": 48.671
+    },
+    "two_component_multibody_assembly_warm": {
+      "minimum_ms": 2.833,
+      "median_ms": 2.918,
+      "p95_ms": 3.037,
+      "maximum_ms": 3.321
+    }
+  },
+  "claim_ceiling": "One measured local arm64 runtime; no large-model, concurrency, cold-start, container, cross-platform, or service-SLO claim"
+}
