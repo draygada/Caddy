@@ -60,13 +60,16 @@ const BASE_NODES = [
       frame_rate_hz: syntheticAttr(9, 'Hz'),
       fpa_elements: syntheticAttr(327680, 'elements'),
       fpa_qualifies_6A002_a_3_f: syntheticAttr(true),
-      min_ifov_mrad_per_pixel: syntheticAttr(6, 'mrad/pixel'),
+      min_horizontal_or_vertical_ifov_mrad: syntheticAttr(6, 'mrad'),
       fixed_focal_length_nonremovable: syntheticAttr(true),
       direct_view_display: syntheticAttr(false),
       facility_to_obtain_viewable_image: syntheticAttr(true),
       single_application_not_user_modifiable: syntheticAttr(false),
-      designed_for_civilian_vehicle_under_3t: syntheticAttr(false),
-      civil_vehicle_only_operable_when_installed: syntheticAttr(false),
+      designed_for_civilian_passenger_land_vehicle: syntheticAttr(false),
+      placement_and_configuration_solely_driver_assistance: syntheticAttr(false),
+      operable_only_in_intended_civil_vehicle: syntheticAttr(false),
+      intended_civil_vehicle_gross_weight_kg: syntheticAttr(5000, 'kg'),
+      operable_only_in_authorized_maintenance_test_facility: syntheticAttr(false),
       removal_disables_camera: syntheticAttr(false),
     },
     declared: { civil_product: false },
@@ -120,7 +123,7 @@ export const DESIGN_FIXTURES = Object.freeze({
     updateAttr(design, 'kestrel', 'endurance_h', 3.68, 'h', 'Derived as 1300 Wh × 0.85 ÷ 300 W.')
   }),
   f3: makeDesign((design) => updateAttr(design, 'nose_thermal', 'frame_rate_hz', 60, 'Hz')),
-  f8: makeDesign(),
+  f8: makeDesign((design) => updateAttr(design, 'nose_thermal', 'frame_rate_hz', 60, 'Hz')),
   missing: makeDesign(),
 })
 
@@ -181,11 +184,11 @@ export const KESTREL_SLOTS = Object.freeze([
 ])
 
 const DESIGN_REVISIONS = Object.freeze({
-  baseline: 'sha256:dce8e8ee9202e69e8afc9b5c21bb03ab0a464aa74a7fd8f72aaa9feb56f5e37a',
-  f1: 'sha256:627f2f29af653eaf63a9d0d120d9428fba03abe8514b26ce4889d843dd8be6be',
-  f3: 'sha256:ce0a03e8c3a58d01e128114a28e970f3daf232709b19c6bc1a8700411822e9d2',
-  f8: 'sha256:dce8e8ee9202e69e8afc9b5c21bb03ab0a464aa74a7fd8f72aaa9feb56f5e37a',
-  missing: 'sha256:dce8e8ee9202e69e8afc9b5c21bb03ab0a464aa74a7fd8f72aaa9feb56f5e37a',
+  baseline: 'sha256:8afae293975c03febc13d6351ecea0eeb133b7f4e3102e04d8bf591470a101ba',
+  f1: 'sha256:1c7e2e45fa91a7dbba26595b616a208a4e8ac9c69483d17e201c4304e175e1e2',
+  f3: 'sha256:e29a981b7dab10311ee046ab2f6d4168dc19aacd83f555fe72c8aec351be7151',
+  f8: 'sha256:e29a981b7dab10311ee046ab2f6d4168dc19aacd83f555fe72c8aec351be7151',
+  missing: 'sha256:8afae293975c03febc13d6351ecea0eeb133b7f4e3102e04d8bf591470a101ba',
 })
 
 function emptyDetermination() {
@@ -211,6 +214,30 @@ function determinationsWith(overrides = {}) {
 }
 
 const syntheticEvidence = () => ({ level: 'synthetic', sha256: null, span: null })
+
+const baselineEnduranceTripwire = {
+  rule_id: 'CCL-9A012.a.1',
+  state: 'fired',
+  jurisdiction: 'EAR',
+  entry: '9A012.a.1',
+  reason_for_control: ['AT1'],
+  node_id: 'kestrel',
+  cause_node_id: 'battery_pack',
+  facts: [
+    { attribute: 'bvlos', observed: true, unit: null, operator: 'equals', threshold: true },
+    { attribute: 'formula', observed: 'energy_Wh × usable_fraction ÷ steady_power_W', unit: null, operator: 'equals', threshold: 'declared synthetic model' },
+    { attribute: 'energy_capacity_Wh', observed: 1000, unit: 'Wh', operator: 'equals', threshold: 1000 },
+    { attribute: 'usable_fraction', observed: 0.85, unit: 'ratio', operator: 'equals', threshold: 0.85 },
+    { attribute: 'steady_or_maximum_power_assumption', observed: 300, unit: 'W', operator: 'equals', threshold: 300 },
+    { attribute: 'atmosphere_and_wind_assumption', observed: 'ISA sea-level / calm wind', unit: null, operator: 'equals', threshold: 'ISA sea-level / calm wind' },
+    { attribute: 'endurance_h', observed: 2.83, unit: 'h', operator: '<', threshold: 3 },
+  ],
+  text: "a.1. A maximum 'endurance' less than 3 hours;",
+  source_url: SOURCE_URL,
+  ecfr_date: FIXTURE_META.sourceDate,
+  rule_effective: '2026-08-13',
+  evidence: syntheticEvidence(),
+}
 
 const f1EnduranceTripwire = {
   rule_id: 'CCL-9A012.a.2',
@@ -250,14 +277,19 @@ const f3CameraTripwire = {
     { attribute: 'frame_rate_hz', observed: 60, unit: 'Hz', operator: '>', threshold: 9 },
     { attribute: 'fpa_qualifies_6A002_a_3_f', observed: true, unit: null, operator: 'equals', threshold: true },
     { attribute: 'note_3_a_max_frame_rate_exclusion', observed: false, unit: null, operator: 'equals', threshold: false },
-    { attribute: 'note_3_b_min_ifov_mrad_per_pixel', observed: 6, unit: 'mrad/pixel', operator: '<', threshold: 10 },
+    { attribute: 'note_3_b_min_horizontal_or_vertical_ifov_mrad', observed: 6, unit: 'mrad', operator: '>=', threshold: 2 },
     { attribute: 'note_3_b_fixed_focal_length_nonremovable', observed: true, unit: null, operator: 'equals', threshold: true },
     { attribute: 'note_3_b_direct_view_display', observed: false, unit: null, operator: 'equals', threshold: false },
-    { attribute: 'note_3_b_facility_to_obtain_viewable_image', observed: true, unit: null, operator: 'equals', threshold: true },
-    { attribute: 'note_3_b_single_application_not_user_modifiable', observed: false, unit: null, operator: 'equals', threshold: false },
-    { attribute: 'note_3_c_designed_for_civilian_vehicle_under_3t', observed: false, unit: null, operator: 'equals', threshold: false },
-    { attribute: 'note_3_c_vehicle_only_operable_when_installed', observed: false, unit: null, operator: 'equals', threshold: false },
-    { attribute: 'note_3_c_removal_disables_camera', observed: false, unit: null, operator: 'equals', threshold: false },
+    { attribute: 'note_3_b_4_a_no_facility_to_obtain_viewable_image', observed: false, unit: null, operator: 'equals', threshold: true },
+    { attribute: 'note_3_b_4_b_single_application_not_user_modifiable', observed: false, unit: null, operator: 'equals', threshold: true },
+    { attribute: 'note_3_b_exclusion_applies', observed: false, unit: null, operator: 'equals', threshold: false },
+    { attribute: 'note_3_c_designed_for_civilian_passenger_land_vehicle', observed: false, unit: null, operator: 'equals', threshold: true },
+    { attribute: 'note_3_c_placement_and_configuration_solely_driver_assistance', observed: false, unit: null, operator: 'equals', threshold: true },
+    { attribute: 'note_3_c_operable_only_in_intended_civil_vehicle', observed: false, unit: null, operator: 'equals', threshold: true },
+    { attribute: 'note_3_c_intended_civil_vehicle_gross_weight_kg', observed: 5000, unit: 'kg', operator: '<', threshold: 4500 },
+    { attribute: 'note_3_c_operable_only_in_authorized_maintenance_test_facility', observed: false, unit: null, operator: 'equals', threshold: true },
+    { attribute: 'note_3_c_removal_disables_camera', observed: false, unit: null, operator: 'equals', threshold: true },
+    { attribute: 'note_3_c_exclusion_applies', observed: false, unit: null, operator: 'equals', threshold: false },
   ],
   text: 'b.4.b. Incorporating “focal plane arrays” controlled by 6A002.a.3.f; or',
   source_url: SOURCE_URL,
@@ -349,7 +381,13 @@ function response({ scenarioId, requestId, determinations, delta }) {
 }
 
 const baselineResponse = response({
-  scenarioId: 'baseline', requestId: 1, determinations: determinationsWith(),
+  scenarioId: 'baseline', requestId: 1,
+  determinations: determinationsWith({
+    kestrel: {
+      state: 'flag', jurisdiction: 'EAR', entries: ['9A012.a.1'], direct_tripwires: [baselineEnduranceTripwire],
+      destinations: { status: 'not_evaluated', reason: 'SYNTHETIC_DEMO has no approved destination policy.' }, evidence_level: 'synthetic',
+    },
+  }),
   delta: {
     changed_nodes: ['nose_thermal', 'kestrel'],
     tripwires_added: [],
@@ -373,23 +411,25 @@ const f1Response = response({
   delta: {
     changed_nodes: ['battery_pack', 'kestrel'],
     tripwires_added: [{ node_id: 'kestrel', rule_id: f1EnduranceTripwire.rule_id, kind: 'direct', cause_node_id: 'battery_pack' }],
-    tripwires_removed: [{ node_id: 'kestrel', rule_id: 'CCL-9A012.a.1', kind: 'direct', cause_node_id: 'battery_pack' }],
-    rules_evaluated: ['CCL-9A012.a.1', f1EnduranceTripwire.rule_id],
+    tripwires_removed: [{ node_id: 'kestrel', rule_id: baselineEnduranceTripwire.rule_id, kind: 'direct', cause_node_id: 'battery_pack' }],
+    rules_evaluated: [baselineEnduranceTripwire.rule_id, f1EnduranceTripwire.rule_id],
+  },
+})
+
+const f3Determinations = determinationsWith({
+  nose_thermal: {
+    state: 'flag', jurisdiction: 'EAR', entries: ['6A003.b.4.b'], direct_tripwires: [f3CameraTripwire, f3RsTripwire],
+    destinations: { status: 'not_evaluated', reason: 'SYNTHETIC_DEMO has no approved destination policy.' }, evidence_level: 'synthetic',
+  },
+  kestrel: {
+    state: 'flag', jurisdiction: 'EAR', entries: ['9A012.a.1', '9A012.a.3'], direct_tripwires: [baselineEnduranceTripwire], propagated_tripwires: [f3ParentTripwire],
+    destinations: { status: 'not_evaluated', reason: 'SYNTHETIC_DEMO has no approved destination policy.' }, evidence_level: 'synthetic',
   },
 })
 
 const f3Response = response({
   scenarioId: 'f3', requestId: 3,
-  determinations: determinationsWith({
-    nose_thermal: {
-      state: 'flag', jurisdiction: 'EAR', entries: ['6A003.b.4.b'], direct_tripwires: [f3CameraTripwire, f3RsTripwire],
-      destinations: { status: 'not_evaluated', reason: 'SYNTHETIC_DEMO has no approved destination policy.' }, evidence_level: 'synthetic',
-    },
-    kestrel: {
-      state: 'flag', jurisdiction: 'EAR', entries: ['9A012.a.3'], propagated_tripwires: [f3ParentTripwire],
-      destinations: { status: 'not_evaluated', reason: 'SYNTHETIC_DEMO has no approved destination policy.' }, evidence_level: 'synthetic',
-    },
-  }),
+  determinations: f3Determinations,
   delta: {
     changed_nodes: ['nose_thermal', 'kestrel'],
     tripwires_added: [
@@ -403,8 +443,8 @@ const f3Response = response({
 })
 
 const f8Response = response({
-  scenarioId: 'f8', requestId: 4, determinations: determinationsWith(),
-  delta: { changed_nodes: [], tripwires_added: [], tripwires_removed: [], rules_evaluated: ['F8-NO-CHANGE-CONTROL'] },
+  scenarioId: 'f8', requestId: 4, determinations: f3Determinations,
+  delta: { changed_nodes: [], tripwires_added: [], tripwires_removed: [], rules_evaluated: [] },
 })
 
 const missingResponse = response({
@@ -426,8 +466,8 @@ const missingResponse = response({
 export const SCENARIOS = Object.freeze({
   baseline: {
     id: 'baseline', short: 'BASE', label: 'Baseline', artifact_status: FIXTURE_META.artifactStatus, approval_status: FIXTURE_META.approvalStatus,
-    eyebrow: 'BASE · 9 HZ CAMERA', headline: 'Baseline restored · active camera markers cleared',
-    detail: 'Synthetic baseline facts only. The prior change remains visible in session history.', focusNodeId: 'nose_thermal', response: baselineResponse,
+    eyebrow: 'BASE · GOVERNED SYNTHETIC ENDURANCE', headline: 'Baseline restored · 9A012.a.1 direct tripwire active',
+    detail: 'The 9 Hz camera tripwires are cleared; the under-3-hour product result remains visible as an unapproved synthetic stub.', focusNodeId: 'kestrel', response: baselineResponse,
   },
   f1: {
     id: 'f1', short: 'F1', label: 'Energy / endurance', artifact_status: FIXTURE_META.artifactStatus, approval_status: FIXTURE_META.approvalStatus,
@@ -435,14 +475,14 @@ export const SCENARIOS = Object.freeze({
     detail: 'The airframe is the result node; the battery is only the causal input to the declared synthetic model.', focusNodeId: 'kestrel', response: f1Response,
   },
   f3: {
-    id: 'f3', short: 'F3', label: 'Complete camera predicate', artifact_status: FIXTURE_META.artifactStatus, approval_status: FIXTURE_META.approvalStatus,
-    eyebrow: 'F3 · COMPLETE SIGNED-PREDICATE SHAPE', headline: 'Camera direct tripwires · separate parent propagation',
-    detail: '9 / 60 / 111,000 thresholds appear with the FPA prerequisite, Note 3 exclusions, and RS1 prerequisite—not frame rate alone.', focusNodeId: 'nose_thermal', response: f3Response,
+    id: 'f3', short: 'F3', label: 'Camera predicate fixture', artifact_status: FIXTURE_META.artifactStatus, approval_status: FIXTURE_META.approvalStatus,
+    eyebrow: 'F3 · COMPLETE-SHAPE · UNAPPROVED STUB', headline: 'Camera direct tripwires · separate parent propagation',
+    detail: '9 / 60 / 111,000 thresholds appear with the FPA prerequisite, all Note 3 branches, and RS1 prerequisite—not frame rate alone.', focusNodeId: 'nose_thermal', response: f3Response,
   },
   f8: {
     id: 'f8', short: 'F8', label: 'No-change control', artifact_status: FIXTURE_META.artifactStatus, approval_status: FIXTURE_META.approvalStatus,
     eyebrow: 'F8 · CONTROL', headline: '0 determinations changed',
-    detail: 'The fixture replay reports no visual delta; no marker pulse is manufactured.', focusNodeId: 'kestrel', response: f8Response,
+    detail: 'The fixture replay preserves the active F3 direct and propagated markers; no marker delta or pulse is manufactured.', focusNodeId: 'kestrel', response: f8Response,
   },
   missing: {
     id: 'missing', short: '?', label: 'Missing evidence', artifact_status: FIXTURE_META.artifactStatus, approval_status: FIXTURE_META.approvalStatus,
