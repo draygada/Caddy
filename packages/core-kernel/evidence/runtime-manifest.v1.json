@@ -1,0 +1,55 @@
+{
+  "schema_version": "forge.core-runtime-evidence/1",
+  "observed_at": "2026-09-05T17:09:37Z",
+  "adoption_state": "SPIKE_ONLY_DISTRIBUTION_HOLD",
+  "lock": {
+    "path": "packages/core-kernel/uv.lock",
+    "sha256": "6867117385dd2c0dc793f4f7230bfcc865997135e04908378b3ec76912be0103"
+  },
+  "project_manifest": {
+    "path": "packages/core-kernel/pyproject.toml",
+    "sha256": "6c0352714d11a2cf86872f582a95e598137067b3c3070fa97a78ba1dd80e25b9"
+  },
+  "runtime": {
+    "python": "CPython 3.12.13",
+    "uv": "0.11.17",
+    "os": "macOS 26.5.2 build 25F84",
+    "architecture": "arm64",
+    "container": null,
+    "container_status": "UNCONTAINERIZED"
+  },
+  "geometry_dependency": {
+    "package": "cadquery-ocp-novtk",
+    "version": "7.9.3.1",
+    "reported_module_version": "7.9.3.1",
+    "wheel_tag": "cp312-cp312-macosx_11_0_arm64",
+    "wheel_sha256": "a070f99039e877e9558759570fd379365e2d28de3850b62e33c9c48e5ac1f0e3",
+    "ocp_source_commit": "d69b064a3a604ebf245b1f3b14fb54c835a3a571",
+    "occt_version": "7.9.3",
+    "occt_source_commit": "a016080bf6738d6aeae020badee4e888ad1540a5"
+  },
+  "direct_dependencies": [
+    {"name": "cadquery-ocp-novtk", "version": "7.9.3.1"},
+    {"name": "jsonschema", "version": "4.25.1"},
+    {"name": "rfc8785", "version": "0.1.4"}
+  ],
+  "development_dependencies": [
+    {"name": "hatchling", "version": "1.27.0"},
+    {"name": "pytest", "version": "8.4.2"}
+  ],
+  "deterministic_settings": {
+    "occt_parallel_algorithms": false,
+    "boolean_fuzzy_tolerance_mm": "0.0000001",
+    "semantic_observation_decimal_places": 12,
+    "brep_binary_format": 4,
+    "brep_with_triangles": false,
+    "brep_with_normals": false,
+    "units": {"length": "mm", "angle": "deg"}
+  },
+  "license_review": {
+    "notice_packet": "packages/core-kernel/THIRD_PARTY_NOTICES.md",
+    "wheel_license_metadata_present": false,
+    "wheel_license_file_present": false,
+    "distribution_state": "HOLD"
+  }
+}
