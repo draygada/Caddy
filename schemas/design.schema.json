@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tripwire.local/schemas/design.schema.json",
+  "title": "design.json — the product/assembly/part tree",
+  "description": "THE_BUILD.md §3.2. Frozen 2026-09-05 at the build-window open. The one addition beyond §3.2 is `items[]` on every node, per Charlie's parts handoff Step 0: engine v2 walks items[] (commodity|software|technology) WITHIN a product, while this tree is a physical decomposition. His recommendation, adopted here: each part node carries its own items[], and the tree is the outer loop. See docs/adr/ADR-001-items-axis.md.",
+  "type": "object",
+  "required": ["root", "nodes"],
+  "properties": {
+    "root": { "type": "string", "description": "id of the product node" },
+    "rule_pack_sha": { "type": ["string", "null"] },
+    "nodes": { "type": "array", "items": { "$ref": "#/$defs/node" } }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "enum": ["product", "assembly", "part"] },
+        "parent": { "type": ["string", "null"] },
+        "role": { "enum": ["nav", "sensor", "power", "comms", "structure", null] },
+        "mpn": { "type": ["string", "null"] },
+        "vendor": { "type": ["string", "null"] },
+        "origin": { "type": ["string", "null"], "description": "ISO-3166-1 alpha-2" },
+        "value_usd": { "type": ["number", "null"] },
+        "part_class": {
+          "type": ["string", "null"],
+          "description": "sensor | ic | cell | fastener | connector | wire | solder | board | airframe | motor | prop | …; drives the 120.41(b)(2) release"
+        },
+        "attrs": {
+          "type": "object",
+          "description": "measured/declared fields the rules read. An empty field CANNOT fire a rule.",
+          "additionalProperties": { "$ref": "#/$defs/attr" }
+        },
+        "items": {
+          "type": "array",
+          "description": "ADDED beyond §3.2. The commodity/software/technology axis, nested UNDER the part rather than parallel to it. Empty is valid and is the baseline for every physical part.",
+          "items": { "$ref": "#/$defs/item" }
+        },
+        "declared": { "$ref": "#/$defs/declared" }
+      }
+    },
+    "attr": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value"],
+      "properties": {
+        "value": { "type": ["number", "string", "boolean", "null"] },
+        "unit": { "type": ["string", "null"] },
+        "source_url": { "type": ["string", "null"] },
+        "quote": { "type": ["string", "null"] },
+        "span": {
+          "type": ["array", "null"],
+          "items": { "type": "integer" },
+          "minItems": 2, "maxItems": 2,
+          "description": "[start, end] byte offsets into the document named by doc_sha256"
+        },
+        "doc_sha256": { "type": ["string", "null"] },
+        "extracted_by": { "enum": ["human", "api", "extractor", null] }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "item_kind"],
+      "properties": {
+        "id": { "type": "string" },
+        "item_kind": {
+          "enum": ["commodity", "software", "technology"],
+          "description": "the engine-v2 axis. A physical part with firmware has one commodity item and one software item; both are evaluated under the same part node."
+        },
+        "description": { "type": ["string", "null"] },
+        "attrs": { "type": "object", "additionalProperties": { "$ref": "#/$defs/attr" } }
+      }
+    },
+    "declared": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "human declarations. Never inferred, never set by a model.",
+      "properties": {
+        "bvlos": { "type": ["boolean", "null"] },
+        "civil_product": { "type": ["boolean", "null"] },
+        "military_use": { "type": ["boolean", "null"] },
+        "designed_to_incorporate": { "type": ["boolean", "null"] },
+        "mass_market": { "type": ["boolean", "null"] },
+        "civil_certified": { "type": ["boolean", "null"] },
+        "civil_gnss_service": { "type": ["boolean", "null"] },
+        "designed_for_inertial_nav": { "type": ["boolean", "null"] },
+        "spinning_mass": { "type": ["boolean", "null"] },
+        "board_target": { "enum": ["civil_uav", "600_series_uav", "usml_article", null] },
+        "used_on": { "type": "array", "items": { "type": "string" } },
+        "production_nonusml_equivalent": { "type": ["string", "null"] },
+        "document_ref": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

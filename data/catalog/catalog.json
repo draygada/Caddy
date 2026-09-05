@@ -1,0 +1,276 @@
+{
+  "generated": "2026-09-04",
+  "note": "spec[] is transcribed from THE_BUILD.md; lcsc[] is live. They are NOT merged. Disagreement = finding.",
+  "parts": [
+    {
+      "slot": "battery_bay",
+      "spec": {
+        "mpn": "INR-21700-P45B",
+        "vendor": "Molicel",
+        "origin": "TW",
+        "declared_eccn": null,
+        "source_url": "https://www.molicel.com/inr-21700-p45b/",
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": null
+    },
+    {
+      "slot": "fc_mcu",
+      "spec": {
+        "mpn": "STM32H743VIT6",
+        "vendor": "ST",
+        "origin": "MY",
+        "declared_eccn": "3A991.a.2",
+        "source_url": "https://estore.st.com/en/stm32h743vit6-cpn.html",
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": {
+        "productCode": "C114409",
+        "productModel": "STM32H743VIT6",
+        "brandNameEn": "ST",
+        "eccn": "3A991A2",
+        "pdfUrl": "https://datasheet.lcsc.com/datasheet/pdf/880ee2974c46763ce43da1468b8b0b74.pdf?productCode=C114409",
+        "encapStandard": "LQFP-100(14x14)"
+      },
+      "jlcsearch_top": {
+        "lcsc": 114409,
+        "mfr": "STM32H743VIT6",
+        "package": "LQFP-100(14x14)",
+        "description": "-40\u2103~+85\u2103 1.71V~3.6V 12bit 16bit 1MB 2MB 32 Bit 480MHz 82 ARM Cortex-M7 Built-in FLASH LQFP-100(14x14) Microcontrollers (MCU/MPU/SOC) ROHS"
+      },
+      "search_matches_pin": true
+    },
+    {
+      "slot": "io_mcu",
+      "spec": {
+        "mpn": "STM32F100C8T6B",
+        "vendor": "ST",
+        "origin": null,
+        "declared_eccn": "EAR99",
+        "source_url": "https://estore.st.com/en/stm32f100c8t6b-cpn.html",
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": {
+        "lcsc": 2970082,
+        "mfr": "STM32F100C8T6BTR",
+        "package": "LQFP-48_7x7",
+        "description": "-40\u2103~+85\u2103 12bit 12bit 24MHz 2V~3.6V 32 Bit 37 64KB 8KB ARM Cortex-M3 Built-in FLASH LQFP-48(7x7) Microcontrollers (MCU/MPU/SOC) ROHS"
+      },
+      "search_matches_pin": false
+    },
+    {
+      "slot": "imu",
+      "spec": {
+        "mpn": "ICM-42688-P",
+        "vendor": "TDK",
+        "origin": "US",
+        "declared_eccn": "7A994",
+        "source_url": "https://www.lcsc.com/product-detail/C1850418.html",
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": {
+        "productCode": "C1850418",
+        "productModel": "ICM-42688-P",
+        "brandNameEn": "TDK InvenSense",
+        "eccn": "7A994",
+        "pdfUrl": "https://datasheet.lcsc.com/datasheet/pdf/d5f9e170444ac167b391a8574fc574ca.pdf?productCode=C1850418",
+        "encapStandard": "LGA-14(2.5x3)"
+      },
+      "jlcsearch_top": {
+        "lcsc": 46550687,
+        "mfr": "ICM-42688P-HXY",
+        "package": "LGA-14(2.5x3)",
+        "description": "-40\u2103~+85\u2103 1.71V~3.6V 16bit 4uA IMU SPI\u3001I2C X,Y,Z X,Y,Z \u00b116g \u00b12000dps LGA-14(2.5x3) Accelerometers ROHS"
+      },
+      "search_matches_pin": false
+    },
+    {
+      "slot": "baro",
+      "spec": {
+        "mpn": "BMP388",
+        "vendor": "Bosch",
+        "origin": "DE",
+        "declared_eccn": null,
+        "source_url": null,
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": {
+        "lcsc": 779278,
+        "mfr": "BMP388",
+        "package": "LGA-10(2x2)",
+        "description": "-40\u2103~+85\u2103 1.65V~3.6V 1pa/K 2uA 30Kpa~1.25bar 50pa 8pa I2C\u3001SPI LGA-10(2x2) Pressure Sensors ROHS"
+      },
+      "search_matches_pin": false
+    },
+    {
+      "slot": "mag",
+      "spec": {
+        "mpn": "BMM150",
+        "vendor": "Bosch",
+        "origin": "DE",
+        "declared_eccn": null,
+        "source_url": null,
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": {
+        "lcsc": 171681,
+        "mfr": "BMM150",
+        "package": "WLCSP-12(1.6x1.6)",
+        "description": "-40\u2103~+85\u2103 1.62V~3.6V I2C\u3001SPI \u00b11.3mT \u00b12.5mT WLCSP-12(1.6x1.6) 3D Magnetic Sensors ROHS"
+      },
+      "search_matches_pin": false
+    },
+    {
+      "slot": "gnss",
+      "spec": {
+        "mpn": "NEO-M9N",
+        "vendor": "u-blox",
+        "origin": "CH",
+        "declared_eccn": "7A994",
+        "source_url": "https://content.u-blox.com/sites/default/files/NEO-M9N-00B_DataSheet_UBX-19014285.pdf",
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": {
+        "lcsc": 5119087,
+        "mfr": "NEO-M9N-00B",
+        "package": "SMD-24P",
+        "description": "SMD-24P GNSS Modules ROHS"
+      },
+      "search_matches_pin": false
+    },
+    {
+      "slot": "nose_thermal",
+      "spec": {
+        "mpn": "500-0771-01",
+        "vendor": "Teledyne FLIR",
+        "origin": "US",
+        "declared_eccn": "6A993",
+        "source_url": "https://www1.futureelectronics.com/doc/FLIR%20SYSTEMS/Lepton%20Export%20fact%20sheet.pdf",
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": {
+        "lcsc": 3021082,
+        "mfr": "QMI8658A",
+        "package": "LGA-14",
+        "description": "-40\u2103~+85\u2103 1.5KB 1.71V~3.6V 16bit IMU (accelerometer + gyroscope) SPI\u3001I2C\u3001I3C X,Y,Z X,Y,Z \u00b116g \u00b12048dps \u8fd0\u52a8\u4e8b\u4ef6\u68c0\u6d4b\u3001\u540c\u6b65\u4e0e\u65f6\u95f4\u6233 LGA-14 Accelerometers ROHS"
+      },
+      "search_matches_pin": false
+    },
+    {
+      "slot": "datalink",
+      "spec": {
+        "mpn": "OEM-M0048-4-1",
+        "vendor": "Microhard",
+        "origin": "CA",
+        "declared_eccn": "5A992.c",
+        "source_url": "https://www.modalai.com/products/oem-m0048-4-1",
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": null
+    },
+    {
+      "slot": "esc",
+      "spec": {
+        "mpn": "KDE-UAS55HVL",
+        "vendor": "KDE",
+        "origin": "US",
+        "declared_eccn": "EAR99",
+        "source_url": null,
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": null
+    },
+    {
+      "slot": "motor",
+      "spec": {
+        "mpn": "MN5008",
+        "vendor": "T-Motor",
+        "origin": "CN",
+        "declared_eccn": null,
+        "source_url": null,
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": null
+    },
+    {
+      "slot": "prop",
+      "spec": {
+        "mpn": "18x6.1 CF",
+        "vendor": "T-Motor",
+        "origin": "CN",
+        "declared_eccn": null,
+        "source_url": null,
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": {
+        "lcsc": 565569,
+        "mfr": "FN18X681K500PSG",
+        "package": "0603",
+        "description": "50V 680pF X7R \u00b110% 0603 Multilayer Ceramic Capacitors MLCC - SMD/SMT ROHS"
+      },
+      "search_matches_pin": false
+    },
+    {
+      "slot": "swap_battery",
+      "spec": {
+        "mpn": "INR-21700-P45B (1,300 Wh pack)",
+        "vendor": "Molicel",
+        "origin": "TW",
+        "declared_eccn": null,
+        "source_url": "https://www.molicel.com/inr-21700-p45b/",
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": null
+    },
+    {
+      "slot": "swap_thermal",
+      "spec": {
+        "mpn": "Boson+ 640 (60 Hz)",
+        "vendor": "Teledyne FLIR",
+        "origin": "US",
+        "declared_eccn": "6A003.b.4.b",
+        "source_url": "https://groupgets.com/products/boson-plus",
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": null
+    },
+    {
+      "slot": "swap_imu",
+      "spec": {
+        "mpn": "68905700-CA01",
+        "vendor": "Honeywell",
+        "origin": null,
+        "declared_eccn": "7A003.d.1",
+        "source_url": null,
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": null
+    },
+    {
+      "slot": "swap_cell",
+      "spec": {
+        "mpn": "SiCore 450 Wh/kg",
+        "vendor": "Amprius",
+        "origin": "US",
+        "declared_eccn": null,
+        "source_url": "https://ir.amprius.com/",
+        "from": "THE_BUILD.md \u00a72.1"
+      },
+      "lcsc": null,
+      "jlcsearch_top": null
+    }
+  ]
+}
