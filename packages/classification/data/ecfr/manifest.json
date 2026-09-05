@@ -1,0 +1,37 @@
+{
+  "schema": "forge-classification.reference-pack/1",
+  "retrieved_at": "2026-06-25",
+  "content_date": null,
+  "content_date_note": "The part-121 and part-774 XML exports carry no 'current as of' date; they were retrieved 2026-06-25 (strafe-prototype corpus commit 6704c19). The two section files were pulled from the eCFR versioner at content date 2026-09-01.",
+  "sources": {
+    "title-22-part-121.xml": {
+      "citation": "22 CFR Part 121 (the USML)",
+      "sha256": "3137d0b14c0f2e1878918cd1b29f11d5afa733696895d6fef59927f8c6d9fba5",
+      "bytes": 240319,
+      "retrieved_at": "2026-06-25",
+      "content_date": null
+    },
+    "title-15-part-774.xml": {
+      "citation": "15 CFR Part 774 (the CCL)",
+      "sha256": "dd6ce98b86fbd14c3b357fdaf1b10af823a185783f0d0bcaf2565f2e4008ee79",
+      "bytes": 2128594,
+      "retrieved_at": "2026-06-25",
+      "content_date": null
+    },
+    "title-22-section-120.41.xml": {
+      "citation": "22 CFR 120.41 (ITAR 'specially designed')",
+      "sha256": "53cfb45ea60ed2f3aa342956145c931febebf7df3f00c6019704ed852c62f041",
+      "bytes": 3328,
+      "retrieved_at": "2026-09-05",
+      "content_date": "2026-09-01"
+    },
+    "title-15-section-772.1.xml": {
+      "citation": "15 CFR 772.1 (EAR definitions, incl. 'specially designed')",
+      "sha256": "13b77810749c0335b76f9807c4893698714a51f1d1519dfbe15fc0ea7b0d9577",
+      "bytes": 152395,
+      "retrieved_at": "2026-09-05",
+      "content_date": "2026-09-01"
+    }
+  },
+  "pack_sha256": "21818b45bcc1e5a23781cf569565cbcf9ea74a264d36a31b47975f38090f760e"
+}

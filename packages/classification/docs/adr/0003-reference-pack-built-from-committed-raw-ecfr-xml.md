@@ -1,0 +1,3 @@
+# The reference pack is built deterministically from committed raw eCFR XML, not committed as derived data
+
+The lane commits the raw eCFR exports (22 CFR part 121, 15 CFR part 774, 22 CFR 120.41, the 15 CFR 772.1 definitions) with their hashes and retrieval dates, and parses them into paragraph-grain units at load; the pack's hash is pinned by a test. Committing the parse would hide the parse; recomputing it makes "same inputs, same hash" a sentence about the world, and a later law change is a new dated raw file whose diff names exactly the units that moved. `resolve` is a dictionary read — no search, no embeddings, no retrieval — so a provision either exists in the pack the run was handed or is unprintable.

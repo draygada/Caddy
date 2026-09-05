@@ -1,0 +1,3 @@
+# The lane is the classification decision engine; it does not render a memo
+
+Charlie's instruction of 2026-09-05: build the decision-making process, not the memo generator. The lane's sole output is the envelope — the candidate board with per-element records and verified citations, the order-of-review route, the ordinal claim class and instrument, the ranked questions, the concerns and tensions, and the provenance. Any prose rendering (a classification memo, a card, an export face) is a separate consumer of the envelope and lives outside this lane. The register such a consumer must use ("ruled out", "negative finding", never "knocked out", "determination", "classified as", "cleared", or a number) is recorded in CONTEXT.md.

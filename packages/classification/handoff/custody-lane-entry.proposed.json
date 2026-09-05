@@ -1,0 +1,13 @@
+{
+  "classification": {
+    "branch": "lane/classification",
+    "worktree": "/Users/charliehaywood/Downloads/CADdyDaddy",
+    "worktree_label": "forge/classification",
+    "write_allowlist": [
+      "packages/classification/**",
+      "tests/classification/**",
+      "governance/receipts/classification.json"
+    ],
+    "handoff": "packages/classification/HANDOFF.md"
+  }
+}

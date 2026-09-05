@@ -1,0 +1,3 @@
+# The runtime is stdlib-only and the model sits behind a port; no provider SDK is pinned by this lane
+
+The engine takes a `ModelClient` callable and never constructs one. Tests script the model per wave; fixtures replay from a cache keyed by the prompt's hash; a live Anthropic adapter exists behind a lazy import and abstains when the SDK or key is absent. This keeps the change/proposal boundary testable with the network cable out, keeps every conclusion in code, and leaves the exact-version license and transitive-notice review that AGENTS.md requires for any dependency as the integrator's call. `pytest` and `jsonschema` are pinned dev-only in the lane's own pyproject; nothing at the repository root is touched.

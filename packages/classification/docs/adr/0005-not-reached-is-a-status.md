@@ -1,0 +1,3 @@
+# `not_reached` is a candidate status, added to the three-status vocabulary of the 2026-08-10 contract
+
+The CCL is walked stage by stage and a later stage is analysed only when the earlier one closes negative; a candidate in a stage the order of review never reached has no ruling. Recording it as `knocked_out` would render "we did not analyse this" as "this does not apply" — the exact misstatement the separate `pursuit` field exists to prevent — and `blocked_on_facts` would be a lie about facts. So the envelope carries `not_reached` (with `pursuit: explicitly_not` and no reason), and the 08-10 three-status vocabulary gains one value. Proposed to the integrator as a contract delta alongside the record kinds.

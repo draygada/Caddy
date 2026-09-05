@@ -1,0 +1,3 @@
+# Lane records use the platform's `forge.record/1` envelope under a proposed `compliance` authority domain
+
+The frozen platform-records contract has no compliance domain and rejects wrong-domain writes. The lane emits its analysis, declared-facts, round, failure, adoption, supersession and impact records in the contract's exact envelope and event shapes (RFC 8785 canonicalization, SHA-256 content hashes, chained `forge.event/1` events) with `authority_domain: "compliance"`, and proposes the domain and the seven record kinds in its handoff rather than inventing a private format or editing the registry from a lane. Admission is the integrator's decision; the lane's records are conformant the day it is made. Hashing is tested against the contract's own normative vectors.
