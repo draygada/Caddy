@@ -94,7 +94,7 @@ function ScenarioBar({ state, onScenario }) {
         {SCENARIO_ORDER.map((scenarioId) => {
           const scenario = SCENARIOS[scenarioId]
           const active = state.targetScenarioId === scenarioId
-          return <button key={scenarioId} className={active ? 'scenario-button active' : 'scenario-button'} aria-label={`${scenario.short}: ${scenario.label}. ${scenario.artifact_status}; ${scenario.approval_status}`} aria-pressed={active} onClick={() => onScenario(scenarioId)}><span className="scenario-code">{scenario.short}</span><span className="scenario-copy">{scenario.label}</span></button>
+          return <button key={scenarioId} className={active ? 'scenario-button active' : 'scenario-button'} data-scenario-id={scenarioId} aria-label={`${scenario.short}: ${scenario.label}. ${scenario.artifact_status}; ${scenario.approval_status}`} aria-pressed={active} onClick={() => onScenario(scenarioId)}><span className="scenario-code">{scenario.short}</span><span className="scenario-copy">{scenario.label}</span></button>
         })}
       </div></div>
       <div className={`evaluation-state ${state.evaluationStatus}`} role="status" aria-live="polite">{state.evaluationStatus === 'confirmed' ? 'STUB CONFIRMED' : state.evaluationStatus === 'pending' ? 'CHECKING…' : 'CONTRACT HOLD'}</div>
@@ -179,7 +179,7 @@ function SlotMarkers({ state, onSelect }) {
     const node = getNode(slot.primaryNodeId)
     return (
       <Html key={slot.id} position={slot.anchor} center distanceFactor={5.7} zIndexRange={[30 - index, 1]}>
-        <button className={`slot-marker state-${status} ${state.selectedNodeId === slot.primaryNodeId ? 'selected' : ''}`} onClick={(event) => { event.stopPropagation(); onSelect(slot.primaryNodeId) }} aria-label={`${slot.label}, ${node.mpn}, ${STATUS[status].label}, ${slot.note}`}>
+        <button className={`slot-marker state-${status} ${state.selectedNodeId === slot.primaryNodeId ? 'selected' : ''}`} data-slot-id={slot.id} data-node-id={slot.primaryNodeId} onClick={(event) => { event.stopPropagation(); onSelect(slot.primaryNodeId) }} aria-label={`${slot.label}, ${node.mpn}, ${STATUS[status].label}, ${slot.note}`}>
           <span className="slot-index">0{index + 1}</span><span className="slot-copy"><strong>{slot.label}</strong><small>{node.mpn}</small></span><span className="slot-state"><b aria-hidden="true">{STATUS[status].icon}</b>{STATUS[status].label}</span>{slot.note.startsWith('schematic') && <em>SCHEMATIC</em>}
         </button>
       </Html>
@@ -188,13 +188,12 @@ function SlotMarkers({ state, onSelect }) {
 }
 
 function TripwireMarkers({ state, onSelect }) {
-  if (state.evaluationStatus !== 'confirmed') return null
   return KESTREL_SCENE_NODES.flatMap((binding) => {
     const determination = state.response.determinations[binding.nodeId]
     const status = directnessFor(determination)
     if (!['flag', 'question', 'watch', 'propagated'].includes(status)) return []
     const count = determination.direct_tripwires.length + determination.propagated_tripwires.length + determination.unresolved_tripwires.length
-    return [<Html key={`tripwire-${binding.nodeId}`} position={[binding.position[0], binding.position[1] + 0.43, binding.position[2]]} center zIndexRange={[50, 31]}><button className={`tripwire-marker state-${status}`} onClick={(event) => { event.stopPropagation(); onSelect(binding.nodeId) }} aria-label={`${STATUS[status].label} on ${getNodeLabel(binding.nodeId)}. ${count} causal object${count === 1 ? '' : 's'}. Open inspector.`}><b aria-hidden="true">{STATUS[status].icon}</b><span>{STATUS[status].label}{count > 1 ? ` ×${count}` : ''}</span></button></Html>]
+    return [<Html key={`tripwire-${binding.nodeId}`} position={[binding.position[0], binding.position[1] + 0.43, binding.position[2]]} center zIndexRange={[50, 31]}><button className={`tripwire-marker state-${status}`} data-node-id={binding.nodeId} data-marker-status={status} aria-describedby="marker-evaluation-description" onClick={(event) => { event.stopPropagation(); onSelect(binding.nodeId) }} aria-label={`${STATUS[status].label} on ${getNodeLabel(binding.nodeId)}. ${count} causal object${count === 1 ? '' : 's'}. Open inspector.`}><b aria-hidden="true">{STATUS[status].icon}</b><span>{STATUS[status].label}{count > 1 ? ` ×${count}` : ''}</span><small className="marker-freshness" aria-hidden="true">STALE</small></button></Html>]
   })
 }
 
@@ -232,7 +231,8 @@ function Viewport({ state, onSelect }) {
   return (
     <main className="viewport-panel">
       <div className="viewport-heading"><div><span className="overline">{scenario.eyebrow}</span><h2>{scenario.headline}</h2><p>{scenario.detail}</p></div><div className="delta-summary" aria-label="Fixture delta"><strong>{state.evaluationStatus === 'confirmed' ? state.response.delta.tripwires_added.length : '…'}</strong><span>ADDED</span><strong>{state.evaluationStatus === 'confirmed' ? state.response.delta.tripwires_removed.length : '…'}</strong><span>REMOVED</span></div></div>
-      <div className={`viewport-canvas ${state.evaluationStatus !== 'confirmed' ? 'stale' : ''}`} data-testid="model-viewport">
+      <div className={`viewport-canvas ${state.evaluationStatus !== 'confirmed' ? 'stale' : ''}`} data-testid="model-viewport" data-evaluation-status={state.evaluationStatus} aria-busy={state.evaluationStatus === 'pending'}>
+        <span className="visually-hidden" id="marker-evaluation-description">{state.evaluationStatus === 'confirmed' ? 'Confirmed synthetic fixture marker.' : `Last confirmed marker retained as stale while evaluation is ${state.evaluationStatus}.`}</span>
         <KestrelScene state={state} inspectionMode={inspectionMode} showTripwires={showTripwires} onSelect={onSelect} />
         <div className="orientation-cue" aria-hidden="true"><span>N</span><i />NOSE</div><div className="model-caption"><strong>SCHEMATIC ASSEMBLY</strong><span>not dimensional CAD</span></div>
         <SceneInventory state={state} inspectionMode={inspectionMode} showAllParts={showAllParts} onSelect={onSelect} /><MobileLocationRail state={state} onSelect={onSelect} />
@@ -279,17 +279,35 @@ function DestinationTable({ destinations }) {
 }
 
 function Inspector({ state, onSelect }) {
+  const inspectorScroll = React.useRef(null)
   const node = getNode(state.selectedNodeId)
   const presentation = NODE_PRESENTATION[state.selectedNodeId]
   const determination = state.response.determinations[state.selectedNodeId]
   const directness = directnessFor(determination)
   const directCount = determination.direct_tripwires.length
+  const hasEvidence = directCount + determination.propagated_tripwires.length + determination.unresolved_tripwires.length > 0
+  React.useEffect(() => {
+    if (inspectorScroll.current) inspectorScroll.current.scrollTop = 0
+  }, [state.scenarioId, state.selectedNodeId])
+  const showEvidence = React.useCallback(() => {
+    const scroller = inspectorScroll.current
+    const evidence = scroller?.querySelector('.evidence-block')
+    if (!scroller || !evidence) return
+    const scrollable = scroller.scrollHeight > scroller.clientHeight + 1 && window.getComputedStyle(scroller).overflowY !== 'visible'
+    if (scrollable) {
+      const scrollerRect = scroller.getBoundingClientRect()
+      const evidenceRect = evidence.getBoundingClientRect()
+      scroller.scrollTo({ top: scroller.scrollTop + evidenceRect.top - scrollerRect.top - 8, behavior: 'auto' })
+    } else {
+      evidence.scrollIntoView({ block: 'start', behavior: 'auto' })
+    }
+  }, [])
   return (
     <aside className="panel inspector-panel" aria-label="Selected node inspector" data-selected-node={node.id}>
       <div className="inspector-title"><span className="overline">SELECTED NODE</span><h2>{presentation.label}</h2><code>{node.id}</code></div>
-      <div className="selected-summary"><StateBadge state={state.evaluationStatus === 'confirmed' ? directness : state.evaluationStatus} count={directCount} /><p>{STATUS[directness].description}</p></div>
+      <div className="selected-summary"><StateBadge state={state.evaluationStatus === 'confirmed' ? directness : state.evaluationStatus} count={directCount} /><p>{STATUS[directness].description}</p>{hasEvidence && <button type="button" className="evidence-jump" data-testid="evidence-jump" aria-controls="inspector-content" onClick={showEvidence}><span>SOURCE</span><b aria-hidden="true">↓</b></button>}</div>
       <dl className="node-meta"><div><dt>KIND / ROLE</dt><dd>{node.kind} / {node.role}</dd></div><div><dt>SYNTHETIC MPN</dt><dd>{node.mpn}</dd></div><div><dt>ARTIFACT STATUS</dt><dd>{FIXTURE_META.artifactStatus}</dd></div><div><dt>APPROVAL</dt><dd>{FIXTURE_META.approvalStatus}</dd></div></dl>
-      <div className="inspector-scroll">
+      <div className="inspector-scroll" id="inspector-content" ref={inspectorScroll}>
         {state.evaluationStatus !== 'confirmed' && <div className="stale-card"><strong>LAST RESULT IS STALE</strong><p>Checking a local stub. The confirmed fixture remains visible but must not be read as current or clear.</p></div>}
         {determination.direct_tripwires.map((tripwire) => <TripwireCard key={tripwire.rule_id} tripwire={tripwire} kind="direct" onSelect={onSelect} />)}
         {determination.propagated_tripwires.map((tripwire) => <TripwireCard key={tripwire.rule_id} tripwire={tripwire} kind="propagated" onSelect={onSelect} />)}

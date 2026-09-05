@@ -183,3 +183,25 @@ test('reducer synchronizes selection, admits monotonic responses, and ignores a 
   assert.equal(state.selectedNodeId, 'kestrel')
   assert.equal(state.response.delta.changed_nodes.includes('battery_pack'), true)
 })
+
+test('F3 to F8 pending retains the last-confirmed marker projection until the unchanged response is admitted', () => {
+  let state = createInitialState()
+  const lastConfirmedResponse = state.response
+  const lastConfirmedDeterminations = state.response.determinations
+  const markerNodeIds = (response) => Object.entries(response.determinations)
+    .filter(([, determination]) => ['flag', 'question', 'watch', 'propagated'].includes(directnessFor(determination)))
+    .map(([nodeId]) => nodeId)
+
+  assert.deepEqual(markerNodeIds(state.response), ['kestrel', 'nose_thermal'])
+  const requestId = state.latestRequestId + 1
+  state = inspectionReducer(state, { type: 'EVALUATION_STARTED', scenarioId: 'f8', requestId })
+  assert.equal(state.evaluationStatus, 'pending')
+  assert.strictEqual(state.response, lastConfirmedResponse)
+  assert.strictEqual(state.response.determinations, lastConfirmedDeterminations)
+  assert.deepEqual(markerNodeIds(state.response), ['kestrel', 'nose_thermal'])
+
+  state = inspectionReducer(state, { type: 'EVALUATION_RECEIVED', response: responseForScenario('f8', requestId) })
+  assert.equal(state.evaluationStatus, 'confirmed')
+  assert.strictEqual(state.response.determinations, lastConfirmedDeterminations)
+  assert.deepEqual(markerNodeIds(state.response), ['kestrel', 'nose_thermal'])
+})
