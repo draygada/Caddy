@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from .actors import require_human, validate_actor
 from .errors import DiagnosticError, require
-from .events import AppendOnlyEventLog, HistoryEvent
+from .events import AppendOnlyEventLog, EventTransaction, HistoryEvent
 
 
 AUTHORIZATION_STATES = {"REQUESTED", "AUTHORIZED", "APPLIED", "VERIFIED", "REJECTED", "ROLLED_BACK"}
@@ -29,13 +29,17 @@ class AuthorizationLedger:
     def __init__(self, log: AppendOnlyEventLog) -> None:
         self.log = log
 
-    def receipts(self, authorization_id: str) -> List[HistoryEvent]:
+    @classmethod
+    def _receipts(cls, events: Sequence[HistoryEvent], authorization_id: str) -> List[HistoryEvent]:
         return [
             event
-            for event in self.log.read_all()
-            if event.value["event_type"] == self.EVENT_TYPE
+            for event in events
+            if event.value["event_type"] == cls.EVENT_TYPE
             and event.value["aggregate_id"] == authorization_id
         ]
+
+    def receipts(self, authorization_id: str) -> List[HistoryEvent]:
+        return self._receipts(self.log.read_all(), authorization_id)
 
     def state(self, authorization_id: str) -> Optional[str]:
         found = self.receipts(authorization_id)
@@ -53,15 +57,6 @@ class AuthorizationLedger:
     ) -> HistoryEvent:
         checked_actor = validate_actor(actor)
         require(state in AUTHORIZATION_STATES, "AUTHORIZATION_STATE_INVALID", "unsupported authorization state")
-        current = self.state(authorization_id)
-        allowed = _TRANSITIONS[current]
-        require(
-            state in allowed,
-            "AUTHORIZATION_TRANSITION_INVALID",
-            "authorization lifecycle transition is not permitted",
-            current=current,
-            requested=state,
-        )
         if state in {"AUTHORIZED", "REJECTED", "ROLLED_BACK"}:
             require_human(checked_actor, state.lower())
         require(isinstance(subject, dict), "AUTHORIZATION_SUBJECT_INVALID", "authorization subject must be an object")
@@ -76,16 +71,29 @@ class AuthorizationLedger:
         }
         if checked_actor["actor_kind"] == "AGENT":
             event_provenance["agent_execution_identity"] = checked_actor["execution_identity"]
-        return self.log.append(
-            event_type=self.EVENT_TYPE,
-            aggregate_type="AUTHORIZATION",
-            aggregate_id=authorization_id,
-            occurred_at=occurred_at,
-            provenance=event_provenance,
-            payload={
-                "state": state,
-                "subject": dict(subject),
-                "evidence_refs": list(evidence_refs or []),
-            },
-        )
 
+        def append_in_transaction(transaction: EventTransaction) -> HistoryEvent:
+            receipts = self._receipts(transaction.events, authorization_id)
+            current = receipts[-1].value["payload"]["state"] if receipts else None
+            allowed = _TRANSITIONS[current]
+            require(
+                state in allowed,
+                "AUTHORIZATION_TRANSITION_INVALID",
+                "authorization lifecycle transition is not permitted",
+                current=current,
+                requested=state,
+            )
+            return transaction.append(
+                event_type=self.EVENT_TYPE,
+                aggregate_type="AUTHORIZATION",
+                aggregate_id=authorization_id,
+                occurred_at=occurred_at,
+                provenance=event_provenance,
+                payload={
+                    "state": state,
+                    "subject": dict(subject),
+                    "evidence_refs": list(evidence_refs or []),
+                },
+            )
+
+        return self.log.transact(append_in_transaction)

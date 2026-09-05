@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 
@@ -63,6 +65,28 @@ class RevisionSnapshotTests(unittest.TestCase):
             self.assertEqual(restarted.releases("rev:one")[0].value["payload"]["release_id"], "release:one")
             with self.assertRaisesRegex(DiagnosticError, "RELEASE_IMMUTABILITY_VIOLATION"):
                 restarted.mark_released("rev:two", "release:one", PROVENANCE, "2026-09-05T16:00:03Z", ["evidence:fixture"])
+
+    def test_concurrent_identical_snapshot_is_indexed_once(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            barrier = threading.Barrier(12)
+            snapshot = {"record_id": "part:one", "value": "1"}
+
+            def persist(_: int):
+                barrier.wait()
+                return self.make_store(directory).persist(
+                    "rev:one",
+                    "FIXTURE",
+                    snapshot,
+                    [],
+                    PROVENANCE,
+                    "2026-09-05T16:00:00Z",
+                )
+
+            with ThreadPoolExecutor(max_workers=12) as executor:
+                pointers = list(executor.map(persist, range(12)))
+            self.assertEqual(len(set(pointers)), 1)
+            events = AppendOnlyEventLog(Path(directory) / "events.jsonl").read_all()
+            self.assertEqual(len(events), 1)
 
 
 if __name__ == "__main__":

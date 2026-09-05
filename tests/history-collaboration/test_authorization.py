@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 
@@ -69,7 +71,40 @@ class AuthorizationLedgerTests(unittest.TestCase):
             with self.assertRaisesRegex(DiagnosticError, "AUTHORIZATION_TRANSITION_INVALID"):
                 ledger.append("authorization:1", "APPLIED", SERVICE, "2026-09-05T16:00:02Z", "fixture:apply", SUBJECT)
 
+    def test_concurrent_terminal_decisions_cannot_both_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self.make_ledger(directory).append(
+                "authorization:1",
+                "REQUESTED",
+                AGENT,
+                "2026-09-05T16:00:00Z",
+                "fixture:request",
+                SUBJECT,
+            )
+            barrier = threading.Barrier(2)
+
+            def decide(state: str) -> str:
+                barrier.wait()
+                try:
+                    self.make_ledger(directory).append(
+                        "authorization:1",
+                        state,
+                        HUMAN,
+                        "2026-09-05T16:00:01Z",
+                        "fixture:decision",
+                        SUBJECT,
+                    )
+                    return state
+                except DiagnosticError as exc:
+                    return exc.code
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                outcomes = list(executor.map(decide, ["AUTHORIZED", "REJECTED"]))
+            receipts = self.make_ledger(directory).receipts("authorization:1")
+            self.assertEqual(len(receipts), 2)
+            self.assertEqual(sum(value in {"AUTHORIZED", "REJECTED"} for value in outcomes), 1)
+            self.assertIn("AUTHORIZATION_TRANSITION_INVALID", outcomes)
+
 
 if __name__ == "__main__":
     unittest.main()
-

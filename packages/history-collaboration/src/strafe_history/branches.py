@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from .errors import DiagnosticError, require
-from .events import AppendOnlyEventLog, HistoryEvent
+from .events import AppendOnlyEventLog, EventTransaction, HistoryEvent
 
 
 BRANCH_CREATED = "BRANCH_CREATED"
@@ -35,11 +35,12 @@ class EventSourcedBranches:
     def __init__(self, log: AppendOnlyEventLog) -> None:
         self.log = log
 
-    def project(self) -> BranchProjection:
+    @staticmethod
+    def _project(events: Sequence[HistoryEvent]) -> BranchProjection:
         heads: Dict[str, str] = {}
         pending: Dict[str, Dict[str, Any]] = {}
         terminal = set()
-        for event in self.log.read_all():
+        for event in events:
             event_type = event.value["event_type"]
             payload = event.value["payload"]
             if event_type == BRANCH_CREATED:
@@ -66,6 +67,9 @@ class EventSourcedBranches:
                     heads[branch] = payload["revision_id"]
         return BranchProjection(heads=dict(heads), pending_applies=dict(pending), terminal_apply_ids=frozenset(terminal))
 
+    def project(self) -> BranchProjection:
+        return self._project(self.log.read_all())
+
     def head(self, branch: str) -> str:
         projection = self.project()
         if branch not in projection.heads:
@@ -75,15 +79,24 @@ class EventSourcedBranches:
     def create(self, branch: str, revision_id: str, actor_provenance: Dict[str, Any], occurred_at: str) -> HistoryEvent:
         require(isinstance(branch, str) and bool(branch), "BRANCH_INVALID", "branch name must be non-empty")
         require(isinstance(revision_id, str) and bool(revision_id), "REVISION_ID_INVALID", "revision ID must be non-empty")
-        require(branch not in self.project().heads, "BRANCH_ALREADY_EXISTS", "branch already exists", branch=branch)
-        return self.log.append(
-            BRANCH_CREATED,
-            "BRANCH",
-            "branch:" + branch,
-            occurred_at,
-            actor_provenance,
-            {"branch": branch, "revision_id": revision_id},
-        )
+
+        def create_in_transaction(transaction: EventTransaction) -> HistoryEvent:
+            require(
+                branch not in self._project(transaction.events).heads,
+                "BRANCH_ALREADY_EXISTS",
+                "branch already exists",
+                branch=branch,
+            )
+            return transaction.append(
+                BRANCH_CREATED,
+                "BRANCH",
+                "branch:" + branch,
+                occurred_at,
+                actor_provenance,
+                {"branch": branch, "revision_id": revision_id},
+            )
+
+        return self.log.transact(create_in_transaction)
 
     def start_apply(
         self,
@@ -97,15 +110,6 @@ class EventSourcedBranches:
         authorization_id: Optional[str] = None,
         rollback_of_revision_id: Optional[str] = None,
     ) -> HistoryEvent:
-        projection = self.project()
-        require(apply_id not in projection.pending_applies and apply_id not in projection.terminal_apply_ids, "APPLY_ID_REUSED", "apply ID already exists")
-        require(projection.heads.get(branch) == expected_head_revision_id, "STALE_BASE", "branch head does not match expected revision", branch=branch)
-        require(
-            not any(item["branch"] == branch for item in projection.pending_applies.values()),
-            "APPLY_ALREADY_PENDING",
-            "branch already has an interrupted apply",
-            branch=branch,
-        )
         payload = {
             "apply_id": apply_id,
             "branch": branch,
@@ -115,50 +119,78 @@ class EventSourcedBranches:
             "authorization_id": authorization_id,
             "rollback_of_revision_id": rollback_of_revision_id,
         }
-        return self.log.append(
-            APPLY_STARTED,
-            "APPLY",
-            apply_id,
-            occurred_at,
-            actor_provenance,
-            payload,
-        )
+
+        def start_in_transaction(transaction: EventTransaction) -> HistoryEvent:
+            projection = self._project(transaction.events)
+            require(
+                apply_id not in projection.pending_applies and apply_id not in projection.terminal_apply_ids,
+                "APPLY_ID_REUSED",
+                "apply ID already exists",
+            )
+            require(
+                projection.heads.get(branch) == expected_head_revision_id,
+                "STALE_BASE",
+                "branch head does not match expected revision",
+                branch=branch,
+            )
+            require(
+                not any(item["branch"] == branch for item in projection.pending_applies.values()),
+                "APPLY_ALREADY_PENDING",
+                "branch already has an interrupted apply",
+                branch=branch,
+            )
+            return transaction.append(
+                APPLY_STARTED,
+                "APPLY",
+                apply_id,
+                occurred_at,
+                actor_provenance,
+                payload,
+            )
+
+        return self.log.transact(start_in_transaction)
 
     def complete_apply(self, apply_id: str, actor_provenance: Dict[str, Any], occurred_at: str, recovered: bool = False) -> HistoryEvent:
-        projection = self.project()
-        started = projection.pending_applies.get(apply_id)
-        require(started is not None, "APPLY_NOT_PENDING", "apply is not pending", apply_id=apply_id)
-        require(
-            projection.heads.get(started["branch"]) == started["expected_head_revision_id"],
-            "STALE_BASE",
-            "branch changed before apply completed",
-        )
-        event_type = REVISION_ROLLED_BACK if started.get("rollback_of_revision_id") else REVISION_APPLIED
-        return self.log.append(
-            event_type,
-            "BRANCH",
-            "branch:" + started["branch"],
-            occurred_at,
-            actor_provenance,
-            {
-                "apply_id": apply_id,
-                "branch": started["branch"],
-                "revision_id": started["candidate_revision_id"],
-                "recovered": recovered,
-            },
-        )
+        def complete_in_transaction(transaction: EventTransaction) -> HistoryEvent:
+            projection = self._project(transaction.events)
+            started = projection.pending_applies.get(apply_id)
+            require(started is not None, "APPLY_NOT_PENDING", "apply is not pending", apply_id=apply_id)
+            require(
+                projection.heads.get(started["branch"]) == started["expected_head_revision_id"],
+                "STALE_BASE",
+                "branch changed before apply completed",
+            )
+            event_type = REVISION_ROLLED_BACK if started.get("rollback_of_revision_id") else REVISION_APPLIED
+            return transaction.append(
+                event_type,
+                "BRANCH",
+                "branch:" + started["branch"],
+                occurred_at,
+                actor_provenance,
+                {
+                    "apply_id": apply_id,
+                    "branch": started["branch"],
+                    "revision_id": started["candidate_revision_id"],
+                    "recovered": recovered,
+                },
+            )
+
+        return self.log.transact(complete_in_transaction)
 
     def abort_apply(self, apply_id: str, reason_code: str, actor_provenance: Dict[str, Any], occurred_at: str) -> HistoryEvent:
-        started = self.project().pending_applies.get(apply_id)
-        require(started is not None, "APPLY_NOT_PENDING", "apply is not pending", apply_id=apply_id)
-        return self.log.append(
-            APPLY_ABORTED,
-            "APPLY",
-            apply_id,
-            occurred_at,
-            actor_provenance,
-            {"apply_id": apply_id, "reason_code": reason_code},
-        )
+        def abort_in_transaction(transaction: EventTransaction) -> HistoryEvent:
+            started = self._project(transaction.events).pending_applies.get(apply_id)
+            require(started is not None, "APPLY_NOT_PENDING", "apply is not pending", apply_id=apply_id)
+            return transaction.append(
+                APPLY_ABORTED,
+                "APPLY",
+                apply_id,
+                occurred_at,
+                actor_provenance,
+                {"apply_id": apply_id, "reason_code": reason_code},
+            )
+
+        return self.log.transact(abort_in_transaction)
 
     def recover(
         self,
@@ -166,21 +198,61 @@ class EventSourcedBranches:
         actor_provenance: Dict[str, Any],
         occurred_at: str,
     ) -> List[HistoryEvent]:
-        recovered: List[HistoryEvent] = []
-        snapshot = self.project()
-        for apply_id in sorted(snapshot.pending_applies):
-            started = snapshot.pending_applies[apply_id]
-            current = self.project()
-            if current.heads.get(started["branch"]) != started["expected_head_revision_id"]:
-                recovered.append(self.abort_apply(apply_id, "STALE_BASE", actor_provenance, occurred_at))
-                continue
-            try:
-                valid = candidate_validator(started["candidate_revision_id"])
-            except Exception as exc:
-                raise DiagnosticError("RECOVERY_VALIDATION_FAILED", "candidate validator failed closed", details={"apply_id": apply_id}) from exc
-            if valid:
-                recovered.append(self.complete_apply(apply_id, actor_provenance, occurred_at, recovered=True))
-            else:
-                recovered.append(self.abort_apply(apply_id, "CANDIDATE_INVALID", actor_provenance, occurred_at))
-        return recovered
+        def recover_in_transaction(transaction: EventTransaction) -> List[HistoryEvent]:
+            recovered: List[HistoryEvent] = []
+            snapshot = self._project(transaction.events)
+            for apply_id in sorted(snapshot.pending_applies):
+                started = self._project(transaction.events).pending_applies.get(apply_id)
+                if started is None:
+                    continue
+                if self._project(transaction.events).heads.get(started["branch"]) != started["expected_head_revision_id"]:
+                    recovered.append(
+                        transaction.append(
+                            APPLY_ABORTED,
+                            "APPLY",
+                            apply_id,
+                            occurred_at,
+                            actor_provenance,
+                            {"apply_id": apply_id, "reason_code": "STALE_BASE"},
+                        )
+                    )
+                    continue
+                try:
+                    valid = candidate_validator(started["candidate_revision_id"])
+                except Exception as exc:
+                    raise DiagnosticError(
+                        "RECOVERY_VALIDATION_FAILED",
+                        "candidate validator failed closed",
+                        details={"apply_id": apply_id},
+                    ) from exc
+                if not valid:
+                    recovered.append(
+                        transaction.append(
+                            APPLY_ABORTED,
+                            "APPLY",
+                            apply_id,
+                            occurred_at,
+                            actor_provenance,
+                            {"apply_id": apply_id, "reason_code": "CANDIDATE_INVALID"},
+                        )
+                    )
+                    continue
+                event_type = REVISION_ROLLED_BACK if started.get("rollback_of_revision_id") else REVISION_APPLIED
+                recovered.append(
+                    transaction.append(
+                        event_type,
+                        "BRANCH",
+                        "branch:" + started["branch"],
+                        occurred_at,
+                        actor_provenance,
+                        {
+                            "apply_id": apply_id,
+                            "branch": started["branch"],
+                            "revision_id": started["candidate_revision_id"],
+                            "recovered": True,
+                        },
+                    )
+                )
+            return recovered
 
+        return self.log.transact(recover_in_transaction)

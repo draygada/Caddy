@@ -13,7 +13,7 @@ import re
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, TypeVar
 
 from .canonical import canonical_bytes, digest_json, parse_json
 from .errors import DiagnosticError, require
@@ -27,6 +27,7 @@ except ImportError:  # pragma: no cover - exercised only on unsupported hosts.
 
 _UTC_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$")
 _EVENT_PROTOCOL = "forge.history-event/1"
+_TransactionResult = TypeVar("_TransactionResult")
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,60 @@ class HistoryEvent:
     @property
     def sequence(self) -> int:
         return self.value["sequence"]
+
+
+class EventTransaction:
+    """Lock-scoped view used for atomic compare-and-append operations.
+
+    Domain ledgers often need to validate the current projection and append one
+    or more events without another process changing the log between those two
+    steps.  Appends are staged in memory and become durable only after the
+    callback returns successfully.
+    """
+
+    def __init__(self, current: Sequence[HistoryEvent]) -> None:
+        self._events = [HistoryEvent(copy.deepcopy(event.value)) for event in current]
+        self._initial_count = len(self._events)
+        self._active = True
+
+    @property
+    def events(self) -> Sequence[HistoryEvent]:
+        return tuple(HistoryEvent(copy.deepcopy(event.value)) for event in self._events)
+
+    @property
+    def appended(self) -> Sequence[HistoryEvent]:
+        return tuple(
+            HistoryEvent(copy.deepcopy(event.value))
+            for event in self._events[self._initial_count :]
+        )
+
+    def append(
+        self,
+        event_type: str,
+        aggregate_type: str,
+        aggregate_id: str,
+        occurred_at: str,
+        provenance: Dict[str, Any],
+        payload: Any,
+    ) -> HistoryEvent:
+        require(self._active, "EVENT_TRANSACTION_CLOSED", "event transaction is no longer active")
+        sequence = len(self._events)
+        previous = self._events[-1].event_hash if self._events else None
+        event = build_event(
+            sequence=sequence,
+            previous_event_hash=previous,
+            event_type=event_type,
+            aggregate_type=aggregate_type,
+            aggregate_id=aggregate_id,
+            occurred_at=occurred_at,
+            provenance=provenance,
+            payload=payload,
+        )
+        self._events.append(event)
+        return HistoryEvent(copy.deepcopy(event.value))
+
+    def _close(self) -> None:
+        self._active = False
 
 
 def _event_preimage(value: Dict[str, Any]) -> Dict[str, Any]:
@@ -193,38 +248,75 @@ class AppendOnlyEventLog:
         provenance: Dict[str, Any],
         payload: Any,
     ) -> HistoryEvent:
+        return self.transact(
+            lambda transaction: transaction.append(
+                event_type,
+                aggregate_type,
+                aggregate_id,
+                occurred_at,
+                provenance,
+                payload,
+            )
+        )
+
+    def transact(
+        self,
+        operation: Callable[[EventTransaction], _TransactionResult],
+    ) -> _TransactionResult:
+        """Run a projection check and its appends under one process-safe lock.
+
+        The callback sees a stable snapshot and may stage multiple events.  If
+        it raises, none of those events are written.  A completed callback is
+        persisted as one contiguous write set followed by ``fsync``.
+        """
+
         with self._lock:
             descriptor = os.open(str(self.path), os.O_RDWR | os.O_CREAT, 0o600)
             try:
                 self._flock(descriptor, fcntl.LOCK_EX)
                 current = self._decode(self._read_descriptor(descriptor))
-                sequence = len(current)
-                previous = current[-1].event_hash if current else None
-                event = build_event(
-                    sequence=sequence,
-                    previous_event_hash=previous,
-                    event_type=event_type,
-                    aggregate_type=aggregate_type,
-                    aggregate_id=aggregate_id,
-                    occurred_at=occurred_at,
-                    provenance=provenance,
-                    payload=payload,
+                transaction = EventTransaction(current)
+                try:
+                    result = operation(transaction)
+                except Exception:
+                    transaction._close()
+                    raise
+                transaction._close()
+
+                payload_bytes = b"".join(
+                    canonical_bytes(event.value) + b"\n" for event in transaction.appended
                 )
-                line = canonical_bytes(event.value) + b"\n"
-                os.lseek(descriptor, 0, os.SEEK_END)
-                view = memoryview(line)
-                written = 0
-                while written < len(line):
-                    count = os.write(descriptor, view[written:])
-                    if count <= 0:
-                        raise DiagnosticError("EVENT_APPEND_FAILED", "event append made no progress")
-                    written += count
-                os.fsync(descriptor)
+                original_length = os.lseek(descriptor, 0, os.SEEK_END)
+                if original_length + len(payload_bytes) > self.max_bytes:
+                    raise DiagnosticError("EVENT_LOG_TOO_LARGE", "event log exceeds configured write limit")
+                if payload_bytes:
+                    try:
+                        view = memoryview(payload_bytes)
+                        written = 0
+                        while written < len(payload_bytes):
+                            count = os.write(descriptor, view[written:])
+                            if count <= 0:
+                                raise DiagnosticError(
+                                    "EVENT_APPEND_FAILED",
+                                    "event transaction append made no progress",
+                                )
+                            written += count
+                        os.fsync(descriptor)
+                    except Exception as exc:
+                        try:
+                            os.ftruncate(descriptor, original_length)
+                            os.fsync(descriptor)
+                        except Exception as rollback_exc:
+                            raise DiagnosticError(
+                                "EVENT_TRANSACTION_ROLLBACK_FAILED",
+                                "event transaction failed and its partial append could not be removed",
+                            ) from rollback_exc
+                        raise
             finally:
                 if fcntl is not None:
                     fcntl.flock(descriptor, fcntl.LOCK_UN)
                 os.close(descriptor)
-            return event
+            return result
 
     def iter_type(self, event_type: str) -> Iterable[HistoryEvent]:
         return (event for event in self.read_all() if event.value["event_type"] == event_type)

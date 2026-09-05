@@ -3,7 +3,9 @@ from __future__ import annotations
 import copy
 import sys
 import tempfile
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 
@@ -106,6 +108,26 @@ class SyntheticDispatchTests(unittest.TestCase):
                 request.update(override)
                 with self.assertRaises(DiagnosticError):
                     self.make_adapter(directory).dispatch(request, SERVICE, "2026-09-05T16:00:00Z")
+
+    def test_concurrent_retries_commit_one_attempt_and_one_effect(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "dispatch.jsonl"
+            barrier = threading.Barrier(12)
+
+            def dispatch(_: int) -> str:
+                barrier.wait()
+                return SyntheticDispatchJournal(AppendOnlyEventLog(path)).dispatch(
+                    REQUEST,
+                    SERVICE,
+                    "2026-09-05T16:00:00Z",
+                ).effect_id
+
+            with ThreadPoolExecutor(max_workers=12) as executor:
+                effect_ids = list(executor.map(dispatch, range(12)))
+            events = AppendOnlyEventLog(path).read_all()
+            self.assertEqual(len(set(effect_ids)), 1)
+            self.assertEqual(sum(event.value["event_type"] == "LOCAL_DISPATCH_ATTEMPTED" for event in events), 1)
+            self.assertEqual(sum(event.value["event_type"] == EFFECT_WRITTEN for event in events), 1)
 
 
 if __name__ == "__main__":

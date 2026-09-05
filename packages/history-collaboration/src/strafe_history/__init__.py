@@ -7,7 +7,7 @@ not assign geometry authority.
 
 from .canonical import canonical_bytes, canonical_text, digest_json, parse_json
 from .errors import DiagnosticError
-from .events import AppendOnlyEventLog, HistoryEvent
+from .events import AppendOnlyEventLog, EventTransaction, HistoryEvent
 from .storage import ImmutableObjectStore
 from .authorization import AuthorizationLedger
 from .branches import BranchProjection, EventSourcedBranches
@@ -18,6 +18,7 @@ from .reviews import ReviewLedger
 from .dispatch import DispatchOutcome, SimulatedDispatchInterruption, SyntheticDispatchJournal
 from .revisions import RevisionPointer, RevisionSnapshotStore
 from .graph import Hierarchy, OrderedGraph, validate_hierarchy, validate_ordered_dag
+from .idempotency import IdempotencyLedger
 
 __all__ = [
     "AppendOnlyEventLog",
@@ -27,9 +28,11 @@ __all__ = [
     "DiagnosticError",
     "DispatchOutcome",
     "EventSourcedBranches",
+    "EventTransaction",
     "HistoryEvent",
     "Hierarchy",
     "ImmutableObjectStore",
+    "IdempotencyLedger",
     "MetadataStream",
     "MergeAssessment",
     "MergeConflict",

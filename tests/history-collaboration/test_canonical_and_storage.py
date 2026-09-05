@@ -141,6 +141,26 @@ class AppendOnlyEventLogTests(unittest.TestCase):
             self.assertEqual(len(set(event_ids)), 20)
             self.assertEqual({event.value["payload"]["index"] for event in replay}, set(range(20)))
 
+    def test_failed_transaction_commits_none_of_its_staged_events(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "history.jsonl"
+            log = AppendOnlyEventLog(path)
+
+            def fail(transaction):
+                transaction.append(
+                    "THING_CREATED",
+                    "THING",
+                    "thing:1",
+                    "2026-09-05T16:00:00Z",
+                    self.PROVENANCE,
+                    {"value": 1},
+                )
+                raise DiagnosticError("FIXTURE_ABORT", "abort the transaction")
+
+            with self.assertRaisesRegex(DiagnosticError, "FIXTURE_ABORT"):
+                log.transact(fail)
+            self.assertEqual(log.read_all(), [])
+
 
 if __name__ == "__main__":
     unittest.main()

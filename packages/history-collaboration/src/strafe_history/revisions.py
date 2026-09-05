@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Set
 
 from .canonical import digest_json
 from .errors import DiagnosticError, require
-from .events import AppendOnlyEventLog, HistoryEvent
+from .events import AppendOnlyEventLog, EventTransaction, HistoryEvent
 from .safety import validate_persistence_safety
 from .storage import ImmutableObjectStore
 
@@ -36,9 +36,10 @@ class RevisionSnapshotStore:
         self.objects = objects
         self.log = log
 
-    def pointers(self) -> Dict[str, RevisionPointer]:
+    @staticmethod
+    def _pointers(events: Sequence[HistoryEvent]) -> Dict[str, RevisionPointer]:
         result: Dict[str, RevisionPointer] = {}
-        for event in self.log.read_all():
+        for event in events:
             if event.value["event_type"] != SNAPSHOT_STORED:
                 continue
             payload = event.value["payload"]
@@ -54,6 +55,9 @@ class RevisionSnapshotStore:
             result[pointer.revision_id] = pointer
         return result
 
+    def pointers(self) -> Dict[str, RevisionPointer]:
+        return self._pointers(self.log.read_all())
+
     def persist(
         self,
         revision_id: str,
@@ -67,13 +71,13 @@ class RevisionSnapshotStore:
         require(isinstance(record_kind, str) and bool(record_kind), "RECORD_KIND_INVALID", "record kind is required")
         parents = tuple(parent_revision_ids)
         require(len(parents) == len(set(parents)), "DUPLICATE_ID", "parent revision IDs must be unique")
-        known = self.pointers()
-        missing = [parent for parent in parents if parent not in known]
-        require(not missing, "PARENT_REVISION_MISSING", "parent revision is not stored", missing=missing)
         validate_persistence_safety(snapshot)
         digest = digest_json(snapshot)
         proposed = RevisionPointer(revision_id, record_kind, digest, parents)
-        existing = known.get(revision_id)
+        observed = self.pointers()
+        missing = [parent for parent in parents if parent not in observed]
+        require(not missing, "PARENT_REVISION_MISSING", "parent revision is not stored", missing=missing)
+        existing = observed.get(revision_id)
         if existing is not None:
             if existing != proposed:
                 raise DiagnosticError(
@@ -84,20 +88,36 @@ class RevisionSnapshotStore:
             return existing
         stored_digest = self.objects.put("revisions", snapshot)
         require(stored_digest == digest, "HASH_MISMATCH", "immutable store returned an unexpected digest")
-        self.log.append(
-            SNAPSHOT_STORED,
-            "REVISION",
-            revision_id,
-            occurred_at,
-            actor_provenance,
-            {
-                "revision_id": revision_id,
-                "record_kind": record_kind,
-                "object_digest": digest,
-                "parent_revision_ids": list(parents),
-            },
-        )
-        return proposed
+
+        def persist_in_transaction(transaction: EventTransaction) -> RevisionPointer:
+            known = self._pointers(transaction.events)
+            missing = [parent for parent in parents if parent not in known]
+            require(not missing, "PARENT_REVISION_MISSING", "parent revision is not stored", missing=missing)
+            existing = known.get(revision_id)
+            if existing is not None:
+                if existing != proposed:
+                    raise DiagnosticError(
+                        "REVISION_IMMUTABILITY_VIOLATION",
+                        "revision ID already names different immutable content",
+                        details={"revision_id": revision_id},
+                    )
+                return existing
+            transaction.append(
+                SNAPSHOT_STORED,
+                "REVISION",
+                revision_id,
+                occurred_at,
+                actor_provenance,
+                {
+                    "revision_id": revision_id,
+                    "record_kind": record_kind,
+                    "object_digest": digest,
+                    "parent_revision_ids": list(parents),
+                },
+            )
+            return proposed
+
+        return self.log.transact(persist_in_transaction)
 
     def load(self, revision_id: str) -> Any:
         pointer = self.pointers().get(revision_id)
@@ -127,27 +147,39 @@ class RevisionSnapshotStore:
         occurred_at: str,
         evidence_refs: List[str],
     ) -> HistoryEvent:
-        require(revision_id in self.pointers(), "REVISION_NOT_FOUND", "released revision is not stored")
         require(isinstance(release_id, str) and bool(release_id), "RELEASE_ID_INVALID", "release ID is required")
         require(bool(evidence_refs), "RELEASE_EVIDENCE_MISSING", "release requires evidence references")
-        existing = [
-            event
-            for event in self.log.read_all()
-            if event.value["event_type"] == REVISION_RELEASED
-            and event.value["payload"]["release_id"] == release_id
-        ]
-        if existing:
-            payload = existing[0].value["payload"]
-            require(payload["revision_id"] == revision_id, "RELEASE_IMMUTABILITY_VIOLATION", "release ID already binds another revision")
-            return existing[0]
-        return self.log.append(
-            REVISION_RELEASED,
-            "REVISION",
-            revision_id,
-            occurred_at,
-            actor_provenance,
-            {"revision_id": revision_id, "release_id": release_id, "evidence_refs": list(evidence_refs)},
-        )
+
+        def release_in_transaction(transaction: EventTransaction) -> HistoryEvent:
+            require(
+                revision_id in self._pointers(transaction.events),
+                "REVISION_NOT_FOUND",
+                "released revision is not stored",
+            )
+            existing = [
+                event
+                for event in transaction.events
+                if event.value["event_type"] == REVISION_RELEASED
+                and event.value["payload"]["release_id"] == release_id
+            ]
+            if existing:
+                payload = existing[0].value["payload"]
+                require(
+                    payload["revision_id"] == revision_id,
+                    "RELEASE_IMMUTABILITY_VIOLATION",
+                    "release ID already binds another revision",
+                )
+                return existing[0]
+            return transaction.append(
+                REVISION_RELEASED,
+                "REVISION",
+                revision_id,
+                occurred_at,
+                actor_provenance,
+                {"revision_id": revision_id, "release_id": release_id, "evidence_refs": list(evidence_refs)},
+            )
+
+        return self.log.transact(release_in_transaction)
 
     def releases(self, revision_id: Optional[str] = None) -> List[HistoryEvent]:
         return [

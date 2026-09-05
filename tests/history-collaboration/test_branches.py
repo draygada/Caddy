@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 
@@ -70,7 +72,32 @@ class BranchHistoryTests(unittest.TestCase):
                 branches.start_apply("apply:one", "main", "rev:stale", "rev:two", PROVENANCE, "2026-09-05T16:00:01Z")
             self.assertEqual(branches.head("main"), "rev:one")
 
+    def test_concurrent_applies_cannot_stage_two_candidates_for_one_branch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self.make_branches(directory).create("main", "rev:one", PROVENANCE, "2026-09-05T16:00:00Z")
+            barrier = threading.Barrier(2)
+
+            def stage(index: int) -> str:
+                barrier.wait()
+                try:
+                    self.make_branches(directory).start_apply(
+                        "apply:{0}".format(index),
+                        "main",
+                        "rev:one",
+                        "rev:{0}".format(index + 2),
+                        PROVENANCE,
+                        "2026-09-05T16:00:01Z",
+                    )
+                    return "STAGED"
+                except DiagnosticError as exc:
+                    return exc.code
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                outcomes = list(executor.map(stage, range(2)))
+            self.assertEqual(outcomes.count("STAGED"), 1)
+            self.assertIn("APPLY_ALREADY_PENDING", outcomes)
+            self.assertEqual(len(self.make_branches(directory).project().pending_applies), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
-
