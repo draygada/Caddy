@@ -57,6 +57,10 @@
             <span class="truth-dot" aria-hidden="true"></span>
             <span>DRAFT_REVIEW_ONLY</span>
           </div>
+          <button class="toolbar-button sourcing-trigger" type="button" data-action="open-sourcing" aria-label="Open part sourcing" aria-pressed="false">
+            <span data-icon="package" aria-hidden="true"></span>
+            <span class="wide-label">Parts</span>
+          </button>
           <button class="toolbar-button" type="button" data-action="import" aria-label="Import neutral file">
             <span data-icon="upload" aria-hidden="true"></span>
             <span class="wide-label">Import</span>
@@ -171,6 +175,11 @@
                 <span data-icon="history" aria-hidden="true"></span>
                 Timeline
               </button>
+              <button type="button" role="tab" id="sourcing-tab" aria-controls="sourcing-panel" aria-selected="false" data-bottom-tab="sourcing">
+                <span data-icon="package" aria-hidden="true"></span>
+                Part sourcing
+                <span class="tab-count" id="sourcing-count">0</span>
+              </button>
               <button type="button" role="tab" id="diagnostics-tab" aria-controls="diagnostics-panel" aria-selected="false" data-bottom-tab="diagnostics">
                 <span data-icon="diagnostic" aria-hidden="true"></span>
                 Diagnostics
@@ -189,6 +198,7 @@
               <div role="tabpanel" id="timeline-panel" aria-labelledby="timeline-tab" data-panel="timeline">
                 <div class="skeleton skeleton-timeline" aria-hidden="true"></div>
               </div>
+              <div role="tabpanel" id="sourcing-panel" aria-labelledby="sourcing-tab" data-panel="sourcing" hidden></div>
               <div role="tabpanel" id="diagnostics-panel" aria-labelledby="diagnostics-tab" data-panel="diagnostics" hidden></div>
               <div role="tabpanel" id="selection-panel" aria-labelledby="selection-tab" data-panel="selection" hidden></div>
             </div>
@@ -234,6 +244,7 @@
         <button type="button" data-mobile-panel="viewport" aria-pressed="true"><span data-icon="cube" aria-hidden="true"></span><span>View</span></button>
         <button type="button" data-mobile-panel="properties" aria-pressed="false"><span data-icon="sliders" aria-hidden="true"></span><span>Review</span></button>
         <button type="button" data-mobile-panel="history" aria-pressed="false"><span data-icon="history" aria-hidden="true"></span><span>History</span></button>
+        <button type="button" data-action="open-sourcing" aria-pressed="false"><span data-icon="package" aria-hidden="true"></span><span>Source</span></button>
       </nav>
 
       <div class="palette-backdrop" id="command-palette" hidden>

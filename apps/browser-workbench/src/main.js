@@ -80,6 +80,9 @@ function renderLayout() {
   for (const button of root.querySelectorAll("[data-mobile-panel]")) {
     button.setAttribute("aria-pressed", String(button.dataset.mobilePanel === store.state.mobilePanel));
   }
+  for (const button of root.querySelectorAll("[data-action='open-sourcing']")) {
+    button.setAttribute("aria-pressed", String(store.state.bottomTab === "sourcing"));
+  }
 }
 
 function renderHeader() {
@@ -428,13 +431,35 @@ function renderBottomPanel() {
     panel.hidden = panel.dataset.panel !== store.state.bottomTab;
   }
   document.querySelector("#timeline-panel").innerHTML = timelineMarkup();
+  document.querySelector("#sourcing-panel").innerHTML = sourcingMarkup();
   document.querySelector("#diagnostics-panel").innerHTML = diagnosticsMarkup();
   document.querySelector("#selection-panel").innerHTML = selectionPanelMarkup();
   const count = document.querySelector("#diagnostic-count");
   count.textContent = String(store.evidenceState.diagnostics.length);
   count.classList.toggle("has-errors", store.evidenceState.diagnostics.some((item) => item.severity === "ERROR"));
+  document.querySelector("#sourcing-count").textContent = String(fixture.sourcingRound.lines.length);
   const scenario = document.querySelector("#fixture-scenario");
   if (scenario) scenario.value = store.state.evidenceStateKey;
+}
+
+function sourcingMarkup() {
+  const round = fixture.sourcingRound;
+  const offers = round.lines.flatMap((line) => line.offers);
+  return `<div class="sourcing-round">
+    <section class="sourcing-summary" aria-label="Sourcing round summary">
+      <div><span class="section-eyebrow">PART SOURCING · ${escapeHtml(round.status)}</span><h3>${round.lines.length} BOM line · ${offers.length} synthetic offers</h3></div>
+      <p>${escapeHtml(round.claimCeiling)}</p>
+      <dl><div><dt>Revision</dt><dd><code title="${escapeAttribute(round.sourceRevisionId)}">${escapeHtml(shortId(round.sourceRevisionId))}</code></dd></div><div><dt>Fixture manifest</dt><dd><code title="${escapeAttribute(round.manifest.sha256)}">${escapeHtml(round.manifest.sha256.slice(0, 10))}…</code></dd></div></dl>
+    </section>
+    <div class="sourcing-lines">${round.lines.map((line) => `<article class="sourcing-line">
+      <header><div><span class="section-eyebrow">${escapeHtml(line.bomItemId)}</span><h3>${escapeHtml(line.label)}</h3><p>${escapeHtml(line.mpn)} · qty ${line.quantity} · ${escapeHtml(line.requirement)}</p></div><span class="status-badge" data-status="PENDING">REVIEW ONLY</span></header>
+      <div class="sourcing-offers">${line.offers.map((offer) => `<details class="sourcing-offer">
+        <summary><span><strong>${escapeHtml(offer.supplier)}</strong><small>${escapeHtml(offer.origin ?? "Origin missing")} · ${escapeHtml(offer.availability)}</small></span><span class="sourcing-price">$${escapeHtml(offer.unitPriceUsd)}<small>/ unit</small></span></summary>
+        <dl><div><dt>Lead time</dt><dd>${escapeHtml(offer.leadTime)}</dd></div><div><dt>Origin evidence</dt><dd>${escapeHtml(humanize(offer.originEvidence))}</dd></div><div><dt>Screening</dt><dd>${escapeHtml(humanize(offer.screeningStatus))}</dd></div><div><dt>Source</dt><dd><code>${escapeHtml(offer.sourceRef)}</code></dd></div></dl>
+        <p>Synthetic fixture only. No supplier was contacted and no order action is available.</p>
+      </details>`).join("")}</div>
+    </article>`).join("")}</div>
+  </div>`;
 }
 
 function timelineMarkup() {
@@ -723,6 +748,7 @@ async function handleAction(action, button) {
     case "properties-menu": showToast("Inspector", "Properties preserve stable IDs and source provenance in every selection mode.", "info"); break;
     case "pin-properties": button.setAttribute("aria-pressed", String(button.getAttribute("aria-pressed") !== "true")); break;
     case "toggle-bottom-panel": store.patch({ bottomCollapsed: !store.state.bottomCollapsed }, "panel"); break;
+    case "open-sourcing": store.setBottomTab("sourcing"); if (store.state.mobileReviewOnly) store.setMobilePanel("history"); break;
     case "toggle-wireframe": {
       const visible = viewer.toggleEdges();
       button.setAttribute("aria-pressed", String(visible));
@@ -885,6 +911,7 @@ function filteredCommands() {
     command("view:top", "View · Top", "Align the camera to the top datum.", "Viewport", "view-top", "2"),
     command("view:show-all", "Visibility · Show all", "Restore every PartDocument body.", "Viewport", "eye", ""),
     command("panel:diagnostics", "Open diagnostics", "Review stable codes and blocked dependents.", "Review", "diagnostic", ""),
+    command("panel:sourcing", "Open part sourcing", "Inspect revision-bound synthetic supplier offers.", "Review", "package", ""),
   ];
   const descriptorCommands = fixture.descriptors.map((descriptor) => ({
     id: `add:${descriptor.registryKey}`,
@@ -924,6 +951,7 @@ function executeCommand(commandId) {
     "view:top": () => viewer.setView("top"),
     "view:show-all": () => store.showAllNodes(),
     "panel:diagnostics": () => store.setBottomTab("diagnostics"),
+    "panel:sourcing": () => { store.setBottomTab("sourcing"); if (store.state.mobileReviewOnly) store.setMobilePanel("history"); },
     "state:current": () => store.setEvidenceState("current"),
     "state:failed": () => store.setEvidenceState("failed"),
     "state:stale": () => store.setEvidenceState("stale"),

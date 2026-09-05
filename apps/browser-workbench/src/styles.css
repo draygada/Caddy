@@ -1193,6 +1193,125 @@ kbd {
   white-space: nowrap;
 }
 
+.sourcing-round {
+  display: grid;
+  min-width: 760px;
+  min-height: 100%;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.sourcing-summary,
+.sourcing-line,
+.sourcing-offer {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #14181c;
+}
+
+.sourcing-summary {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 10px 11px;
+}
+
+.sourcing-summary h3,
+.sourcing-line h3 {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 11px;
+}
+
+.sourcing-summary p,
+.sourcing-line p,
+.sourcing-offer p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.sourcing-summary dl,
+.sourcing-offer dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.sourcing-summary dl > div,
+.sourcing-offer dl > div {
+  display: flex;
+  min-width: 0;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sourcing-summary dt,
+.sourcing-offer dt {
+  color: var(--text-muted);
+  font-size: 8px;
+}
+
+.sourcing-summary dd,
+.sourcing-offer dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 8px;
+  text-align: right;
+}
+
+.sourcing-lines {
+  min-width: 0;
+}
+
+.sourcing-line {
+  padding: 9px 10px 10px;
+}
+
+.sourcing-line > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.sourcing-offers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 7px;
+}
+
+.sourcing-offer {
+  overflow: hidden;
+  background: #101417;
+}
+
+.sourcing-offer summary {
+  display: flex;
+  min-height: 55px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.sourcing-offer summary::-webkit-details-marker { display: none; }
+.sourcing-offer summary:hover { background: var(--bg-hover); }
+.sourcing-offer summary > span:first-child { display: grid; min-width: 0; gap: 3px; }
+.sourcing-offer summary strong { overflow: hidden; color: var(--text); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.sourcing-offer summary small { overflow: hidden; color: var(--text-muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.sourcing-price { color: var(--accent-bright); font-family: var(--font-mono); font-size: 11px; text-align: right; }
+.sourcing-price small { display: block; }
+.sourcing-offer[open] summary { border-bottom: 1px solid var(--line-faint); }
+.sourcing-offer dl { padding: 7px 9px 3px; }
+.sourcing-offer > p { padding: 3px 9px 8px; }
+
 .diagnostic-list {
   display: grid;
   gap: 1px;
@@ -2762,7 +2881,7 @@ kbd {
     z-index: 50;
     display: grid;
     grid-row: 3;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     padding-bottom: env(safe-area-inset-bottom);
     border-top: 1px solid var(--line);
     background: #0e1114;
@@ -2826,6 +2945,16 @@ kbd {
 
   .timeline-item:not(:last-child)::after {
     display: none;
+  }
+
+  .sourcing-round {
+    min-width: 0;
+    grid-template-columns: 1fr;
+    padding: 10px;
+  }
+
+  .sourcing-offers {
+    grid-template-columns: 1fr;
   }
 
   .diagnostic-row {

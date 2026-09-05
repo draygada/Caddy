@@ -68,6 +68,14 @@ class TestProductService:
         assert candidate["kernelProvenance"]["platformImage"] == "Darwin@arm64;python=cp312;wheel-platform=macosx_11_0_arm64"
         assert candidate["document"]["units"] == {"length": "mm", "angle": "deg"}
         assert all(node["mesh"]["entityRanges"] for node in candidate["document"]["scene"]["nodes"])
+        sourcing = candidate["sourcingRound"]
+        assert sourcing["schemaVersion"] == "caddydaddy.sourcing-round/1"
+        assert sourcing["sourceRevisionId"] == candidate["document"]["revisionId"]
+        assert sourcing["status"] == "FIXTURE_REVIEW_ONLY"
+        assert sourcing["externalEffects"] == "NONE"
+        assert sourcing["lines"] and sourcing["lines"][0]["offers"]
+        assert all(offer["kind"] == "SYNTHETIC" for line in sourcing["lines"] for offer in line["offers"])
+        assert all(offer["screeningStatus"] == "NOT_EVALUATED" for line in sourcing["lines"] for offer in line["offers"])
         status, body = self.post(first_request(self.runtime))
         assert status == 200
         assert body["status"] == "REVIEW_REQUIRED" and body["cleared"] is False
