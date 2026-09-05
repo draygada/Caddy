@@ -1,0 +1,79 @@
+import { useEffect, useMemo } from 'react';
+import { useStore } from './store';
+import { service } from './lib/service';
+import { TopBar } from './panels/TopBar';
+import { Browser } from './panels/Browser';
+import { Viewport } from './panels/Viewport';
+import { StatusPanel } from './panels/StatusPanel';
+import { SpecPanel } from './panels/SpecPanel';
+import { Reasoning } from './panels/Reasoning';
+import { Timeline } from './panels/Timeline';
+import { HelpOverlay } from './panels/HelpOverlay';
+import { DemoBar } from './panels/DemoBar';
+
+function useKeyboard() {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const st = useStore.getState();
+      const tag = ((e.target as HTMLElement | null)?.tagName || '').toLowerCase();
+      if (e.key === 'Escape') { st.closeAll(); return; }
+      if (tag === 'input' || tag === 'textarea') return;
+      if (e.key === '?') st.toggleHelp();
+      else if (e.key === 'l' || e.key === 'L') st.toggleTimeline();
+      else if (e.key === 'f' || e.key === 'F') st.setView('iso');
+      else if ((e.key === 'ArrowRight' || e.key === ' ') && st.demoBar) { e.preventDefault(); st.advance(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+}
+
+export default function App() {
+  const theme = useStore((s) => s.theme);
+  const parts = useStore((s) => s.parts);
+  const attrs = useStore((s) => s.attrs);
+  const span = useStore((s) => s.span);
+  const demoBar = useStore((s) => s.demoBar);
+  const unreachable = useStore((s) => s.serviceState === 'unreachable');
+  const reasoningOpen = useStore((s) => s.reasoningOpen);
+  const timelineOpen = useStore((s) => s.timelineOpen);
+  const helpOpen = useStore((s) => s.helpOpen);
+  const eventCount = useStore((s) => s.events.length);
+  const openTimeline = useStore((s) => s.openTimeline);
+  const o = useMemo(() => service.evaluate({ parts, attrs, span }), [parts, attrs, span]);
+  useKeyboard();
+
+  return (
+    <div data-theme={theme} className="h-full min-w-[1200px] flex flex-col bg-bg text-ink overflow-hidden">
+      <TopBar />
+      {unreachable && (
+        <div role="status" className="flex-none px-4 py-2 border-b border-line2 bg-surface2 text-[14px] flex gap-3 items-center">
+          <span className="chip">Cached</span>
+          <span>service not reachable — replaying the cached baseline · last outcome 2026-09-05 09:12</span>
+        </div>
+      )}
+      <div className="flex-1 min-h-0 relative grid grid-cols-[340px_minmax(0,1fr)_400px_32px] gap-2 pt-2 pb-2 pl-2">
+        <Browser />
+        <div className="flex flex-col gap-2 min-h-0 min-w-0">
+          <Viewport o={o} />
+        </div>
+        <div className="flex flex-col gap-2 min-h-0">
+          <StatusPanel o={o} />
+          <SpecPanel o={o} />
+        </div>
+        {reasoningOpen && <Reasoning o={o} />}
+        <button
+          onClick={openTimeline}
+          aria-label="Open timeline"
+          className="w-8 min-h-full bg-surface border border-line2 border-r-0 rounded-l-r text-ink cursor-pointer text-[13px] font-semibold tracking-[.04em] py-3 hover:bg-hover"
+          style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+        >
+          Timeline · {eventCount} events
+        </button>
+        {timelineOpen && <Timeline />}
+        {helpOpen && <HelpOverlay />}
+      </div>
+      {demoBar && <DemoBar />}
+    </div>
+  );
+}

@@ -1,0 +1,29 @@
+{
+  "name": "tripwire-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CADdy Daddy / Tripwire frontend: Kestrel slot editor, rule outcome, timeline. Renders outcomes; computes nothing authoritative. Local rule engine is a synthetic stand-in until the service seam is wired.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zustand": "5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "@vitejs/plugin-react": "6.1.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vite": "8.2.2",
+    "vitest": "5.0.0"
+  }
+}
