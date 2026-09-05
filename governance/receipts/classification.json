@@ -1,0 +1,109 @@
+{
+  "lane": "classification",
+  "branch": "lane/classification",
+  "worktree": "/Users/charliehaywood/Downloads/CADdyDaddy",
+  "exclusive_write_paths": [
+    "packages/classification/**",
+    "tests/classification/**",
+    "governance/receipts/classification.json"
+  ],
+  "base_commit": "92241b9ca7c9df37cc48e55b4ea388cb21686bb4",
+  "status": "ASSIGNED_LOCAL_CANDIDATE",
+  "mutation_admitted": true,
+  "writer": {
+    "writer_id": "charlie-haywood/claude-code-session",
+    "task_id": "classification-lane-remake-2026-09-05",
+    "model": "claude-fable-5-1",
+    "authority": "Charlie Haywood, in-session instructions 2026-09-05 (three decisions-ledger entries of that date)"
+  },
+  "lease_acquired_at": "2026-09-05T21:28:40Z",
+  "renew_by": null,
+  "expires_at": null,
+  "candidate_commit": "c59a7ea0e1671ef599cae572f8f98b58a792e46e",
+  "registry_status": "NOT_ADMITTED \u2014 proposed entry in packages/classification/handoff/custody-lane-entry.proposed.json",
+  "now_observation": {
+    "schema_version": "1.0.0",
+    "observed_at": "2026-09-05T21:28:40Z",
+    "worktree_label": "forge/classification",
+    "task": {
+      "id": "classification-lane-remake-2026-09-05",
+      "title": "Classification lane: automatic order-of-review engine returning the jurisdictional determination",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "packages/classification/HANDOFF.md"
+    },
+    "actor": {
+      "owner": {
+        "id": "charlie-haywood",
+        "title": "Charlie Haywood",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/classification/HANDOFF.md"
+      },
+      "model": {
+        "id": "claude-fable-5-1",
+        "title": "Claude Fable 5.1 (Claude Code)",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/classification/HANDOFF.md"
+      }
+    },
+    "lane_state": {
+      "value": "IMPLEMENTED_LOCAL_UNADMITTED",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "git:c59a7ea0e1671ef599cae572f8f98b58a792e46e"
+    },
+    "current_action": {
+      "value": "handoff written; awaiting integrator admission of the lane",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "packages/classification/HANDOFF.md"
+    },
+    "last_evidenced_change": {
+      "kind": "commit",
+      "occurred_at": "2026-09-05T21:28:40Z",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "git:c59a7ea0e1671ef599cae572f8f98b58a792e46e"
+    },
+    "blockers": [
+      {
+        "id": "registry-admission",
+        "state": "HOLD",
+        "summary": "lane `classification` is not in governance/custody.v1.json",
+        "clearer": "main integration owner",
+        "next_unblock": "admit the proposed lane entry from packages/classification/handoff/",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/classification/handoff/custody-lane-entry.proposed.json"
+      },
+      {
+        "id": "live-model-spend",
+        "state": "HOLD",
+        "summary": "no live model run; every test scripts the model",
+        "clearer": "Charlie (spend authority)",
+        "next_unblock": "a bounded spend grant and a cache-recording run",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/classification/HANDOFF.md"
+      }
+    ],
+    "checks": [
+      {
+        "name": "pytest tests/classification",
+        "state": "PASSED",
+        "observed_at": "2026-09-05T21:28:40Z",
+        "candidate": "c59a7ea0e1671ef599cae572f8f98b58a792e46e",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/classification/HANDOFF.md"
+      },
+      {
+        "name": "tools/check_custody.py --lane classification (against the proposed registry entry)",
+        "state": "PASSED",
+        "observed_at": "2026-09-05T21:28:40Z",
+        "candidate": "c59a7ea0e1671ef599cae572f8f98b58a792e46e",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/classification/HANDOFF.md"
+      }
+    ],
+    "release": {
+      "state": "NONE",
+      "candidate": null,
+      "evidence_class": "MEASURED",
+      "evidence_ref": null
+    }
+  }
+}
