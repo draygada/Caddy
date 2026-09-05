@@ -1195,9 +1195,9 @@ kbd {
 
 .sourcing-round {
   display: grid;
-  min-width: 760px;
+  min-width: 0;
   min-height: 100%;
-  grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
   gap: 10px;
   padding: 10px 12px;
 }
@@ -1280,12 +1280,15 @@ kbd {
 }
 
 .sourcing-offers {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  display: flex;
+  overflow-x: auto;
   gap: 7px;
+  padding-bottom: 2px;
 }
 
 .sourcing-offer {
+  min-width: 180px;
+  flex: 1 0 180px;
   overflow: hidden;
   background: #101417;
 }
@@ -2954,7 +2957,9 @@ kbd {
   }
 
   .sourcing-offers {
+    display: grid;
     grid-template-columns: 1fr;
+    overflow: visible;
   }
 
   .diagnostic-row {
