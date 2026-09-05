@@ -11,7 +11,7 @@ For any accepted P0 design edit, Tripwire deterministically returns per-node fin
 - Load and validate the canonical design and approved `rules.P0.json` pack.
 - Evaluate typed clauses and atoms with unit-aware comparisons.
 - Hard-code order of review outside rule data: USML/ITAR → CCL/EAR → EAR99 only after specific candidates are rejected.
-- Evaluate parts/items first, then propagate named consequences to assemblies/products.
+- Evaluate admitted P0 physical nodes first, then propagate named consequences to assemblies/products. Empty or absent `items[]` is valid; a nonempty `items[]` fails P0 admission as `unsupported_input` because item-axis evaluation is outside this slice.
 - Return causal objects suitable for direct UI rendering.
 - Implement only the admitted P0 flips F1, F3, and F8 plus the missing-evidence fixture. F2/F4/F5/F6 remain excluded until their unresolved facts and grammar are governed.
 
@@ -34,7 +34,7 @@ Each fired or unresolved tripwire includes:
 - `state`: `fired`, `not_fired`, or `cannot_evaluate`;
 - verbatim text, URL, eCFR content date, and rule effective date when present;
 - evidence level and source span/digest when present;
-- destination status fixed to `not_evaluated` for P0.
+- the containing node determination carries destination status fixed to `not_evaluated` for P0; tripwire objects do not duplicate it.
 
 Do not return a generic boolean when a causal object can be returned.
 

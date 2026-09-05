@@ -53,16 +53,17 @@ It returns:
   "destination_policy_sha": null,
   "ecfr_date": "2026-09-01",
   "determinations": {
-    "node-id": {
-      "state": "clear|watch|question|flag",
-      "jurisdiction": "ITAR|EAR|EAR99|null",
-      "entries": [],
+    "nose_thermal": {
+      "state": "flag",
+      "jurisdiction": "EAR",
+      "entries": ["6A003.b.4.b"],
       "direct_tripwires": [{
         "rule_id": "CCL-6A003.b.4.b",
         "state": "fired",
         "jurisdiction": "EAR",
         "entry": "6A003.b.4.b",
-        "reason_for_control": ["RS1"],
+        "reason_for_control": ["NS2", "AT1"],
+        "node_id": "nose_thermal",
         "cause_node_id": "nose_thermal",
         "fact": {"attribute": "frame_rate_hz", "observed": 60, "unit": "Hz", "operator": ">", "threshold": 9},
         "text": "verbatim pinned rule text",
@@ -74,7 +75,32 @@ It returns:
       "propagated_tripwires": [],
       "unresolved_tripwires": [],
       "destinations": {"status": "not_evaluated", "reason": "P0 has no approved destination policy"},
-      "evidence_level": "verified|declared|synthetic|missing"
+      "evidence_level": "verified"
+    },
+    "kestrel": {
+      "state": "flag",
+      "jurisdiction": "EAR",
+      "entries": ["9A012.a.3"],
+      "direct_tripwires": [],
+      "propagated_tripwires": [{
+        "rule_id": "CCL-9A012.a.3",
+        "state": "fired",
+        "jurisdiction": "EAR",
+        "entry": "9A012.a.3",
+        "reason_for_control": ["NS1", "AT1"],
+        "node_id": "kestrel",
+        "cause_node_id": "nose_thermal",
+        "path": ["nose_thermal", "kestrel"],
+        "fact": {"attribute": "installed_descendant_entry", "observed": "6A003.b.4.b", "unit": null, "operator": "in", "threshold": ["6A003.b.3", "6A003.b.4.b", "6A008.d", "6A008.e", "6A008.f", "6A008.g", "6A008.h"]},
+        "text": "verbatim pinned rule text",
+        "source_url": "https://www.ecfr.gov/...",
+        "ecfr_date": "2026-09-01",
+        "rule_effective": "2026-08-13",
+        "evidence": {"level": "verified", "sha256": "...", "span": [220, 340]}
+      }],
+      "unresolved_tripwires": [],
+      "destinations": {"status": "not_evaluated", "reason": "P0 has no approved destination policy"},
+      "evidence_level": "verified"
     }
   },
   "delta": {
@@ -86,13 +112,13 @@ It returns:
     "tripwires_removed": [],
     "rules_evaluated": ["CCL-6A003.b.4.b", "CCL-9A012.a.3"]
   },
-  "summary": {"clear": 0, "watch": 0, "question": 0, "flag": 0}
+  "summary": {"clear": 0, "watch": 0, "question": 0, "flag": 2}
 }
 ```
 
 Internal `evaluate()` may keep returning the determinations map; `backend/app.py` owns the envelope. The fixtures settle field names before parallel implementation starts. The echoed `request_id` and canonical `design_revision` are both required: one rejects browser response races and the other binds evidence to content.
 
-`direct_tripwires`, `propagated_tripwires`, and `unresolved_tripwires` use this same complete object. Propagated objects additionally require `cause_node_id` and `path`; unresolved objects set `state: "cannot_evaluate"` and name the missing or incompatible fact. The inspector renders these fields directly and never joins hidden legal data in React.
+`direct_tripwires`, `propagated_tripwires`, and `unresolved_tripwires` use this same complete object. Every object carries its target `node_id`; `cause_node_id` names the originating node and may equal it for a direct finding. Propagated objects additionally require `path`; unresolved objects set `state: "cannot_evaluate"` and name the missing or incompatible fact. The separate `CCL-6A003.b.4.b-RS1` object, if retained, owns `reason_for_control: ["RS1"]`; the base `>9 Hz` object does not. `destinations` belongs to the node determination, not to each tripwire. The inspector renders these fields directly and never joins hidden legal data in React.
 
 ## Acceptance
 

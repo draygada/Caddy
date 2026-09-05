@@ -55,6 +55,8 @@ Each overview marker shows the slot, installed short MPN, and status. Interior l
 
 The component tree and all marker states come from FB-01 fixtures or same-origin `/api/evaluate`. React may select, filter, sort, focus, and style them. It may not compare engineering values to regulatory thresholds or invent a `watch` margin.
 
+Before FB-01 is frozen, layout scaffolding may use a visibly synthetic frontend-local mock. That mock is disposable pre-stage material, not a golden fixture or accepted contract evidence. An FB-03 candidate cannot pass until its design and all response states validate against the exact frozen FB-01 contract; stale aliases or scenario values are a HOLD.
+
 Every rendered object declares one `nodeId`. A development assertion fails on duplicate mesh bindings, response nodes with no UI representation, or a visible mesh with no node record.
 
 ## Implementation guidance

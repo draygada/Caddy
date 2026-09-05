@@ -2,6 +2,8 @@
 
 Owner lane: truth/contract integration. Priority: P0 blocking gate. This is not an ordinary implementation lane.
 
+Open decisions, semantic-review requirements, and work that may be mechanically prestaged are frozen in `FB-00_APPROVAL_PACKET.md`.
+
 ## Outcome
 
 Produce the smallest approved, executable body of facts needed for the demo before engine builders encode assumptions independently. The current `data/rules/rules.DRAFT.json` is research material and its machine checks do not approve legal semantics.
@@ -14,7 +16,7 @@ Produce the smallest approved, executable body of facts needed for the demo befo
 - The rule grammar is made executable for the retained subset through one controlled schema thaw/refreeze. Clauses and atoms get exclusive discriminators and `additionalProperties: false`; `not` accepts one clause such as `{ "not": { "any": [...] } }`; unsupported declaration, list, and existence constructs remain excluded. Units and value types are explicit before an evaluator is written.
 - A baseline Kestrel design and golden before/after outputs contain every required attribute, unit, parent edge, stable ID, and provenance label.
 - A test-only synthetic collision pack proves USML → CCL → EAR99 ordering and proves EAR99 is unavailable until a named specific candidate is rejected. It does not expand the product claim ceiling or appear in the demo.
-- Unsupported draft rows, F2, F4, F5/F6, P3 downward inheritance, `items[]` runtime behavior, live AI, and destination/legal coverage are explicitly excluded rather than left ambiguous.
+- Unsupported draft rows, F2, F4, F5/F6, P3 downward inheritance, nonempty `items[]` runtime behavior, live AI, and destination/legal coverage are explicitly excluded rather than left ambiguous. Empty or absent `items[]` is accepted; any nonempty array fails P0 admission as `unsupported_input` before evaluation.
 
 ## Non-negotiable semantic decisions
 

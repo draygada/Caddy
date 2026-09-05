@@ -24,7 +24,7 @@ FB-05 audit history and FB-06 AI/classification bridges are roadmap lanes, not h
 
 | ID | Outcome | Primary paths | Depends on | Demo priority |
 |---|---|---|---|---|
-| `FB-00` | Approved, explicitly partial P0 rule pack and semantic decisions | `data/rules/`, decision record, corpus receipts | required authority | P0 blocker |
+| `FB-00` | Approved, explicitly partial P0 rule pack and semantic decisions; open packet in `FB-00_APPROVAL_PACKET.md` | `data/rules/`, decision record, corpus receipts | required authority | P0 blocker |
 | `FB-01` | One canonical Kestrel fixture and stable evaluate contract | exact cross-owner allowlist: `data/demo/`, `backend/tests/fixtures/`, `docs/api/` | FB-00; serialized contract owner | P0 |
 | `FB-02` | Deterministic per-node evaluation and propagation | `backend/engine/`, engine tests | FB-01, approved P0 rule pack | P0 |
 | `FB-03` | Inspectable 3D inventory with in-context tripwire markers | `frontend/src/` | FB-01; fixture-shaped evaluator response | P0 |
@@ -90,6 +90,6 @@ Stop and escalate rather than improvise when:
 - a claim requires a network response to survive;
 - less than two hours remain and the F1/F3/F8 vertical slice is not green.
 
-The current known stop is FB-00: approved `data/rules/rules.P0.json` does not exist. FB-02 cannot start until that is cleared. FB-03 may proceed against the golden response fixtures only and must label that state.
+The current known stop is FB-00: approved `data/rules/rules.P0.json` does not exist. FB-02 cannot start until that is cleared. Before FB-01 exists, an FB-03 task may pre-stage layout and interaction primitives against an explicitly synthetic frontend-local mock, but that work is not an accepted FB-03 candidate. It must reconcile to and validate against the frozen FB-01 fixtures before integration, and the product must label fixture mode.
 
 At the two-hour stop, retain only preset F1/F3/F8 actions, exact citations, the missing-evidence state, and FB-07. If the live evaluator is not verified, switch visibly to committed fixture mode rather than implying a live result.
