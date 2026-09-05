@@ -55,10 +55,6 @@ test("CURRENT is editable while in-flight, LAST_VALID, and STALE states are expl
     assert.equal(store.canEdit, false);
   }
 
-  store.setEvidenceState("worker-crashed");
-  assert.equal(store.evidenceState.adapterOnline, false);
-  assert.equal(store.evidenceState.recomputeStatus, "WORKER_CRASHED");
-  assert.equal(store.canEdit, false);
 });
 
 test("mobile review-only follows media changes and blocks mutation", () => {

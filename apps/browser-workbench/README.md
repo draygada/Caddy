@@ -11,8 +11,9 @@ record revision, and product revision to `/api/compliance-at-design-click`. The 
 imported Tripwire evaluator through `packages/compliance-bridge`, and the browser independently checks
 the returned observation and receipt hashes before rendering them.
 
-Claim ceiling: "CADdyDaddy combines one bounded browser CAD workflow with a dated, review-only
-compliance-at-design-click evaluation on the same immutable product revision."
+Claim ceiling: "Selected CAD entity bound to immutable revision; review-readiness guardrail through
+Tripwire; Candidate 0.1 returns insufficient evidence and requires human review, not a compliance
+determination."
 
 Positioning only: "We're closing the loop from idea to execution for high-stakes industries."
 
@@ -34,14 +35,9 @@ npm run serve
 `FORGE_WORKBENCH_HOST` and `FORGE_WORKBENCH_PORT`. The server sends a restrictive local CSP,
 disables caching, and returns 404 for missing module assets instead of serving the HTML shell.
 
-Useful synthetic review URLs:
+Useful local review URLs:
 
 - `/` — current multi-body PartDocument surface
-- `/?scenario=queued` — queued attempt with the prior artifact marked stale
-- `/?scenario=running` — running attempt with the prior artifact marked stale
-- `/?scenario=failed` — failed attempt with separately identified last-valid geometry
-- `/?scenario=stale` — stale artifact with authoring blocked
-- `/?scenario=worker-crashed` — worker failure and explicit retry
 - `/?renderer=fallback` — semantic 2D fallback without WebGL
 
 ## Browser architecture
@@ -63,8 +59,8 @@ mapping, state-truth labeling, or the source-scene immutability invariant in tha
 ## Known contract gaps
 
 - No admitted core-kernel packet or shared boundary adapter exists in this lane.
-- Recompute and worker transitions are synthetic UI simulations. No geometry recompute, worker
-  execution, transport, crash recovery, or authoritative geometry execution is implemented here.
+- Candidate 0.1 is revision-pinned. It does not expose recompute, worker execution, crash recovery,
+  or authoritative geometry execution.
 - Mobile semantic-diff review and browser-driven accessibility/responsive automation remain unbuilt.
 - The timing script is a synthetic Node-process target; it records no browser, memory, or external-SLO
   evidence.
