@@ -1,40 +1,109 @@
 {
-  "schema_version": "caddydaddy.sanitized-bundle/1",
+  "schema_version": "caddydaddy.sanitized-bundle/2",
   "candidate": "0.1",
+  "target": "vercel-file-based-python-function",
+  "python": "3.12",
   "required_trees": [
-    "apps/browser-workbench/dist",
-    "apps/product-service/product_service",
-    "packages/core-kernel/src/strafe_forge_core",
-    "packages/compliance-bridge/compliance_bridge"
+    {
+      "source": "apps/browser-workbench/dist",
+      "target": "public"
+    },
+    {
+      "source": "apps/product-service/product_service",
+      "target": "apps/product-service/product_service"
+    },
+    {
+      "source": "packages/core-kernel/src/strafe_forge_core",
+      "target": "packages/core-kernel/src/strafe_forge_core"
+    },
+    {
+      "source": "packages/compliance-bridge/compliance_bridge",
+      "target": "packages/compliance-bridge/compliance_bridge"
+    }
   ],
   "required_files": [
-    "apps/product-service/README.md",
-    "apps/product-service/bundle-manifest.v1.json",
-    "apps/browser-workbench/THIRD_PARTY_NOTICES.md",
-    "packages/core-kernel/pyproject.toml",
-    "packages/core-kernel/uv.lock",
-    "packages/core-kernel/THIRD_PARTY_NOTICES.md",
-    "packages/caddydaddy-contracts/schemas/compliance-input.v1.schema.json",
-    "packages/caddydaddy-contracts/schemas/compliance-observation.v1.schema.json",
-    "packages/caddydaddy-contracts/schemas/compliance-binding-receipt.v1.schema.json",
-    "features/tripwire/backend/engine/evaluate.py"
+    {
+      "source": "apps/product-service/vercel/api/index.py",
+      "target": "api/index.py"
+    },
+    {
+      "source": "apps/product-service/vercel/.python-version",
+      "target": ".python-version"
+    },
+    {
+      "source": "apps/product-service/vercel/requirements.txt",
+      "target": "requirements.txt"
+    },
+    {
+      "source": "apps/product-service/vercel/vercel.json",
+      "target": "vercel.json"
+    },
+    {
+      "source": "apps/browser-workbench/THIRD_PARTY_NOTICES.md",
+      "target": "apps/browser-workbench/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "source": "packages/core-kernel/THIRD_PARTY_NOTICES.md",
+      "target": "packages/core-kernel/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "source": "packages/caddydaddy-contracts/schemas/compliance-input.v1.schema.json",
+      "target": "packages/caddydaddy-contracts/schemas/compliance-input.v1.schema.json"
+    },
+    {
+      "source": "packages/caddydaddy-contracts/schemas/compliance-observation.v1.schema.json",
+      "target": "packages/caddydaddy-contracts/schemas/compliance-observation.v1.schema.json"
+    },
+    {
+      "source": "packages/caddydaddy-contracts/schemas/compliance-binding-receipt.v1.schema.json",
+      "target": "packages/caddydaddy-contracts/schemas/compliance-binding-receipt.v1.schema.json"
+    },
+    {
+      "source": "features/tripwire/backend/engine/evaluate.py",
+      "target": "features/tripwire/backend/engine/evaluate.py"
+    }
   ],
   "excluded": [
     "features/tripwire/data/**",
     "features/tripwire/data/catalog/consolidated_screening_list.csv",
     "features/tripwire/data/catalog/PX4_PARTS_DATABASE.csv",
     "packages/history-collaboration/**",
+    "packages/core-kernel/evidence/**",
     "governance/**",
     "docs/**",
     "tests/**",
     ".git/**",
+    "**/.git/**",
+    ".vercel/**",
+    "**/.vercel/**",
+    "**/.terraform/**",
+    "**/node_modules/**",
     "**/__pycache__/**",
+    "**/.pytest_cache/**",
+    "**/.mypy_cache/**",
+    "**/.ruff_cache/**",
+    "**/.cache/**",
     "**/*.pyc",
     "**/*.pyo",
+    ".env*",
     "**/.env*",
     "**/*credential*",
     "**/*secret*",
+    "**/*.pem",
+    "**/*.key",
+    "**/fixtures/**",
+    "**/*fixture*",
+    "**/test-vectors/**",
+    "**/*kestrel*",
+    "**/*Kestrel*",
+    "**/bom/**",
+    "**/*bom-data*",
+    "**/*BOM*",
     "apps/browser-workbench/src/internal-fixture.js",
     "apps/browser-workbench/src/internal-scene.js"
+  ],
+  "forbidden_content": [
+    "/Users/",
+    "file:///Users/"
   ]
 }

@@ -5,63 +5,141 @@ from __future__ import annotations
 
 import argparse
 from fnmatch import fnmatch
+import gzip
 import hashlib
 import json
 from pathlib import Path
-import shutil
+import tarfile
 
 REPO = Path(__file__).resolve().parents[3]
 POLICY = REPO / "apps" / "product-service" / "bundle-manifest.v1.json"
+RESOLVED_MANIFEST = "bundle-manifest.resolved.json"
+
+
+def _relative_path(value: str, label: str) -> Path:
+    path = Path(value)
+    if path.is_absolute() or path == Path(".") or ".." in path.parts:
+        raise SystemExit(f"{label} must be a safe relative path: {value}")
+    return path
+
+
+def _write_archive(bundle: Path, archive: Path) -> None:
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    with archive.open("xb") as raw_archive:
+        with gzip.GzipFile(filename="", mode="wb", fileobj=raw_archive, mtime=0, compresslevel=9) as compressed:
+            with tarfile.open(fileobj=compressed, mode="w", format=tarfile.PAX_FORMAT) as tar:
+                for source in sorted(path for path in bundle.rglob("*") if path.is_file()):
+                    relative = source.relative_to(bundle).as_posix()
+                    content = source.read_bytes()
+                    info = tarfile.TarInfo(relative)
+                    info.size = len(content)
+                    info.mode = 0o644
+                    info.mtime = 0
+                    info.uid = 0
+                    info.gid = 0
+                    info.uname = ""
+                    info.gname = ""
+                    import io
+
+                    tar.addfile(info, io.BytesIO(content))
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--archive", type=Path)
     args = parser.parse_args()
     output = args.output.resolve()
+    archive = (args.archive or output.with_name(output.name + ".tar.gz")).resolve()
     if output.exists():
         raise SystemExit("Output already exists; refusing to overwrite it.")
+    if archive.exists():
+        raise SystemExit("Archive already exists; refusing to overwrite it.")
+    if output == REPO or REPO in output.parents or archive == REPO or REPO in archive.parents:
+        raise SystemExit("Bundle output and archive must be outside the source repository.")
+    if output == archive or output in archive.parents:
+        raise SystemExit("Archive must be outside the bundle directory.")
     policy = json.loads(POLICY.read_text(encoding="utf-8"))
     excluded = tuple(policy["excluded"])
+    forbidden_content = tuple(item.encode("utf-8") for item in policy["forbidden_content"])
 
     def is_excluded(relative: str) -> bool:
         return any(fnmatch(relative, pattern) for pattern in excluded)
 
-    paths: set[Path] = set()
-    for tree in policy["required_trees"]:
-        root = REPO / tree
-        if not root.is_dir():
-            raise SystemExit(f"Required runtime tree is missing: {tree}")
-        paths.update(
-            path
-            for path in root.rglob("*")
-            if path.is_file() and not is_excluded(path.relative_to(REPO).as_posix())
-        )
-    for name in policy["required_files"]:
-        path = REPO / name
-        if not path.is_file():
-            raise SystemExit(f"Required runtime file is missing: {name}")
-        if is_excluded(path.relative_to(REPO).as_posix()):
-            raise SystemExit(f"Required runtime file is excluded by policy: {name}")
-        paths.add(path)
-    records = []
-    for source in sorted(paths):
+    payloads: dict[str, tuple[str, bytes]] = {}
+
+    def admit(source: Path, target_relative: Path) -> None:
         if source.is_symlink():
             raise SystemExit(f"Symlinks are not admitted: {source.relative_to(REPO)}")
-        relative = source.relative_to(REPO).as_posix()
-        if is_excluded(relative):
-            raise SystemExit(f"Excluded path entered bundle allowlist: {relative}")
+        source_relative = source.relative_to(REPO).as_posix()
+        target_name = target_relative.as_posix()
+        if is_excluded(source_relative) or is_excluded(target_name):
+            raise SystemExit(f"Excluded path entered bundle allowlist: {source_relative} -> {target_name}")
+        if target_name in payloads:
+            raise SystemExit(f"Multiple sources target the same bundle path: {target_name}")
         content = source.read_bytes()
         if str(REPO).encode() in content or b"/Users/" in content:
-            raise SystemExit(f"Absolute workspace path found in runtime file: {relative}")
-        target = output / relative
+            raise SystemExit(f"Absolute workspace path found in runtime file: {source_relative}")
+        for marker in forbidden_content:
+            if marker in content:
+                raise SystemExit(f"Forbidden content marker found in runtime file: {source_relative}")
+        payloads[target_name] = (source_relative, content)
+
+    for mapping in policy["required_trees"]:
+        source_root = _relative_path(mapping["source"], "tree source")
+        target_root = _relative_path(mapping["target"], "tree target")
+        root = REPO / source_root
+        if not root.is_dir():
+            raise SystemExit(f"Required runtime tree is missing: {source_root.as_posix()}")
+        for source in sorted(path for path in root.rglob("*") if path.is_file()):
+            source_relative = source.relative_to(REPO).as_posix()
+            if is_excluded(source_relative):
+                continue
+            admit(source, target_root / source.relative_to(root))
+    for mapping in policy["required_files"]:
+        source_relative = _relative_path(mapping["source"], "file source")
+        target_relative = _relative_path(mapping["target"], "file target")
+        source = REPO / source_relative
+        if not source.is_file():
+            raise SystemExit(f"Required runtime file is missing: {source_relative.as_posix()}")
+        admit(source, target_relative)
+
+    records = []
+    for target_name, (source_relative, content) in sorted(payloads.items()):
+        target = output / target_name
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
-        records.append({"path": relative, "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()})
-    manifest = {"schema_version": policy["schema_version"], "candidate": policy["candidate"], "files": records, "excluded": policy["excluded"], "provider_state": "NOT_INCLUDED"}
+        target.write_bytes(content)
+        target.chmod(0o644)
+        records.append({"path": target_name, "source": source_relative, "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()})
+    closure_bytes = json.dumps(records, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    manifest = {
+        "schema_version": policy["schema_version"],
+        "candidate": policy["candidate"],
+        "target": policy["target"],
+        "python": policy["python"],
+        "files": records,
+        "payload_file_count": len(records),
+        "payload_bytes": sum(record["bytes"] for record in records),
+        "closure_sha256": hashlib.sha256(closure_bytes).hexdigest(),
+        "excluded": policy["excluded"],
+        "provider_state": "NOT_INCLUDED",
+    }
     manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
-    (output / "bundle-manifest.resolved.json").write_bytes(manifest_bytes)
-    print(json.dumps({"output": output.name, "file_count": len(records), "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(), "excluded": policy["excluded"]}, sort_keys=True))
+    (output / RESOLVED_MANIFEST).write_bytes(manifest_bytes)
+    (output / RESOLVED_MANIFEST).chmod(0o644)
+    _write_archive(output, archive)
+    bundle_files = [path for path in output.rglob("*") if path.is_file()]
+    print(json.dumps({
+        "output": output.name,
+        "archive": archive.name,
+        "payload_file_count": len(records),
+        "bundle_file_count": len(bundle_files),
+        "payload_bytes": manifest["payload_bytes"],
+        "bundle_bytes": sum(path.stat().st_size for path in bundle_files),
+        "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+        "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "closure_sha256": manifest["closure_sha256"],
+    }, sort_keys=True))
     return 0
 
 

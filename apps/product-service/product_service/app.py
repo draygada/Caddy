@@ -6,10 +6,12 @@ import argparse
 from copy import deepcopy
 from dataclasses import dataclass
 from fractions import Fraction
+import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
 from pathlib import Path
+import platform
 from typing import Any, Callable, Mapping
 from urllib.parse import unquote, urlsplit
 
@@ -36,20 +38,88 @@ PRODUCT_THREAD_ID = "product-thread:caddydaddy-demo-01"
 BOUNDED_CLAIM = "CADdyDaddy combines one bounded browser CAD workflow with a dated, review-only compliance-at-design-click evaluation on the same immutable product revision."
 POSITIONING = "We're closing the loop from idea to execution for high-stakes industries."
 REQUEST_KEYS = {"entity_id", "node_id", "product_thread_id", "forge_record_id", "occurrence_path", "forge_record_revision_id", "forge_revision_id"}
+MAX_REQUEST_BODY_BYTES = 65536
+_LOCKED_RUNTIME_PROVENANCE: tuple[dict[str, str], ...] = (
+    {
+        "system": "Darwin",
+        "machine": "arm64",
+        "python_tag": "cp312",
+        "wheel_filename": "cadquery_ocp_novtk-7.9.3.1-cp312-cp312-macosx_11_0_arm64.whl",
+        "wheel_platform": "macosx_11_0_arm64",
+        "wheel_sha256": "a070f99039e877e9558759570fd379365e2d28de3850b62e33c9c48e5ac1f0e3",
+    },
+    {
+        "system": "Linux",
+        "machine": "x86_64",
+        "python_tag": "cp312",
+        "wheel_filename": "cadquery_ocp_novtk-7.9.3.1-cp312-cp312-manylinux_2_31_x86_64.whl",
+        "wheel_platform": "manylinux_2_31_x86_64",
+        "wheel_sha256": "8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b",
+    },
+)
+_LOCKED_RUNTIME_PROVENANCE_SHA256 = "5913aa949b3979b6c93e3df4e0228acdb63633e0c5dbefdcb37f64242fcd44ff"
 
 
 def _literal(parameter_id: str, value: str) -> dict[str, object]:
     return {"parameter_id": parameter_id, "name": parameter_id.removeprefix("param:"), "value_type": "LENGTH", "literal": value, "expression": None}
 
 
+def _runtime_provenance_lock_sha256(records: tuple[Mapping[str, str], ...]) -> str:
+    encoded = json.dumps(records, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _runtime_provenance(
+    *,
+    system_name: str | None = None,
+    machine: str | None = None,
+    python_implementation: str | None = None,
+    python_version: str | None = None,
+) -> dict[str, str]:
+    if _runtime_provenance_lock_sha256(_LOCKED_RUNTIME_PROVENANCE) != _LOCKED_RUNTIME_PROVENANCE_SHA256:
+        raise RuntimeError("RUNTIME_PROVENANCE_LOCK_TAMPERED")
+    active_system = platform.system() if system_name is None else system_name
+    active_machine = platform.machine() if machine is None else machine
+    active_implementation = platform.python_implementation() if python_implementation is None else python_implementation
+    active_version = platform.python_version() if python_version is None else python_version
+    version_parts = active_version.split(".")
+    if active_implementation != "CPython" or len(version_parts) < 2 or not all(part.isdigit() for part in version_parts[:2]):
+        raise RuntimeError(
+            f"RUNTIME_PROVENANCE_UNSUPPORTED:{active_implementation}:{active_system}:{active_machine}:{active_version}"
+        )
+    python_tag = f"cp{version_parts[0]}{version_parts[1]}"
+    matches = [
+        record
+        for record in _LOCKED_RUNTIME_PROVENANCE
+        if (record["system"], record["machine"], record["python_tag"])
+        == (active_system, active_machine, python_tag)
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"RUNTIME_PROVENANCE_UNSUPPORTED:{active_implementation}:{active_system}:{active_machine}:{active_version}"
+        )
+    return {**matches[0], "python_version": active_version}
+
+
 def _manifest() -> EngineManifest:
+    provenance = _runtime_provenance()
     return EngineManifest(
         adapter="strafe-ocp@0.1.0",
-        binding="cadquery-ocp-novtk@7.9.3.1;wheel-sha256=a070f99039e877e9558759570fd379365e2d28de3850b62e33c9c48e5ac1f0e3;source=d69b064a3a604ebf245b1f3b14fb54c835a3a571",
+        binding=(
+            "cadquery-ocp-novtk@7.9.3.1"
+            f";wheel={provenance['wheel_filename']}"
+            f";wheel-sha256={provenance['wheel_sha256']}"
+            ";source=d69b064a3a604ebf245b1f3b14fb54c835a3a571"
+            ";lock=packages/core-kernel/uv.lock"
+        ),
         kernel="OCCT@7.9.3;source=a016080bf6738d6aeae020badee4e888ad1540a5",
         solver="NONE:not-adopted",
-        toolchain="CPython@3.12.13;uv@0.11.17",
-        platform_image="UNCONTAINERIZED:local-candidate",
+        toolchain=f"CPython@{provenance['python_version']};dependency-lock=uv@0.11.17",
+        platform_image=(
+            f"{provenance['system']}@{provenance['machine']}"
+            f";python={provenance['python_tag']}"
+            f";wheel-platform={provenance['wheel_platform']}"
+        ),
         tolerances={"linear_mm": "0.000001", "angular_deg": "0.000001"},
         deterministic_settings={"parallel": False, "boolean_fuzzy_mm": "0.0000001", "brep_format": 4, "binary64_rounding": "nearest-ties-even"},
     )
@@ -154,7 +224,7 @@ def build_candidate_state() -> CandidateState:
         "evidenceCeiling": "DEMONSTRATED_LOCAL",
         "capabilities": {"authoring": False, "recompute": False, "import": False, "export": False, "complianceAtDesignClick": True},
         "forgeRevision": revision,
-        "kernelProvenance": {"partResult": "forge.core-recompute-result/1", "assemblyResult": "forge.core-assembly-result/1", "viewportPacket": viewport["protocol_version"], "engineManifestHash": assembly.engine_manifest_hash, "geometryArtifactId": assembly.current_artifact.artifact_id, "geometryArtifactHash": assembly.current_artifact.content_hash},
+        "kernelProvenance": {"partResult": "forge.core-recompute-result/1", "assemblyResult": "forge.core-assembly-result/1", "viewportPacket": viewport["protocol_version"], "engineManifestHash": assembly.engine_manifest_hash, "binding": manifest.binding, "toolchain": manifest.toolchain, "platformImage": manifest.platform_image, "geometryArtifactId": assembly.current_artifact.artifact_id, "geometryArtifactHash": assembly.current_artifact.content_hash},
         "descriptors": [],
         "document": document,
         "states": {"current": current},
@@ -280,9 +350,17 @@ class ProductServer(ThreadingHTTPServer):
     daemon_threads = True
 
 
-def create_server(host: str, port: int, runtime: CandidateRuntime | None = None, static_root: Path | None = None) -> ProductServer:
+def create_handler(
+    runtime: CandidateRuntime | None = None,
+    static_root: Path | None = None,
+) -> type[BaseHTTPRequestHandler]:
+    """Bind the product runtime to one reusable local/Vercel HTTP handler."""
+
     active_runtime = runtime or CandidateRuntime()
-    assets = (static_root or (REPOSITORY_ROOT / "apps" / "browser-workbench" / "dist")).resolve()
+    default_assets = REPOSITORY_ROOT / "public"
+    if not default_assets.is_dir():
+        default_assets = REPOSITORY_ROOT / "apps" / "browser-workbench" / "dist"
+    assets = (static_root or default_assets).resolve()
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
@@ -293,12 +371,28 @@ def create_server(host: str, port: int, runtime: CandidateRuntime | None = None,
             if path == "/api/candidate":
                 self._json(200, active_runtime.candidate())
                 return
+            if path == "/api/compliance-at-design-click":
+                self._method_not_allowed("POST")
+                return
+            if path == "/api" or path.startswith("/api/"):
+                self._json(404, {"status": "BLOCKED", "diagnostic": {"code": "ROUTE_NOT_FOUND"}})
+                return
             relative = unquote(path).lstrip("/") or "index.html"
-            candidate = (assets / relative).resolve()
-            if assets not in candidate.parents or not candidate.is_file():
+            if ".." in Path(relative).parts:
                 self._json(404, {"status": "BLOCKED", "diagnostic": {"code": "ASSET_NOT_FOUND"}})
                 return
-            content = candidate.read_bytes()
+            try:
+                candidate = (assets / relative).resolve()
+                if assets not in candidate.parents or not candidate.is_file():
+                    if Path(relative).suffix:
+                        raise FileNotFoundError
+                    candidate = (assets / "index.html").resolve()
+                if assets not in candidate.parents or not candidate.is_file():
+                    raise FileNotFoundError
+                content = candidate.read_bytes()
+            except (FileNotFoundError, OSError, ValueError):
+                self._json(404, {"status": "BLOCKED", "diagnostic": {"code": "ASSET_NOT_FOUND"}})
+                return
             self.send_response(200)
             self.send_header("Content-Type", mimetypes.guess_type(candidate.name)[0] or "application/octet-stream")
             self.send_header("Content-Length", str(len(content)))
@@ -309,18 +403,69 @@ def create_server(host: str, port: int, runtime: CandidateRuntime | None = None,
             self.wfile.write(content)
 
         def do_POST(self) -> None:
-            if urlsplit(self.path).path != "/api/compliance-at-design-click":
+            path = urlsplit(self.path).path
+            if path in {"/api/health", "/healthz", "/api/candidate"}:
+                self._method_not_allowed("GET")
+                return
+            if path != "/api/compliance-at-design-click":
                 self._json(404, {"status": "BLOCKED", "diagnostic": {"code": "ROUTE_NOT_FOUND"}})
                 return
+            if self.headers.get_content_type() != "application/json":
+                self._json(*CandidateRuntime._blocked(415, "CONTENT_TYPE_UNSUPPORTED", "Content-Type must be application/json."))
+                return
+            if self.headers.get("Transfer-Encoding") is not None:
+                self._json(*CandidateRuntime._blocked(400, "REQUEST_BODY_INVALID", "Transfer-Encoding is not supported."))
+                return
+            raw_length = self.headers.get("Content-Length")
+            if raw_length is None:
+                self._json(*CandidateRuntime._blocked(411, "CONTENT_LENGTH_REQUIRED", "Content-Length is required."))
+                return
             try:
-                length = int(self.headers.get("Content-Length", "0"))
-                if length <= 0 or length > 65536 or self.headers.get_content_type() != "application/json":
+                length = int(raw_length)
+                if length <= 0:
                     raise ValueError
-                request = json.loads(self.rfile.read(length))
-            except (ValueError, json.JSONDecodeError):
+            except ValueError:
+                self._json(*CandidateRuntime._blocked(400, "REQUEST_BODY_INVALID", "A bounded JSON request is required."))
+                return
+            if length > MAX_REQUEST_BODY_BYTES:
+                self._json(*CandidateRuntime._blocked(413, "REQUEST_BODY_TOO_LARGE", "The JSON request exceeds 65536 bytes."))
+                return
+            try:
+                body = self.rfile.read(length)
+                if len(body) != length:
+                    raise ValueError
+                request = json.loads(body.decode("utf-8"))
+            except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
                 self._json(*CandidateRuntime._blocked(400, "REQUEST_BODY_INVALID", "A bounded JSON request is required."))
                 return
             self._json(*active_runtime.evaluate_request(request))
+
+        def do_DELETE(self) -> None:
+            self._method_not_allowed("GET, POST")
+
+        def do_OPTIONS(self) -> None:
+            self._method_not_allowed("GET, POST")
+
+        def do_PATCH(self) -> None:
+            self._method_not_allowed("GET, POST")
+
+        def do_PUT(self) -> None:
+            self._method_not_allowed("GET, POST")
+
+        def _method_not_allowed(self, allow: str) -> None:
+            content = json.dumps(
+                {"status": "BLOCKED", "diagnostic": {"code": "METHOD_NOT_ALLOWED"}},
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+            self.send_response(405)
+            self.send_header("Allow", allow)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(content)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(content)
 
         def _json(self, status: int, body: dict[str, Any]) -> None:
             content = json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -335,7 +480,11 @@ def create_server(host: str, port: int, runtime: CandidateRuntime | None = None,
         def log_message(self, format: str, *args: object) -> None:
             return
 
-    return ProductServer((host, port), Handler)
+    return Handler
+
+
+def create_server(host: str, port: int, runtime: CandidateRuntime | None = None, static_root: Path | None = None) -> ProductServer:
+    return ProductServer((host, port), create_handler(runtime, static_root))
 
 
 def main(argv: list[str] | None = None) -> int:

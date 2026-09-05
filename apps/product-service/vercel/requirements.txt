@@ -1,0 +1,4 @@
+--only-binary=:all:
+cadquery-ocp-novtk==7.9.3.1
+jsonschema==4.25.1
+rfc8785==0.1.4

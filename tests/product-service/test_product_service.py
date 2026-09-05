@@ -9,10 +9,13 @@ from tempfile import TemporaryDirectory
 from threading import Thread
 from unittest.mock import patch
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "apps" / "product-service"))
 
 from compliance_bridge import evaluate_compliance, validate_binding_receipt  # noqa: E402
+import product_service.app as product_service_app  # noqa: E402
 from product_service.app import CandidateRuntime, create_server  # noqa: E402
 
 
@@ -51,6 +54,8 @@ class TestProductService:
         assert candidate["forgeRevision"]["recompute_state"] == "SUCCEEDED"
         assert candidate["kernelProvenance"]["partResult"] == "forge.core-recompute-result/1"
         assert candidate["kernelProvenance"]["assemblyResult"] == "forge.core-assembly-result/1"
+        assert "wheel-sha256=a070f99039e877e9558759570fd379365e2d28de3850b62e33c9c48e5ac1f0e3" in candidate["kernelProvenance"]["binding"]
+        assert candidate["kernelProvenance"]["platformImage"] == "Darwin@arm64;python=cp312;wheel-platform=macosx_11_0_arm64"
         assert candidate["document"]["units"] == {"length": "mm", "angle": "deg"}
         assert all(node["mesh"]["entityRanges"] for node in candidate["document"]["scene"]["nodes"])
         status, body = self.post(first_request(self.runtime))
@@ -61,6 +66,51 @@ class TestProductService:
         assert body["observation"]["producer"]["source_commit"] == "898f6167e4305a4f86f3ebe4a473278ffbd56530"
         assert body["binding_receipt"]["binding_status"] == "BOUND"
         validate_binding_receipt(body["binding_receipt"])
+
+    def test_runtime_provenance_support_and_fail_closed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        local = product_service_app._runtime_provenance(
+            system_name="Darwin",
+            machine="arm64",
+            python_implementation="CPython",
+            python_version="3.12.13",
+        )
+        assert local["wheel_platform"] == "macosx_11_0_arm64"
+        assert local["wheel_sha256"] == "a070f99039e877e9558759570fd379365e2d28de3850b62e33c9c48e5ac1f0e3"
+
+        target = product_service_app._runtime_provenance(
+            system_name="Linux",
+            machine="x86_64",
+            python_implementation="CPython",
+            python_version="3.12.13",
+        )
+        assert target["wheel_platform"] == "manylinux_2_31_x86_64"
+        assert target["wheel_sha256"] == "8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b"
+
+        with pytest.raises(RuntimeError, match="^RUNTIME_PROVENANCE_UNSUPPORTED:"):
+            product_service_app._runtime_provenance(
+                system_name="Plan9",
+                machine="mips64",
+                python_implementation="CPython",
+                python_version="3.12.13",
+            )
+        with pytest.raises(RuntimeError, match="^RUNTIME_PROVENANCE_UNSUPPORTED:"):
+            product_service_app._runtime_provenance(
+                system_name="Linux",
+                machine="x86_64",
+                python_implementation="CPython",
+                python_version="3.11.9",
+            )
+
+        tampered = tuple(dict(record) for record in product_service_app._LOCKED_RUNTIME_PROVENANCE)
+        tampered[0]["wheel_sha256"] = "0" * 64
+        monkeypatch.setattr(product_service_app, "_LOCKED_RUNTIME_PROVENANCE", tampered)
+        with pytest.raises(RuntimeError, match="^RUNTIME_PROVENANCE_LOCK_TAMPERED$"):
+            product_service_app._runtime_provenance(
+                system_name="Darwin",
+                machine="arm64",
+                python_implementation="CPython",
+                python_version="3.12.13",
+            )
 
     def test_stale_mismatch_and_request_tamper_fail_closed(self) -> None:
         cases = (("forge_revision_id", "revision:stale", "STALE_FORGE_REVISION"), ("forge_record_revision_id", "record-revision:stale", "STALE_RECORD_REVISION"), ("occurrence_path", ["assembly:wrong"], "WRONG_OCCURRENCE"))
@@ -103,3 +153,16 @@ class TestProductService:
         assert "features/tripwire/data/**" in excluded
         assert "packages/history-collaboration/**" in excluded
         assert "governance/**" in excluded
+        admitted_sources = {
+            mapping["source"]
+            for collection in ("required_trees", "required_files")
+            for mapping in policy[collection]
+        }
+        assert admitted_sources.isdisjoint(
+            {
+                "apps/product-service/README.md",
+                "apps/product-service/bundle-manifest.v1.json",
+                "packages/core-kernel/pyproject.toml",
+                "packages/core-kernel/uv.lock",
+            }
+        )
