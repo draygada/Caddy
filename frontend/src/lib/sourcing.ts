@@ -1,5 +1,5 @@
 // Sourcing lane, browser-side stand-in for backend/app/sourcing. Pure functions
-// over committed-style fixtures: resolve offers, walk owners, screen names,
+// over committed-style fixtures: resolve offers, walk owners, screen names against a synthetic CSL fixture slice,
 // roll up, estimate landed cost, gate on the engine's destination cell.
 // Every number here is declared and dated; nothing is a determination.
 import { CATALOG, type PartId, type Slot } from './catalog';
@@ -18,7 +18,7 @@ export const FIXTURES = {
   offers: 'offers@6e1a3c · retrieved 2026-09-04',
   ownership: 'ownership@b7d0f2 · retrieved 2026-09-04',
   tariff: 'tariff@3c02a7 · HTS 2026 rev 9 · effective 2026-09-03',
-  csl: 'CSL@91f4e8 · 26,083 rows · 2026-09-04 06:00Z',
+  csl: 'synthetic CSL fixture slice@91f4e8 · 2 fixture keys · 1 active match · 2026-09-04 06:00Z',
 };
 
 export interface Line {
@@ -142,7 +142,7 @@ const OWNERSHIP: Record<string, Owner[]> = {
   'JST': [{ name: 'J.S.T. Mfg. Co., Ltd.', pct: 100, relation: 'parent', evidence: 'jst-mfg.com · 2026-08-30' }],
   'in-house machining': [{ name: 'the design owner', pct: 100, relation: 'self', evidence: 'this document' }],
 };
-/** Names on the Consolidated Screening List snapshot, with the list. Exact and suffix-normalised only; "not fuzzy". */
+/** Synthetic CSL fixture slice: two fixture keys, one active match. Exact and suffix-normalised only; not a full-corpus screen. */
 const CSL: Record<string, string> = { 'sz dji technology co': 'Entity List (15 CFR 744 Supp. 4)', 'shenzhen lcsc electronics technology co': '' };
 const norm = (n: string) => n.toLowerCase().replace(/[.,]/g, '').replace(/\s+(ltd|limited|inc|corporation|corp|co|as|ag|nv|gmbh|llc)\b/g, ' $1').replace(/,?\s*(ltd|limited|inc|llc|nv|ag|as|gmbh)$/g, '').trim();
 export function screen(name: string): { result: 'exact' | 'normalized' | 'none'; listed?: string } {

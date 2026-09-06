@@ -92,7 +92,7 @@ export function Sourcing({ o }: { o: Outcome }) {
     const stages = [
       { label: 'resolve offers', detail: 'committed catalog · ' + FIXTURES.offers },
       { label: 'walk owners', detail: 'seller and manufacturer · full walk where controlled, foreign or flagged · ' + FIXTURES.ownership },
-      { label: 'screen every name', detail: 'Consolidated Screening List · exact and suffix-normalised · ' + FIXTURES.csl },
+      { label: 'screen fixture names', detail: 'synthetic CSL fixture slice · exact and suffix-normalised · ' + FIXTURES.csl },
       { label: 'estimate landed cost', detail: 'declared code × origin × dated tariff table · ' + FIXTURES.tariff },
     ];
     const running = stage >= 0 && stage < 4;
@@ -178,7 +178,7 @@ export function Sourcing({ o }: { o: Outcome }) {
           {r.lines.map((l, i) => <button key={l.id} onClick={() => setK(i)} title={l.description} className="h-2 flex-1 rounded-[2px] border-0 cursor-pointer" style={{ background: i === k ? 'var(--focus)' : r.selections[l.id] ? 'var(--accent)' : 'var(--m2)' }} />)}
           <button onClick={() => setK(n)} title="review · package · order" className="h-2 w-8 rounded-[2px] border-0 cursor-pointer" style={{ background: done ? 'var(--focus)' : r.pkg ? 'var(--accent)' : 'var(--m2)' }} />
         </div>
-        <button onClick={() => s.refineRound({})} className="btn" title="re-screen against the same list snapshot · K runs, 0 changed">Re-screen</button>
+        <button onClick={() => s.refineRound({})} className="btn" title="re-screen against the same two-key synthetic fixture slice · K runs, 0 changed">Re-screen</button>
         <span className="text-[12px] text-muted whitespace-nowrap">{selectedCount} of {n} picked</span>
         <button onClick={() => setK(Math.max(0, k - 1))} disabled={k === 0} className="btn disabled:opacity-40">Back</button>
         <button onClick={() => setK(Math.min(n, k + 1))} disabled={done} className="btn disabled:opacity-40">{sel || done ? 'Next' : 'Skip'}</button>
