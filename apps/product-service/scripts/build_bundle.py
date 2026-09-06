@@ -8,6 +8,7 @@ from fnmatch import fnmatch
 import gzip
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -63,6 +64,50 @@ def _source_identity() -> dict[str, str]:
     tree = _git_output("write-tree")
     tree_state = "COMMITTED" if tree == commit_tree else "STAGED_CANDIDATE"
     return {"commit": commit, "tree": tree, "commit_tree": commit_tree, "tree_state": tree_state}
+
+
+def _verify_runtime(bundle: Path, runtime_imports: list[str]) -> dict[str, object]:
+    probe = r'''
+import importlib
+import json
+import os
+
+from api.index import handler
+
+for module in json.loads(os.environ["CADDYDADDY_BUNDLE_IMPORTS"]):
+    importlib.import_module(module)
+
+from product_service.app import CANDIDATE02_POST_ROUTES, Candidate02Routes, CandidateRuntime
+
+routes = Candidate02Routes.from_runtime(CandidateRuntime())
+missing = sorted(set(CANDIDATE02_POST_ROUTES) - routes.post_paths)
+if missing:
+    raise RuntimeError(f"Candidate 0.2 routes failed to mount: {missing}")
+print(json.dumps({"handler": handler.__name__, "post_routes": sorted(routes.post_paths)}))
+'''
+    environment = os.environ.copy()
+    environment.pop("PYTHONPATH", None)
+    environment.pop("CADDYDADDY_SNAPSHOT_PATH", None)
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    environment["CADDYDADDY_BUNDLE_IMPORTS"] = json.dumps(runtime_imports)
+    completed = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=bundle,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if completed.returncode != 0:
+        raise SystemExit(f"Sanitized bundle runtime probe failed: {completed.stderr.strip()}")
+    try:
+        result = json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit("Sanitized bundle runtime probe returned invalid evidence.") from error
+    if result.get("handler") != "handler":
+        raise SystemExit("Sanitized bundle runtime probe did not load the Vercel handler.")
+    return result
 
 
 def main() -> int:
@@ -188,6 +233,7 @@ def main() -> int:
     manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
     (output / RESOLVED_MANIFEST).write_bytes(manifest_bytes)
     (output / RESOLVED_MANIFEST).chmod(0o644)
+    runtime_probe = _verify_runtime(output, list(policy.get("runtime_imports", [])))
     _write_archive(output, archive)
     bundle_files = [path for path in output.rglob("*") if path.is_file()]
     print(json.dumps({
@@ -203,6 +249,7 @@ def main() -> int:
         "snapshot_sha256": snapshot["snapshot_hash"],
         "source_commit": source_identity["commit"],
         "source_tree": source_identity["tree"],
+        "runtime_probe": runtime_probe,
     }, sort_keys=True))
     return 0
 

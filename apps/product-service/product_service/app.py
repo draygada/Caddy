@@ -37,8 +37,11 @@ BOUNDED_CLAIM = "CADdyDaddy binds a selected CAD entity to its immutable product
 POSITIONING = "We're closing the loop from idea to execution for high-stakes industries."
 REQUEST_KEYS = {"entity_id", "node_id", "product_thread_id", "forge_record_id", "occurrence_path", "forge_record_revision_id", "forge_revision_id"}
 MAX_REQUEST_BODY_BYTES = 65536
-MAX_CAD_REQUEST_BODY_BYTES = 32 * 1024 * 1024
-MAX_CAD_RESPONSE_BODY_BYTES = 64 * 1024 * 1024
+MAX_PROVIDER_BODY_BYTES = 4_250_000
+MAX_CAD_REQUEST_BODY_BYTES = MAX_PROVIDER_BODY_BYTES
+MAX_CAD_RESPONSE_BODY_BYTES = MAX_PROVIDER_BODY_BYTES
+MAX_RESPONSE_BODY_BYTES = MAX_PROVIDER_BODY_BYTES
+CAD_CLIENT_STATE_SCHEMA = "caddydaddy.cad-client-state/1"
 SNAPSHOT_SCHEMA = "caddydaddy.core-snapshot/1"
 SNAPSHOT_FILENAME = "candidate-snapshot.v1.json"
 _HEX40 = re.compile(r"^[0-9a-f]{40}$")
@@ -422,8 +425,6 @@ class Candidate02Routes:
         self.candidate_identity = dict(candidate_identity)
         self.cad_service_url = (cad_service_url if cad_service_url is not None else os.environ.get("CADDYDADDY_CAD_SERVICE_URL", "")).rstrip("/")
         self._cad_transport = cad_transport or self._http_cad_transport
-        self._kernel_documents: dict[str, dict[str, Any]] = {}
-        self._cad_body_artifacts: dict[str, dict[str, str]] = {}
         unavailable: dict[str, str] = {}
 
         if classification_action is None:
@@ -536,6 +537,8 @@ class Candidate02Routes:
         if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username or parsed.password or parsed.query or parsed.fragment:
             return 503, _candidate02_error("CAD_SERVICE_URL_INVALID", "CADDYDADDY_CAD_SERVICE_URL must be an HTTP(S) origin or base path without credentials, query, or fragment.", domain="cad")
         body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        if len(body) > MAX_CAD_REQUEST_BODY_BYTES:
+            return 413, _candidate02_error("CAD_REQUEST_TOO_LARGE", "The encoded CAD request exceeded the bounded proxy limit.", domain="cad")
         request = Request(
             f"{self.cad_service_url}{path}",
             data=body,
@@ -575,21 +578,21 @@ class Candidate02Routes:
         candidate = self._kernel_document(document, expected)
         upstream: dict[str, Any] = {"candidate_document": candidate}
         if expected != "revision:new":
-            base = self._kernel_documents.get(expected)
-            if base is None:
-                raise CadAdapterError("CAD_STALE", "The product-service process has no authoritative base document for this revision; restore or recompute from a current revision.", 409)
-            upstream.update({"base_document": base, "expected_base_revision_id": expected})
+            continuation = self._cad_continuation(document, expected, require_base=True)
+            upstream.update({"base_document": continuation["base_document"], "expected_base_revision_id": expected})
+        elif document.get("kernelState") is not None:
+            raise CadAdapterError("CAD_STATE_UNEXPECTED", "A new document cannot carry a prior kernel continuation.", 409)
         status, body = self._cad_transport(CAD_UPSTREAM_ROUTES["/api/cad/recompute"], upstream)
         if not 200 <= status < 300:
             return status, body
         response = self._frontend_recompute(document, body)
         revision = response["revisionId"]
-        self._kernel_documents[revision] = candidate
-        self._cad_body_artifacts[revision] = {
+        artifacts = {
             str(item["body_id"]): str(item["brep_base64"])
             for item in body.get("bodies", [])
             if isinstance(item, Mapping) and isinstance(item.get("body_id"), str) and isinstance(item.get("brep_base64"), str)
         }
+        response["document"]["kernelState"] = self._seal_cad_continuation(revision, candidate, artifacts)
         return 200, response
 
     def _cad_import(self, request: Any) -> tuple[int, dict[str, Any]]:
@@ -630,7 +633,11 @@ class Candidate02Routes:
         diagnostics = self._frontend_diagnostics(body.get("diagnostics", []))
         diagnostics.append({"id": "cad:import-preview", "severity": "warning", "code": "IMPORT_PREVIEW_BOUNDS_PROXY", "message": "The semantic preview is a verified-bounds proxy; exchange succeeded in OCCT but exact tessellation was not returned by the exchange endpoint.", "operationId": None, "entityIds": [body_id]})
         brep = body.get("brep_base64")
-        self._cad_body_artifacts[revision] = {body_id: brep} if isinstance(brep, str) and brep else {}
+        browser_document["kernelState"] = self._seal_cad_continuation(
+            revision,
+            None,
+            {body_id: brep} if isinstance(brep, str) and brep else {},
+        )
         return 200, {
             "document": browser_document,
             "revisionId": revision,
@@ -649,7 +656,7 @@ class Candidate02Routes:
         document = request["document"]
         if not isinstance(revision, str) or document.get("revisionId") != revision or format_name not in {"STEP", "IGES", "STL"}:
             raise CadAdapterError("CAD_EXPORT_INVALID", "Export format and revision must match the current document.", 400)
-        artifacts = self._cad_body_artifacts.get(revision, {})
+        artifacts = self._cad_continuation(document, revision, require_base=False)["body_artifacts"]
         if len(artifacts) != 1:
             raise CadAdapterError("CAD_EXPORT_BODY_SELECTION_REQUIRED", "Candidate 0.2 exports exactly one revision-bound body; zero-body and multi-body export need an explicit body or assembly selection.", 422)
         body_id, brep = next(iter(artifacts.items()))
@@ -672,9 +679,8 @@ class Candidate02Routes:
         return 200, {"fileName": f"{stem}.{extension}", "format": format_name, "mimeType": mime, "dataBase64": data, "revisionId": revision, "documentHash": content_hash}
 
     def _cad_assembly(self, document: dict[str, Any], expected: str) -> tuple[int, dict[str, Any]]:
-        artifacts = self._cad_body_artifacts.get(expected)
-        if artifacts is None:
-            raise CadAdapterError("CAD_STALE", "Assembly solving requires revision-bound B-rep artifacts in the current product-service process.", 409)
+        continuation = self._cad_continuation(document, expected, require_base=False)
+        artifacts = continuation["body_artifacts"]
         assembly = document.get("assembly")
         if not isinstance(assembly, Mapping) or not isinstance(assembly.get("instances"), list) or not assembly["instances"]:
             raise CadAdapterError("CAD_ASSEMBLY_INVALID", "Assembly solve requires at least one instance.", 422)
@@ -703,7 +709,14 @@ class Candidate02Routes:
         if not isinstance(assembly_body, Mapping) or not isinstance(revision, str) or not isinstance(geometry_hash, str):
             raise CadAdapterError("CAD_RESPONSE_INVALID", "Assembly service response omitted revision-bound geometry.", 502)
         document["revisionId"] = revision
-        self._cad_body_artifacts[revision] = dict(artifacts)
+        assembly_brep = assembly_body.get("brep_base64")
+        assembly_body_id = assembly_body.get("body_id")
+        next_artifacts = (
+            {str(assembly_body_id): str(assembly_brep)}
+            if isinstance(assembly_body_id, str) and isinstance(assembly_brep, str)
+            else dict(artifacts)
+        )
+        document["kernelState"] = self._seal_cad_continuation(revision, None, next_artifacts)
         return 200, {
             "document": document,
             "revisionId": revision,
@@ -712,6 +725,60 @@ class Candidate02Routes:
             "mesh": self._mesh_from_bodies([assembly_body], revision),
             "diagnostics": self._frontend_diagnostics(body.get("diagnostics", [])),
             "kernel": {"name": "OpenCascade", "version": "7.9.3", "mode": "live", "computedAt": _iso_now(), "artifactHash": geometry_hash},
+        }
+
+    @staticmethod
+    def _seal_cad_continuation(
+        revision: str,
+        base_document: Mapping[str, Any] | None,
+        body_artifacts: Mapping[str, str],
+    ) -> dict[str, Any]:
+        state: dict[str, Any] = {
+            "schema_version": CAD_CLIENT_STATE_SCHEMA,
+            "revision_id": revision,
+            "base_document": deepcopy(dict(base_document)) if base_document is not None else None,
+            "body_artifacts": dict(sorted(body_artifacts.items())),
+        }
+        state["state_sha256"] = hashlib.sha256(
+            json.dumps(state, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        return state
+
+    @staticmethod
+    def _cad_continuation(
+        document: Mapping[str, Any],
+        expected_revision: str,
+        *,
+        require_base: bool,
+    ) -> dict[str, Any]:
+        raw = document.get("kernelState")
+        if not isinstance(raw, Mapping):
+            raise CadAdapterError("CAD_STATE_REQUIRED", "This operation requires the hash-sealed kernel continuation returned with the current document.", 409)
+        state = deepcopy(dict(raw))
+        supplied_hash = state.pop("state_sha256", None)
+        computed_hash = hashlib.sha256(
+            json.dumps(state, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        if not isinstance(supplied_hash, str) or not _HEX64.fullmatch(supplied_hash) or supplied_hash != computed_hash:
+            raise CadAdapterError("CAD_STATE_TAMPERED", "The client-carried kernel continuation failed SHA-256 verification.", 409)
+        artifacts = state.get("body_artifacts")
+        base_document = state.get("base_document")
+        if (
+            state.get("schema_version") != CAD_CLIENT_STATE_SCHEMA
+            or state.get("revision_id") != expected_revision
+            or document.get("revisionId") != expected_revision
+            or not isinstance(artifacts, Mapping)
+            or any(not isinstance(key, str) or not isinstance(value, str) for key, value in artifacts.items())
+            or (base_document is not None and not isinstance(base_document, Mapping))
+        ):
+            raise CadAdapterError("CAD_STATE_INVALID", "The kernel continuation does not match the submitted revision.", 409)
+        if require_base and not isinstance(base_document, Mapping):
+            raise CadAdapterError("CAD_BASE_STATE_REQUIRED", "This imported or assembly-only revision cannot be used as a parametric recompute base.", 409)
+        return {
+            **state,
+            "state_sha256": supplied_hash,
+            "body_artifacts": dict(artifacts),
+            "base_document": deepcopy(dict(base_document)) if isinstance(base_document, Mapping) else None,
         }
 
     def _kernel_document(self, document: Mapping[str, Any], expected: str) -> dict[str, Any]:
@@ -1021,6 +1088,9 @@ def create_handler(
             except (FileNotFoundError, OSError, ValueError):
                 self._json(404, {"status": "BLOCKED", "diagnostic": {"code": "ASSET_NOT_FOUND"}})
                 return
+            if len(content) > MAX_RESPONSE_BODY_BYTES:
+                self._json(502, _candidate02_error("RESPONSE_BODY_TOO_LARGE", "The static response exceeds the provider body limit.", domain="transport"))
+                return
             self.send_response(200)
             self.send_header("Content-Type", mimetypes.guess_type(candidate.name)[0] or "application/octet-stream")
             self.send_header("Content-Length", str(len(content)))
@@ -1101,6 +1171,13 @@ def create_handler(
 
         def _json(self, status: int, body: dict[str, Any]) -> None:
             content = json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            if len(content) > MAX_RESPONSE_BODY_BYTES:
+                status = 502
+                content = json.dumps(
+                    _candidate02_error("RESPONSE_BODY_TOO_LARGE", "The JSON response exceeds the provider body limit.", domain="transport"),
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(content)))
