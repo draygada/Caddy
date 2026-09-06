@@ -1,0 +1,73 @@
+{
+  "fixture": "kestrel_round_input",
+  "revision": "2026-09-05",
+  "source": "Hand-typed from THE BUILD §2.1, §2.2 and §2.4 and Diego's 2026-09-05 validation (stage 10a dispositions). The rule engine replaces every `evaluation` block; the sourcing lane reads them verbatim and adds no rule.",
+  "states": {
+    "baseline": {
+      "design_hash": "3b1c0d7a9e4f5b6c8d2e1f0a7b9c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c",
+      "design_seq": 12,
+      "product": {
+        "node_id": "kestrel",
+        "final_assembly_country": "US",
+        "declared": {"prime_flowdown": false}
+      },
+      "nodes": [
+        {"node_id": "battery_cells", "slot": "battery_bay", "part_class": "cell", "item_kind": "commodity", "mpn": "INR-21700-P45B", "manufacturer": "Molicel", "origin": "TW", "quantity_per": 48, "value_usd": "6.00", "description": "Lithium-ion cell 21700, 4.5 Ah",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["EAR99"], "fired": [], "contains_defense_article": [], "flags": [],
+           "destinations": {"TW": {"state": "NLR", "because": ["EAR99 (list-based); part 744 end-use/end-user and part 746 checks not modelled"]}, "CN": {"state": "NLR", "because": ["EAR99 (list-based); 744.21 line at baseline"]}}}},
+        {"node_id": "fc_mcu", "slot": "flight_controller_pcba", "part_class": "ic", "item_kind": "commodity", "mpn": "STM32H743VIT6", "manufacturer": "STMicroelectronics", "origin": "MY", "quantity_per": 1, "value_usd": "12.50", "description": "MCU, Cortex-M7 480 MHz, -40/+85 C",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["3A991.a.2"], "fired": [], "contains_defense_article": [], "flags": [],
+           "destinations": {"TW": {"state": "NLR", "because": ["3A991.a.2: AT Column 1 only; Taiwan has no X in the AT column (verify)"]}, "CN": {"state": "NLR", "because": ["3A991.a.2: AT1; 744.21 line at baseline"]}}}},
+        {"node_id": "io_mcu", "slot": "flight_controller_pcba", "part_class": "ic", "item_kind": "commodity", "mpn": "STM32F100C8T6B", "manufacturer": "STMicroelectronics", "origin": "MY", "origin_note": "two fabs; origin depends on lot (MY or CN); as declared per offer", "quantity_per": 1, "value_usd": "3.20", "description": "IO MCU, Cortex-M3 24 MHz",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["EAR99"], "fired": [], "contains_defense_article": [], "flags": [],
+           "destinations": {"TW": {"state": "NLR", "because": ["EAR99 (list-based); part 744 end-use/end-user and part 746 checks not modelled"]}, "CN": {"state": "NLR", "because": ["EAR99 (list-based); 744.21 line at baseline"]}}}},
+        {"node_id": "imu", "slot": "imu", "part_class": "sensor", "item_kind": "commodity", "mpn": "ICM-42688-P", "manufacturer": "TDK InvenSense", "origin": "US", "origin_note": "US design; assembled per lot; ship-from CN does not set origin", "quantity_per": 1, "value_usd": "8.90", "description": "6-axis MEMS IMU",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["7A994"], "fired": [], "contains_defense_article": [], "flags": [],
+           "destinations": {"TW": {"state": "NLR", "because": ["7A994: AT Column 1 only"]}, "CN": {"state": "NLR", "because": ["7A994: AT1; 744.21 line at baseline"]}}}},
+        {"node_id": "baro_mag", "slot": "sensor_pod", "part_class": "sensor", "item_kind": "commodity", "mpn": "BMP388+BMM150", "manufacturer": "Bosch Sensortec", "origin": "DE", "quantity_per": 1, "value_usd": "5.70", "description": "Barometer and magnetometer pair",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["EAR99"], "fired": [], "contains_defense_article": [], "flags": [],
+           "destinations": {"TW": {"state": "NLR", "because": ["EAR99 assumed (no vendor ECCN); (list-based)"]}, "CN": {"state": "NLR", "because": ["EAR99 assumed; 744.21 line at baseline"]}}}},
+        {"node_id": "gnss", "slot": "gnss", "part_class": "gnss", "item_kind": "commodity", "mpn": "NEO-M9N", "manufacturer": "u-blox", "origin": "CH", "quantity_per": 1, "value_usd": "25.00", "description": "GNSS receiver module, 500 m/s limit",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["7A994"], "fired": [], "contains_defense_article": [], "flags": [],
+           "destinations": {"TW": {"state": "NLR", "because": ["7A994 (family letter): AT Column 1 only; 500 m/s < 600 m/s (7A105.b.1)"]}, "CN": {"state": "NLR", "because": ["7A994: AT1; 744.21 line at baseline"]}}}},
+        {"node_id": "thermal_core", "slot": "thermal_core", "part_class": "thermal_imager", "item_kind": "commodity", "mpn": "500-0771-01", "manufacturer": "Teledyne FLIR", "origin": "US", "quantity_per": 1, "value_usd": "239.00", "description": "Lepton 3.5 thermal core, 160x120, 8.7 Hz",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["6A993.a"], "fired": [], "contains_defense_article": [], "flags": [],
+           "destinations": {"TW": {"state": "NLR", "because": ["6A993.a (Note 3.a, 8.7 Hz <= 9 Hz); 744.9(a)(1)(ii): licence if for a 'military end-user' outside A:1 or for incorporation into 0A919"]}, "CN": {"state": "NLR", "because": ["6A993.a; 744.9 line; 744.21 line at baseline"]}}}},
+        {"node_id": "datalink", "slot": "datalink", "part_class": "radio", "item_kind": "commodity", "mpn": "OEM-M0048-4-1", "manufacturer": "Microhard", "origin": "CA", "quantity_per": 1, "value_usd": "399.00", "description": "pMDDL2450 datalink, AES, declared mass-market",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["5A992.c"], "fired": [], "contains_defense_article": [], "flags": [],
+           "destinations": {"TW": {"state": "NLR", "because": ["5A992.c per vendor self-classification (declared mass-market = yes, 740.17(b))"]}, "CN": {"state": "NLR", "because": ["5A992.c; 744.21 line at baseline"]}}}},
+        {"node_id": "esc", "slot": "esc", "part_class": "esc", "item_kind": "commodity", "mpn": "KDE-UAS55HVL", "manufacturer": "KDE Direct", "origin": "US", "quantity_per": 1, "value_usd": "95.00", "description": "Electronic speed controller",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["EAR99"], "fired": [], "contains_defense_article": [], "flags": [],
+           "destinations": {"TW": {"state": "NLR", "because": ["EAR99 (vendor reported); (list-based)"]}, "CN": {"state": "NLR", "because": ["EAR99; 744.21 line at baseline"]}}}},
+        {"node_id": "motor", "slot": "motor", "part_class": "motor", "item_kind": "commodity", "mpn": "MN5008", "manufacturer": "T-Motor", "origin": "CN", "quantity_per": 1, "value_usd": "60.00", "description": "Brushless DC motor, KV340",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["EAR99"], "fired": [], "contains_defense_article": [], "flags": ["848_amber"],
+           "flag_text": {"848_amber": "US Government buyer column: FY2020 NDAA §848 / DoD class deviation 2020-O0015 — component manufactured in the PRC; amber, no export-control change"},
+           "destinations": {"TW": {"state": "NLR", "because": ["EAR99 assumed (no vendor ECCN); (list-based)"]}, "CN": {"state": "NLR", "because": ["EAR99 assumed; 744.21 line at baseline"]}}}},
+        {"node_id": "propeller", "slot": "propeller", "part_class": "propeller", "item_kind": "commodity", "mpn": "18x6.1CF", "manufacturer": "T-Motor", "origin": "CN", "quantity_per": 1, "value_usd": "45.00", "description": "Carbon-fibre propeller 18x6.1",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["EAR99"], "fired": [], "contains_defense_article": [], "flags": [],
+           "destinations": {"TW": {"state": "NLR", "because": ["EAR99 assumed; (list-based)"]}, "CN": {"state": "NLR", "because": ["EAR99 assumed; 744.21 line at baseline"]}}}},
+        {"node_id": "board", "slot": "flight_controller_pcba", "part_class": "board", "item_kind": "commodity", "mpn": "KESTREL-FC-PCB-4L", "manufacturer": "JLCPCB", "origin": "CN", "quantity_per": 1, "value_usd": "28.00", "description": "4-layer flight-controller PCB, fabricated (bare)",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["9A991.d"], "fired": [], "contains_defense_article": [], "flags": ["848_amber"],
+           "flag_text": {"848_amber": "US Government buyer column: FY2020 NDAA §848 — flight controller board fabricated in the PRC; amber, no export-control change; board_target = civil_uav rides along as the export fact"},
+           "destinations": {"TW": {"state": "NLR", "because": ["9A991.d (board_target civil UAV): AT Column 1 only"]}, "CN": {"state": "NLR", "because": ["9A991.d: AT1; 744.21 line at baseline"]}}}},
+        {"node_id": "passives_connectors", "slot": "harness_connectors_fasteners_passives", "part_class": "passive", "item_kind": "commodity", "mpn": "PX4-PARTS-SET", "manufacturer": "mixed", "origin": "CN", "origin_note": "mixed, declared per part; aggregated as one line at the fixture's declared codes", "quantity_per": 1, "value_usd": "18.00", "description": "Passives and connectors from the PX4 parts list, aggregated",
+         "evaluation": {"jurisdiction": "EAR", "entries": ["EAR99"], "fired": [], "contains_defense_article": [], "flags": [],
+           "destinations": {"TW": {"state": "NLR", "because": ["EAR99 assumed; (list-based)"]}, "CN": {"state": "NLR", "because": ["EAR99 assumed; 744.21 line at baseline"]}}}}
+      ]
+    },
+    "f4_hg5700": {
+      "design_hash": "9f2e6d1c0b7a8e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d",
+      "design_seq": 18,
+      "product": {
+        "node_id": "kestrel",
+        "final_assembly_country": "US",
+        "declared": {"prime_flowdown": false}
+      },
+      "replace_nodes": {
+        "imu": {"node_id": "imu", "slot": "imu", "part_class": "sensor", "item_kind": "commodity", "mpn": "68905700-CA01", "manufacturer": "Honeywell Aerospace", "origin": "US", "quantity_per": 1, "value_usd": null, "description": "HG5700 navigation-grade IMU",
+          "evaluation": {"jurisdiction": "EAR", "entries": ["7A003.d.1"], "fired": ["7A002.a.1.a", "7A102.a", "7A003.d.1"], "contains_defense_article": [], "flags": [],
+            "destinations": {"TW": {"state": "LIC", "because": ["7A003.d.1: NS Column 1 + MT Column 1 + AT Column 1; Taiwan X in NS1 and MT1", "STA barred, 740.20(b)(2)(iii)", "unless a licence exception not modelled applies"]}, "CN": {"state": "LIC, no exception", "because": ["7A003.d.1: NS1 + MT1; China X in every NS and MT column; not Group B"]}}}}
+      }
+    }
+  }
+}
