@@ -439,7 +439,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                     </div>
                   </div>
                   {/* one call to action; an existing round is a text link under it */}
-                  <div className="grid justify-items-center gap-2 pt-3">
+                  <div className="grid justify-items-center gap-2 pt-2">
                     <button onClick={start} disabled={s.viewSeq != null} className="btn btn-primary min-h-12 px-10 text-[15px] disabled:opacity-50 w-full sm:w-auto sm:min-w-[260px]">{r ? 'Open a new round' : 'Find suppliers'}</button>
                     {r && <button onClick={() => setStepWanted(2)} className="bg-transparent border-0 p-0 min-h-8 text-[13px] text-ink underline underline-offset-2 cursor-pointer">Continue round {r.id} instead</button>}
                   </div>
@@ -757,24 +757,36 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
               </div>
             )}
 
-            {picked && !sel && (
-              <div className="panel p-3 grid gap-2 text-[13px]" style={{ borderColor: 'var(--focus)' }}>
-                <div className="font-semibold text-[14px]">Pick {picked.offer.seller}</div>
-                {consequences(picked, line, r, o).slice(0, 4).map((c, i) => <div key={i} className="grid grid-cols-[8px_1fr] gap-2 items-start text-[12px]"><span className="mt-[5px] w-2 h-2 rounded-full" style={{ background: c.tone }} /><span>{c.text}</span></div>)}
-                {list.filter((x) => x.offer.id !== picked.offer.id).length > 0 && (
-                  <details className="text-[12px] text-muted"><summary className="cursor-pointer flex items-center min-h-8 max-sm:min-h-11">the other {list.length - 1} offer{list.length === 2 ? ' is' : 's are'} recorded as declined · reasons from their status · change</summary>
-                    <div className="grid gap-1 mt-1">{list.filter((x) => x.offer.id !== picked.offer.id).map((x) => (
-                      <div key={x.offer.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center"><span>{x.offer.seller} <span className="text-muted">· was {STATUS_WORD[x.status]}</span></span><select value={reasons[x.offer.id] ?? ''} onChange={(e) => setReasons({ ...reasons, [x.offer.id]: e.target.value as DeclineReason })} className="btn text-ink"><option value="">reason from status</option>{DECLINE_REASONS.map((d) => <option key={d} value={d}>{d}</option>)}</select></div>
-                    ))}</div>
-                  </details>
-                )}
-                <div className="flex gap-2 flex-wrap items-center">
-                  <input aria-label="attestor" placeholder="attestor · required · a pick is a human act" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field flex-1 min-w-[200px]" />
-                  <button onClick={confirm} disabled={s.viewSeq != null || !attestor.trim()} className="btn btn-primary btn-lg disabled:opacity-50">Pick {picked.offer.seller}{k + 1 < n ? ' · next part' : ' · package'}</button>
+            {picked && !sel && (() => {
+              const others = list.filter((x) => x.offer.id !== picked.offer.id);
+              const signed = attestor.trim();
+              const after = k + 1 < n ? 'part ' + (k + 2) + ' of ' + n : 'the package step';
+              return (
+              <div className="panel grid text-[13px]" style={{ borderColor: 'var(--focus)' }}>
+                <div className="p-4 grid gap-2">
+                  <div className="font-semibold text-[14px]">Pick {picked.offer.seller} for {line.description.split(' · ')[0]} <span className="font-normal text-muted">· part {k + 1} of {n}</span></div>
+                  {consequences(picked, line, r, o).slice(0, 4).map((c, i) => <div key={i} className="grid grid-cols-[8px_1fr] gap-2 items-start text-[12px]"><span className="mt-[5px] w-2 h-2 rounded-full" style={{ background: c.tone }} /><span>{c.text}</span></div>)}
+                  {others.length > 0 && (
+                    <details className="text-[12px] text-muted"><summary className="cursor-pointer flex items-center gap-3 flex-wrap min-h-8 max-sm:min-h-11 list-none"><span>{others.length === 1 ? 'The other offer is declined by this pick · reason taken from its status' : 'The other ' + others.length + ' offers are declined by this pick · reasons taken from their status'}</span><span className="text-ink underline underline-offset-2 whitespace-nowrap">change the reason{others.length === 1 ? '' : 's'}</span></summary>
+                      <div className="grid gap-1 mt-1">{others.map((x) => (
+                        <div key={x.offer.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center"><span>{x.offer.seller} <span className="text-muted">· was {STATUS_WORD[x.status]}</span></span><select value={reasons[x.offer.id] ?? ''} onChange={(e) => setReasons({ ...reasons, [x.offer.id]: e.target.value as DeclineReason })} className="btn text-ink"><option value="">reason from status</option>{DECLINE_REASONS.map((d) => <option key={d} value={d}>{d}</option>)}</select></div>
+                      ))}</div>
+                    </details>
+                  )}
                 </div>
-                {err && <div role="alert" className="text-red font-semibold">{err}</div>}
+                {/* the sign-off: a pick is a human act, so the name comes first and the button follows it */}
+                <div className="border-t border-line2 bg-surface2 p-4 grid gap-2">
+                  <label htmlFor="pick-attestor" className="grid gap-[2px]"><span className="font-semibold">Sign the pick</span><span className="text-[12px] text-muted">A pick is a human act. Your name goes on the record as the attestor.</span></label>
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <input id="pick-attestor" aria-label="attestor" placeholder="your name" autoComplete="name" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field flex-1 min-w-[200px]" />
+                    <button onClick={confirm} disabled={s.viewSeq != null || !signed} className="btn btn-primary btn-lg px-6 disabled:opacity-50">Pick {picked.offer.seller}</button>
+                  </div>
+                  <div className="text-[12px] text-muted" aria-live="polite">{signed ? 'Records the pick under ' + signed + ' and opens ' + after + '.' : 'Type your name to turn the button on. Picking records the choice and opens ' + after + '.'}</div>
+                  {err && <div role="alert" className="text-red font-semibold">{err}</div>}
+                </div>
               </div>
-            )}
+              );
+            })()}
 
             {(reason || esc) && (
               <details className="panel p-3 text-[13px]" style={{ borderColor: 'var(--amber)' }} open={!!esc}>
