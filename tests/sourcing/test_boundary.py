@@ -1,24 +1,50 @@
-"""The change path is model-free and network-free: no module in the lane imports a model client or a socket."""
+"""The change path is model-free and network-free.
+
+forge_sourcing: no module imports a model client or a socket, and none imports forge_search or the API.
+forge_search: only fetch.py may import urllib, only model.py may import anthropic, only documents.py may import pypdf.
+"""
 from __future__ import annotations
 
 import ast
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[2] / "packages" / "sourcing"
 FORBIDDEN = {"anthropic", "openai", "requests", "httpx", "urllib", "socket", "http", "aiohttp", "sqlite3"}
+SEARCH_ALLOWED = {"fetch.py": {"urllib"}, "model.py": {"anthropic"}, "documents.py": {"pypdf"}}
 
 
-def test_no_model_or_network_import_in_the_lane():
-    pkg = Path(__file__).resolve().parents[2] / "packages" / "sourcing" / "forge_sourcing"
+def _imports(path: Path) -> set[str]:
+    names: set[str] = set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import):
+            names |= {a.name.split(".")[0] for a in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names.add(node.module.split(".")[0])
+    return names
+
+
+def test_no_model_or_network_import_in_the_sourcing_lane():
+    for path in (ROOT / "forge_sourcing").glob("*.py"):
+        bad = FORBIDDEN & _imports(path)
+        assert not bad, f"{path.name} imports {bad}"
+
+
+def test_sourcing_never_imports_search_or_api():
+    for path in (ROOT / "forge_sourcing").glob("*.py"):
+        bad = {"forge_search", "forge_sourcing_api"} & _imports(path)
+        assert not bad, f"{path.name} imports {bad}"
+
+
+def test_search_package_boundary():
+    pkg = ROOT / "forge_search"
+    assert pkg.is_dir(), "forge_search package missing"
     for path in pkg.glob("*.py"):
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
-            names = []
-            if isinstance(node, ast.Import):
-                names = [a.name.split(".")[0] for a in node.names]
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                names = [node.module.split(".")[0]]
-            bad = FORBIDDEN & set(names)
-            assert not bad, f"{path.name} imports {bad}"
+        bad = ((FORBIDDEN | {"pypdf"}) & _imports(path)) - SEARCH_ALLOWED.get(path.name, set())
+        assert not bad, f"forge_search/{path.name} imports {bad}"
+
+
+def test_api_package_exists():
+    assert (ROOT / "forge_sourcing_api").is_dir()
 
 
 def test_agents_cannot_write_terminal_events():

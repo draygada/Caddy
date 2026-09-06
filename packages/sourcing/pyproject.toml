@@ -1,13 +1,23 @@
 [project]
 name = "forge-sourcing"
-version = "0.1.0"
-description = "Strafe Forge sourcing lane: a round state machine over pure functions and dated fixtures. Runtime is stdlib-only."
+version = "0.2.0"
+description = "Strafe Forge sourcing lane (stdlib runtime) with the search lane (byte-verified proposer) and an HTTP adapter."
 requires-python = ">=3.12"
 dependencies = []
+
+[project.optional-dependencies]
+search = ["pypdf==6.17.0", "jsonschema==4.26.0"]
+api = ["fastapi==0.121.2", "uvicorn==0.41.0"]
+live = ["anthropic==1.4.0"]
 
 [dependency-groups]
 dev = [
   "pytest==8.4.1",
+  "pypdf==6.17.0",
+  "jsonschema==4.26.0",
+  "fastapi==0.121.2",
+  "uvicorn==0.41.0",
+  "httpx==0.28.1",
 ]
 
 [build-system]
@@ -15,4 +25,4 @@ requires = ["hatchling==1.27.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["forge_sourcing"]
+packages = ["forge_sourcing", "forge_search", "forge_sourcing_api"]
