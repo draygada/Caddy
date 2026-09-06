@@ -317,8 +317,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
             <button onClick={() => s.patch({ az: s.az - Math.PI / 12 })} aria-label="Rotate view 15° left" title="Rotate left" className="tree-btn absolute left-0 bottom-0 w-6 h-6 text-ink text-[14px]">⟲</button>
             <button onClick={() => s.patch({ az: s.az + Math.PI / 12 })} aria-label="Rotate view 15° right" title="Rotate right" className="tree-btn absolute right-0 bottom-0 w-6 h-6 text-ink text-[14px]">⟳</button>
             <svg viewBox="0 0 120 120" role="group" aria-label="View cube: drag to orbit; click a face, edge or corner to snap" onMouseDown={cubeDown} className="absolute left-2 top-2 w-[120px] h-[120px] block select-none cursor-grab">
-              {/* faces: a wide same-colour round-joined stroke softens the silhouette corners */}
-              {scene.cube.faces.map((cf, i) => <polygon key={'f' + i} points={cf.pts} fill={cf.fill} stroke={cf.fill} strokeWidth={6} strokeLinejoin="round" />)}
+              {scene.cube.faces.map((cf, i) => <polygon key={'f' + i} points={cf.pts} fill={cf.fill} stroke="none" />)}
               {scene.cube.faces.map((cf, i) => <polygon key={'o' + i} points={cf.pts} fill="none" stroke="var(--ink)" strokeWidth={0.9} strokeLinejoin="round" strokeLinecap="round" />)}
               {/* corner zones stay as small squares */}
               {scene.cube.cells.filter((c) => c.kind === 'corner').map((c, i) => <polygon key={'k' + i} points={c.pts} fill="none" stroke="var(--ink)" strokeOpacity={0.35} strokeWidth={0.6} strokeLinejoin="round" />)}
