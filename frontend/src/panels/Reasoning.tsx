@@ -41,7 +41,7 @@ export function Reasoning({ o }: { o: Outcome }) {
   const decl = (patch: Parameters<typeof s.setDeclared>[0], label: string) => setDeclErr(s.setDeclared(patch, label));
   const c3 = callC();
   const readOnly = s.viewSeq != null;
-  const tone = (w: string) => (w === 'NLR' ? 'var(--green)' : w === 'STA' ? 'var(--amber)' : w === 'LIC' ? 'var(--red)' : 'var(--blackfg)');
+  const tone = (w: string) => (w === 'NLR' || w === 'REVIEW' ? 'var(--amber)' : w === 'STA' ? 'var(--amber)' : w === 'LIC' ? 'var(--red)' : 'var(--blackfg)');
   const toneBg = (w: string) => (w === 'DDTC' || w === 'DENIAL' ? 'var(--black)' : 'transparent');
 
   return (
@@ -78,7 +78,7 @@ export function Reasoning({ o }: { o: Outcome }) {
                 ))}
               </div>
               {mtFixed && <div className="px-3 pt-2 text-[13px] font-semibold">MT fired; strip fixed at the strictest column set.</div>}
-              <div className="px-3 pt-2 pb-[10px] text-[13px] text-muted">NLR is list-based; part 744 end-use/end-user and part 746 checks are not modelled. Licence exceptions beyond STA (c)(1)/(c)(2)/(c)(1)(ii)(A), GBS and LVS are not modelled; ENC eligibility is declared, not computed.</div>
+              <div className="px-3 pt-2 pb-[10px] text-[13px] text-amber font-semibold">Limited scan only · a no-match result is not NLR or export authorization. Parts 744 and 746 are not modeled. Licence exceptions beyond STA (c)(1)/(c)(2)/(c)(1)(ii)(A), GBS and LVS are not modeled; ENC eligibility is declared, not computed. Human review is required.</div>
             </div>
           </Section>
 
@@ -190,7 +190,7 @@ export function Reasoning({ o }: { o: Outcome }) {
           <Section title="Design to a target" sub="scored by the same rules · never ranked on price alone">
             <div className="p-3 grid gap-2 text-[13px]">
               <div className="flex gap-3 flex-wrap items-center">
-                <label className="flex items-center gap-1 text-muted">NLR to<select value={tc.nlrTo} onChange={(e) => setTc({ ...tc, nlrTo: e.target.value as TargetConstraints['nlrTo'] })} className="btn text-ink">{['DE', 'TW', 'CA', 'none'].map((x) => <option key={x}>{x}</option>)}</select></label>
+                <label className="flex items-center gap-1 text-muted">no modeled match in<select value={tc.nlrTo} onChange={(e) => setTc({ ...tc, nlrTo: e.target.value as TargetConstraints['nlrTo'] })} className="btn text-ink">{['DE', 'TW', 'CA', 'none'].map((x) => <option key={x}>{x}</option>)}</select></label>
                 <label className="flex items-center gap-1 text-muted">enters the US at ≤<select value={tc.maxDutyPct} onChange={(e) => setTc({ ...tc, maxDutyPct: +e.target.value as TargetConstraints['maxDutyPct'] })} className="btn text-ink"><option value={25}>25 %</option><option value={100}>100 %</option><option value={1000}>any</option></select></label>
                 <label className="flex items-center gap-2"><input type="checkbox" checked={tc.noUsml} onChange={(e) => setTc({ ...tc, noUsml: e.target.checked })} /> no defense article</label>
                 <button onClick={() => s.runTarget(tc)} className="btn btn-primary">Search the catalog</button>

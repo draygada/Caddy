@@ -272,7 +272,7 @@ export const EXTRUDE_MIN = 0.02;
 export const EXTRUDE_MAX = 1.5;
 
 export const SCENARIO: string[] = [
-  'Baseline: Kestrel, every column NLR (list-based). Four IMU rows cannot fire and say so.',
+  'Baseline: Kestrel has no match in the 14-row limited scan. Human review is required; four IMU rows cannot fire and say so.',
   'Battery slot selected; the palette shows the packs that fit it. Click one or drag it onto the bracket.',
   'Amprius pack: endurance 3.25 h crosses 3.0 h; 9A012.a.2 fires; Germany STA, Taiwan and Vietnam LIC.',
   'Confirm: same function, performance, form and fit · attestor benji; the amber leaves the label, the spec and the timeline.',

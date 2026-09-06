@@ -16,8 +16,8 @@ export function slotStatus(o: Outcome, unconfirmed: Unconfirmed, slot: Node): St
   if (rs.some((r) => r.kind === 'USML')) return { word: 'USML · DDTC', color: col('black') };
   if (rs.length) return { word: rs[0].entry + (rs.length > 1 ? ' +' + (rs.length - 1) : ''), color: col('red') };
   const cannot = o.cannot.filter((c) => c.node === slot).length;
-  if (cannot) return { word: 'NLR · cannot fire ×' + cannot, color: col('green') };
-  return { word: 'NLR', color: col('green') };
+  if (cannot) return { word: 'review · missing evidence ×' + cannot, color: col('amber') };
+  return { word: 'no match · limited scan', color: col('amber') };
 }
 
 export interface PartInfo { name: string; vendor: string; origin: string; real: boolean }
@@ -37,10 +37,10 @@ export function overallOf(o: Outcome): Overall {
   if (o.rules.some((r) => r.kind === 'USML')) overall = { glyph: '■', word: 'USML · DDTC', color: 'var(--blackfg)', bg: 'var(--black)', sub: 'a defense article is in the tree; every destination needs DDTC authorization; CN is a 126.1 denial' };
   else if (licDest.length) overall = { glyph: '●', word: 'LIC · licence required', color: col('red'), bg: 'transparent', sub: 'at ' + licDest.join(' · ') + (staDest.length ? ' · exception path at ' + staDest.join(' · ') : '') };
   else if (staDest.length) overall = { glyph: '?', word: 'STA · exception path', color: col('amber'), bg: 'transparent', sub: 'at ' + staDest.join(' · ') + ' · conditions apply' };
-  else overall = { glyph: '●', word: 'NLR (list-based)', color: col('green'), bg: 'transparent', sub: 'no rule row met · part 744 / 746 checks not modelled' };
+  else overall = { glyph: '?', word: 'Limited scan · review required', color: col('amber'), bg: 'transparent', sub: 'no match in the modeled rows · Parts 744 / 746 and other controls were not evaluated' };
   const entries = productEntries.length
     ? 'as designed, meets the parameters of ' + productEntries.join(' · ') + (partEntries.length ? ' · parts: ' + partEntries.join(' · ') : '')
-    : partEntries.length ? 'product meets no listed entry · parts: ' + partEntries.join(' · ') : 'meets no listed entry among the 14 rows evaluated';
+    : partEntries.length ? 'no product match in the modeled rows · parts with modeled matches: ' + partEntries.join(' · ') : 'no match among 14 modeled rows · not an NLR or export authorization';
   return { ...overall, entries };
 }
 
@@ -57,13 +57,15 @@ export function attentionOf(o: Outcome, unconfirmed: Unconfirmed): Attention[] {
   (Object.keys(unconfirmed) as Slot[]).forEach((slot) => a.push({ glyph: '?', word: 'attest', color: col('amber'), bg: 'transparent', text: 'swap on ' + SLOT_LABEL[slot] + ' unconfirmed', action: 'Confirm with an attestor, or leave amber', target: { kind: 'reopen', slot } }));
   o.advisories.filter((x) => x.entry.startsWith('§848')).forEach((x) => a.push({ glyph: '$', word: 'buyer', color: col('amber'), bg: 'transparent', text: 'PRC-origin part on ' + SLOT_LABEL[x.node], action: 'federal-buyer flags · amber, never red', target: { kind: 'go', slot: x.node } }));
   o.cannot.forEach((c) => a.push({ glyph: '○', word: 'data', color: col('grey'), bg: 'transparent', text: c.entry + ' cannot fire on ' + SLOT_LABEL[c.node], action: 'a datasheet with the field is needed', target: { kind: 'go', slot: c.node } }));
-  if (!a.length) a.push({ glyph: '●', word: 'none', color: col('green'), bg: 'transparent', text: 'nothing to act on', action: 'every row evaluated, every destination NLR', target: null });
+  a.push({ glyph: '?', word: 'coverage', color: col('amber'), bg: 'transparent', text: 'limited regulatory coverage', action: 'human review required before any export decision · Parts 744 / 746 and other controls are not modeled', target: null });
   return a;
 }
 
 export interface DestCellVM { code: string; word: string; para: string; color: string; bg: string }
 export function destCellsOf(o: Outcome, node: Node): DestCellVM[] {
-  return o.cols[node].map((d) => ({ code: d.code, word: d.word, para: d.para, color: d.tone === 'black' ? 'var(--blackfg)' : col(d.tone), bg: d.tone === 'black' ? 'var(--black)' : 'transparent' }));
+  return o.cols[node].map((d) => d.word === 'NLR'
+    ? { code: d.code, word: 'REVIEW', para: 'no match in modeled columns · incomplete coverage', color: col('amber'), bg: 'transparent' }
+    : { code: d.code, word: d.word, para: d.para, color: d.tone === 'black' ? 'var(--blackfg)' : col(d.tone), bg: d.tone === 'black' ? 'var(--black)' : 'transparent' });
 }
 
 export interface SpecAttr {

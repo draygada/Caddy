@@ -45,7 +45,7 @@ export function searchTarget(base: Design, c: TargetConstraints, pack: Outcome['
     const cost = SLOTS.reduce((sum, s) => sum + (parts[s] ? CATALOG[parts[s] as PartId].value_usd : 0), 0);
     const deltas: string[] = [];
     let passes = true;
-    if (c.nlrTo !== 'none') { const cell = o.cols.airframe.find((x) => x.code === c.nlrTo); const ok = cell?.word === 'NLR'; if (!ok) passes = false; deltas.push(c.nlrTo + ' ' + (cell?.word ?? '?') + (ok ? ' ✓' : ' ✗')); }
+    if (c.nlrTo !== 'none') { const cell = o.cols.airframe.find((x) => x.code === c.nlrTo); const ok = cell?.word === 'NLR'; if (!ok) passes = false; deltas.push(c.nlrTo + ' ' + (ok ? 'no modeled match' : (cell?.word ?? '?')) + (ok ? ' ✓ · human review still required' : ' ✗')); }
     if (c.noUsml) { const ok = !o.rules.some((r) => r.kind === 'USML'); if (!ok) passes = false; deltas.push(ok ? 'no defense article ✓' : 'defense article in the tree ✗'); }
     const thermal = !!parts.thermal;
     const dutyPct = thermal ? 100 : 25;

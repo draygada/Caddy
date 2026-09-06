@@ -28,7 +28,7 @@ function consequences(ro: ResolvedOffer, line: Line, round: Round, o: Outcome): 
   if (it.usedOn === 'listed military aircraft') out.push({ tone: 'var(--black)', text: 'declared used on a listed military aircraft · VIII(h)(1) via 120.41(a)(2) · the (b)(3) open fact is a question the engineer owns · every destination reads DDTC' });
   if (it.bvlos) out.push({ tone: 'var(--muted)', text: 'declared BVLOS operation · an operating declaration, not a rule input this weekend' });
   const gate = gateFor(line, o, round.shipTo);
-  if (round.shipTo !== 'US') out.push({ tone: gate.blocks ? 'var(--red)' : gate.word === 'STA' ? 'var(--amber)' : 'var(--green)', text: 'export gate to ' + round.shipTo + ': ' + gate.word + ' · ' + gate.para + (gate.blocks ? ' · the package is blocked until you type and attest an authorization reference' : '') });
+  if (round.shipTo !== 'US') out.push({ tone: gate.blocks ? 'var(--red)' : gate.word === 'STA' ? 'var(--amber)' : 'var(--green)', text: 'export gate to ' + round.shipTo + ': ' + gate.word + ' · ' + gate.para + (gate.blocks ? gate.word === 'REVIEW' ? ' · the package is blocked pending documented human review' : ' · the package is blocked until you type and attest an authorization reference' : '') });
   out.push({ tone: STATUS_COLOR[ro.status], text: STATUS_WORD[ro.status] + ' · ' + ro.because });
   const fired = ro.ladder.rows.filter((r) => r.amount != null && r.amount > 0 && r.layer !== 'MPF' && r.layer !== 'HMF' && !r.layer.startsWith('base'));
   if (ro.ladder.domestic) out.push({ tone: 'var(--muted)', text: 'ships from the US · no entry, no duty layers' });
@@ -242,15 +242,15 @@ export function Sourcing({ o }: { o: Outcome }) {
             </div>
             {r.shipTo !== 'US' && gate.blocks && (
               <div className="panel" style={{ borderColor: 'var(--red)' }}>
-                <div className="panel-head"><div className="panel-title text-red">Your regulation changes here</div></div>
+                <div className="panel-head"><div className="panel-title text-red">{gate.word === 'REVIEW' ? 'Human review required' : 'Your regulation changes here'}</div></div>
                 <div className="p-3 grid gap-2 text-[13px]">
-                  <div>Sending this part to {r.shipTo} reads <b>{gate.word}</b> ({gate.para}). The package is blocked until an authorization reference is typed and attested.</div>
+                  <div>Sending this part to {r.shipTo} reads <b>{gate.word}</b> ({gate.para}). {gate.word === 'REVIEW' ? 'The limited scan cannot authorize export; the package remains blocked until a human review is documented.' : 'The package is blocked until an authorization reference is typed and attested.'}</div>
                   {gate.word === 'DENIAL' ? <div className="text-muted">DENIAL has no reference field. Change the design or the destination.</div> : r.references[line.id] ? (
                     <div>reference <span className="font-mono">{r.references[line.id].ref}</span> · attestor {r.references[line.id].attestor} · <span className="text-amber font-semibold">reference typed, not validated</span></div>
                   ) : (
                     <div className="grid gap-2">
-                      <input aria-label="authorization reference" placeholder="licence / agreement / exemption / DSP-5 number" value={refDraft} onChange={(e) => setRefDraft(e.target.value)} className="field" />
-                      <div className="flex gap-2"><input aria-label="attestor for the reference" placeholder="attestor · required" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field flex-1" /><button onClick={() => { if (refDraft.trim() && attestor.trim()) s.setReference(line.id, refDraft.trim(), attestor.trim()); }} className="btn btn-primary">Attest reference</button></div>
+                      <input aria-label="authorization reference" placeholder={gate.word === 'REVIEW' ? 'documented reviewer decision / evidence reference' : 'licence / agreement / exemption / DSP-5 number'} value={refDraft} onChange={(e) => setRefDraft(e.target.value)} className="field" />
+                      <div className="flex gap-2"><input aria-label="attestor for the reference" placeholder="attestor · required" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field flex-1" /><button onClick={() => { if (refDraft.trim() && attestor.trim()) s.setReference(line.id, refDraft.trim(), attestor.trim()); }} className="btn btn-primary">{gate.word === 'REVIEW' ? 'Attest review' : 'Attest reference'}</button></div>
                     </div>
                   )}
                 </div>

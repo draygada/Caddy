@@ -27,7 +27,7 @@ export function BoardView() {
             <span className="chip chip-sm">declared</span>
           </div>
           <div className="font-mono text-[12px] text-muted">DRC · kicad-cli pcb drc --format json · 0 errors · 2 warnings (silkscreen overlap) · fixture</div>
-          <div className="text-[12px] text-muted">{tgt === '600-series UAV' ? 'connectors under a 600-series parent print 3A611.y.1; heat sinks 3A611.y.3 · 600-series .y: NLR to CA/DE/TW/VN; LIC to CN (RS, 742.6(a)(7)); no de minimis to PRC (734.4(a)(6)(ii))' : 'layout is the only characteristic evaluated (Note) · the GNSS body is a labelled stand-in · no live re-layout'}</div>
+          <div className="text-[12px] text-muted">{tgt === '600-series UAV' ? 'connectors under a 600-series parent print 3A611.y.1; heat sinks 3A611.y.3 · no modeled column match at CA/DE/TW/VN (human review required); LIC to CN (RS, 742.6(a)(7)); no de minimis to PRC (734.4(a)(6)(ii))' : 'layout is the only characteristic evaluated (Note) · the GNSS body is a labelled stand-in · no live re-layout'}</div>
         </div>
       </div>
     </div>

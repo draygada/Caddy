@@ -240,12 +240,12 @@ export type DeclineReason = 'price' | 'lead time' | 'quality' | 'owner screened'
 export const DECLINE_REASONS: DeclineReason[] = ['price', 'lead time', 'quality', 'owner screened', 'ownership unknown', 'origin', 'export gate', 'other'];
 export const defaultDecline = (o: ResolvedOffer, chosen: ResolvedOffer): DeclineReason => o.status === 'review_blocked' ? 'owner screened' : o.status === 'review_required' ? 'ownership unknown' : (o.ladder.perUnit ?? 0) > (chosen.ladder.perUnit ?? 0) ? 'price' : o.offer.leadDays > chosen.offer.leadDays ? 'lead time' : 'other';
 
-/** The export gate is the engine's destination cell, verbatim. Lines with no node use the product's cell. */
-export function gateFor(line: Line, outcome: Outcome, shipTo: ShipTo): { word: DestWord | 'NLR'; para: string; blocks: boolean } {
-  if (shipTo === 'US') return { word: 'NLR', para: 'domestic · no export', blocks: false };
+/** Positive controls remain verbatim; an incomplete no-match path routes to human review. */
+export function gateFor(line: Line, outcome: Outcome, shipTo: ShipTo): { word: DestWord | 'REVIEW' | 'DOMESTIC'; para: string; blocks: boolean } {
+  if (shipTo === 'US') return { word: 'DOMESTIC', para: 'no export gate evaluated', blocks: false };
   const node = line.slot ?? 'airframe';
   const cell = outcome.cols[node].find((c) => c.code === shipTo);
-  if (!cell) return { word: 'NLR', para: '(list-based)', blocks: false };
+  if (!cell || cell.word === 'NLR') return { word: 'REVIEW', para: 'limited modeled scan · Parts 744 / 746 and other controls not evaluated', blocks: true };
   return { word: cell.word, para: cell.para, blocks: cell.word === 'LIC' || cell.word === 'DDTC' || cell.word === 'DENIAL' };
 }
 
