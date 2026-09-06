@@ -709,7 +709,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       let msg = '';
       if (text == null || text.trim() === '') {
         if (!field.nullable) { set({ fieldMsg: { ...s.fieldMsg, [key]: 'required · ' + field.min + '–' + field.max + ' ' + field.unit } }); return; }
-        v = null; msg = 'cleared · not published';
+        v = null; msg = 'cleared · empty';
       } else {
         const neg = /^\s*[−-]/.test(text);
         const parsed = parseDecimal(text.replace(/^\s*[−-]/, ''));

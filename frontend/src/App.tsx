@@ -13,11 +13,11 @@ import { HelpOverlay } from './panels/HelpOverlay';
 import { DemoBar } from './panels/DemoBar';
 import { CommandBox } from './panels/CommandBox';
 import { TripwirePanel } from './panels/TripwirePanel';
-import { MissionNav } from './panels/MissionNav';
 import { ClassificationTab } from './panels/ClassificationTab';
 import { ProjectsHome } from './panels/ProjectsHome';
 import { IntakeDialog, NeedsInfoBanner } from './panels/IntakeDialog';
 import { runCommand } from './commands';
+import { overallOf } from './lib/viewmodel';
 import { useTripwireStore } from './tripwire-store';
 
 type MobilePanel = 'browser' | 'model' | 'status' | 'spec';
@@ -85,6 +85,13 @@ export default function App() {
   const project = useStore((s) => s.project);
   const compact = useCompactWorkspace();
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('model');
+  const [statusOpen, setStatusOpen] = useState(false);
+  useEffect(() => {
+    if (!statusOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setStatusOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [statusOpen]);
   const o = useMemo(() => service.evaluate({ parts, attrs, span, declared }, pack), [parts, attrs, span, declared, pack]);
   useKeyboard();
 
@@ -95,14 +102,11 @@ export default function App() {
   const goHome = () => { useStore.getState().closeAll(); useTripwireStore.getState().closePanel(); setWorkspace('design'); };
 
   const designSurface = !compact ? (
-    <div className="flex-1 min-h-0 grid grid-cols-[340px_minmax(0,1fr)_400px] gap-2 p-2">
+    <div className="flex-1 min-h-0 grid grid-cols-[340px_minmax(0,1fr)] gap-2 p-2">
       <Browser />
       <div className="flex flex-col gap-2 min-h-0 min-w-0">
         <Viewport o={o} />
-      </div>
-      <div className="grid min-h-0 grid-rows-[minmax(220px,0.85fr)_minmax(240px,1.15fr)] gap-2">
-        <div className="min-h-0 overflow-hidden [&>*]:h-full"><StatusPanel o={o} /></div>
-        <div className="min-h-0 overflow-hidden [&>*]:h-full"><SpecPanel o={o} /></div>
+        <div className="flex-none h-[260px] flex flex-col min-h-0 [&>*]:h-full"><SpecPanel o={o} /></div>
       </div>
     </div>
   ) : (
@@ -128,8 +132,7 @@ export default function App() {
 
   return (
     <div data-theme={theme} className="relative h-full min-w-0 flex flex-col bg-bg text-ink overflow-hidden">
-      <TopBar onHome={goHome} />
-      <MissionNav active={active} onSelect={setWorkspace} />
+      <TopBar onHome={goHome} active={active} onSelect={setWorkspace} status={overallOf(o)} onStatus={() => setStatusOpen(true)} />
       {unreachable && (
         <div role="status" className="flex-none px-4 py-2 border-b border-line2 bg-surface2 text-[14px] flex gap-3 items-center">
           <span className="chip">Cached</span>
@@ -138,6 +141,14 @@ export default function App() {
       )}
       {active !== 'sourcing' && <NeedsInfoBanner compact />}
       {surface}
+      {statusOpen && (
+        <>
+          <div className="fixed inset-0 z-[29] bg-scrim" onMouseDown={() => setStatusOpen(false)} />
+          <div role="dialog" aria-label="Product status" className="fixed z-[30] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(92vw,560px)] max-h-[80vh] flex flex-col [&>*]:min-h-0 [&>*]:overflow-auto">
+            <StatusPanel o={o} onClose={() => setStatusOpen(false)} />
+          </div>
+        </>
+      )}
       <IntakeDialog />
       {reasoningOpen && <Reasoning o={o} />}
       {timelineOpen && <Timeline />}

@@ -6,7 +6,7 @@ import { CORE_SLOTS, GENERIC_NAME, SLOTS, type Node } from '../lib/catalog';
 const CLEAN = 'no match · limited scan';
 
 /** Product status: the overall word, then only the parts that need a look. Clean parts roll up into one line. */
-export function StatusPanel({ o }: { o: Outcome }) {
+export function StatusPanel({ o, onClose }: { o: Outcome; onClose?: () => void }) {
   const unconfirmed = useStore((s) => s.unconfirmed);
   const parts = useStore((s) => s.parts);
   const sel = useStore((s) => s.sel);
@@ -24,6 +24,7 @@ export function StatusPanel({ o }: { o: Outcome }) {
     <div data-panel="status" aria-live="polite" className="panel flex-none">
       <div className="panel-head py-[6px]">
         <div className="panel-title">Product status</div>
+        {onClose && <button onClick={onClose} className="btn btn-xs">Close · Esc</button>}
       </div>
       {incomplete ? (
         <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-line2">
