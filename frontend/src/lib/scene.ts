@@ -8,7 +8,9 @@ import type { Attrs, Parts } from './rules';
 import { HOLE_INSET_X, HOLE_INSET_Y } from './sketch';
 
 /** The plate length and width come from the geometry, not from the wing span. */
-export interface SceneInput { dims: Dims; geo: Geo; parts: Parts; attrs: Attrs; pos: Positions }
+export interface SceneInput { dims: Dims; geo: Geo; parts: Parts; attrs: Attrs; pos: Positions; /** wing span, m, for a wing-kind airframe */ span?: number }
+/** Kestrel's default span when a caller has none. */
+export const WING_SPAN_DEFAULT = 1.8;
 export type BodyKey = Slot | 'plate' | 'flange';
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 /** Flange sheet thickness, m (same 6 mm stock as the plate). */
@@ -57,6 +59,27 @@ function buildFrameBodies(d: SceneInput, frame: PartId): Record<BodyKey, Solid> 
   return out;
 }
 
+/** Wing-kind airframe: the plate is the floor of the centre body; the shell (nose, walls, wing panels, winglets) is built around it as part of the same body. */
+function wingShell(L: number, W: number, T: number, wallH: number, span: number): Face[] {
+  const SKIN = '#dfe4ea', DARK = '#3a4250', panel = Math.max(0.2, (span - W) / 2);
+  const paint = (faces: Face[], fill: string) => faces.map((f) => ({ ...f, fill }));
+  let out: Face[] = [];
+  // side walls and rear bulkhead of the bay, on top of the floor plate
+  out = out.concat(paint(boxFaces(0, 0, T, L, 0.006, wallH, 'airframe'), SKIN), paint(boxFaces(0, W - 0.006, T, L, 0.006, wallH, 'airframe'), SKIN), paint(boxFaces(L - 0.006, 0.006, T, 0.006, W - 0.012, wallH, 'airframe'), SKIN));
+  // nose: a tapered block ahead of the front bulkhead
+  out = out.concat(paint(prismFaces([[-0.14, W * 0.35], [0, 0.02], [0, W - 0.02], [-0.14, W * 0.65]], 0, wallH * 0.7, 'airframe'), SKIN));
+  // wing panels: swept flying-wing planform, root chord the body length, tip chord a third of it
+  const le0 = 0.02, te0 = L - 0.02, leT = 0.30, teT = L - 0.04;
+  const left: [number, number][] = [[le0, 0], [te0, 0], [teT, -panel], [leT, -panel]];
+  const right: [number, number][] = [[le0, W], [leT, W + panel], [teT, W + panel], [te0, W]];
+  out = out.concat(paint(prismFaces(left, 0, 0.028, 'airframe'), SKIN), paint(prismFaces(right, 0, 0.028, 'airframe'), SKIN));
+  // winglets at the tips
+  out = out.concat(paint(boxFaces(leT + 0.01, -panel - 0.006, 0, teT - leT - 0.02, 0.006, 0.11, 'airframe'), DARK), paint(boxFaces(leT + 0.01, W + panel, 0, teT - leT - 0.02, 0.006, 0.11, 'airframe'), DARK));
+  // elevon hinge lines as thin dark strips along the trailing edges
+  out = out.concat(paint(boxFaces(teT - 0.004, -panel, 0.028, 0.004, panel - 0.02, 0.001, 'airframe'), DARK), paint(boxFaces(teT - 0.004, W + 0.02, 0.028, 0.004, panel - 0.02, 0.001, 'airframe'), DARK));
+  return out;
+}
+
 export function buildBodies(d: SceneInput): Record<BodyKey, Solid> {
   if (d.geo.kind === 'frame' && d.geo.frame) return buildFrameBodies(d, d.geo.frame);
   const L = d.geo.plateL, W = d.geo.plateW, T = d.geo.plateT;
@@ -68,6 +91,7 @@ export function buildBodies(d: SceneInput): Record<BodyKey, Solid> {
       .concat(([[ix, iy], [L - ix, iy], [ix, W - iy], [L - ix, W - iy]] as [number, number][]).flatMap(([x, y]) => [discZ(x, y, T, r, 'airframe', 'var(--m3)'), discZd(x, y, 0, r, 'airframe', 'var(--m1)')])),
     c: [L / 2, W / 2, T / 2],
   }, 'plate');
+  if (d.geo.kind === 'wing') plate.faces = plate.faces.concat(indexFaces({ slot: 'airframe', faces: wingShell(L, W, T, d.dims.airframe, d.span ?? WING_SPAN_DEFAULT) }, 'plate').faces.map((f, i) => ({ ...f, fi: plate.faces.length + i })));
   const flange: Solid = indexFaces({
     slot: 'airframe',
     faces: boxFaces(0, 0, T, FLANGE_T, W, d.dims.airframe, 'airframe').concat(([[0.035, T + 0.03], [W - 0.035, T + 0.03]] as [number, number][]).flatMap(([y, z]) => [discX(FLANGE_T, y, z, r, 1, 'airframe', 'var(--m2)'), discX(0, y, z, r, -1, 'airframe', 'var(--m2)')])),

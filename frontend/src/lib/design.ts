@@ -12,7 +12,7 @@ export type Positions = Record<Slot, Pos>;
 /** Plate geometry parameters driven by the feature dialogs. */
 export interface Geo {
   /** what the airframe body is: a mounting plate (Kestrel) or a frame kit the parts bolt onto (Merlin). Missing means plate. */
-  kind?: 'plate' | 'frame';
+  kind?: 'plate' | 'frame' | 'wing';
   /** the frame kit part when kind is frame; it is the airframe, not a slot */
   frame?: PartId;
   /** plate length along X, m: the sensor-bay bracket, not the wing span */
@@ -29,7 +29,7 @@ export interface Geo {
   holeD: number;
 }
 /** Kestrel plate: 460 x 300 x 6 mm, four 6.5 mm clearance holes. */
-export const GEO0: Geo = { plateL: 0.46, plateW: 0.3, plateT: 0.006, fillet: 0, chamfer: 0, holeD: 0.0065 };
+export const GEO0: Geo = { kind: 'wing', plateL: 0.46, plateW: 0.3, plateT: 0.006, fillet: 0, chamfer: 0, holeD: 0.0065 };
 
 export interface Snapshot {
   parts: Parts;

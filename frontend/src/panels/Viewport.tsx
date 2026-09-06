@@ -152,7 +152,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     const p0 = proj(s.az, s.el, U, 0, 0);
     const c0 = p0.pt(L / 2, W / 2, 0.03);
     const pr = proj(s.az, s.el, U, 380 + s.pan.x - c0[0], 262 + s.pan.y - c0[1]);
-    const bodies = buildBodies({ dims, geo, parts: s.parts, attrs: s.attrs, pos });
+    const bodies = buildBodies({ dims, geo, parts: s.parts, attrs: s.attrs, pos, span: s.span });
     const extents = Object.fromEntries(SLOTS.map((sl) => { const b = solidBounds(bodies[sl]); const p = pos[sl]; return [sl, { dx0: b.minx - p.x, dx1: b.maxx - p.x, dy0: b.miny - p.y, dy1: b.maxy - p.y }]; })) as Record<Slot, Extent>;
     const cut = (so: Solid): Solid => (s.section.on ? { ...so, faces: clipFaces(so.faces, s.section.axis, s.section.at) } : so);
     const solids: Solid[] = [...SLOTS.filter(visible).map((sl) => cut(bodies[sl])), ...(visible('flange') ? [cut(bodies.flange)] : [])];
@@ -209,7 +209,9 @@ export function Viewport({ o: _o }: { o: Outcome }) {
       return { label, x1: o0[0].toFixed(1), y1: o0[1].toFixed(1), x2: p[0].toFixed(1), y2: p[1].toFixed(1), tx: t[0].toFixed(1), ty: (t[1] + 4).toFixed(1) };
     });
     const cube = cubeCells(proj(s.az, s.el, 33, 108, 102));
-    const d1 = pr.pt(0, W + 0.03, 0), d2 = pr.pt(L, W + 0.03, 0);
+    // the dimension line: the body length, or the span tip to tip on a wing
+    const wing = geo.kind === 'wing', half = Math.max(0.2, (s.span - W) / 2);
+    const d1 = wing ? pr.pt(L + 0.06, -half, 0) : pr.pt(0, W + 0.03, 0), d2 = wing ? pr.pt(L + 0.06, W + half, 0) : pr.pt(L, W + 0.03, 0);
     const dim = { x1: d1[0].toFixed(1), y1: d1[1].toFixed(1), x2: d2[0].toFixed(1), y2: d2[1].toFixed(1), tx: ((d1[0] + d2[0]) / 2).toFixed(1), ty: (Math.max(d1[1], d2[1]) + 18).toFixed(1) };
     let plane: string | null = null;
     if (s.section.on) {
@@ -399,7 +401,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
           ))}
           {scene.plane && <polygon points={scene.plane} fill="var(--focus)" fillOpacity="0.08" stroke="var(--focus)" strokeWidth="1.2" strokeDasharray="6 4" style={{ pointerEvents: 'none' }} />}
           <line x1={scene.dim.x1} y1={scene.dim.y1} x2={scene.dim.x2} y2={scene.dim.y2} stroke="var(--muted)" strokeWidth="1" strokeDasharray="3 3" />
-          <text x={scene.dim.tx} y={scene.dim.ty} fill="var(--muted)" fontSize="13" fontFamily="Geist Mono, monospace" textAnchor="middle">{geo.kind === 'frame' ? 'frame' : 'plate'} L {fmtLen(L, s.units)}</text>
+          <text x={scene.dim.tx} y={scene.dim.ty} fill="var(--muted)" fontSize="13" fontFamily="Geist Mono, monospace" textAnchor="middle">{geo.kind === 'wing' ? 'span ' + fmtLen(s.span, s.units) : (geo.kind === 'frame' ? 'frame' : 'plate') + ' L ' + fmtLen(L, s.units)}</text>
           {s.dragging && <text x="380" y="476" fill="var(--ink)" fontSize="14" fontWeight="600" textAnchor="middle">{dropHint}</text>}
         </svg>
         <div className="absolute right-1 top-1 group" onMouseDown={(e) => e.stopPropagation()}>

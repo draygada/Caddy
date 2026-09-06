@@ -13,7 +13,7 @@ export function DesignPreview({ snap, components, className }: { snap: Snapshot;
     const p0 = proj(Math.PI / 4, 0.6155, U, 0, 0);
     const c0 = p0.pt(L / 2, PW / 2, 0.025);
     const pr = proj(Math.PI / 4, 0.6155, U, W / 2 - c0[0], H / 2 - c0[1] + 8);
-    const bodies = buildBodies({ dims: snap.dims, geo: snap.geo, parts: snap.parts, attrs: snap.attrs, pos: snap.pos });
+    const bodies = buildBodies({ dims: snap.dims, geo: snap.geo, parts: snap.parts, attrs: snap.attrs, pos: snap.pos, span: snap.span });
     const inProject = components ?? CORE_SLOTS;
     const order: Solid[] = [bodies.plate, bodies.flange, ...SLOTS.filter((sl) => !!snap.parts[sl] || inProject.includes(sl)).map((sl) => bodies[sl])];
     const dep = (so: Solid) => (so.c ? pr.depth(so.c[0], so.c[1], so.c[2]) : -1);

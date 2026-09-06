@@ -666,7 +666,8 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const az = Math.abs(x) + Math.abs(y) < 1e-9 ? get().az : Math.atan2(x, y);
       set({ az, el, pan: { x: 0, y: 0 } });
     },
-    fit: () => set((s) => ({ pan: { x: 0, y: 0 }, zoom: Math.max(0.3, Math.min(4, +(0.32 / s.geo.plateL).toFixed(2))) })),
+    // frame the airframe: the span tip to tip on a wing, the body length otherwise
+    fit: () => set((s) => { const extent = s.geo.kind === 'wing' ? s.span * 0.72 : s.geo.plateL; return { pan: { x: 0, y: 0 }, zoom: Math.max(0.3, Math.min(4, +(0.32 / extent).toFixed(2))) }; }),
     toggleHidden: (id) => set((s) => ({ hidden: { ...s.hidden, [id]: !s.hidden[id] } })),
     isolate: (id) => set({ isolated: id }),
 

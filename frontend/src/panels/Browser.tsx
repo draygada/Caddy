@@ -106,7 +106,7 @@ export function Browser() {
       </div>
       {library && <ComponentLibrary onClose={() => setLibrary(false)} />}
       <div role="tree" className="overflow-auto min-h-0 py-1 flex-1">
-        <Row depth={0} icon={<Doc />} name={(s.project?.name ?? 'Kestrel') + (s.geo.kind === 'frame' ? ' frame' : ' bracket')} open={open.root} onToggle={() => toggle('root')} trailing={'v' + s.versions.length} />
+        <Row depth={0} icon={<Doc />} name={(s.project?.name ?? 'Kestrel') + (s.geo.kind === 'frame' ? ' frame' : s.geo.kind === 'wing' ? ' wing' : ' bracket')} open={open.root} onToggle={() => toggle('root')} trailing={'v' + s.versions.length} />
         {open.root && (
           <>
             <Row depth={1} icon={<Gear />} name="Document settings" open={open.settings} onToggle={() => toggle('settings')} />
@@ -139,8 +139,8 @@ export function Browser() {
                 <Row depth={2} icon={<Folder />} name="Bodies" open={open.bodies} onToggle={() => toggle('bodies')} />
                 {(open.bodies || filtering) && (
                   <>
-                    {bodyHit(s.geo.kind === 'frame' ? 'Frame' : 'Base plate') && <Row depth={3} icon={<Body />} name={s.geo.kind === 'frame' ? 'Frame' : 'Base plate'} hiddenId="plate" active={s.selBody === 'plate' && s.selFilter !== 'component'} onClick={() => { s.select('airframe'); s.patch({ selBody: 'plate' }); }} />}
-                    {s.geo.kind !== 'frame' && bodyHit('Flange') && <Row depth={3} icon={<Body />} name="Flange" hiddenId="flange" active={s.selBody === 'flange'} onClick={() => { s.select('airframe'); s.patch({ selBody: 'flange' }); }} />}
+                    {bodyHit(s.geo.kind === 'frame' ? 'Frame' : s.geo.kind === 'wing' ? 'Centre body' : 'Base plate') && <Row depth={3} icon={<Body />} name={s.geo.kind === 'frame' ? 'Frame' : s.geo.kind === 'wing' ? 'Centre body' : 'Base plate'} hiddenId="plate" active={s.selBody === 'plate' && s.selFilter !== 'component'} onClick={() => { s.select('airframe'); s.patch({ selBody: 'plate' }); }} />}
+                    {s.geo.kind !== 'frame' && bodyHit(s.geo.kind === 'wing' ? 'Front bulkhead' : 'Flange') && <Row depth={3} icon={<Body />} name={s.geo.kind === 'wing' ? 'Front bulkhead' : 'Flange'} hiddenId="flange" active={s.selBody === 'flange'} onClick={() => { s.select('airframe'); s.patch({ selBody: 'flange' }); }} />}
                   </>
                 )}
                 <Row depth={2} icon={<Folder />} name="Features" open={open.features} onToggle={() => toggle('features')} trailing={String(s.features.length)} />
