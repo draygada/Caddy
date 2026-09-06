@@ -41,6 +41,9 @@ const UPSTREAM = {
   },
 };
 
+const PREVIEW_PRODUCT_SERVICE = 'https://caddydaddy-product-preview-team.vercel.app';
+const PRODUCTION_PRODUCT_SERVICE = 'https://caddydaddy-product-service.vercel.app';
+
 function jsonResponse(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
 }
@@ -59,9 +62,70 @@ describe('candidate machine contract endpoint', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it('reports an unknown product service without a binding and never fetches a fallback', async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const handler = createCandidateHandler({ fetchImpl, env: {} });
+    const { capture, response } = responseCapture();
+
+    await handler({ method: 'GET' }, response);
+
+    expect(capture.statusCode).toBe(503);
+    expect(capture.body).toMatchObject({
+      status: 'BLOCKED',
+      serviceAvailability: {
+        productService: {
+          status: 'UNKNOWN',
+          binding: 'CADDYDADDY_PRODUCT_SERVICE_URL',
+          origin: null,
+        },
+      },
+      runtimeGeometry: {
+        authoritativeForThisBrowserSession: 'BROWSER_JSCAD_BOUNDED',
+        browser: { availability: 'AVAILABLE', kernel: 'JSCAD' },
+        native: { connection: 'DISCONNECTED', evidence: 'NO_CAPABILITY_PROBE' },
+      },
+      diagnostic: { code: 'PRODUCT_SERVICE_BINDING_UNKNOWN' },
+      mutationAuthority: 'NONE',
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid product-service bindings without making a fetch', async () => {
+    const invalidBindings = [
+      'not-a-url',
+      'http://preview.vercel.app',
+      'https://user:pass@preview.vercel.app',
+      'https://preview.vercel.app:444',
+      'https://preview.vercel.app/api',
+      'https://preview.vercel.app?candidate=mixed',
+      'https://preview.vercel.app.evil.example',
+    ];
+
+    for (const configured of invalidBindings) {
+      const fetchImpl = vi.fn<typeof fetch>();
+      const handler = createCandidateHandler({
+        fetchImpl,
+        env: { CADDYDADDY_PRODUCT_SERVICE_URL: configured },
+      });
+      const { capture, response } = responseCapture();
+
+      await handler({ method: 'GET' }, response);
+
+      expect(capture.statusCode).toBe(503);
+      expect(capture.body).toMatchObject({
+        serviceAvailability: { productService: { status: 'UNAVAILABLE', origin: null } },
+        diagnostic: { code: 'PRODUCT_SERVICE_BINDING_INVALID' },
+      });
+      expect(fetchImpl).not.toHaveBeenCalled();
+    }
+  });
+
   it('replaces upstream OCCT overclaims with disconnected runtime truth', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(UPSTREAM));
-    const handler = createCandidateHandler({ fetchImpl, env: {} });
+    const handler = createCandidateHandler({
+      fetchImpl,
+      env: { CADDYDADDY_PRODUCT_SERVICE_URL: PREVIEW_PRODUCT_SERVICE },
+    });
     const { capture, response } = responseCapture();
 
     await handler({ method: 'GET' }, response);
@@ -87,6 +151,28 @@ describe('candidate machine contract endpoint', () => {
       },
     });
     expect(JSON.stringify(capture.body)).not.toContain('OpenCascade 7.9.3');
+    expect(fetchImpl).toHaveBeenCalledWith(`${PREVIEW_PRODUCT_SERVICE}/api/candidate`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+  });
+
+  it('uses the production service only when it is explicitly bound', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(UPSTREAM));
+    const handler = createCandidateHandler({
+      fetchImpl,
+      env: { CADDYDADDY_PRODUCT_SERVICE_URL: PRODUCTION_PRODUCT_SERVICE },
+    });
+    const { capture, response } = responseCapture();
+
+    await handler({ method: 'GET' }, response);
+
+    expect(capture.statusCode).toBe(200);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenCalledWith(`${PRODUCTION_PRODUCT_SERVICE}/api/candidate`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
   });
 
   it('reports connected OCCT only after a valid capability probe and keeps execution false', async () => {
@@ -100,6 +186,7 @@ describe('candidate machine contract endpoint', () => {
     const handler = createCandidateHandler({
       fetchImpl,
       env: {
+        CADDYDADDY_PRODUCT_SERVICE_URL: PREVIEW_PRODUCT_SERVICE,
         CADDYDADDY_CAD_CAPABILITIES_URL: 'https://native.example/api/capabilities',
         CADDYDADDY_FRONTEND_COMMIT_SHA: 'a'.repeat(40),
         CADDYDADDY_BACKEND_COMMIT_SHA: 'b'.repeat(40),
@@ -131,7 +218,10 @@ describe('candidate machine contract endpoint', () => {
 
   it('fails the whole contract closed when the immutable upstream is unavailable', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({}, 502));
-    const handler = createCandidateHandler({ fetchImpl, env: {} });
+    const handler = createCandidateHandler({
+      fetchImpl,
+      env: { CADDYDADDY_PRODUCT_SERVICE_URL: PREVIEW_PRODUCT_SERVICE },
+    });
     const { capture, response } = responseCapture();
 
     await handler({ method: 'GET' }, response);

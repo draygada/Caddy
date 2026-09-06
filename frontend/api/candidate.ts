@@ -10,8 +10,12 @@ import {
   type RuntimeDependencies,
 } from './_machine-contracts';
 
-const DEFAULT_PRODUCT_SERVICE = 'https://caddydaddy-product-service.vercel.app';
 const NATIVE_PROBE_TIMEOUT_MS = 1_500;
+
+type ProductServiceBinding =
+  | { status: 'BOUND'; origin: string }
+  | { status: 'UNKNOWN'; origin: null }
+  | { status: 'UNAVAILABLE'; origin: null };
 
 type NativeRuntime = {
   connection: 'CONNECTED' | 'DISCONNECTED';
@@ -29,6 +33,29 @@ function disconnected(evidence: NativeRuntime['evidence']): NativeRuntime {
     executedForThisResponse: false,
     evidence,
   };
+}
+
+function productServiceBinding(value: string | undefined): ProductServiceBinding {
+  const configured = value?.trim();
+  if (!configured) return { status: 'UNKNOWN', origin: null };
+
+  try {
+    const url = new URL(configured);
+    const valid =
+      url.protocol === 'https:'
+      && url.hostname.endsWith('.vercel.app')
+      && !url.username
+      && !url.password
+      && !url.port
+      && url.pathname === '/'
+      && !url.search
+      && !url.hash;
+    return valid
+      ? { status: 'BOUND', origin: url.origin }
+      : { status: 'UNAVAILABLE', origin: null };
+  } catch {
+    return { status: 'UNAVAILABLE', origin: null };
+  }
 }
 
 function kernelIdentity(value: unknown): { name: string; version: string | null } | null {
@@ -95,25 +122,10 @@ function browserExchange(native: NativeRuntime) {
   } as const;
 }
 
-export function runtimeTruthfulCandidate(upstream: unknown, native: NativeRuntime, env: RuntimeDependencies['env']): Record<string, unknown> {
-  if (!isRecord(upstream) || !isRecord(upstream.candidate)) {
-    throw new Error('UPSTREAM_CANDIDATE_INVALID');
-  }
-  const candidate = upstream.candidate;
-  const snapshotProvenance = isRecord(candidate.snapshotProvenance) ? candidate.snapshotProvenance : {};
+function localRuntimeObservation(native: NativeRuntime, env: RuntimeDependencies['env']) {
   const exchange = browserExchange(native);
   const nativeConnected = native.connection === 'CONNECTED';
-
   return {
-    ...upstream,
-    candidate: {
-      ...candidate,
-      snapshotProvenance: {
-        ...snapshotProvenance,
-        coreExecutedAtRuntime: false,
-        mode: 'PRECOMPUTED_IMMUTABLE',
-      },
-    },
     buildIdentity: buildIdentity(env),
     runtimeGeometry: {
       authoritativeForThisBrowserSession: 'BROWSER_JSCAD_BOUNDED',
@@ -123,11 +135,10 @@ export function runtimeTruthfulCandidate(upstream: unknown, native: NativeRuntim
         executionLocation: 'BROWSER',
         scope: 'BOUNDED_MESH_CSG_NOT_PRODUCTION_BREP',
       },
-      native: native,
+      native,
       coreExecutedAtRuntime: false,
     },
     capabilities: {
-      ...(isRecord(upstream.capabilities) ? upstream.capabilities : {}),
       authoring: true,
       recompute: true,
       import: true,
@@ -136,7 +147,6 @@ export function runtimeTruthfulCandidate(upstream: unknown, native: NativeRuntim
       coreExecutedAtRuntime: false,
     },
     capabilityContracts: {
-      ...(isRecord(upstream.capabilityContracts) ? upstream.capabilityContracts : {}),
       cadAuthoring: {
         status: 'AVAILABLE_BROWSER_BOUNDED',
         kernel: 'JSCAD',
@@ -168,6 +178,38 @@ export function runtimeTruthfulCandidate(upstream: unknown, native: NativeRuntim
       observedAtRequestTime: true,
       claimCeiling: 'RUNTIME_AVAILABILITY_AND_BOUNDED_DEMO_EVIDENCE_ONLY',
     },
+  } as const;
+}
+
+export function runtimeTruthfulCandidate(upstream: unknown, native: NativeRuntime, env: RuntimeDependencies['env']): Record<string, unknown> {
+  if (!isRecord(upstream) || !isRecord(upstream.candidate)) {
+    throw new Error('UPSTREAM_CANDIDATE_INVALID');
+  }
+  const candidate = upstream.candidate;
+  const snapshotProvenance = isRecord(candidate.snapshotProvenance) ? candidate.snapshotProvenance : {};
+  const local = localRuntimeObservation(native, env);
+
+  return {
+    ...upstream,
+    candidate: {
+      ...candidate,
+      snapshotProvenance: {
+        ...snapshotProvenance,
+        coreExecutedAtRuntime: false,
+        mode: 'PRECOMPUTED_IMMUTABLE',
+      },
+    },
+    buildIdentity: local.buildIdentity,
+    runtimeGeometry: local.runtimeGeometry,
+    capabilities: {
+      ...(isRecord(upstream.capabilities) ? upstream.capabilities : {}),
+      ...local.capabilities,
+    },
+    capabilityContracts: {
+      ...(isRecord(upstream.capabilityContracts) ? upstream.capabilityContracts : {}),
+      ...local.capabilityContracts,
+    },
+    machineContract: local.machineContract,
   };
 }
 
@@ -180,11 +222,34 @@ export function createCandidateHandler(overrides: Partial<RuntimeDependencies> =
       env: overrides.env ?? runtimeEnv(),
       fetchImpl: overrides.fetchImpl ?? fetch,
     };
-    const productService = dependencies.env.CADDYDADDY_PRODUCT_SERVICE_URL?.trim() || DEFAULT_PRODUCT_SERVICE;
+    const binding = productServiceBinding(dependencies.env.CADDYDADDY_PRODUCT_SERVICE_URL);
+
+    if (binding.status !== 'BOUND') {
+      const native = await observeNativeRuntime(dependencies);
+      response.status(503).json({
+        status: 'BLOCKED',
+        serviceAvailability: {
+          productService: {
+            status: binding.status,
+            binding: 'CADDYDADDY_PRODUCT_SERVICE_URL',
+            origin: null,
+          },
+        },
+        ...localRuntimeObservation(native, dependencies.env),
+        diagnostic: {
+          code: binding.status === 'UNKNOWN'
+            ? 'PRODUCT_SERVICE_BINDING_UNKNOWN'
+            : 'PRODUCT_SERVICE_BINDING_INVALID',
+          message: 'An explicit valid product-service origin is required; no fallback service was contacted.',
+        },
+        mutationAuthority: 'NONE',
+      });
+      return;
+    }
 
     try {
       const [upstreamResponse, native] = await Promise.all([
-        dependencies.fetchImpl(serviceUrl(productService, '/api/candidate'), {
+        dependencies.fetchImpl(serviceUrl(binding.origin, '/api/candidate'), {
           headers: { Accept: 'application/json' },
           cache: 'no-store',
         }),
