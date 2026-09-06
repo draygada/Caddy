@@ -159,4 +159,3 @@ def test_stale_mesh_tampered_bytes_and_noncanonical_native_fail_closed():
     noncanonical = base64.b64encode(b"\n" + canonical).decode("ascii")
     status, body = runtime.load_native({"data_base64": noncanonical})
     assert status == 400 and body["diagnostic"]["code"] == "DOCUMENT_NONCANONICAL"
-

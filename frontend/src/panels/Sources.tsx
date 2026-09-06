@@ -74,14 +74,14 @@ function ServiceProvenance() {
       <div className="panel-head flex-wrap gap-2"><div className="panel-title">Source provenance <span className="sub">· exact client-carried bytes</span></div><span className="chip">{evidence ? evidence.status : 'not run'}</span></div>
       <div className="p-3 grid gap-3 text-[13px]">
         <div className="flex flex-wrap items-end gap-2">
-          <label className="grid gap-1 text-muted">source lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink"><option value="live-bounded">Live bounded input</option><option value="offline-demo">Offline demo fixtures</option></select></label>
+          <label className="grid gap-1 text-muted">source lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink"><option value="live-bounded">Candidate 0.2 service input, available when connected</option><option value="offline-demo">Offline demo fixtures</option></select></label>
           {inputMode === 'offline-demo' && <label className="grid gap-1 text-muted">Offline demo document<select value={documentId} onChange={(event) => { setDocumentId(event.target.value as ServiceDocumentId); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink">{Object.keys(SERVICE_PRESETS).map((id) => <option key={id}>{id}</option>)}</select></label>}
           <button className="btn btn-primary" disabled={busy !== null} onClick={inspect}>{busy === 'inspect' ? 'Inspecting…' : 'Inspect + verify source hash'}</button>
           <button className="btn disabled:opacity-40" disabled={!inspected || busy !== null} onClick={verify}>{busy === 'verify' ? 'Rereading…' : `Verify exact span · ${claim.quote}`}</button>
           <button className="btn disabled:opacity-40" disabled={!verified || busy !== null} onClick={() => run('accept', async (api) => setAccepted(await api.acceptVerifiedChange(verified!.verification.receipt_sha256, verified!.verification.field)))}>Accept for local review</button>
         </div>
         {inputMode === 'live-bounded' && (
-          <div className="border border-line2 rounded-r p-3 grid gap-2" aria-label="Live bounded source input">
+          <div className="border border-line2 rounded-r p-3 grid gap-2" aria-label="Candidate 0.2 source service input, available when connected">
             <div className="flex flex-wrap justify-between gap-2"><b>User-provided source bytes</b><span className="text-[12px] text-muted">no fetch · no authority/freshness claim · instruction-like content quarantines</span></div>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2">
               <label className="grid gap-1 text-muted">document ID<input value={liveId} onChange={(event) => setLiveId(event.target.value)} className="field font-mono text-ink" /></label>

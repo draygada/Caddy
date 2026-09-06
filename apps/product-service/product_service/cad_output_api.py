@@ -357,4 +357,3 @@ def create_fastapi_router(runtime: CadOutputRuntime | None = None) -> Any | None
     bind("/native/load", service.load_native)
     bind("/generate", service.generate)
     return router
-

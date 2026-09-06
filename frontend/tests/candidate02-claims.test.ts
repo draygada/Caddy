@@ -3,6 +3,7 @@ import authoringSource from '../src/panels/AuthoringWorkspace.tsx?raw';
 import classificationSource from '../src/panels/ClassificationWorkspace.tsx?raw';
 import commandBoxSource from '../src/panels/CommandBox.tsx?raw';
 import sourcingSource from '../src/panels/Sourcing.tsx?raw';
+import sourcesSource from '../src/panels/Sources.tsx?raw';
 
 describe('Candidate 0.2 pre-preview claims', () => {
   it('names the connected classification route and its exact evidence ceiling', () => {
@@ -21,6 +22,13 @@ describe('Candidate 0.2 pre-preview claims', () => {
     expect(sourcingSource).not.toContain('immutable order records');
     expect(sourcingSource).not.toContain('Create live bounded round');
     expect(sourcingSource).not.toContain('Live offer + screening evidence');
+  });
+
+  it('presents provenance as a service contract rather than an unproven live connection', () => {
+    expect(sourcesSource).toContain('Candidate 0.2 service input, available when connected');
+    expect(sourcesSource).toContain('Candidate 0.2 source service input, available when connected');
+    expect(sourcesSource).not.toContain('Live bounded input');
+    expect(sourcesSource).not.toContain('Live bounded source input');
   });
 
   it('labels proprietary snapshots without obscuring STEP, IGES, or STL exchange', () => {
