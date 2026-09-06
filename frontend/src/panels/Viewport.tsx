@@ -307,7 +307,12 @@ export function Viewport({ o: _o }: { o: Outcome }) {
         )}
       </div>
       {mode === 'sheet' && <SheetView span={s.span} />}
-      {mode === 'sketch' && <SketchView />}
+      {mode === 'sketch' && (
+        <div className="flex-1 min-h-0 flex">
+          <SketchView />
+          {s.dialog?.kind === 'sketch' && <FeatureDialog docked />}
+        </div>
+      )}
       {mode === 'board' && <BoardView />}
       <div ref={canvasRef} onContextMenu={onContext} className="flex-1 min-h-0 items-center justify-center p-2 relative" style={{ display: mode === 'model' ? 'flex' : 'none', background: s.dragging ? 'var(--surface2)' : 'transparent' }}>
         <svg viewBox={`0 0 ${VB_W} ${VB_H}`} role="img" aria-label="Orbitable bracket with movable slot bodies"
@@ -416,7 +421,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
         </div>
         <MarkingMenu />
       </div>
-      <FeatureDialog />
+      {!(mode === 'sketch' && s.dialog?.kind === 'sketch') && <FeatureDialog />}
     </div>
   );
 }

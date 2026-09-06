@@ -24,9 +24,13 @@ function LenField({ id, label, metres, units, min, max, onChange, hint }: { id: 
   );
 }
 
-function Frame({ title, sub, children, onOk, onCancel, okLabel = 'OK', okDisabled, placement = 'right-3 top-[176px]' }: { title: string; sub?: string; children: React.ReactNode; onOk?: () => void; onCancel: () => void; okLabel?: string; okDisabled?: boolean; placement?: string }) {
+function Frame({ title, sub, children, onOk, onCancel, okLabel = 'OK', okDisabled, placement = 'right-3 top-[176px]', docked = false }: { title: string; sub?: string; children: React.ReactNode; onOk?: () => void; onCancel: () => void; okLabel?: string; okDisabled?: boolean; placement?: string; docked?: boolean }) {
+  // docked: a side column that takes its own width, so the canvas beside it is never covered
+  const cls = docked
+    ? 'flex-none w-[340px] max-w-[45%] h-full flex flex-col bg-surface border-l border-line2'
+    : 'absolute ' + placement + ' w-[min(300px,calc(100%-24px))] max-h-[calc(100%-180px)] flex flex-col bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] z-[12]';
   return (
-    <div role="dialog" aria-label={title} className={'absolute ' + placement + ' w-[min(300px,calc(100%-24px))] max-h-[calc(100%-180px)] flex flex-col bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] z-[12]'} onMouseDown={(e) => e.stopPropagation()}>
+    <div role="dialog" aria-label={title} className={cls} onMouseDown={(e) => e.stopPropagation()}>
       <div className="px-3 py-2 border-b border-line2 flex items-baseline justify-between gap-2">
         <span className="text-[13px] font-semibold">{title}</span>
         {sub && <span className="text-[12px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">{sub}</span>}
@@ -41,7 +45,7 @@ function Frame({ title, sub, children, onOk, onCancel, okLabel = 'OK', okDisable
 }
 
 /** Docked feature dialog: live preview via store.preview, OK commits an event, Cancel discards. */
-export function FeatureDialog() {
+export function FeatureDialog({ docked = false }: { docked?: boolean } = {}) {
   const s = useStore();
   const d = s.dialog;
   const [text, setText] = useState('');
@@ -158,7 +162,7 @@ export function FeatureDialog() {
         </div>
       );
       return (
-        <Frame title="Sketch" sub="plate profile" onCancel={cancel} onOk={cancel} okLabel="Finish sketch">
+        <Frame title="Sketch" sub="plate profile" onCancel={cancel} onOk={cancel} okLabel="Finish sketch" docked={docked}>
           {ro}
           <div className="grid gap-1">
             {(['rect', 'holes'] as const).map((e) => (
