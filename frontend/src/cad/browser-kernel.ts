@@ -12,9 +12,11 @@ import type {
   CadRecomputeRequest,
   CadRecomputeResponse,
   CadSketch,
+  CadTransferFormat,
   FeatureOperation,
   SketchEntity,
 } from './types';
+import { validateBoundedParameterExpression } from './model';
 
 type Geom2 = ReturnType<typeof primitives.rectangle>;
 type Geom3 = ReturnType<typeof extrusions.extrudeLinear>;
@@ -39,6 +41,7 @@ export async function recomputeCadInBrowser(request: CadRecomputeRequest): Promi
   if (request.expectedRevisionId !== request.document.revisionId) {
     throw new BrowserCadError('BROWSER_CAD_STALE', `Browser kernel rejected stale base ${request.expectedRevisionId}; current document is ${request.document.revisionId}.`, [diagnostic('error', 'STALE_BASE_REVISION', 'The browser kernel will not recompute a stale revision.', request.operation.id)]);
   }
+  validateBrowserParameterExpressions(request.document, request.operation.id);
   const evaluated = evaluateDocument(request.document);
   const sourceHash = await hashCanonical({ ...request.document, revisionId: 'revision:pending' });
   const revisionId = `revision:${sourceHash.slice(7, 31)}`;
@@ -72,6 +75,19 @@ export async function recomputeCadInBrowser(request: CadRecomputeRequest): Promi
       artifactHash,
     },
   };
+}
+
+function validateBrowserParameterExpressions(document: CadDocument, operationId: string): void {
+  for (const parameter of document.parameters) {
+    try {
+      validateBoundedParameterExpression(parameter);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `Parameter ${parameter.name} is invalid.`;
+      throw new BrowserCadError('BROWSER_CAD_INVALID', message, [
+        diagnostic('error', 'PARAMETER_EXPRESSION_INVALID', `${message} The bounded browser kernel records valid literals but does not solve formulas, references, constraints, or unit conversions.`, operationId, [parameter.id]),
+      ]);
+    }
+  }
 }
 
 export async function importCadInBrowser(request: CadImportRequest): Promise<CadRecomputeResponse> {
@@ -127,6 +143,10 @@ export async function exportCadInBrowser(request: CadExportRequest): Promise<Cad
     revisionId: request.revisionId,
     documentHash: await hashCanonical(request.document),
   };
+}
+
+export async function exportCurrentCadInBrowser(document: CadDocument, format: CadTransferFormat = 'STL'): Promise<CadExportResponse> {
+  return exportCadInBrowser({ document, format, revisionId: document.revisionId });
 }
 
 function evaluateDocument(document: CadDocument): { bodies: EvaluatedBody[]; bodyIds: Set<string>; diagnostics: CadDiagnostic[] } {
@@ -185,7 +205,7 @@ function evaluateDocument(document: CadDocument): { bodies: EvaluatedBody[]; bod
   }
 
   for (const mate of document.assembly.mates) {
-    if (mate.kind !== 'fixed') diagnostics.push(diagnostic('warning', 'MATE_RECORDED_NOT_SOLVED', `Mate ${mate.name} is recorded but not solved by the bounded browser kernel; authored instance transforms remain in force.`, mate.id));
+    diagnostics.push(diagnostic('warning', 'MATE_RECORDED_NOT_SOLVED', `Mate ${mate.name} is recorded but not solved by the bounded browser kernel; authored instance transforms remain in force.`, mate.id));
   }
   const instanced = new Set(document.assembly.instances.map((instance) => instance.bodyId));
   const bodies: EvaluatedBody[] = [];
@@ -285,7 +305,7 @@ function buildDependencyGraph(document: CadDocument): CadDependencyGraph {
   const nodes: CadDependencyGraph['nodes'] = [];
   const edges: CadDependencyGraph['edges'] = [];
   for (const parameter of document.parameters) nodes.push({ id: parameter.id, label: parameter.name, kind: 'parameter', state: 'clean' });
-  for (const sketch of document.sketches) nodes.push({ id: sketch.id, label: sketch.name, kind: 'sketch', state: 'clean' });
+  for (const sketch of document.sketches) nodes.push({ id: sketch.id, label: sketch.name, kind: 'sketch', state: sketch.constraints.length > 0 || sketch.dimensions.length > 0 ? 'dirty' : 'clean' });
   for (const operation of document.operations) {
     if (operation.kind === 'sketch.create' || operation.kind === 'parameter.set' || operation.kind === 'assembly.instance.add' || operation.kind === 'assembly.mate.add') continue;
     nodes.push({ id: operation.id, label: operation.name, kind: 'feature', state: operation.suppressed ? 'suppressed' : 'clean' });
@@ -300,7 +320,7 @@ function buildDependencyGraph(document: CadDocument): CadDependencyGraph {
     edges.push({ from: instance.bodyId, to: instance.id, relation: 'instances' });
   }
   for (const mate of document.assembly.mates) {
-    nodes.push({ id: mate.id, label: mate.name, kind: 'mate', state: mate.kind === 'fixed' ? 'clean' : 'dirty' });
+    nodes.push({ id: mate.id, label: mate.name, kind: 'mate', state: 'dirty' });
     edges.push({ from: mate.instanceAId, to: mate.id, relation: 'mates' }, { from: mate.instanceBId, to: mate.id, relation: 'mates' });
   }
   return { nodes, edges };

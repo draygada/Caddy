@@ -43,6 +43,7 @@ from OCP.TopTools import TopTools_IndexedMapOfShape
 from OCP.TopoDS import TopoDS, TopoDS_Compound, TopoDS_Shape
 from OCP.gp import gp_Ax1, gp_Ax2, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec
 
+from .errors import CadError
 from .models import (
     ArcEntity,
     AssemblyRequest,
@@ -66,12 +67,6 @@ from .models import (
 )
 from .solver import AssemblySolveError, SketchSolveError, solve_assembly_mates, solve_sketch
 from .topology import catalog_topology, compare_topology, initial_topology_report
-
-
-class CadError(Exception):
-    def __init__(self, code: str, message: str, *, feature_id: str | None = None) -> None:
-        super().__init__(message)
-        self.diagnostic = Diagnostic(code=code, severity="ERROR", message=message, feature_id=feature_id)
 
 
 @dataclass

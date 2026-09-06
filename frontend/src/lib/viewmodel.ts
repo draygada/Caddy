@@ -84,7 +84,13 @@ export interface SpecAttr {
 }
 
 /** One row per editable regulated field: current value, evidence level, and where the value came from. */
-export function specAttrsOf(sel: Slot, pid: PartId | null, attrs: PartAttrs, extracted: Record<string, { by: string; verified: boolean }> = {}): SpecAttr[] {
+export function specAttrsOf(sel: Slot, pid: PartId | null, attrs: PartAttrs, extracted: Record<string, {
+  by: string;
+  acceptance: 'NONE' | 'UNAUTHENTICATED_BROWSER_SESSION';
+  reviewStatus: 'NOT_HUMAN_REVIEWED';
+  attestor: null;
+  durability: 'MEMORY_ONLY';
+}> = {}): SpecAttr[] {
   const tpl = pid ? CATALOG[pid] : null;
   return FIELDS[sel].map((field) => {
     const value = attrs[field.key] as number | null | undefined;
@@ -95,8 +101,8 @@ export function specAttrsOf(sel: Slot, pid: PartId | null, attrs: PartAttrs, ext
       return { field, value, template, level: 'missing', levelColor: 'var(--amber)', source: inrun };
     }
     const ex = extracted[sel + '.' + field.key];
-    if (ex && !ex.verified) return { field, value, template, level: 'L1 ' + ex.by, levelColor: 'var(--amber)', source: 'extracted by the ' + ex.by + ' · verified bytes · not yet ticked “verified against datasheet” by a human' };
-    if (ex && ex.verified) return { field, value, template, level: 'L2 datasheet', levelColor: 'var(--muted)', source: 'extracted by the ' + ex.by + ' · verified against the datasheet by a human' };
+    if (ex && ex.acceptance === 'NONE') return { field, value, template, level: 'L1 ' + ex.by, levelColor: 'var(--amber)', source: 'accepted cached-fixture span applied by the ' + ex.by + ' · not human reviewed · no identity or attestor' };
+    if (ex && ex.acceptance === 'UNAUTHENTICATED_BROWSER_SESSION') return { field, value, template, level: 'session accepted', levelColor: 'var(--amber)', source: 'unauthenticated browser-session acceptance · memory only · no identity or attestor · not human review' };
     if (value !== template) return { field, value, template, level: 'L1 edited', levelColor: 'var(--amber)', source: 'typed in the spec · datasheet said ' + (template == null ? 'not published' : template.toFixed(field.dp) + (field.unit ? ' ' + field.unit : '')) };
     return { field, value, template, level: tpl.real === false ? 'synthetic' : 'L2 datasheet', levelColor: 'var(--muted)', source: tpl.real === false ? 'SYNTHETIC fixture row' : 'vendor datasheet' };
   });

@@ -87,7 +87,14 @@ describe('operations service client', () => {
     const pkg = await client.buildSourcingPackage('round:fixture');
     expect(pkg.package.byte_reread_verified).toBe(true);
     const dispatch = await client.stageSourcingDispatch('round:fixture', pkg.package.manifest_sha256, 'same-key');
+    expect(dispatch.status).toBe('STAGED');
     expect(dispatch.dispatch).toMatchObject({ external_send: false, network_calls: 0, idempotency_key: 'same-key' });
+  });
+
+  it('rejects dispatch-looking status even when zero-network fields are present', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(envelope('sourcing', { status: 'DISPATCHED', dispatch: { dispatch_id: 'staged:fixture', idempotency_key: 'same-key', manifest_sha256: HASH_B, external_send: false, network_calls: 0 } })), { status: 200 })) as unknown as typeof fetch;
+    const client = new OperationsClient(IDENTITY, fetchImpl);
+    await expect(client.stageSourcingDispatch('round:fixture', HASH_B, 'same-key')).rejects.toMatchObject({ code: 'SOURCING_DISPATCH_INVALID' });
   });
 
   it('validates provenance document hashes and exact-span receipts', async () => {

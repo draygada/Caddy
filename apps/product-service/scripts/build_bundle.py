@@ -19,6 +19,15 @@ REPO = Path(__file__).resolve().parents[3]
 POLICY = REPO / "apps" / "product-service" / "bundle-manifest.v1.json"
 RESOLVED_MANIFEST = "bundle-manifest.resolved.json"
 SNAPSHOT_GENERATOR = REPO / "apps" / "product-service" / "scripts" / "generate_snapshot.py"
+LIVE_LLM_ENV_NAMES = (
+    "REAL_LLM_AUTHORIZED",
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_MODEL",
+    "CADDYDADDY_LIVE_LLM_ACCESS_TOKEN",
+    "CADDYDADDY_LIVE_LLM_CALLS_CAP",
+    "CADDYDADDY_LIVE_LLM_COST_CAP_MICROUSD",
+    "CADDYDADDY_LIVE_LLM_ESTIMATED_CALL_COST_MICROUSD",
+)
 
 
 def _relative_path(value: str, label: str) -> Path:
@@ -127,6 +136,7 @@ print(json.dumps({
     "health_candidate": health["candidate"],
     "classification_status": classification_status,
     "classification_determination": classification_body.get("determination"),
+    "classification_model": classification_body.get("provenance", {}).get("model"),
     "order_status": order_status,
     "order_boundary": order_boundary,
 }))
@@ -134,6 +144,8 @@ print(json.dumps({
     environment = os.environ.copy()
     environment.pop("PYTHONPATH", None)
     environment.pop("CADDYDADDY_SNAPSHOT_PATH", None)
+    for name in LIVE_LLM_ENV_NAMES:
+        environment.pop(name, None)
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
     environment["CADDYDADDY_BUNDLE_IMPORTS"] = json.dumps(runtime_imports)
     completed = subprocess.run(

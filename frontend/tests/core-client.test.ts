@@ -19,6 +19,11 @@ describe('core Candidate client', () => {
     expect(result.warning).toBeNull();
     expect(result.releaseIdentity?.candidateId).toBe('candidate:0.2');
     expect(result.evidenceRole).toBe('IMMUTABLE_CANDIDATE_0_1_SOURCE_EVIDENCE_ONLY');
+    expect(result.cadRuntime).toMatchObject({
+      connection: 'DISCONNECTED',
+      kernel: null,
+      reason: { code: 'CAD_RUNTIME_OWNER_APPROVAL_REQUIRED' },
+    });
     expect(result.candidate.document.bodies.map((body) => body.label)).toEqual(['Left bracket', 'Right bracket']);
     expect(result.candidate.document.operations[0].parameterBindings).toEqual({ height: 'param:height', length: 'param:length', width: 'param:width' });
     expect(result.candidate.document.parameters.map((parameter) => `${parameter.name}=${parameter.literal}${parameter.unit}`)).toEqual(['length=24mm', 'width=12mm', 'height=4mm']);
@@ -54,6 +59,7 @@ describe('core Candidate client', () => {
     expect(result.candidate.snapshotProvenance.coreExecutedAtRuntime).toBe(false);
     expect(result.candidate.capabilities.recompute).toBe(false);
     expect(result.candidate.states.current.editable).toBe(false);
+    expect(result.cadRuntime.reason?.message).toContain('does not prove a connected or owner-approved OCCT runtime');
   });
 
   it('rejects stale revision chains and false live-recompute claims', () => {
@@ -100,6 +106,32 @@ function candidate02Envelope(publicSnapshot: ReturnType<typeof loadCachedCoreCan
       immutable: true,
       currentCapabilityAuthority: false,
       publicSnapshot,
+    },
+    runtimeGeometry: {
+      authoritativeForThisBrowserSession: 'BROWSER_JSCAD_BOUNDED',
+      browser: {
+        availability: 'AVAILABLE',
+        kernel: 'JSCAD',
+        executionLocation: 'BROWSER',
+        scope: 'BOUNDED_MESH_CSG_NOT_PRODUCTION_BREP',
+      },
+      native: {
+        connection: 'DISCONNECTED',
+        kernel: null,
+        version: null,
+        executedForThisResponse: false,
+        evidence: 'PRODUCT_CORE_CAPABILITY_BLOCKED',
+        reason: {
+          code: 'CAD_RUNTIME_OWNER_APPROVAL_REQUIRED',
+          message: 'Repository-owner approval is not recorded for the exact native runtime packet.',
+        },
+      },
+      coreExecutedAtRuntime: false,
+    },
+    capabilities: { nativeOcctConnected: false },
+    capabilityContracts: {
+      cadAuthoring: { productionBrepKernel: false },
+      liveKernelRecompute: { status: 'UNAVAILABLE_NATIVE_DISCONNECTED' },
     },
   };
 }

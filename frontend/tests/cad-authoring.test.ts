@@ -16,6 +16,7 @@ import {
   type CadRecomputeResponse,
   type CadSketch,
 } from '../src/cad';
+import { cadProjectTreeSections } from '../src/panels/AuthoringWorkspace';
 
 function sketch(): CadSketch {
   return {
@@ -58,6 +59,10 @@ describe('general CAD authoring model', () => {
     expect(document.operations[0].kind).toBe('sketch.create');
     expect(document.sketches[0].entities.map((entity) => entity.kind)).toEqual(['line', 'line', 'circle']);
     expect(document.sketches[0].constraints.map((constraint) => constraint.kind)).toEqual(['horizontal', 'coincident']);
+    const sketchSection = cadProjectTreeSections(document).find((section) => section.label === 'Sketches')!;
+    expect(sketchSection.count).toBe(1);
+    expect(sketchSection.rows).toHaveLength(4);
+    expect(sketchSection.rows[0].meta).toContain('constraints recorded, not solved');
   });
 
   it('stages the complete feature family, multi-body outputs, parameters, instances, and mates', () => {
@@ -89,6 +94,9 @@ describe('general CAD authoring model', () => {
     state = cadAuthoringReducer(state, { type: 'failed', requestId: 'request:1', error: 'revision conflict', stale: true, occurredAt: '2026-09-05T00:00:02Z' });
 
     expect(state.status).toBe('stale');
+    expect(state.activeRequestId).toBeNull();
+    expect(state.pendingOperation).toBeNull();
+    expect(state.history.map((entry) => entry.status)).toEqual(['stale', 'stale', 'stale']);
     expect(state.document.sketches).toHaveLength(1);
     expect(state.lastValidDocument.sketches).toHaveLength(0);
     state = cadAuthoringReducer(state, { type: 'recover-last-valid', occurredAt: '2026-09-05T00:00:03Z' });
@@ -106,6 +114,7 @@ describe('general CAD authoring model', () => {
     state = cadAuthoringReducer(state, { type: 'succeeded', requestId: 'request:current', response: authoritative });
     expect(state.lastValidDocument.revisionId).toBe('revision:2');
     expect(state.lastValidMesh?.revisionId).toBe('revision:2');
+    expect(state.history.every((entry) => entry.status === 'succeeded')).toBe(true);
   });
 });
 

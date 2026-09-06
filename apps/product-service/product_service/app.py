@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -582,6 +584,7 @@ CAD_UPSTREAM_ROUTES = {
     "/api/cad/import": "/v1/exchange",
     "/api/cad/export": "/v1/exchange",
 }
+CAD_CAPABILITIES_ROUTE = "/api/cad/capabilities"
 
 
 class CadAdapterError(ValueError):
@@ -619,11 +622,13 @@ class Candidate02Routes:
         candidate_identity: Mapping[str, str],
         *,
         classification_action: Callable[[Any], tuple[int, dict[str, Any]]] | None = None,
+        classification_token_action: Callable[[Any, str | None], tuple[int, dict[str, Any]]] | None = None,
         sourcing_runtime: Any | None = None,
         provenance_runtime: Any | None = None,
         order_runtime: Any | None = None,
         cad_output_runtime: Any | None = None,
         cad_transport: Callable[[str, dict[str, Any]], tuple[int, dict[str, Any]]] | None = None,
+        cad_capability_transport: Callable[[], tuple[int, dict[str, Any]]] | None = None,
         cad_service_url: str | None = None,
     ) -> None:
         required = {"candidate_id", "revision_id", "snapshot_sha256"}
@@ -632,6 +637,7 @@ class Candidate02Routes:
         self.candidate_identity = dict(candidate_identity)
         self.cad_service_url = (cad_service_url if cad_service_url is not None else os.environ.get("CADDYDADDY_CAD_SERVICE_URL", "")).rstrip("/")
         self._cad_transport = cad_transport or self._http_cad_transport
+        self._cad_capability_transport = cad_capability_transport or self._http_cad_capabilities
         unavailable: dict[str, str] = {}
         default_inline_order_runtime = False
 
@@ -639,7 +645,12 @@ class Candidate02Routes:
             try:
                 from .classification_api import ClassificationAdapter
 
-                classification_action = ClassificationAdapter().classify
+                classification_adapter = ClassificationAdapter()
+                classification_action = classification_adapter.classify
+                classification_token_action = lambda payload, token: classification_adapter.classify(
+                    payload,
+                    presented_token=token,
+                )
             except Exception:
                 unavailable["/api/classification"] = "Classification adapter is unavailable in this product-service artifact."
         if sourcing_runtime is None:
@@ -697,6 +708,7 @@ class Candidate02Routes:
 
             return invoke
 
+        self._classification_token_action = classification_token_action
         self._actions: dict[str, Callable[[Any], tuple[int, dict[str, Any]]]] = {
             "/api/classification": classification_action or self._unavailable(unavailable["/api/classification"], "classification"),
             "/api/sourcing/rounds": getattr(sourcing_runtime, "create_round", self._unavailable(unavailable.get("/api/sourcing", "Sourcing adapter is unavailable."), "sourcing")),
@@ -736,22 +748,42 @@ class Candidate02Routes:
     def post_paths(self) -> frozenset[str]:
         return frozenset(self._actions)
 
+    @property
+    def get_paths(self) -> frozenset[str]:
+        return frozenset({CAD_CAPABILITIES_ROUTE})
+
     @staticmethod
     def _unavailable(message: str, domain: str) -> Callable[[Any], tuple[int, dict[str, Any]]]:
         return lambda _payload: (503, _candidate02_error("ADAPTER_UNAVAILABLE", message, domain=domain))
 
-    def dispatch(self, path: str, payload: Any) -> tuple[int, dict[str, Any]]:
+    def dispatch(self, path: str, payload: Any, *, live_token: str | None = None) -> tuple[int, dict[str, Any]]:
         action = self._actions.get(path)
         if action is None:
             return 404, _candidate02_error("ROUTE_NOT_FOUND", "Candidate 0.2 route does not exist.")
         try:
+            if path == "/api/classification" and self._classification_token_action is not None:
+                return self._classification_token_action(payload, live_token)
             return action(payload)
         except CadAdapterError as error:
             return error.status, _candidate02_error(error.code, error.message, domain="cad")
         except Exception:
             return 500, _candidate02_error("ROUTE_EXECUTION_FAILED", "The service adapter failed closed without returning a result.")
 
+    def dispatch_get(self, path: str) -> tuple[int, dict[str, Any]]:
+        if path != CAD_CAPABILITIES_ROUTE:
+            return 404, _candidate02_error("ROUTE_NOT_FOUND", "Candidate 0.2 route does not exist.")
+        try:
+            return self.cad_capabilities()
+        except Exception:
+            return 500, _candidate02_error("ROUTE_EXECUTION_FAILED", "The CAD capability adapter failed closed without returning a result.", domain="cad")
+
     def _http_cad_transport(self, path: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        return self._http_cad_request(path, payload)
+
+    def _http_cad_capabilities(self) -> tuple[int, dict[str, Any]]:
+        return self._http_cad_request("/v1/capabilities", None)
+
+    def _http_cad_request(self, path: str, payload: dict[str, Any] | None) -> tuple[int, dict[str, Any]]:
         if not self.cad_service_url:
             return 503, _candidate02_error(
                 "CAD_SERVICE_NOT_CONFIGURED",
@@ -761,14 +793,17 @@ class Candidate02Routes:
         parsed = urlsplit(self.cad_service_url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username or parsed.password or parsed.query or parsed.fragment:
             return 503, _candidate02_error("CAD_SERVICE_URL_INVALID", "CADDYDADDY_CAD_SERVICE_URL must be an HTTP(S) origin or base path without credentials, query, or fragment.", domain="cad")
-        body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-        if len(body) > MAX_CAD_REQUEST_BODY_BYTES:
+        body = None if payload is None else json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        if body is not None and len(body) > MAX_CAD_REQUEST_BODY_BYTES:
             return 413, _candidate02_error("CAD_REQUEST_TOO_LARGE", "The encoded CAD request exceeded the bounded proxy limit.", domain="cad")
+        headers = {"Accept": "application/json"}
+        if body is not None:
+            headers.update({"Content-Type": "application/json", "Content-Length": str(len(body))})
         request = Request(
             f"{self.cad_service_url}{path}",
             data=body,
-            method="POST",
-            headers={"Accept": "application/json", "Content-Type": "application/json", "Content-Length": str(len(body))},
+            method="POST" if body is not None else "GET",
+            headers=headers,
         )
         try:
             response = urlopen(request, timeout=30)
@@ -789,6 +824,86 @@ class Candidate02Routes:
             return 502, _candidate02_error("CAD_RESPONSE_INVALID", "The CAD service returned a non-object response.", domain="cad")
         return status, decoded
 
+    def cad_capabilities(self) -> tuple[int, dict[str, Any]]:
+        status, body = self._cad_capability_transport()
+        if not 200 <= status < 300:
+            return status, body
+        kernel = body.get("kernel") if isinstance(body, Mapping) else None
+        runtime_gate = body.get("runtime_gate") if isinstance(body, Mapping) else None
+        features = body.get("features") if isinstance(body, Mapping) else None
+        exchange = body.get("exchange") if isinstance(body, Mapping) else None
+        exact_exchange = exchange.get("exact") if isinstance(exchange, Mapping) else None
+        if (
+            body.get("schema_version") != "caddydaddy.cad-capabilities/1"
+            or body.get("status") != "AVAILABLE"
+            or not isinstance(kernel, Mapping)
+            or kernel.get("name") != "OpenCascade"
+            or kernel.get("version") != "7.9.3"
+            or kernel.get("binding") != "cadquery-ocp-novtk/7.9.3.1"
+            or not isinstance(runtime_gate, Mapping)
+            or runtime_gate.get("status") != "APPROVED"
+            or runtime_gate.get("owner_approval") != "ASSERTED_BY_DEPLOYMENT_CONFIGURATION"
+            or runtime_gate.get("approval_binding") != "caddydaddy.native-runtime/v1"
+            or runtime_gate.get("factual_evidence") != "PASS"
+            or runtime_gate.get("legal_determination") != "NOT_PERFORMED"
+            or runtime_gate.get("artifact_sha256") != "8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b"
+            or not isinstance(features, list)
+            or not {"FILLET", "CHAMFER"}.issubset(set(features))
+            or not isinstance(exchange, Mapping)
+            or not isinstance(exact_exchange, list)
+            or not {"STEP_AP242", "IGES_5_3"}.issubset(set(exact_exchange))
+        ):
+            return 502, _candidate02_error(
+                "CAD_CAPABILITY_CONTRACT_INVALID",
+                "The configured CAD service did not prove the approved caddydaddy.cad-capabilities/1 OCCT runtime contract; native operations remain blocked.",
+                domain="cad",
+            )
+        return 200, dict(body)
+
+    def _cad_runtime_gate(self) -> tuple[int, dict[str, Any]] | None:
+        status, body = self.cad_capabilities()
+        return None if 200 <= status < 300 else (status, body)
+
+    @staticmethod
+    def _require_exchange_result(body: Any, direction: str, format_name: str) -> Mapping[str, Any]:
+        if (
+            not isinstance(body, Mapping)
+            or body.get("schema_version") != "caddydaddy.exchange-result/1"
+            or body.get("status") != "SUCCEEDED"
+            or body.get("direction") != direction
+            or body.get("format") != format_name
+            or not isinstance(body.get("verification"), list)
+            or not any(
+                isinstance(item, Mapping)
+                and item.get("code") == "OCCT_REIMPORT_NON_NULL"
+                and item.get("status") == "PASSED"
+                for item in body["verification"]
+            )
+        ):
+            raise CadAdapterError("CAD_RESPONSE_INVALID", "CAD exchange response omitted its versioned OCCT verification receipt.", 502)
+        content = body.get("content_base64")
+        digest = body.get("content_sha256")
+        try:
+            decoded = base64.b64decode(content, validate=True) if isinstance(content, str) else b""
+        except (binascii.Error, ValueError) as exc:
+            raise CadAdapterError("CAD_RESPONSE_INVALID", "CAD exchange returned invalid artifact bytes.", 502) from exc
+        if not decoded or not isinstance(digest, str) or hashlib.sha256(decoded).hexdigest() != digest:
+            raise CadAdapterError("CAD_RESPONSE_INVALID", "CAD exchange artifact bytes do not match their SHA-256 receipt.", 502)
+        if format_name in {"STEP", "IGES"} and (
+            body.get("exact_geometry") is not True
+            or body.get("editable_brep") is not True
+            or not isinstance(body.get("brep_base64"), str)
+            or not body["brep_base64"]
+        ):
+            raise CadAdapterError("CAD_RESPONSE_INVALID", f"{format_name} exchange did not return verified editable OCCT B-rep geometry.", 502)
+        if format_name in {"STEP", "IGES"}:
+            try:
+                if not base64.b64decode(str(body["brep_base64"]), validate=True):
+                    raise ValueError("empty B-rep")
+            except (binascii.Error, ValueError) as exc:
+                raise CadAdapterError("CAD_RESPONSE_INVALID", f"{format_name} exchange returned invalid OCCT B-rep bytes.", 502) from exc
+        return body
+
     def _cad_recompute(self, request: Any) -> tuple[int, dict[str, Any]]:
         if not isinstance(request, Mapping) or not isinstance(request.get("document"), Mapping) or not isinstance(request.get("operation"), Mapping):
             raise CadAdapterError("CAD_REQUEST_INVALID", "Recompute requires document, operation, and expectedRevisionId.", 400)
@@ -798,6 +913,9 @@ class Candidate02Routes:
         if not isinstance(expected, str) or document.get("revisionId") != expected:
             raise CadAdapterError("CAD_STALE", "The submitted document does not match expectedRevisionId.", 409)
         if str(operation.get("kind", "")).startswith("assembly."):
+            blocked = self._cad_runtime_gate()
+            if blocked is not None:
+                return blocked
             return self._cad_assembly(document, expected)
 
         candidate = self._kernel_document(document, expected)
@@ -807,6 +925,9 @@ class Candidate02Routes:
             upstream.update({"base_document": continuation["base_document"], "expected_base_revision_id": expected})
         elif document.get("kernelState") is not None:
             raise CadAdapterError("CAD_STATE_UNEXPECTED", "A new document cannot carry a prior kernel continuation.", 409)
+        blocked = self._cad_runtime_gate()
+        if blocked is not None:
+            return blocked
         status, body = self._cad_transport(CAD_UPSTREAM_ROUTES["/api/cad/recompute"], upstream)
         if not 200 <= status < 300:
             return status, body
@@ -829,6 +950,9 @@ class Candidate02Routes:
         expected = request.get("expectedRevisionId")
         if format_name not in {"STEP", "IGES", "STL"} or not all(isinstance(value, str) and value for value in (file_name, content, expected)):
             raise CadAdapterError("CAD_IMPORT_INVALID", "Import requires STEP, IGES, or STL bytes plus file and revision identity.", 400)
+        blocked = self._cad_runtime_gate()
+        if blocked is not None:
+            return blocked
         status, body = self._cad_transport(CAD_UPSTREAM_ROUTES["/api/cad/import"], {
             "request_id": f"import:{hashlib.sha256(content.encode('ascii', errors='ignore')).hexdigest()}",
             "direction": "IMPORT",
@@ -837,6 +961,7 @@ class Candidate02Routes:
         })
         if not 200 <= status < 300:
             return status, body
+        body = self._require_exchange_result(body, "IMPORT", format_name)
         required = ("content_sha256", "bounds_mm", "diagnostics")
         if not isinstance(body, Mapping) or any(key not in body for key in required):
             raise CadAdapterError("CAD_RESPONSE_INVALID", "CAD import response omitted verified exchange evidence.", 502)
@@ -885,6 +1010,9 @@ class Candidate02Routes:
         if len(artifacts) != 1:
             raise CadAdapterError("CAD_EXPORT_BODY_SELECTION_REQUIRED", "Candidate 0.2 exports exactly one revision-bound body; zero-body and multi-body export need an explicit body or assembly selection.", 422)
         body_id, brep = next(iter(artifacts.items()))
+        blocked = self._cad_runtime_gate()
+        if blocked is not None:
+            return blocked
         status, body = self._cad_transport(CAD_UPSTREAM_ROUTES["/api/cad/export"], {
             "request_id": f"export:{revision}:{body_id}:{format_name}",
             "direction": "EXPORT",
@@ -894,6 +1022,7 @@ class Candidate02Routes:
         })
         if not 200 <= status < 300:
             return status, body
+        body = self._require_exchange_result(body, "EXPORT", format_name)
         data = body.get("content_base64") if isinstance(body, Mapping) else None
         content_hash = body.get("content_sha256") if isinstance(body, Mapping) else None
         if not isinstance(data, str) or not isinstance(content_hash, str):
@@ -1187,20 +1316,40 @@ class Candidate02Routes:
         document_hash = body.get("document_hash")
         geometry_hash = body.get("geometry_hash")
         kernel_bodies = body.get("bodies")
-        if not isinstance(revision, str) or not isinstance(document_hash, str) or not isinstance(geometry_hash, str) or not isinstance(kernel_bodies, list):
+        kernel = body.get("kernel")
+        if (
+            body.get("schema_version") != "caddydaddy.recompute-result/1"
+            or body.get("status") != "SUCCEEDED"
+            or not isinstance(revision, str)
+            or not isinstance(document_hash, str)
+            or not isinstance(geometry_hash, str)
+            or not isinstance(kernel_bodies, list)
+            or not isinstance(kernel, Mapping)
+            or kernel.get("name") != "OpenCascade"
+            or kernel.get("version") != "7.9.3"
+        ):
             raise CadAdapterError("CAD_RESPONSE_INVALID", "CAD recompute response omitted revision, hash, or bodies.", 502)
         document["revisionId"] = revision
         browser_bodies = document.setdefault("bodies", [])
         known = {item.get("id"): item for item in browser_bodies if isinstance(item, dict)}
         for kernel_body in kernel_bodies:
-            if not isinstance(kernel_body, Mapping) or not isinstance(kernel_body.get("body_id"), str):
+            try:
+                brep = base64.b64decode(kernel_body.get("brep_base64"), validate=True) if isinstance(kernel_body, Mapping) and isinstance(kernel_body.get("brep_base64"), str) else b""
+            except (binascii.Error, ValueError):
+                brep = b""
+            if (
+                not isinstance(kernel_body, Mapping)
+                or not isinstance(kernel_body.get("body_id"), str)
+                or kernel_body.get("valid") is not True
+                or not brep
+                or hashlib.sha256(brep).hexdigest() != kernel_body.get("brep_sha256")
+            ):
                 raise CadAdapterError("CAD_RESPONSE_INVALID", "CAD recompute returned a malformed body.", 502)
             body_id = kernel_body["body_id"]
             if body_id in known:
                 known[body_id]["state"] = "valid"
             else:
                 browser_bodies.append({"id": body_id, "name": body_id, "featureIds": [kernel_body.get("producing_feature_id")], "material": None, "visible": True, "state": "valid"})
-        kernel = body.get("kernel", {})
         return {
             "document": document,
             "revisionId": revision,
@@ -1208,7 +1357,7 @@ class Candidate02Routes:
             "dependencyGraph": self._dependency_graph(document),
             "mesh": self._mesh_from_bodies(kernel_bodies, revision),
             "diagnostics": self._frontend_diagnostics(body.get("diagnostics", [])),
-            "kernel": {"name": str(kernel.get("name", "OpenCascade")), "version": str(kernel.get("version", "unknown")), "mode": "live", "computedAt": _iso_now(), "artifactHash": geometry_hash},
+            "kernel": {"name": "OpenCascade", "version": "7.9.3", "mode": "live", "computedAt": _iso_now(), "artifactHash": geometry_hash},
         }
 
     @staticmethod
@@ -1288,6 +1437,9 @@ def create_handler(
             if path == "/api/candidate":
                 self._json(200, active_runtime.candidate())
                 return
+            if path in active_candidate02.get_paths:
+                self._json(*active_candidate02.dispatch_get(path))
+                return
             if path == "/api/compliance-at-design-click":
                 self._method_not_allowed("POST")
                 return
@@ -1327,7 +1479,7 @@ def create_handler(
 
         def do_POST(self) -> None:
             path = urlsplit(self.path).path
-            if path in {"/api/health", "/healthz", "/api/candidate"}:
+            if path in {"/api/health", "/healthz", "/api/candidate", *active_candidate02.get_paths}:
                 self._method_not_allowed("GET")
                 return
             if path != "/api/compliance-at-design-click" and path not in active_candidate02.post_paths:
@@ -1364,6 +1516,10 @@ def create_handler(
                 return
             if path == "/api/compliance-at-design-click":
                 self._json(*active_runtime.evaluate_request(request))
+            elif path == "/api/classification":
+                live_tokens = self.headers.get_all("X-CADdyDaddy-Live-Token", failobj=[])
+                live_token = live_tokens[0] if len(live_tokens) == 1 else None
+                self._json(*active_candidate02.dispatch(path, request, live_token=live_token))
             else:
                 self._json(*active_candidate02.dispatch(path, request))
 

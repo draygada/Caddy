@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60,
+      "includeFiles": "{cad_service/**,licenses/**,scripts/verify_redistribution_evidence.py,THIRD_PARTY_NOTICES.md,REDISTRIBUTION_EVIDENCE.md,BUNDLE_MANIFEST.json}",
+      "excludeFiles": "{tests/**,.pytest_cache/**,**/__pycache__/**,**/*.pyc,.env,.env.*}"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.py"
+    }
+  ]
+}

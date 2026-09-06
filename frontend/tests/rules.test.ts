@@ -4,7 +4,7 @@ import { countChanged, outcome, type Design, type Parts } from '../src/lib/rules
 import { parseDecimal } from '../src/lib/hash';
 import { attentionOf, cardGroupsOf, destCellsOf, overallOf, slotStatus, STATUS_CLAIM_CEILING } from '../src/lib/viewmodel';
 
-const design = (over: Partial<Parts> = {}, span = 3.0, edit: Partial<Record<Slot, Record<string, number | null>>> = {}): Design => {
+const design = (over: Partial<Parts> = {}, span = 1.8, edit: Partial<Record<Slot, Record<string, number | null>>> = {}): Design => {
   const parts: Parts = { ...BASELINE_PARTS, ...over };
   const attrs = Object.fromEntries(SLOTS.map((s) => [s, parts[s] ? { ...CATALOG[parts[s] as PartId].attrs, ...(edit[s] || {}) } : {}])) as Design['attrs'];
   return { parts, attrs, span };
@@ -25,10 +25,10 @@ describe('outcome (synthetic rule table)', () => {
     const af = Object.fromEntries(o.cols.airframe.map((d) => [d.code, d.word]));
     expect(af).toMatchObject({ CA: 'NLR', DE: 'STA', TW: 'LIC', VN: 'LIC', CN: 'LIC' });
   });
-  it('F2 span 3.4 m: cruise W 293, range 319 km, MT fires', () => {
-    const o = outcome(design({ battery: 'amprius' }, 3.4));
-    expect(Math.round(o.cruiseW)).toBe(293);
-    expect(Math.round(o.range ?? 0)).toBe(319);
+  it('F2 span 2.0 m: cruise W 297, range 315 km, MT fires', () => {
+    const o = outcome(design({ battery: 'amprius' }, 2.0));
+    expect(Math.round(o.cruiseW)).toBe(297);
+    expect(Math.round(o.range ?? 0)).toBe(315);
     expect(o.rules.some((r) => r.cols === 'MT')).toBe(true);
     expect(o.cols.airframe.find((d) => d.code === 'DE')?.word).toBe('LIC');
   });

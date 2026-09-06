@@ -26,7 +26,7 @@ export function Timeline() {
       <div role="dialog" aria-label="Timeline" className="absolute top-0 right-0 bottom-0 w-[min(460px,100%)] bg-surface border-l border-line z-[6] flex flex-col shadow-[-8px_0_24px_rgba(0,0,0,.12)]">
         <div className="flex items-center justify-between gap-2 px-[14px] py-[10px] border-b border-line2">
           <div className="text-[13px] font-semibold">Timeline <span className="text-muted font-normal">· newest first · {shown.length} of {events.length}</span></div>
-          <button onClick={closeAll} className="btn">Close · Esc</button>
+          <button onClick={closeAll} className="btn btn-xs btn-icon" aria-label="Close" title="Close · Esc">×</button>
         </div>
         <div role="radiogroup" aria-label="Lane filter" className="flex gap-1 px-[14px] py-2 border-b border-line2">
           {LANES.map((l) => (

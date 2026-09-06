@@ -6,6 +6,7 @@ import {
   type CoreCandidateLoad,
 } from '../lib/core-client';
 import {
+  getTripwireRevisionGate,
   publicTripwireError,
   runTripwire,
   type CandidatePayload,
@@ -28,7 +29,7 @@ export function TripwirePanel() {
   const open = useTripwireStore((state) => state.open);
   const closePanel = useTripwireStore((state) => state.closePanel);
   const [loadResult, setLoadResult] = useState<CoreCandidateLoad | null>(null);
-  const [phase, setPhase] = useState<'idle' | 'loading' | 'ready' | 'running' | 'bound' | 'blocked' | 'error'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'loading' | 'ready' | 'running' | 'bound' | 'blocked' | 'stale' | 'unavailable' | 'error'>('idle');
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [result, setResult] = useState<ValidatedTripwireResult | null>(null);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
@@ -43,6 +44,10 @@ export function TripwirePanel() {
   const payload = result?.payload;
   const finding = payload?.observation?.findings?.[0];
   const receipt = payload?.binding_receipt;
+  const revisionGate = useMemo(
+    () => getTripwireRevisionGate(candidate as unknown as CandidatePayload | null, loadResult?.releaseIdentity?.revisionId),
+    [candidate, loadResult?.releaseIdentity?.revisionId],
+  );
 
   async function load() {
     setPhase('loading');
@@ -51,8 +56,10 @@ export function TripwirePanel() {
     setResult(null);
     setError(null);
     try {
-      setLoadResult(await loadCoreCandidate());
-      setPhase('ready');
+      const next = await loadCoreCandidate();
+      const gate = getTripwireRevisionGate(next.candidate as unknown as CandidatePayload, next.releaseIdentity?.revisionId);
+      setLoadResult(next);
+      setPhase(gate.status === 'CURRENT' ? 'ready' : gate.status === 'STALE' ? 'stale' : 'unavailable');
     } catch (caught) {
       setPhase('error');
       setError(corePublicError(caught));
@@ -60,6 +67,12 @@ export function TripwirePanel() {
   }
 
   async function review() {
+    if (!revisionGate.canCheck) {
+      setPhase(revisionGate.status === 'STALE' ? 'stale' : 'unavailable');
+      setResult(null);
+      setError(null);
+      return;
+    }
     if (!candidate || !selectedEntityId) {
       setPhase('error');
       setError({ code: 'SELECTION_REQUIRED', message: 'Select one mapped legacy-snapshot entity before running Tripwire.' });
@@ -69,7 +82,7 @@ export function TripwirePanel() {
     setResult(null);
     setError(null);
     try {
-      const next = await runTripwire(candidate as unknown as CandidatePayload, selectedEntityId);
+      const next = await runTripwire(candidate as unknown as CandidatePayload, selectedEntityId, revisionGate.currentRevisionId);
       setResult(next);
       setPhase(next.displayState === 'BOUND' ? 'bound' : 'blocked');
     } catch (caught) {
@@ -89,12 +102,12 @@ export function TripwirePanel() {
       <section role="dialog" aria-modal="true" aria-label="Tripwire review readiness" onMouseDown={(e) => e.stopPropagation()} className="h-full w-[min(900px,calc(100vw-16px))] bg-surface border-l border-line shadow-[-12px_0_32px_rgba(0,0,0,.2)] flex flex-col">
         <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line2">
           <div className="min-w-0">
-            <div className="font-semibold">Tripwire <span className="text-muted font-normal">· Candidate 0.1 legacy snapshot evidence</span></div>
-            <div className="text-[12px] text-muted">Validated inside Candidate 0.2 · never the browser-authored live model</div>
+            <div className="font-semibold">Tripwire <span className="text-muted font-normal">· current-revision evidence gate</span></div>
+            <div className="text-[12px] text-muted">Candidate 0.1 bracket evidence is historical and is never applied to Candidate 0.2 without an exact revision match.</div>
           </div>
           <div className="flex gap-2 items-center">
             <span className="chip">Draft review only</span>
-            <button onClick={closePanel} className="btn">Close · Esc</button>
+            <button onClick={closePanel} className="btn btn-xs btn-icon" aria-label="Close" title="Close · Esc">×</button>
           </div>
         </header>
 
@@ -103,8 +116,8 @@ export function TripwirePanel() {
             <div className="text-[13px] font-semibold">{candidate.candidate.claim}</div>
             <div className="flex flex-wrap gap-2">
               <span className="chip">Current authority {loadResult.releaseIdentity?.candidateId ?? 'unavailable'}</span>
-              <span className="chip">Legacy snapshot evidence</span>
-              <span className="chip">not live model</span>
+              <span className="chip">Legacy Candidate 0.1 evidence</span>
+              <span className="chip">gate {revisionGate.status}</span>
               <span className="chip">{candidate.snapshotProvenance.mode}</span>
               <span className="chip">revision {short(candidate.document.revisionId, 10)}</span>
               <span className="chip">commit {short(candidate.snapshotProvenance.source.commit, 7)}</span>
@@ -116,7 +129,7 @@ export function TripwirePanel() {
         <div className="flex-1 min-h-0 overflow-auto p-4 grid grid-cols-[minmax(250px,0.8fr)_minmax(340px,1.2fr)] gap-4 max-[720px]:grid-cols-1">
           <div className="panel self-start">
             <div className="panel-head">
-              <div className="panel-title">Canonical entities <span className="sub">· choose one exact face</span></div>
+              <div className="panel-title">Legacy evidence entities <span className="sub">· Candidate 0.1 only</span></div>
               <span className="chip">{targets.length || '—'} mapped</span>
             </div>
             {phase === 'loading' && <div role="status" className="p-3 text-[13px] text-muted">Validating Candidate 0.2, then loading its immutable Candidate 0.1 legacy evidence and exact request bindings…</div>}
@@ -125,7 +138,7 @@ export function TripwirePanel() {
                 <div className="px-3 pt-3 pb-1 text-[12px] text-muted uppercase tracking-[.06em]">{body}</div>
                 <div className="px-2 pb-2 grid gap-1">
                   {targets.map((item) => (
-                    <button key={item.entityId} onClick={() => { setSelectedEntityId(item.entityId); setResult(null); setError(null); setPhase('ready'); }} aria-pressed={selectedEntityId === item.entityId} className="row-hover min-h-10 rounded-r px-2 py-1 text-left grid grid-cols-[auto_minmax(0,1fr)] gap-2 bg-transparent border text-ink cursor-pointer" style={{ borderColor: selectedEntityId === item.entityId ? 'var(--focus)' : 'transparent', background: selectedEntityId === item.entityId ? 'var(--surface2)' : 'transparent' }}>
+                    <button key={item.entityId} disabled={!revisionGate.canCheck} onClick={() => { setSelectedEntityId(item.entityId); setResult(null); setError(null); setPhase('ready'); }} aria-pressed={selectedEntityId === item.entityId} className="row-hover min-h-10 rounded-r px-2 py-1 text-left grid grid-cols-[auto_minmax(0,1fr)] gap-2 bg-transparent border text-ink cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" style={{ borderColor: selectedEntityId === item.entityId ? 'var(--focus)' : 'transparent', background: selectedEntityId === item.entityId ? 'var(--surface2)' : 'transparent' }}>
                       <span className="font-mono text-[12px] font-semibold">F{item.ordinal}</span>
                       <span className="min-w-0"><span className="block text-[12px] font-mono truncate">{short(item.entityId, 9)}</span><span className="block text-[11px] text-muted truncate">{item.featureId}</span></span>
                     </button>
@@ -138,9 +151,10 @@ export function TripwirePanel() {
 
           <div className="grid gap-3 content-start" aria-live="polite">
             <div className="panel">
-              <div className="panel-head"><div className="panel-title">Review readiness <span className="sub">· immutable legacy binding</span></div><span className="chip">{phase}</span></div>
+              <div className="panel-head"><div className="panel-title">Review readiness <span className="sub">· exact current revision required</span></div><span className="chip">{phase}</span></div>
               <div className="p-3 grid gap-2">
-                {!target && phase !== 'loading' && <div className="text-[14px] text-muted">Select one API-supplied legacy-snapshot entity. The browser-authored model is intentionally never substituted for this immutable evidence.</div>}
+                {phase !== 'loading' && !revisionGate.canCheck && <div role="status" className="border border-amber rounded-r p-3 grid gap-1"><b>Tripwire {revisionGate.status.toLowerCase()} for the active model</b><div className="text-[13px]">{revisionGate.message}</div><Fact label="Active revision" value={revisionGate.currentRevisionId ?? undefined} /><Fact label="Evidence revision" value={revisionGate.evidenceRevisionId ?? undefined} /><div className="text-[12px] text-muted">No Tripwire check is available and no legacy bracket result has been applied.</div></div>}
+                {!target && phase !== 'loading' && revisionGate.canCheck && <div className="text-[14px] text-muted">Select one API-supplied entity whose evidence revision exactly matches the active candidate revision.</div>}
                 {target && (
                   <>
                     <div className="font-semibold">{target.bodyLabel} · face {target.ordinal}</div>
@@ -151,7 +165,7 @@ export function TripwirePanel() {
                     <Fact label="Forge record" value={target.binding.request.forge_record_id} />
                   </>
                 )}
-                <button onClick={() => void review()} disabled={!target || phase === 'running' || phase === 'loading'} className="btn btn-primary btn-lg disabled:opacity-50">{phase === 'running' ? 'Checking exact binding…' : payload ? 'Run Tripwire again' : 'Check with Tripwire'}</button>
+                {revisionGate.canCheck && <button onClick={() => void review()} disabled={!target || phase === 'running' || phase === 'loading'} className="btn btn-primary btn-lg disabled:opacity-50">{phase === 'running' ? 'Checking exact binding…' : payload ? 'Run Tripwire again' : 'Check with Tripwire'}</button>}
                 <div className="text-[12px] text-muted">Tripwire checks evidence sufficiency for human review. It does not classify the design and cannot clear it.</div>
               </div>
             </div>

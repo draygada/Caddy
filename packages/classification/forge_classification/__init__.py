@@ -7,14 +7,20 @@ from pathlib import Path
 
 from .engine import ModelUnavailable, determine
 from .model import Budget, BudgetedModel, ModelClient
-from .pack import ReferencePack, build_pack
+from .pack import ReferencePack, build_trusted_pack
 from .snapshot import FactSnapshot, snapshot_from_part_revision, snapshot_from_product
 
 DEFAULT_RAW = Path(__file__).resolve().parent.parent / "data" / "ecfr" / "raw"
+DEFAULT_MANIFEST = DEFAULT_RAW.parent / "manifest.json"
+DEFAULT_PACK_SHA256 = "21818b45bcc1e5a23781cf569565cbcf9ea74a264d36a31b47975f38090f760e"
 
 
 def default_pack() -> ReferencePack:
-    return build_pack(DEFAULT_RAW)
+    return build_trusted_pack(
+        DEFAULT_RAW,
+        DEFAULT_MANIFEST,
+        expected_pack_sha256=DEFAULT_PACK_SHA256,
+    )
 
 
 def run(product_or_part: dict | str, model: ModelClient, *, item_kind: str = "commodity", facts: dict | list | None = None,

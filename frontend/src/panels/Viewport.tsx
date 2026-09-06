@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type DragEvent, type MouseEvent as RMouseEvent, type WheelEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore, isBodyId, nodeOfBody, BODY_LABEL, type BodyId, type Pos } from '../store';
-import { CATALOG, CORE_SLOTS, PLATE_T, PLATE_W, SLOTS, SLOT_LABEL, type PartId, type Slot } from '../lib/catalog';
+import { CATALOG, CORE_SLOTS, PLATE_T, SLOTS, SLOT_LABEL, type PartId, type Slot } from '../lib/catalog';
 import { boxFaces, clipFaces, K, proj, renderSolid, solidBounds, type Face, type Projector, type Solid, type Vec3 } from '../lib/geometry';
 import { buildBodies } from '../lib/scene';
 import { fmtLen } from '../lib/units';
@@ -8,12 +9,12 @@ import type { Outcome } from '../lib/rules';
 import { Check, Display, Fit, Grid as GridIcon, Home, Orbit, Pan, Zoom } from './Icons';
 import { SketchView } from './SketchView';
 import { BoardView } from './BoardView';
-import { AuthoringWorkspace } from './AuthoringWorkspace';
 import { FeatureDialog } from './FeatureDialog';
 import { MarkingMenu } from './MarkingMenu';
 
 const VB_W = 760, VB_H = 490;
-const W = PLATE_W;
+/** Scene unit is the metre; the plate is a few hundred millimetres, so 1 m draws as 1000 px at zoom 1. */
+const PX_PER_M = 1000;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** ViewCube cells: each face split 3×3; centre = face view, edge strips = edge views, corners = corner views (26 directions). */
@@ -91,50 +92,23 @@ function toPlate(pr: Projector, sx: number, sy: number, ca: number, sa: number, 
   return { x: a * ca + b * sa, y: -a * sa + b * ca };
 }
 
-function SheetView({ span }: { span: number }) {
-  const units = useStore((s) => s.units);
-  const views = [
-    { name: 'Top', note: 'plan view · derived from the model on release' },
-    { name: 'Front', note: 'elevation · derived from the model on release' },
-    { name: 'Right', note: 'side elevation · derived from the model on release' },
-  ];
-  return (
-    <div className="flex-1 min-h-0 flex items-center justify-center p-4 bg-surface2">
-      <div className="w-full max-w-[820px] aspect-[1.414] bg-surface border border-line shadow-[0_2px_8px_rgba(0,0,0,.08)] grid grid-cols-2 grid-rows-[1fr_1fr_auto] gap-2 p-3">
-        {views.map((sv) => (
-          <div key={sv.name} className="border border-dashed border-line rounded-r relative min-h-0 flex items-center justify-center" style={{ background: 'repeating-linear-gradient(135deg,transparent 0 10px,var(--line2) 10px 11px)' }}>
-            <span className="absolute left-2 top-[6px] text-[13px] font-semibold">{sv.name}</span>
-            <span className="font-mono text-[12px] text-muted text-center px-3">{sv.note}</span>
-          </div>
-        ))}
-        <div className="border border-dashed border-line rounded-r relative min-h-0 flex items-center justify-center">
-          <span className="absolute left-2 top-[6px] text-[13px] font-semibold">Isometric</span>
-          <span className="font-mono text-[12px] text-muted">from the model view</span>
-        </div>
-        <div className="col-span-2 border border-line rounded-r grid grid-cols-[2fr_1fr_1fr_1fr] text-[13px]">
-          <div className="px-[10px] py-[6px] border-r border-line2"><span className="text-muted">title</span><br /><b>Kestrel bracket · slot assembly</b></div>
-          <div className="px-[10px] py-[6px] border-r border-line2"><span className="text-muted">revision</span><br /><span className="font-mono">v{useStore.getState().versions.length}</span></div>
-          <div className="px-[10px] py-[6px] border-r border-line2"><span className="text-muted">span</span><br /><span className="font-mono">{fmtLen(span, units)}</span></div>
-          <div className="px-[10px] py-[6px]"><span className="text-muted">units · sheet</span><br /><span className="font-mono">{units} · A3 · not yet generated</span></div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function Viewport({ o: _o }: { o: Outcome }) {
   const s = useStore();
-  const orbit = useRef({ on: false, pan: false, start: [0, 0, 0, 0, 0, 0, 0.7], moved: false });
+  const orbit = useRef({ on: false, pan: false, start: [0, 0, 0, 0, 0, 0, 0.7], moved: false, bg: false });
   const cube = useRef({ on: false, start: [0, 0, 0, 0], moved: false });
   const move = useRef<{ slot: Slot; from: Pos; grab: Pos; moved: boolean } | null>(null);
+  // dragging one arrow of the move triad: the axis, the pointer start and the axis direction on screen
+  const axisMove = useRef<{ slot: Slot; axis: 0 | 1 | 2; from: Pos; start: [number, number]; dir: [number, number]; moved: boolean } | null>(null);
+  const [axisHover, setAxisHover] = useState<0 | 1 | 2 | null>(null);
   const prRef = useRef<{ pr: Projector; ca: number; sa: number; extents: Record<Slot, Extent> } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [dispOpen, setDispOpen] = useState(false);
   const [cubeHover, setCubeHover] = useState<string | null>(null);
   const [cubeMenu, setCubeMenu] = useState(false);
 
-  const L = s.span;
   const dims = s.preview?.dims ?? s.dims, geo = s.preview?.geo ?? s.geo, pos = s.preview?.pos ?? s.pos;
+  const L = geo.plateL, W = geo.plateW;
   // a component body shows when it is placed, or when its type is in the project (dashed footprint); library types not in the project draw nothing
   const inProject = (sl: Slot) => !!s.parts[sl] || (s.project?.components ?? CORE_SLOTS).includes(sl);
   const visible = (b: BodyId) => !s.hidden[b] && (!s.isolated || s.isolated === b) && (b === 'plate' || b === 'flange' || inProject(b));
@@ -142,11 +116,11 @@ export function Viewport({ o: _o }: { o: Outcome }) {
   const plateT = geo.plateT ?? PLATE_T;
 
   const scene = useMemo(() => {
-    const U = 100 * s.zoom;
+    const U = PX_PER_M * s.zoom;
     const p0 = proj(s.az, s.el, U, 0, 0);
-    const c0 = p0.pt(L / 2, W / 2, 0.3);
+    const c0 = p0.pt(L / 2, W / 2, 0.03);
     const pr = proj(s.az, s.el, U, 380 + s.pan.x - c0[0], 262 + s.pan.y - c0[1]);
-    const bodies = buildBodies({ span: L, dims, geo, parts: s.parts, attrs: s.attrs, pos });
+    const bodies = buildBodies({ dims, geo, parts: s.parts, attrs: s.attrs, pos, span: s.span });
     const extents = Object.fromEntries(SLOTS.map((sl) => { const b = solidBounds(bodies[sl]); const p = pos[sl]; return [sl, { dx0: b.minx - p.x, dx1: b.maxx - p.x, dy0: b.miny - p.y, dy1: b.maxy - p.y }]; })) as Record<Slot, Extent>;
     const cut = (so: Solid): Solid => (s.section.on ? { ...so, faces: clipFaces(so.faces, s.section.axis, s.section.at) } : so);
     const solids: Solid[] = [...SLOTS.filter(visible).map((sl) => cut(bodies[sl])), ...(visible('flange') ? [cut(bodies.flange)] : [])];
@@ -184,52 +158,73 @@ export function Viewport({ o: _o }: { o: Outcome }) {
       const UK = pr.U * K;
       const corner = (sx: number, sy: number): Pos | null => { if (Math.abs(pr.se) < 0.08) return null; const a = (sx - pr.ox) / UK, b = (sy - pr.oy) / UK / pr.se; return { x: a * ca + b * sa, y: -a * sa + b * ca }; };
       const cs = [corner(0, 0), corner(VB_W, 0), corner(0, VB_H), corner(VB_W, VB_H)];
-      let gx0 = -20, gx1 = L + 20, gy0 = -20, gy1 = W + 20;
+      // 50 mm grid with a 100 mm major line (100 mm minor when zoomed out); extents snap to the 50 mm lattice
+      const step = s.zoom < 0.45 ? 0.1 : 0.05, lattice = 20;
+      let gx0 = -2, gx1 = L + 2, gy0 = -2, gy1 = W + 2;
       if (cs.every((c): c is Pos => !!c)) {
-        const lim = 60;
-        gx0 = clamp(Math.floor(Math.min(...cs.map((c) => c.x)) * 2) / 2, -lim, lim); gx1 = clamp(Math.ceil(Math.max(...cs.map((c) => c.x)) * 2) / 2, -lim, lim);
-        gy0 = clamp(Math.floor(Math.min(...cs.map((c) => c.y)) * 2) / 2, -lim, lim); gy1 = clamp(Math.ceil(Math.max(...cs.map((c) => c.y)) * 2) / 2, -lim, lim);
+        const lim = 6;
+        gx0 = clamp(Math.floor(Math.min(...cs.map((c) => c.x)) * lattice) / lattice, -lim, lim); gx1 = clamp(Math.ceil(Math.max(...cs.map((c) => c.x)) * lattice) / lattice, -lim, lim);
+        gy0 = clamp(Math.floor(Math.min(...cs.map((c) => c.y)) * lattice) / lattice, -lim, lim); gy1 = clamp(Math.ceil(Math.max(...cs.map((c) => c.y)) * lattice) / lattice, -lim, lim);
       }
-      const step = s.zoom < 0.45 ? 1 : 0.5;
-      const ln = (a: [number, number], b: [number, number], major: boolean) => { const p = pr.pt(a[0], a[1], -0.001), q = pr.pt(b[0], b[1], -0.001); gridLines.push({ x1: p[0].toFixed(1), y1: p[1].toFixed(1), x2: q[0].toFixed(1), y2: q[1].toFixed(1), stroke: major ? 'var(--line)' : 'var(--line2)', sw: major ? 1 : 0.6 }); };
-      for (let x = gx0; x <= gx1 + 1e-9; x += step) ln([x, gy0], [x, gy1], Math.abs(x % 1) < 1e-9);
-      for (let y = gy0; y <= gy1 + 1e-9; y += step) ln([gx0, y], [gx1, y], Math.abs(y % 1) < 1e-9);
+      const major = (v: number) => Math.abs(Math.round(v * 1000) % 100) < 1;
+      const ln = (a: [number, number], b: [number, number], isMajor: boolean) => { const p = pr.pt(a[0], a[1], -0.0001), q = pr.pt(b[0], b[1], -0.0001); gridLines.push({ x1: p[0].toFixed(1), y1: p[1].toFixed(1), x2: q[0].toFixed(1), y2: q[1].toFixed(1), stroke: isMajor ? 'var(--line)' : 'var(--line2)', sw: isMajor ? 1 : 0.6 }); };
+      for (let x = gx0; x <= gx1 + 1e-9; x += step) ln([x, gy0], [x, gy1], major(x));
+      for (let y = gy0; y <= gy1 + 1e-9; y += step) ln([gx0, y], [gx1, y], major(y));
     }
-    const axes = ([['X', [0.6, 0, 0]], ['Y', [0, 0.6, 0]], ['Z', [0, 0, 0.6]]] as [string, [number, number, number]][]).map(([label, v]) => {
-      const o0 = pr.pt(-0.6, -0.6, 0), p = pr.pt(-0.6 + v[0], -0.6 + v[1], v[2]);
-      const t = pr.pt(-0.6 + v[0] * 1.25, -0.6 + v[1] * 1.25, v[2] * 1.25);
+    const axes = ([['X', [0.06, 0, 0]], ['Y', [0, 0.06, 0]], ['Z', [0, 0, 0.06]]] as [string, [number, number, number]][]).map(([label, v]) => {
+      const o0 = pr.pt(-0.06, -0.06, 0), p = pr.pt(-0.06 + v[0], -0.06 + v[1], v[2]);
+      const t = pr.pt(-0.06 + v[0] * 1.25, -0.06 + v[1] * 1.25, v[2] * 1.25);
       return { label, x1: o0[0].toFixed(1), y1: o0[1].toFixed(1), x2: p[0].toFixed(1), y2: p[1].toFixed(1), tx: t[0].toFixed(1), ty: (t[1] + 4).toFixed(1) };
     });
     const cube = cubeCells(proj(s.az, s.el, 33, 108, 102));
-    const d1 = pr.pt(0, W + 0.3, 0), d2 = pr.pt(L, W + 0.3, 0);
+    // the dimension line: the body length, or the span tip to tip on a wing
+    const wing = geo.kind === 'wing', half = Math.max(0.2, (s.span - W) / 2);
+    const d1 = wing ? pr.pt(L + 0.06, -half, 0) : pr.pt(0, W + 0.03, 0), d2 = wing ? pr.pt(L + 0.06, W + half, 0) : pr.pt(L, W + 0.03, 0);
     const dim = { x1: d1[0].toFixed(1), y1: d1[1].toFixed(1), x2: d2[0].toFixed(1), y2: d2[1].toFixed(1), tx: ((d1[0] + d2[0]) / 2).toFixed(1), ty: (Math.max(d1[1], d2[1]) + 18).toFixed(1) };
     let plane: string | null = null;
     if (s.section.on) {
-      const zTop = plateT + Math.max(dims.airframe, 1.2), a = s.section.at;
-      const corners: Vec3[] = s.section.axis === 0 ? [[a, -0.2, -0.05], [a, W + 0.2, -0.05], [a, W + 0.2, zTop], [a, -0.2, zTop]] : s.section.axis === 1 ? [[-0.2, a, -0.05], [L + 0.2, a, -0.05], [L + 0.2, a, zTop], [-0.2, a, zTop]] : [[-0.2, -0.2, a], [L + 0.2, -0.2, a], [L + 0.2, W + 0.2, a], [-0.2, W + 0.2, a]];
+      const zTop = plateT + Math.max(dims.airframe, 0.12), a = s.section.at, m = 0.02;
+      const corners: Vec3[] = s.section.axis === 0 ? [[a, -m, -0.005], [a, W + m, -0.005], [a, W + m, zTop], [a, -m, zTop]] : s.section.axis === 1 ? [[-m, a, -0.005], [L + m, a, -0.005], [L + m, a, zTop], [-m, a, zTop]] : [[-m, -m, a], [L + m, -m, a], [L + m, W + m, a], [-m, W + m, a]];
       plane = corners.map((p) => pr.pt(p[0], p[1], p[2]).map((v) => v.toFixed(1)).join(',')).join(' ');
     }
     prRef.current = { pr, ca: Math.cos(s.az), sa: Math.sin(s.az), extents };
-    return { faces, gridLines, axes, cube, dim, plane, faceCount: boxFaces.length };
+    // the move triad: X, Y and Z arrows on the selected placed part, sized in screen space so they read at every zoom
+    let triad: { o: [number, number]; arms: { axis: 0 | 1 | 2; x2: number; y2: number; hx: number; hy: number; dir: [number, number]; label: string }[] } | null = null;
+    const tSlot = s.sel && s.sel !== 'airframe' && s.parts[s.sel] && !s.hidden[s.sel] && s.selFilter !== 'face' && s.viewSeq == null ? s.sel : null;
+    if (tSlot) {
+      const p = pos[tSlot]; const oz = plateT + (p.z ?? 0);
+      const o = pr.pt(p.x, p.y, oz);
+      const armPx = 58;
+      const arms = ([[0, 'X', [1, 0, 0]], [1, 'Y', [0, 1, 0]], [2, 'Z', [0, 0, 1]]] as [0 | 1 | 2, string, Vec3][]).map(([axis, label, v]) => {
+        const q = pr.pt(p.x + v[0], p.y + v[1], oz + v[2]);
+        const dir: [number, number] = [q[0] - o[0], q[1] - o[1]]; // screen pixels per metre along this axis
+        const len = Math.hypot(dir[0], dir[1]) || 1;
+        const ux = dir[0] / len, uy = dir[1] / len;
+        return { axis, label, dir, x2: o[0] + ux * armPx, y2: o[1] + uy * armPx, hx: o[0] + ux * (armPx + 10), hy: o[1] + uy * (armPx + 10) };
+      });
+      triad = { o: [o[0], o[1]], arms };
+    }
+    return { faces, gridLines, axes, cube, dim, plane, triad, faceCount: boxFaces.length };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.az, s.el, s.zoom, s.pan, L, dims, geo, pos, s.parts, s.attrs, s.sel, s.selBody, s.selFace, s.selFilter, s.hover, s.dragPart, s.grid, s.hidden, s.isolated, s.visualStyle, s.section, s.tint]);
 
   const svgPt = (e: { clientX: number; clientY: number; currentTarget: Element }): [number, number] => { const r = e.currentTarget.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * VB_W, ((e.clientY - r.top) / r.height) * VB_H]; };
-  const onPlate = (slot: Slot, p: Pos): Pos => { const ex = prRef.current?.extents[slot]; if (!ex) return p; return { x: clamp(p.x, 0.12 - ex.dx0, L - 0.05 - ex.dx1), y: clamp(p.y, 0.05 - ex.dy0, W - 0.05 - ex.dy1) }; };
-  const platePt = (sx: number, sy: number): Pos | null => { const c = prRef.current; return c ? toPlate(c.pr, sx, sy, c.ca, c.sa, plateT) : null; };
+  const onPlate = (slot: Slot, p: Pos): Pos => { const ex = prRef.current?.extents[slot]; if (!ex) return p; return { x: clamp(p.x, 0.012 - ex.dx0, L - 0.005 - ex.dx1), y: clamp(p.y, 0.005 - ex.dy0, W - 0.005 - ex.dy1) }; };
+  const platePt = (sx: number, sy: number, lift = 0): Pos | null => { const c = prRef.current; return c ? toPlate(c.pr, sx, sy, c.ca, c.sa, plateT + lift) : null; };
 
   const vpDown = (e: RMouseEvent<SVGSVGElement>) => {
     if (e.button !== 0 && e.button !== 1) return;
     if (s.marking) s.patch({ marking: null });
     const [x, y] = svgPt(e);
-    orbit.current = { on: true, pan: e.shiftKey || e.button === 1 || s.navMode === 'pan', start: [x, y, s.az, s.el, s.pan.x, s.pan.y, s.zoom], moved: false };
+    // a press on empty space (the backdrop rect or a grid line, not a body face) that does not turn into a drag clears the selection
+    orbit.current = { on: true, pan: e.shiftKey || e.button === 1 || s.navMode === 'pan', start: [x, y, s.az, s.el, s.pan.x, s.pan.y, s.zoom], moved: false, bg: ['svg', 'rect', 'line'].includes((e.target as Element).tagName) };
   };
   const vpMove = (e: RMouseEvent<SVGSVGElement>) => {
     const mv = move.current;
     if (mv) {
-      const [x, y] = svgPt(e); const p = platePt(x, y); if (!p) return;
-      const next = onPlate(mv.slot, { x: mv.from.x + (p.x - mv.grab.x), y: mv.from.y + (p.y - mv.grab.y) });
-      if (Math.abs(next.x - mv.from.x) + Math.abs(next.y - mv.from.y) > 0.01) mv.moved = true;
+      const [x, y] = svgPt(e); const p = platePt(x, y, mv.from.z ?? 0); if (!p) return;
+      const next = { ...onPlate(mv.slot, { x: mv.from.x + (p.x - mv.grab.x), y: mv.from.y + (p.y - mv.grab.y) }), z: mv.from.z ?? 0 };
+      if (Math.abs(next.x - mv.from.x) + Math.abs(next.y - mv.from.y) > 0.001) mv.moved = true;
       s.moveTo(mv.slot, next);
       return;
     }
@@ -237,24 +232,53 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     const [x, y] = svgPt(e); const dx = x - ob.start[0], dy = y - ob.start[1];
     if (Math.abs(dx) + Math.abs(dy) > 3) ob.moved = true;
     if (ob.pan) s.patch({ pan: { x: ob.start[4] + dx, y: ob.start[5] + dy } });
-    else if (s.navMode === 'zoom' && !e.shiftKey) s.patch({ zoom: clamp(+(ob.start[6] - dy * 0.006).toFixed(2), 0.3, 2) });
+    else if (s.navMode === 'zoom' && !e.shiftKey) s.patch({ zoom: clamp(+(ob.start[6] * Math.exp(-dy * 0.006)).toFixed(2), 0.3, 4) });
     else s.patch({ az: ob.start[2] - dx * 0.008, el: clamp(ob.start[3] + dy * 0.008, -1.55, 1.55) });
   };
   const vpUp = () => {
     const mv = move.current;
     if (mv) { move.current = null; if (mv.moved) { s.commitMove(mv.slot, mv.from); orbit.current.moved = true; setTimeout(() => { orbit.current.moved = false; }, 0); } return; }
     const ob = orbit.current; if (!ob.on) return;
-    ob.on = false; ob.pan = false; setTimeout(() => { ob.moved = false; }, 0);
+    ob.on = false; ob.pan = false;
+    if (!ob.moved && ob.bg && s.sel) s.patch({ sel: null, selBody: null, selFace: null });
+    setTimeout(() => { ob.moved = false; }, 0);
   };
   const bodyDown = (body: string) => (e: RMouseEvent<SVGPolygonElement>) => {
     if (e.button !== 0 || e.shiftKey || !isBodyId(body) || body === 'plate' || body === 'flange' || !s.parts[body] || s.viewSeq != null || s.dialog?.kind === 'measure' || s.selFilter === 'face') return;
     const svg = e.currentTarget.ownerSVGElement; if (!svg) return;
     const [x, y] = svgPt({ clientX: e.clientX, clientY: e.clientY, currentTarget: svg });
-    const p = platePt(x, y); if (!p) return;
+    const p = platePt(x, y, s.pos[body].z ?? 0); if (!p) return;
     e.stopPropagation();
     move.current = { slot: body, from: { ...s.pos[body] }, grab: p, moved: false };
   };
-  const vpWheel = (e: WheelEvent<SVGSVGElement>) => { const dz = e.deltaY > 0 ? -0.05 : 0.05; s.patch({ zoom: clamp(+(s.zoom + dz).toFixed(2), 0.3, 2) }); };
+  const axisDown = (axis: 0 | 1 | 2, dir: [number, number]) => (e: RMouseEvent<SVGElement>) => {
+    const slot = s.sel; if (e.button !== 0 || !slot || slot === 'airframe' || !s.parts[slot] || s.viewSeq != null) return;
+    e.stopPropagation(); e.preventDefault();
+    const svg = e.currentTarget.ownerSVGElement; if (!svg) return;
+    const rect = svg.getBoundingClientRect(); const sx = ((e.clientX - rect.left) / rect.width) * VB_W, sy = ((e.clientY - rect.top) / rect.height) * VB_H;
+    const from: Pos = { ...s.pos[slot], z: s.pos[slot].z ?? 0 };
+    axisMove.current = { slot, axis, from, start: [sx, sy], dir, moved: false };
+    const mv = (ev: MouseEvent) => {
+      const am = axisMove.current; if (!am) return;
+      const mx = ((ev.clientX - rect.left) / rect.width) * VB_W, my = ((ev.clientY - rect.top) / rect.height) * VB_H;
+      // metres along the axis = pointer travel projected onto the axis's screen direction, divided by pixels per metre
+      const d2 = am.dir[0] * am.dir[0] + am.dir[1] * am.dir[1]; if (d2 < 1) return;
+      const tm = ((mx - am.start[0]) * am.dir[0] + (my - am.start[1]) * am.dir[1]) / d2;
+      if (Math.abs(tm) > 0.002) am.moved = true;
+      const st = useStore.getState();
+      const next: Pos = { ...am.from };
+      if (am.axis === 0) next.x = am.from.x + tm; else if (am.axis === 1) next.y = am.from.y + tm; else next.z = Math.max(0, Math.min(1.5, (am.from.z ?? 0) + tm));
+      const onP = onPlate(am.slot, next);
+      st.moveTo(am.slot, { x: onP.x, y: onP.y, z: +(next.z ?? 0).toFixed(3) });
+    };
+    const up = () => {
+      const am = axisMove.current; axisMove.current = null;
+      window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up);
+      if (am && am.moved) { useStore.getState().commitMove(am.slot, am.from); orbit.current.moved = true; setTimeout(() => { orbit.current.moved = false; }, 0); }
+    };
+    window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up);
+  };
+  const vpWheel = (e: WheelEvent<SVGSVGElement>) => { s.patch({ zoom: clamp(+(s.zoom * (e.deltaY > 0 ? 1 / 1.08 : 1.08)).toFixed(2), 0.3, 4) }); };
   const cubeDown = (e: RMouseEvent<SVGSVGElement>) => {
     e.stopPropagation(); e.preventDefault();
     cube.current = { on: true, start: [e.clientX, e.clientY, s.az, s.el], moved: false };
@@ -270,7 +294,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     if (!pid) { s.patch({ dragging: false, dragPart: null }); return; }
     const slot = CATALOG[pid].slot;
     const [x, y] = svgPt(e); const p = platePt(x, y);
-    const at = p ? { x: clamp(p.x, 0.15, L - 0.45), y: clamp(p.y, 0.1, W - 0.35) } : undefined;
+    const at = p ? { x: clamp(p.x, 0.015, L - 0.045), y: clamp(p.y, 0.01, W - 0.035) } : undefined;
     s.swap(slot, pid, at);
     s.patch({ dragging: false, dragPart: null });
   };
@@ -294,7 +318,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     <div data-panel="viewport" data-cad-workspace="design" className="panel flex-1 flex flex-col min-h-0 relative">
       <div className="flex items-center gap-2 px-3 py-[6px] border-b border-line2 flex-wrap">
         <div role="radiogroup" aria-label="View mode" className="flex border border-line rounded-r overflow-hidden">
-          {modeBtn('model', 'Model')}{modeBtn('sketch', 'Sketch', 'border-l border-line')}{modeBtn('board', 'Board', 'border-l border-line')}{modeBtn('authoring', 'CAD authoring', 'border-l border-line')}{modeBtn('sheet', 'Drawing sheet', 'border-l border-line')}
+          {modeBtn('model', 'Model')}{modeBtn('sketch', 'Sketch', 'border-l border-line')}{modeBtn('board', 'Board', 'border-l border-line')}
         </div>
         <label className="text-[13px] text-muted flex items-center gap-1">select
           <select aria-label="Selection filter" value={s.selFilter} onChange={(e) => s.patch({ selFilter: e.target.value as typeof s.selFilter, selFace: null })} className="btn text-ink">
@@ -309,7 +333,6 @@ export function Viewport({ o: _o }: { o: Outcome }) {
           <span role="status" className="sr-only">{mode} view</span>
         )}
       </div>
-      {mode === 'sheet' && <SheetView span={s.span} />}
       {mode === 'sketch' && (
         <div className="flex-1 min-h-0 flex">
           <SketchView />
@@ -317,13 +340,25 @@ export function Viewport({ o: _o }: { o: Outcome }) {
         </div>
       )}
       {mode === 'board' && <BoardView />}
-      {mode === 'authoring' && <div className="flex-1 min-h-0 overflow-auto bg-surface2"><AuthoringWorkspace /></div>}
       <div ref={canvasRef} onContextMenu={onContext} className="flex-1 min-h-0 items-center justify-center p-2 relative" style={{ display: mode === 'model' ? 'flex' : 'none', background: s.dragging ? 'var(--surface2)' : 'transparent' }}>
         <svg viewBox={`0 0 ${VB_W} ${VB_H}`} role="img" aria-label="Orbitable bracket with movable slot bodies"
           onMouseDown={vpDown} onMouseMove={vpMove} onMouseUp={vpUp} onMouseLeave={vpUp} onWheel={vpWheel} onDragOver={vpDragOver} onDrop={vpDrop}
           className="w-full h-full block font-sans select-none" style={{ cursor }}>
           <rect x="0" y="0" width={VB_W} height={VB_H} fill="transparent" />
           {scene.gridLines.map((g, i) => <line key={'g' + i} x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} stroke={g.stroke} strokeWidth={g.sw} />)}
+          {scene.triad && (() => { const tr = scene.triad; const col = ['#e03131', '#40c057', '#1c3fe0']; return (
+            <g aria-label="Move triad: drag an arrow to move the part along that axis" style={{ cursor: 'move' }}>
+              {tr.arms.map((a) => { const on = axisHover === a.axis || axisMove.current?.axis === a.axis; const c = col[a.axis]; const ang = Math.atan2(a.hy - a.y2, a.hx - a.x2); const px = Math.cos(ang), py = Math.sin(ang), nx = -py * 5, ny = px * 5; return (
+                <g key={a.axis} onMouseDown={axisDown(a.axis, a.dir)} onMouseEnter={() => setAxisHover(a.axis)} onMouseLeave={() => setAxisHover(null)}>
+                  <line x1={tr.o[0]} y1={tr.o[1]} x2={a.x2} y2={a.y2} stroke="transparent" strokeWidth="14" />
+                  <line x1={tr.o[0]} y1={tr.o[1]} x2={a.x2} y2={a.y2} stroke={c} strokeWidth={on ? 3 : 2} strokeLinecap="round" />
+                  <polygon points={`${a.hx},${a.hy} ${a.x2 + nx},${a.y2 + ny} ${a.x2 - nx},${a.y2 - ny}`} fill={c} stroke={on ? 'var(--ink)' : 'none'} strokeWidth="1" />
+                  <text x={a.hx + px * 9} y={a.hy + py * 9 + 4} fill={c} fontSize="11" fontFamily="Geist Mono, monospace" fontWeight="700" textAnchor="middle" style={{ pointerEvents: 'none' }}>{a.label}</text>
+                </g>
+              ); })}
+              <circle cx={tr.o[0]} cy={tr.o[1]} r="3.5" fill="var(--surface)" stroke="var(--ink)" strokeWidth="1.2" style={{ pointerEvents: 'none' }} />
+            </g>
+          ); })()}
           {scene.axes.map((ax) => (<g key={ax.label}><line x1={ax.x1} y1={ax.y1} x2={ax.x2} y2={ax.y2} stroke="var(--muted)" strokeWidth="1.5" /><text x={ax.tx} y={ax.ty} fill="var(--muted)" fontSize="12" fontFamily="Geist Mono, monospace" textAnchor="middle">{ax.label}</text></g>))}
           {scene.faces.map((f, i) => (
             <polygon key={i} points={f.pts} fill={f.fill} stroke={f.stroke} strokeWidth={f.sw} strokeDasharray={f.dash || undefined} strokeLinejoin="round" data-slot={f.slot} data-body={f.body} data-face={f.fi}
@@ -332,7 +367,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
           ))}
           {scene.plane && <polygon points={scene.plane} fill="var(--focus)" fillOpacity="0.08" stroke="var(--focus)" strokeWidth="1.2" strokeDasharray="6 4" style={{ pointerEvents: 'none' }} />}
           <line x1={scene.dim.x1} y1={scene.dim.y1} x2={scene.dim.x2} y2={scene.dim.y2} stroke="var(--muted)" strokeWidth="1" strokeDasharray="3 3" />
-          <text x={scene.dim.tx} y={scene.dim.ty} fill="var(--muted)" fontSize="13" fontFamily="Geist Mono, monospace" textAnchor="middle">span {fmtLen(L, s.units)}</text>
+          <text x={scene.dim.tx} y={scene.dim.ty} fill="var(--muted)" fontSize="13" fontFamily="Geist Mono, monospace" textAnchor="middle">{geo.kind === 'wing' ? 'span ' + fmtLen(s.span, s.units) : (geo.kind === 'frame' ? 'frame' : 'plate') + ' L ' + fmtLen(L, s.units)}</text>
           {s.dragging && <text x="380" y="476" fill="var(--ink)" fontSize="14" fontWeight="600" textAnchor="middle">{dropHint}</text>}
         </svg>
         <div className="absolute right-1 top-1 group" onMouseDown={(e) => e.stopPropagation()}>
@@ -397,7 +432,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
             )}
           </div>
         </div>
-        <div className="absolute left-1/2 bottom-3 -translate-x-1/2 flex items-center gap-[2px] px-1 py-[3px] bg-surface border border-line rounded-r shadow-[0_2px_8px_rgba(0,0,0,.08)]" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="absolute left-1/2 bottom-3 -translate-x-1/2 z-[20] flex items-center gap-[2px] px-1 py-[3px] bg-surface border border-line rounded-r shadow-[0_2px_8px_rgba(0,0,0,.08)]" onMouseDown={(e) => e.stopPropagation()}>
           <button className="nav-btn" aria-pressed={s.navMode === 'orbit'} title="Orbit (drag)" onClick={() => s.patch({ navMode: 'orbit' })}><Orbit /></button>
           <button className="nav-btn" aria-pressed={s.navMode === 'pan'} title="Pan (drag · or shift-drag)" onClick={() => s.patch({ navMode: 'pan' })}><Pan /></button>
           <button className="nav-btn" aria-pressed={s.navMode === 'zoom'} title="Zoom (drag up/down · or wheel)" onClick={() => s.patch({ navMode: 'zoom' })}><Zoom /></button>
@@ -406,8 +441,9 @@ export function Viewport({ o: _o }: { o: Outcome }) {
           <span className="w-px h-5 bg-line2 mx-1" />
           <div className="relative">
             <button className="nav-btn" aria-expanded={dispOpen} title="Display settings" onClick={() => setDispOpen((v) => !v)}><Display /><span className="text-[12px] text-muted">{Math.round(s.zoom * 100)}%</span></button>
+            {dispOpen && createPortal(<div className="fixed inset-0 z-[19]" onMouseDown={(e) => { e.stopPropagation(); setDispOpen(false); }} />, document.body)}
             {dispOpen && (
-              <div role="menu" className="absolute bottom-[38px] left-0 w-[220px] bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] py-1 text-[13px]">
+              <div role="menu" className="absolute z-[20] bottom-[38px] left-0 w-[220px] bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] py-1 text-[13px]">
                 <div className="px-3 pt-1 pb-[2px] text-[12px] text-muted">Visual style</div>
                 {(['shaded', 'edges', 'wireframe'] as const).map((v) => (
                   <button key={v} role="menuitemradio" aria-checked={s.visualStyle === v} onClick={() => s.patch({ visualStyle: v })} className="row-hover w-full text-left px-3 min-h-7 grid grid-cols-[16px_1fr] gap-2 items-center bg-transparent border-0 text-ink cursor-pointer">

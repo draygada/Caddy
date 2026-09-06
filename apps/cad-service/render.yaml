@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: caddydaddy-native-cad
+    runtime: docker
+    plan: 1c-2g
+    rootDir: apps/cad-service
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /ready
+    autoDeployTrigger: off
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: CAD_NATIVE_RUNTIME_OWNER_APPROVAL
+        sync: false
+      - key: CAD_CORS_ORIGINS
+        value: https://caddydaddy-candidate-0-1.vercel.app
+      - key: CAD_ALLOWED_HOSTS
+        value: "*.onrender.com"
+      - key: CAD_MAX_REQUEST_BYTES
+        value: "4250000"
+      - key: CAD_MAX_RESPONSE_BYTES
+        value: "4250000"
+      - key: CAD_TRANSPORT_TIMEOUT_SECONDS
+        value: "40"
+      - key: CAD_NATIVE_TIMEOUT_SECONDS
+        value: "30"
+      - key: CAD_NATIVE_CPU_SECONDS
+        value: "25"
+      - key: CAD_NATIVE_MAX_ADDRESS_SPACE_MIB
+        value: "0"
+      - key: CAD_NATIVE_MAX_OPEN_FILES
+        value: "256"
+      - key: CAD_MAX_CONCURRENCY
+        value: "1"
+      - key: CAD_KEEPALIVE_SECONDS
+        value: "5"

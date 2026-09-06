@@ -14,8 +14,13 @@ describe('Candidate 0.2 shell integration', () => {
   });
 
   it('keeps browser contracts same-origin and API responses uncached', () => {
-    expect(vercel.rewrites[0].source).toBe('/api/:path*');
-    expect(vercel.headers).toEqual([{ source: '/api/(.*)', headers: [{ key: 'Cache-Control', value: 'no-store' }] }]);
+    expect(vercel.rewrites).toEqual([{ source: '/now', destination: '/api/now' }]);
+    expect(vercelSource).not.toMatch(/"destination"\s*:\s*"https?:\/\//i);
+    expect(vercel.headers.flatMap((entry) => entry.headers)).toEqual(expect.arrayContaining([
+      { key: 'Cache-Control', value: 'no-store' },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'X-Frame-Options', value: 'DENY' },
+    ]));
     expect(appSource).not.toContain('CADDYDADDY_CAD_SERVICE_URL');
   });
 });

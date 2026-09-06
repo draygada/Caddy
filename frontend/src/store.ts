@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
   BASELINE_PARTS, CATALOG, CMP_KEYS, DECLARED0, DEFAULT_POS, DIMS0, EXTRUDE_MAX, EXTRUDE_MIN, FIELDS, RULES_EVALUATED, SCENARIO, SEED_EVENTS, SEED_FEATURES,
-  CORE_SLOTS, GENERIC_NAME, SLOTS, SLOT_LABEL, SPAN_BASELINE, SPAN_MAX, SPAN_MIN, PLATE_W,
+  CORE_SLOTS, GENERIC_NAME, SLOTS, SLOT_LABEL, SPAN_BASELINE, SPAN_MAX, SPAN_MIN,
   type CmpKey, type Declared, type Dims, type Feature, type FieldSpec, type Lane, type Node, type PartAttrs, type PartId, type Slot, type TimelineEvent,
 } from './lib/catalog';
 import { GEO0, type Geo, type Pos, type Positions, type Snapshot } from './lib/design';
@@ -27,10 +27,13 @@ export const PRIMARY_WORKSPACES: { id: WorkspaceId; label: string }[] = [
   { id: 'classification', label: 'Classification' },
   { id: 'sourcing', label: 'Sourcing' },
 ];
-export type ViewMode = 'model' | 'sheet' | 'sketch' | 'board' | 'authoring';
+export type ViewMode = 'model' | 'sketch' | 'board';
 export type NavMode = 'orbit' | 'pan' | 'zoom';
 export type VisualStyle = 'shaded' | 'edges' | 'wireframe';
 export type SelFilter = 'component' | 'body' | 'face';
+export const DESIGN_PROJECT_ID = 'product:caddydaddy:kestrel' as const;
+export const DESIGN_PROJECT_NAME = 'Kestrel' as const;
+export const DESIGN_PRODUCT_THREAD_RELATIONSHIP = 'SEPARATE_LEGACY_DESIGN_CONTEXT_NOT_QX_0_PRODUCT_THREAD' as const;
 /** body ids: a slot, or one of the airframe's two bodies */
 export type BodyId = Slot | 'plate' | 'flange';
 export const BODY_LABEL: Record<BodyId, string> = { plate: 'Base plate', flange: 'Flange', ...GENERIC_NAME };
@@ -78,9 +81,6 @@ export interface Project {
   /** the design as last left; drives the card preview */
   snapshot?: Snapshot;
 }
-export const SAMPLE_PROJECTS: Project[] = [
-  { id: 'kestrel', name: 'Kestrel', description: 'Fixed-wing survey drone · 7 slots · the demo design', intake: { ...INTAKE_DEFAULT, civilProduct: true }, createdAt: '2026-09-04 18:10', openedAt: '2026-09-05 09:12', components: [...CORE_SLOTS] },
-];
 export type OrderState = 'DRAFT' | 'DISPATCH_PENDING' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'EXCEPTION' | 'DISPATCH_UNKNOWN' | 'CLOSED';
 export interface Order { key: string; packetHash: string; state: OrderState; receipt: string | null; attempts: number; trail: string[] }
 export interface Round {
@@ -111,6 +111,12 @@ export function designHashOf(s: Snapshot): string {
 }
 
 export interface WorkbenchState extends Snapshot {
+  workflowIdentity: {
+    projectId: typeof DESIGN_PROJECT_ID;
+    projectName: typeof DESIGN_PROJECT_NAME;
+    revisionId: string;
+    productThreadRelationship: typeof DESIGN_PRODUCT_THREAD_RELATIONSHIP;
+  };
   theme: Theme;
   serviceState: ServiceState;
   demoBar: boolean;
@@ -138,7 +144,6 @@ export interface WorkbenchState extends Snapshot {
   open: Record<string, boolean>;
   timelineOpen: boolean;
   helpOpen: boolean;
-  reasoningOpen: boolean;
   cmdOpen: boolean;
   recent: string[];
   dialog: Dialog | null;
@@ -191,8 +196,14 @@ export interface WorkbenchState extends Snapshot {
   recordOpen: boolean;
   sourcesOpen: boolean;
   sources: { doc: SourceDocId | null; slot: Slot | null; network: NetLine[]; proposals: Proposal[]; showHidden: boolean; candidates: Candidate[]; candidateNode: Node | null; llmNote: string | null };
-  /** attribute provenance after an extraction: slot.key → who wrote it and whether a human ticked "verified against datasheet" */
-  extracted: Record<string, { by: 'extractor' | 'supplier_doc'; verified: boolean }>;
+  /** Attribute provenance after extraction. Offline acceptance is memory-only and never implies an identified human review. */
+  extracted: Record<string, {
+    by: 'extractor' | 'supplier_doc';
+    acceptance: 'NONE' | 'UNAUTHENTICATED_BROWSER_SESSION';
+    reviewStatus: 'NOT_HUMAN_REVIEWED';
+    attestor: null;
+    durability: 'MEMORY_ONLY';
+  }>;
   escalations: Record<string, { reason: string; proposal: string; confident: boolean; state: 'proposed' | 'accepted' | 'rejected'; attestor: string | null }>;
   memos: Memo[];
   slotList: SlotListProposal | null;
@@ -203,8 +214,8 @@ export interface WorkbenchState extends Snapshot {
   requestDetermination: (o: Outcome) => void;
   tamper: (seq: number) => void;
   dropDocument: (id: SourceDocId, slot: Slot) => void;
-  applyExtraction: (slot: Slot, field: string, value: number, unit: string) => void;
-  markVerified: (slot: Slot, field: string) => void;
+  applyExtraction: (slot: Slot, proposal: Proposal) => void;
+  acknowledgeExtraction: (slot: Slot, field: string) => void;
   findAlternative: (node: Node, o: Outcome) => void;
   acceptCandidate: (node: Node, pid: PartId) => void;
   proposeEscalation: (lineId: string, reason: string) => void;
@@ -236,7 +247,6 @@ export interface WorkbenchState extends Snapshot {
   openTimeline: () => void;
   toggleTimeline: () => void;
   toggleHelp: () => void;
-  openReasoning: () => void;
   setView: (name: ViewName) => void;
   setViewDir: (dir: [number, number, number]) => void;
   fit: () => void;
@@ -294,12 +304,38 @@ function readUrl(): { theme: Theme; demoBar: boolean; serviceState: ServiceState
 }
 
 const attrsFor = (parts: Parts): Attrs => Object.fromEntries(SLOTS.map((s) => [s, parts[s] ? { ...CATALOG[parts[s] as PartId].attrs } : {}])) as Attrs;
-const posFor = (span: number): Positions => Object.fromEntries(SLOTS.map((s) => [s, DEFAULT_POS[s](span)])) as Positions;
+/** Default part positions for a plate of length L and width W (metres). */
+const posFor = (L: number, W: number): Positions => Object.fromEntries(SLOTS.map((s) => [s, DEFAULT_POS[s](L, W)])) as Positions;
 
 const baselineSnapshot = (): Snapshot => ({
-  parts: { ...BASELINE_PARTS }, attrs: attrsFor(BASELINE_PARTS), pos: posFor(SPAN_BASELINE), span: SPAN_BASELINE, dims: { ...DIMS0 }, features: SEED_FEATURES.slice(), geo: { ...GEO0 }, sketch: { ...SKETCH_DEFAULT }, tint: {}, unconfirmed: {}, declared: { ...DECLARED0 },
+  parts: { ...BASELINE_PARTS }, attrs: attrsFor(BASELINE_PARTS), pos: posFor(GEO0.plateL, GEO0.plateW), span: SPAN_BASELINE, dims: { ...DIMS0 }, features: SEED_FEATURES.slice(), geo: { ...GEO0 }, sketch: { ...SKETCH_DEFAULT }, tint: {}, unconfirmed: {}, declared: { ...DECLARED0 },
 });
 const pickSnapshot = (s: Snapshot): Snapshot => ({ parts: s.parts, attrs: s.attrs, pos: s.pos, span: s.span, dims: s.dims, features: s.features, geo: s.geo, sketch: s.sketch, tint: s.tint, unconfirmed: s.unconfirmed, declared: s.declared });
+
+/** Merlin, the second sample: a 7 inch civil survey quad on a Chimera7 frame, every part mounted where it bolts on. */
+export const MERLIN_SLOTS: Slot[] = ['battery', 'fc', 'imu', 'esc', 'motor', 'prop', 'gnss', 'datalink', 'camera', 'transponder'];
+const merlinSnapshot = (): Snapshot => {
+  // the Chimera7 frame is the airframe: no plate. Parts sit where they bolt on: the ESC and flight controller in the 30.5 mm stack
+  // between the plates, the pack, IMU breakout, GNSS mast and telemetry radio on the top plate, the camera in the nose cage,
+  // the transponder on the bottom plate ahead of the stack; motors and props repeat on the four arm pads (frame-local metres, z absolute)
+  const geo: Geo = { ...GEO0, kind: 'frame', frame: 'chimera7', plateL: 0.27, plateW: 0.199, plateT: 0.003 };
+  const parts: Parts = { ...(Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts), battery: 'tattu1300', fc: 'px6cmini', imu: 'icm', esc: 'tekko65', motor: 'f60prov', prop: 'hq7035', gnss: 'm10gps', datalink: 'sik915', camera: 'thumbpro', transponder: 'ping200' };
+  const pos: Positions = {
+    ...posFor(geo.plateL, geo.plateW),
+    esc: { x: 0.1135, y: 0.0775, z: 0.004 }, fc: { x: 0.108, y: 0.08, z: 0.012 },
+    battery: { x: 0.0975, y: 0.0805, z: 0.032 }, imu: { x: 0.16, y: 0.12, z: 0.032 }, gnss: { x: 0.11, y: 0.135, z: 0.06 }, datalink: { x: 0.175, y: 0.05, z: 0.032 },
+    camera: { x: 0.2, y: 0.087, z: 0.008 }, transponder: { x: 0.05, y: 0.11, z: 0.003 },
+  };
+  return { ...baselineSnapshot(), parts, attrs: attrsFor(parts), pos, geo, features: [{ n: 'f1', text: 'frame · Chimera7 Pro V2 · 0.270 × 0.199 × 0.034 m', kind: 'sketch' }, { n: 'f2', text: 'stack · 30.5 mm M3 · 21 mm standoffs', kind: 'extrude' }, { n: 'f3', text: 'motor pads · 4 × 16 mm M3', kind: 'hole' }] };
+};
+export const SAMPLE_PROJECTS: Project[] = [
+  { id: 'kestrel', name: 'Kestrel', description: 'Fixed-wing survey drone · 7 slots · the demo design', intake: { ...INTAKE_DEFAULT, civilProduct: true }, createdAt: '2026-09-04 18:10', openedAt: '2026-09-05 09:12', components: [...CORE_SLOTS] },
+  {
+    id: 'merlin', name: 'Merlin', description: '7 inch civil survey quadcopter · Chimera7 frame · 10 components, all placed',
+    intake: { endUse: 'civil survey and mapping', endUser: 'commercial operator', shipTo: 'US', qty: 25, mode: 'air', civilProduct: true, bvlos: false, usedOn: 'none', notes: 'orthomosaic mapping of construction sites · VLOS under Part 107 · 25 units for the first fleet' },
+    createdAt: '2026-09-05 14:40', openedAt: '2026-09-05 16:05', components: [...MERLIN_SLOTS], snapshot: merlinSnapshot(),
+  },
+];
 
 const baseline = () => {
   const snap = baselineSnapshot();
@@ -309,6 +345,7 @@ const baseline = () => {
     spanText: SPAN_BASELINE.toFixed(1), spanMsg: '', spanErr: false,
     events: SEED_EVENTS.map((e) => ({ ...e, snap })).reverse(),
     viewSeq: null as number | null, liveStash: null as Snapshot | null,
+    workflowIdentity: { projectId: DESIGN_PROJECT_ID, projectName: DESIGN_PROJECT_NAME, revisionId: 'legacy-design-state:3', productThreadRelationship: DESIGN_PRODUCT_THREAD_RELATIONSHIP },
     versions: [{ v: 1, seq: 3, comment: 'baseline · Kestrel, twelve parts', at: '2026-09-05 09:12' }] as Version[],
     comments: [] as Comment[],
     pending: null as Pending | null, attestor: '', intent: '', confirmErr: '',
@@ -316,7 +353,7 @@ const baseline = () => {
     rederive: null as { line: string; detail: string } | null, step: 0, keysOpen: false,
     az: ISO.az, el: ISO.el, zoom: ISO.zoom, pan: { x: 0, y: 0 },
     dialog: null as Dialog | null, preview: null as Preview | null, marking: null as WorkbenchState['marking'], measure: { a: null, b: null } as WorkbenchState['measure'],
-    isolated: null as BodyId | null, section: { on: false, axis: 0, at: 1.5 } as Section,
+    isolated: null as BodyId | null, section: { on: false, axis: 0, at: GEO0.plateL / 2 } as Section,
     fieldMsg: {} as Record<string, string>, dragging: false, dragPart: null as PartId | null,
   };
 };
@@ -330,7 +367,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     set((s) => {
       const seq = s.events.length + 1;
       const full: TimelineEvent = { seq, lane: 'design', intent: '', word: '', color: 'var(--ink)', ...ev, hash: hashOf(seq), snap: pickSnapshot(s) };
-      return { events: [full, ...s.events] };
+      return { events: [full, ...s.events], workflowIdentity: { ...s.workflowIdentity, revisionId: `legacy-design-state:${seq}` } };
     });
   };
   const changedRows = (from: PartId, to: PartId): CmpKey[] => CMP_KEYS.filter((k) => CATALOG[from].cmp[k] !== CATALOG[to].cmp[k]);
@@ -348,7 +385,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     ...baseline(),
     units: 'm',
     selFilter: 'component',
-    timelineOpen: false, helpOpen: false, reasoningOpen: false, cmdOpen: false, recent: [],
+    timelineOpen: false, helpOpen: false, cmdOpen: false, recent: [],
     namedViews: [], homeView: { ...ISO },
     lane: 'all', copied: null, viewMode: 'model', grid: true, navMode: 'orbit', visualStyle: 'edges', hidden: {},
     round: null, sourcingOpen: false, injectException: false,
@@ -362,7 +399,8 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       if (!p) return;
       const opened: Project = { ...p, openedAt: now(), components: p.components?.length ? p.components : [...CORE_SLOTS] };
       // an older snapshot may predate library components: fill any missing slot with empty state
-      const snap = p.snapshot ? { ...p.snapshot, parts: { ...(Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts), ...p.snapshot.parts }, attrs: { ...(Object.fromEntries(SLOTS.map((sl) => [sl, {}])) as Attrs), ...p.snapshot.attrs }, pos: { ...posFor(p.snapshot.span), ...p.snapshot.pos }, dims: { ...DIMS0, ...p.snapshot.dims } } : {};
+      const geo: Geo = { ...GEO0, ...p.snapshot?.geo };
+      const snap = p.snapshot ? { ...p.snapshot, geo, parts: { ...(Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts), ...p.snapshot.parts }, attrs: { ...(Object.fromEntries(SLOTS.map((sl) => [sl, {}])) as Attrs), ...p.snapshot.attrs }, pos: { ...posFor(geo.plateL, geo.plateW), ...p.snapshot.pos }, dims: { ...DIMS0, ...p.snapshot.dims } } : {};
       set({ ...baseline(), ...snap, round: null, sourcingOpen: false, workspace: 'design', project: opened, projects: s.projects.map((x) => (x.id === id ? opened : x)) });
     },
     addComponent: (slot) => {
@@ -398,9 +436,9 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     closeProject: () => set((s) => {
       // keep the design as left, so the project card preview shows it
       const saved = s.project ? { ...s.project, snapshot: pickSnapshot(s) } : null;
-      return { project: null, projects: saved ? s.projects.map((x) => (x.id === saved.id ? saved : x)) : s.projects, intakeOpen: false, reasoningOpen: false, timelineOpen: false, sourcingOpen: false, cmdOpen: false };
+      return { project: null, projects: saved ? s.projects.map((x) => (x.id === saved.id ? saved : x)) : s.projects, intakeOpen: false, timelineOpen: false, sourcingOpen: false, cmdOpen: false };
     }),
-    setWorkspace: (w) => set({ workspace: w, sourcingOpen: w === 'sourcing', sourcesOpen: false, recordOpen: false, reasoningOpen: false, timelineOpen: false, marking: null, cmdOpen: false }),
+    setWorkspace: (w) => set({ workspace: w, sourcingOpen: w === 'sourcing', sourcesOpen: false, recordOpen: false, timelineOpen: false, marking: null, cmdOpen: false }),
     pack: 'v2', determination: null, apiWarm: false, apiNote: null, tamperedSeq: null, recordOpen: false, sourcesOpen: false,
     sources: { doc: null, slot: null, network: [], proposals: [], showHidden: false, candidates: [], candidateNode: null, llmNote: null },
     extracted: {}, escalations: {}, memos: [], slotList: null, target: null,
@@ -433,17 +471,24 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       set({ sources: { ...get().sources, doc: id, slot, network: netFor(doc), proposals: callA(doc), showHidden: false, llmNote: 'CACHED · response replayed from fixtures/llm_cache' }, sourcesOpen: true });
       append({ kind: 'extraction_proposed', lane: 'proposal', text: doc.title + ' · ' + callA(doc).length + ' unverified claims proposed', entry: 'Call A · CACHED · every claim goes through the verifier', intent: '' });
     },
-    applyExtraction: (slot, field, value, unit) => {
-      if (!editable()) return;
+    applyExtraction: (slot, proposal) => {
+      if (!editable() || !proposal.verdict.ok) return;
+      const { field, value, unit } = proposal.verdict.spec;
       const s = get();
       const before = service.evaluate(design(), s.pack);
       const attrs: Attrs = { ...s.attrs, [slot]: { ...s.attrs[slot], [field]: value } } as Attrs;
       const after = service.evaluate({ ...design(), attrs }, s.pack);
       const { changed, entry } = summary(before, after, slot);
-      set({ attrs, extracted: { ...s.extracted, [slot + '.' + field]: { by: 'extractor', verified: false } }, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: SLOT_LABEL[slot] + ' · ' + field + ' ← extractor' });
-      append({ kind: 'attr_changed', text: SLOT_LABEL[slot] + ' · ' + field + ' = ' + value + ' ' + unit + ' · extracted_by extractor', entry: entry + ' · L1 until a human ticks “verified against datasheet”', intent: '' });
+      set({ attrs, extracted: { ...s.extracted, [slot + '.' + field]: { by: 'extractor', acceptance: 'NONE', reviewStatus: 'NOT_HUMAN_REVIEWED', attestor: null, durability: 'MEMORY_ONLY' } }, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: SLOT_LABEL[slot] + ' · ' + field + ' ← extractor' });
+      append({ kind: 'attr_changed', text: SLOT_LABEL[slot] + ' · ' + field + ' = ' + value + ' ' + unit + ' · extracted_by extractor', entry: entry + ' · accepted cached-fixture span applied · no human review, identity, or attestor recorded', intent: '' });
     },
-    markVerified: (slot, field) => set((s) => ({ extracted: { ...s.extracted, [slot + '.' + field]: { by: s.extracted[slot + '.' + field]?.by ?? 'extractor', verified: true } } })),
+    acknowledgeExtraction: (slot, field) => {
+      const key = slot + '.' + field;
+      const current = get().extracted[key];
+      if (!current) return;
+      set((s) => ({ extracted: { ...s.extracted, [key]: { ...current, acceptance: 'UNAUTHENTICATED_BROWSER_SESSION' } } }));
+      append({ kind: 'source_acceptance_acknowledged', lane: 'proposal', text: SLOT_LABEL[slot] + ' · ' + field + ' · browser-session acceptance acknowledged', entry: 'unauthenticated browser-session acceptance · memory only · no identity or attestor captured · not human review', intent: '' });
+    },
     findAlternative: (node, o) => {
       const cands = callB(node, design(), o);
       set({ sources: { ...get().sources, candidates: cands, candidateNode: node, network: cands.flatMap((c) => c.net), llmNote: 'CACHED · agent proposals re-checked by the rule engine · fetches allowlisted' }, sourcesOpen: true });
@@ -499,12 +544,14 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const id = 'r' + ((prev ? parseInt(prev.id.slice(1), 10) : 0) + 1);
       const snap = pickSnapshot(s);
       const designHash = designHashOf(snap);
-      const lines = linesFor(s.parts);
+      // a frame-kind airframe sources its frame kit on the airframe line
+      const sourcingParts: Parts = s.geo.kind === 'frame' && s.geo.frame ? { ...s.parts, frame: s.geo.frame } : s.parts;
+      const lines = linesFor(sourcingParts);
       const controlled = (line: Line) => { const o = service.evaluate(design(), get().pack); const node = line.slot ?? 'airframe'; return o.rules.some((r) => r.node === node); };
       const offers: Record<string, ResolvedOffer[]> = {};
       let screened = 0, est = 0;
       for (const line of lines) {
-        offers[line.id] = offersFor(s.parts).filter((o) => o.lineId === line.id).map((offer) => {
+        offers[line.id] = offersFor(sourcingParts).filter((o) => o.lineId === line.id).map((offer) => {
           const tier = tierFor(line, offer, controlled(line));
           const tree = walk(offer, tier);
           const ru = rollup(tree);
@@ -622,11 +669,10 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     snapshot,
     editable,
     toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
-    closeAll: () => set({ timelineOpen: false, helpOpen: false, reasoningOpen: false, sourcingOpen: false, sourcesOpen: false, recordOpen: false, cmdOpen: false, marking: null, dialog: null, preview: null }),
+    closeAll: () => set({ timelineOpen: false, helpOpen: false, sourcingOpen: false, sourcesOpen: false, recordOpen: false, cmdOpen: false, marking: null, dialog: null, preview: null }),
     openTimeline: () => set({ timelineOpen: true, helpOpen: false }),
     toggleTimeline: () => set((s) => ({ timelineOpen: !s.timelineOpen })),
     toggleHelp: () => set((s) => ({ helpOpen: !s.helpOpen, timelineOpen: false })),
-    openReasoning: () => set({ reasoningOpen: true, timelineOpen: false, helpOpen: false }),
 
     setView: (name) => {
       const s = get();
@@ -643,7 +689,8 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const az = Math.abs(x) + Math.abs(y) < 1e-9 ? get().az : Math.atan2(x, y);
       set({ az, el, pan: { x: 0, y: 0 } });
     },
-    fit: () => set((s) => ({ pan: { x: 0, y: 0 }, zoom: Math.max(0.3, Math.min(2, +(2.1 / s.span).toFixed(2))) })),
+    // frame the airframe: the span tip to tip on a wing, the body length otherwise
+    fit: () => set((s) => { const extent = s.geo.kind === 'wing' ? s.span * 0.72 : s.geo.plateL; return { pan: { x: 0, y: 0 }, zoom: Math.max(0.3, Math.min(4, +(0.32 / extent).toFixed(2))) }; }),
     toggleHidden: (id) => set((s) => ({ hidden: { ...s.hidden, [id]: !s.hidden[id] } })),
     isolate: (id) => set({ isolated: id }),
 
@@ -694,8 +741,9 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     commitMove: (slot, from) => {
       const s = get();
       const to = s.pos[slot];
-      if (Math.abs(to.x - from.x) < 1e-3 && Math.abs(to.y - from.y) < 1e-3) return;
-      append({ kind: 'part_moved', text: SLOT_LABEL[slot] + ' · (' + from.x.toFixed(2) + ', ' + from.y.toFixed(2) + ') → (' + to.x.toFixed(2) + ', ' + to.y.toFixed(2) + ') m', entry: 'geometry only · no rule reads position · re-evaluated ' + RULES_EVALUATED + ' · 0 changed', intent: '' });
+      if (Math.abs(to.x - from.x) < 1e-3 && Math.abs(to.y - from.y) < 1e-3 && Math.abs((to.z ?? 0) - (from.z ?? 0)) < 1e-3) return;
+      const at = (p: Pos) => '(' + p.x.toFixed(2) + ', ' + p.y.toFixed(2) + ', ' + (p.z ?? 0).toFixed(2) + ')';
+      append({ kind: 'part_moved', text: SLOT_LABEL[slot] + ' · ' + at(from) + ' → ' + at(to) + ' m', entry: 'geometry only · no rule reads position · re-evaluated ' + RULES_EVALUATED + ' · 0 changed', intent: '' });
     },
 
     setAttr: (slot, field, text) => {
@@ -709,7 +757,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       let msg = '';
       if (text == null || text.trim() === '') {
         if (!field.nullable) { set({ fieldMsg: { ...s.fieldMsg, [key]: 'required · ' + field.min + '–' + field.max + ' ' + field.unit } }); return; }
-        v = null; msg = 'cleared · not published';
+        v = null; msg = 'cleared · empty';
       } else {
         const neg = /^\s*[−-]/.test(text);
         const parsed = parseDecimal(text.replace(/^\s*[−-]/, ''));
@@ -823,15 +871,14 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const parsed = parseDecimal(text);
       if (parsed == null) { set({ spanMsg: 'not a number · accepted formats: 3.4 · 3,4 · 3.4 m', spanErr: true }); return; }
       let v = parsed, msg = '';
-      if (v < SPAN_MIN) { v = SPAN_MIN; msg = 'clamped to 1.5 m (min)'; } else if (v > SPAN_MAX) { v = SPAN_MAX; msg = 'clamped to 6.0 m (max)'; }
+      if (v < SPAN_MIN) { v = SPAN_MIN; msg = 'clamped to ' + SPAN_MIN.toFixed(1) + ' m (min)'; } else if (v > SPAN_MAX) { v = SPAN_MAX; msg = 'clamped to ' + SPAN_MAX.toFixed(1) + ' m (max)'; }
       const s = get();
       if (v === s.span) { set({ spanText: v.toFixed(1), spanMsg: msg, spanErr: false }); return; }
       const before = service.evaluate(design(), get().pack), after = service.evaluate({ parts: s.parts, attrs: s.attrs, span: v, declared: s.declared }, s.pack);
       const changed = countChanged(before, after);
       const old = s.span;
-      const pos = { ...s.pos };
-      for (const sl of SLOTS) pos[sl] = { x: Math.min(pos[sl].x, v - 0.3), y: pos[sl].y };
-      set({ span: v, spanText: v.toFixed(1), spanErr: false, pos, spanMsg: msg || ('applied · cruise_W ' + after.cruiseW.toFixed(0) + ' W · range ' + (after.range ?? 0).toFixed(0) + ' km'), lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: 'span ' + old.toFixed(1) + ' → ' + v.toFixed(1) + ' m', keysOpen: false });
+      // the span is the wing, not the plate: no part moves
+      set({ span: v, spanText: v.toFixed(1), spanErr: false, spanMsg: msg || ('applied · cruise_W ' + after.cruiseW.toFixed(0) + ' W · range ' + (after.range ?? 0).toFixed(0) + ' km'), lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: 'span ' + old.toFixed(1) + ' → ' + v.toFixed(1) + ' m', keysOpen: false });
       const crossed = after.range != null && before.range != null && after.range >= 300 && before.range < 300;
       append({ kind: 'attr_changed', text: 'airframe · span ' + old.toFixed(1) + ' m → ' + v.toFixed(1) + ' m', entry: crossed ? '9A012 MT · range ' + (after.range ?? 0).toFixed(0) + ' km ≥ 300 km' : 're-evaluated ' + RULES_EVALUATED + ' · ' + changed + ' changed', intent: '' });
     },
@@ -842,7 +889,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const solved = solveSketch(s.sketch);
       if (solved.overall === 'CONTRADICTORY') return 'contradictory sketch · remove the conflicting constraint';
       const n = nextFeature(s);
-      const label = 'plate profile · ' + s.span.toFixed(3) + ' × ' + PLATE_W.toFixed(3) + ' m · ' + solved.overall + ' · ' + solved.dof + ' DOF';
+      const label = 'plate profile · ' + s.geo.plateL.toFixed(3) + ' × ' + s.geo.plateW.toFixed(3) + ' m · ' + solved.overall + ' · ' + solved.dof + ' DOF';
       set({ features: s.features.concat([{ n, text: label, kind: 'sketch' }]) });
       append({ kind: 'feature_added', text: n + ' · sketch · ' + label, entry: 'profile committed · ready for extrusion · re-evaluated ' + RULES_EVALUATED + ' · 0 changed', intent: '' });
       return solved.overall + ' · ' + solved.dof + ' DOF';
@@ -852,7 +899,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       if (!editable()) return 'viewing history · restore to edit';
       const s = get();
       let v = value, msg = '';
-      if (v < EXTRUDE_MIN) { v = EXTRUDE_MIN; msg = 'clamped to 0.02 m'; } else if (v > EXTRUDE_MAX) { v = EXTRUDE_MAX; msg = 'clamped to 1.5 m'; }
+      if (v < EXTRUDE_MIN) { v = EXTRUDE_MIN; msg = 'clamped to ' + EXTRUDE_MIN + ' m'; } else if (v > EXTRUDE_MAX) { v = EXTRUDE_MAX; msg = 'clamped to ' + EXTRUDE_MAX + ' m'; }
       const old = s.dims[target];
       if (Math.abs(v - old) < 1e-6) return 'unchanged';
       const n = nextFeature(s);
@@ -944,7 +991,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       if (k >= SCENARIO.length - 1) return;
       const acts: (() => void)[] = [
         () => a.select('battery'), () => a.swap('battery', 'amprius'), () => a.confirm('benji'),
-        () => { a.select('airframe'); get().setSpan('3.4'); }, () => { a.select('thermal'); get().swap('thermal', 'boson'); },
+        () => { a.select('airframe'); get().setSpan('2.0'); }, () => { a.select('thermal'); get().swap('thermal', 'boson'); },
         () => { a.select('imu'); get().swap('imu', 'hg5700'); }, () => { a.select('fc'); get().swap('fc', 'h753'); },
       ];
       acts[k]();

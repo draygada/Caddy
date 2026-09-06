@@ -48,22 +48,29 @@ an approved, durable source-access channel before redistributing the runtime.
 
 | Package | Version | Installed metadata / upstream license |
 |---|---:|---|
+| annotated-doc | 0.0.5 | MIT |
 | annotated-types | 0.8.0 | MIT |
 | anyio | 4.15.1 | MIT |
 | cadquery-ocp-novtk | 7.9.3.1 | Undeclared in wheel metadata; Apache-2.0 upstream binding plus transitive native terms |
 | cadquery-ocp-proxy | 7.9.3.1 | Undeclared in wheel metadata; Apache-2.0 upstream build system |
 | click | 8.5.0 | BSD-3-Clause |
-| fastapi | 0.116.1 | MIT upstream; wheel includes license file |
+| fastapi | 0.141.1 | MIT upstream; wheel includes license file |
 | h11 | 0.16.0 | MIT |
 | idna | 3.19 | BSD-3-Clause |
-| pydantic | 2.11.7 | MIT |
-| pydantic-core | 2.33.2 | MIT |
-| starlette | 0.47.3 | BSD-3-Clause |
+| pydantic | 2.13.5 | MIT |
+| pydantic-core | 2.46.5 | MIT |
+| starlette | 1.6.0 | BSD-3-Clause |
 | typing-extensions | 4.16.0 | PSF-2.0 |
 | typing-inspection | 0.4.4 | MIT |
-| uvicorn | 0.35.0 | BSD-3-Clause |
+| uvicorn | 0.52.4 | BSD-3-Clause |
 
 Test-only packages are not included in the deployment requirements.
+
+Security observation (2026-09-06): `pip-audit==2.10.0` reports no known vulnerabilities in
+this exact runtime requirements closure. The prior `starlette==0.47.3` closure produced eight
+records, including `GHSA-86qp-5c8j-p5mr` / `PYSEC-2026-161`; GitHub records `1.0.1` as the first
+patched Starlette release for that advisory. This is a time-bounded engineering observation, not
+a legal determination or a guarantee against undisclosed vulnerabilities.
 
 ## Measured Linux wheel and closure
 

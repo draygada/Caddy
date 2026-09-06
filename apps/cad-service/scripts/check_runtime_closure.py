@@ -11,22 +11,23 @@ from pathlib import Path
 
 VERCEL_STANDARD_PYTHON_BYTES = 500 * 1024 * 1024
 VERCEL_DOCUMENTED_BODY_BYTES = 4_500_000
-SERVICE_BODY_BYTES = 4_250_000
+SERVICE_BODY_BYTES = 4_000_000
 EXPECTED_PACKAGES = {
+    "annotated-doc": "0.0.5",
     "annotated-types": "0.8.0",
     "anyio": "4.15.1",
     "cadquery-ocp-novtk": "7.9.3.1",
     "cadquery-ocp-proxy": "7.9.3.1",
     "click": "8.5.0",
-    "fastapi": "0.116.1",
+    "fastapi": "0.141.1",
     "h11": "0.16.0",
     "idna": "3.19",
-    "pydantic": "2.11.7",
-    "pydantic-core": "2.33.2",
-    "starlette": "0.47.3",
+    "pydantic": "2.13.5",
+    "pydantic-core": "2.46.5",
+    "starlette": "1.6.0",
     "typing-extensions": "4.16.0",
     "typing-inspection": "0.4.4",
-    "uvicorn": "0.35.0",
+    "uvicorn": "0.52.4",
 }
 EXPECTED_LICENSE_HASHES = {
     "OCP-APACHE-2.0.txt": "a13caea71627202ad33cc4cafafdd18e667e16716488f8d9c568127121fb89fd",

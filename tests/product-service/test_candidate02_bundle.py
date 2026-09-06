@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -31,6 +32,28 @@ IDENTITY = {
 }
 
 
+def _approved_cad_capabilities() -> tuple[int, dict[str, object]]:
+    return 200, {
+        "schema_version": "caddydaddy.cad-capabilities/1",
+        "status": "AVAILABLE",
+        "kernel": {
+            "name": "OpenCascade",
+            "version": "7.9.3",
+            "binding": "cadquery-ocp-novtk/7.9.3.1",
+        },
+        "features": ["SKETCH", "EXTRUDE", "FILLET", "CHAMFER"],
+        "exchange": {"exact": ["STEP_AP242", "IGES_5_3"], "mesh_only": ["STL"]},
+        "runtime_gate": {
+            "status": "APPROVED",
+            "owner_approval": "ASSERTED_BY_DEPLOYMENT_CONFIGURATION",
+            "approval_binding": "caddydaddy.native-runtime/v1",
+            "factual_evidence": "PASS",
+            "legal_determination": "NOT_PERFORMED",
+            "artifact_sha256": "8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b",
+        },
+    }
+
+
 def _document() -> dict:
     sketch = {
         "id": "sketch:plate",
@@ -58,16 +81,34 @@ def _document() -> dict:
 
 
 def _kernel_response(revision: str) -> dict:
+    brep = b"brep-bytes"
     return {
+        "schema_version": "caddydaddy.recompute-result/1",
+        "status": "SUCCEEDED",
+        "document_id": "document:cold",
         "revision_id": revision,
+        "parent_revision_id": None,
         "document_hash": "c" * 64,
         "geometry_hash": "d" * 64,
         "kernel": {"name": "OpenCascade", "version": "7.9.3"},
+        "constraint_mode": "VALIDATE_ONLY",
+        "operation_status": {"feature:sketch": "SUCCEEDED", "feature:extrude": "SUCCEEDED"},
         "bodies": [{
             "body_id": "body:plate",
             "producing_feature_id": "feature:extrude",
             "brep_base64": "YnJlcC1ieXRlcw==",
-            "mesh": {"positions": [0, 0, 0, 1, 0, 0, 0, 1, 1], "indices": [0, 1, 2]},
+            "brep_sha256": hashlib.sha256(brep).hexdigest(),
+            "valid": True,
+            "bounds_mm": [0, 0, 0, 20, 10, 8],
+            "topology": {"solids": 1},
+            "area_mm2": 1,
+            "volume_mm3": 1,
+            "mesh": {
+                "positions": [0, 0, 0, 1, 0, 0, 0, 1, 1],
+                "normals": [0, 0, 1, 0, 0, 1, 0, 0, 1],
+                "indices": [0, 1, 2],
+                "triangle_count": 1,
+            },
         }],
         "diagnostics": [],
     }
@@ -80,7 +121,12 @@ def test_cold_invocation_uses_hash_sealed_client_carried_cad_state() -> None:
         calls.append((path, payload))
         return 200, _kernel_response("cad-rev:" + "1" * 64)
 
-    first = Candidate02Routes(IDENTITY, classification_action=lambda _: (200, {}), cad_transport=first_transport)
+    first = Candidate02Routes(
+        IDENTITY,
+        classification_action=lambda _: (200, {}),
+        cad_transport=first_transport,
+        cad_capability_transport=_approved_cad_capabilities,
+    )
     document = _document()
     status, created = first.dispatch("/api/cad/recompute", {
         "document": document,
@@ -99,7 +145,12 @@ def test_cold_invocation_uses_hash_sealed_client_carried_cad_state() -> None:
         assert payload["base_document"] == continuation["base_document"]
         return 200, _kernel_response("cad-rev:" + "2" * 64)
 
-    cold = Candidate02Routes(IDENTITY, classification_action=lambda _: (200, {}), cad_transport=cold_transport)
+    cold = Candidate02Routes(
+        IDENTITY,
+        classification_action=lambda _: (200, {}),
+        cad_transport=cold_transport,
+        cad_capability_transport=_approved_cad_capabilities,
+    )
     status, updated = cold.dispatch("/api/cad/recompute", {
         "document": created["document"],
         "operation": created["document"]["operations"][-1],
@@ -113,9 +164,25 @@ def test_cold_invocation_uses_hash_sealed_client_carried_cad_state() -> None:
     def export_transport(path: str, payload: dict):
         assert path == "/v1/exchange"
         assert payload["content_base64"] == "YnJlcC1ieXRlcw=="
-        return 200, {"content_base64": "c3RlcA==", "content_sha256": "e" * 64}
+        return 200, {
+            "schema_version": "caddydaddy.exchange-result/1",
+            "status": "SUCCEEDED",
+            "direction": "EXPORT",
+            "format": "STEP",
+            "content_base64": "c3RlcA==",
+            "content_sha256": hashlib.sha256(b"step").hexdigest(),
+            "brep_base64": "YnJlcC1ieXRlcw==",
+            "exact_geometry": True,
+            "editable_brep": True,
+            "verification": [{"code": "OCCT_REIMPORT_NON_NULL", "status": "PASSED"}],
+        }
 
-    another_cold = Candidate02Routes(IDENTITY, classification_action=lambda _: (200, {}), cad_transport=export_transport)
+    another_cold = Candidate02Routes(
+        IDENTITY,
+        classification_action=lambda _: (200, {}),
+        cad_transport=export_transport,
+        cad_capability_transport=_approved_cad_capabilities,
+    )
     status, exported = another_cold.dispatch("/api/cad/export", {
         "document": exported_request,
         "revisionId": exported_request["revisionId"],

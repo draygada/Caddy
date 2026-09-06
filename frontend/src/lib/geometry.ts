@@ -131,16 +131,19 @@ export function renderSolid<T extends object = Record<never, never>>(
   return out;
 }
 
+/** Footprint of the slot's default part in metres (the published envelope in the CATALOG comments); drawn as a dashed outline when the slot is empty. */
 const FOOTPRINT: Record<string, [number, number]> = {
-  battery: [0.9, 0.5], imu: [0.22, 0.22], fc: [0.7, 0.45], thermal: [0.36, 0.36], gnss: [0.22, 0.22], datalink: [0.4, 0.25], pod: [0.3, 0.3],
-  camera: [0.2, 0.2], lidar: [0.18, 0.24], esc: [0.4, 0.24], motor: [0.3, 0.3], servo: [0.24, 0.12], airspeed: [0.3, 0.08], transponder: [0.24, 0.18], companion: [0.36, 0.24], antenna: [0.2, 0.2], parachute: [0.3, 0.3],
+  battery: [0.222, 0.09], imu: [0.0254, 0.0254], fc: [0.0848, 0.044], thermal: [0.025, 0.025], gnss: [0.025, 0.045], datalink: [0.027, 0.033], pod: [0.12, 0.12],
+  camera: [0.038, 0.038], lidar: [0.043, 0.03], esc: [0.0885, 0.0366], motor: [0.09, 0.0814], servo: [0.024, 0.012], airspeed: [0.16, 0.012], transponder: [0.047, 0.054], companion: [0.1, 0.079], antenna: [0.114, 0.114], parachute: [0.099, 0.099],
+  frame: [0.27, 0.199], prop: [0.178, 0.178],
 };
 
 /** Dashed outline of the slot footprint when no part is placed. */
 export function emptySolid(slot: Slot, x: number, y: number, z: number, dims: Dims): Solid {
   const h = dims[slot];
-  const fp = FOOTPRINT[slot] || [0.6, 0.4];
-  const ox = slot === 'thermal' ? x - 0.18 : x, oy = slot === 'thermal' ? y - 0.18 : y;
+  const fp = FOOTPRINT[slot] || [0.06, 0.04];
+  // the thermal core is positioned by its centre; every other slot by its near corner
+  const ox = slot === 'thermal' ? x - fp[0] / 2 : x, oy = slot === 'thermal' ? y - fp[1] / 2 : y;
   return { slot, faces: boxFaces(ox, oy, z, fp[0], fp[1], h, slot, 'none'), c: [ox + fp[0] / 2, oy + fp[1] / 2, z + h / 2] };
 }
 
@@ -152,225 +155,327 @@ export function solidBounds(solid: Solid): { minx: number; maxx: number; miny: n
 }
 
 /**
- * Build a part body at plate position (x, y). `h` overrides the slot height (spec-driven);
- * `fs` scales the footprint about (x, y) so a bigger sensor reads as a bigger body.
+ * Build a part body at plate position (x, y), in metres at the published envelope (see the CATALOG comments for each source).
+ * `h` overrides the slot height (spec-driven extrude); `fs` scales the footprint about (x, y) so a bigger sensor reads as a bigger body.
  */
 export function partSolid(pid: PartId, slot: Slot, x: number, y: number, z: number, dims: Dims, h = dims[slot], fs = 1): Solid {
   let faces: Face[] = [];
   let c: Vec3;
-  // Shapes follow the published mechanical envelopes (see the research notes in the commit), drawn at the scene's symbolic scale.
   const M1 = 'var(--m1)', M2 = 'var(--m2)', M3 = 'var(--m3)';
+  const PCB = '#2f6b3a', BLACK = '#1b1f26', GOLD = '#c9a227', ALU = '#c8ccd2', JST = '#e6e2d6', RED = '#d94b3d', GREEN = '#3b9d5a';
   const box = (bx: number, by: number, bz: number, dx: number, dy: number, dz: number, fill?: string) => boxFaces(x + bx, y + by, z + bz, dx, dy, dz, slot, fill);
   const cyl = (cx: number, cy: number, cz: number, r: number, hh: number, N = 14, fill?: string) => cylFaces(x + cx, y + cy, z + cz, r, hh, slot, N, fill);
   const cx_ = (bx: number, cy: number, cz: number, r: number, len: number, N = 12, fill?: string) => cylAlongX(x + bx, y + cy, z + cz, r, len, slot, N, fill);
   const cy_ = (cx: number, by: number, cz: number, r: number, len: number, N = 12, fill?: string) => cylAlongY(x + cx, y + by, z + cz, r, len, slot, N, fill);
-  const holes = (pts: [number, number][], hz: number, r = 0.012) => pts.map(([hx, hy]) => discZ(x + hx, y + hy, z + hz, r, slot, M3));
+  const holes = (pts: [number, number][], hz: number, r = 0.0015) => pts.map(([hx, hy]) => discZ(x + hx, y + hy, z + hz, r, slot, M3));
+  /** the four holes of a rectangular pattern `w` x `d` centred at (cx, cy) */
+  const pattern = (cx: number, cy: number, w: number, d: number): [number, number][] => [[cx - w / 2, cy - d / 2], [cx + w / 2, cy - d / 2], [cx - w / 2, cy + d / 2], [cx + w / 2, cy + d / 2]];
+  /** Prism from a local counter-clockwise outline rotated by `ang` about (cx, cy), for arms and blades that do not lie on the axes. */
+  const turned = (outline: [number, number][], cx: number, cy: number, ang: number, z0: number, z1: number, fill: string) => {
+    const ca = Math.cos(ang), sa = Math.sin(ang);
+    const pts = outline.map(([px, py]) => [x + cx + px * ca - py * sa, y + cy + px * sa + py * ca] as [number, number]);
+    return prismFaces(pts, z + z0, z + z1, slot).map((f) => ({ ...f, fill }));
+  };
+  /** JST-GH style connector row along a board edge: `n` housings of 8.3 x 4.5 x 4 mm from (x0, y0) stepping `pitch` along X */
+  const jstRow = (x0: number, y0: number, z0: number, n: number, pitch: number, dy = 0.0045, dz = 0.004) => { for (let i = 0; i < n; i++) faces = faces.concat(box(x0 + i * pitch, y0, z0, 0.0083, dy, dz, JST)); };
   switch (pid) {
     case 'p45b': {
-      // 6S4P brick of 21700 cells (21.55 × 70.15 mm each) lying along X in two layers, nickel strips on the ends, XT90 and balance lead on one end
-      const cr = 0.052, seg = 0.28;
-      faces = box(0, 0, 0, 0.9, 0.5, 0.02, M3);
-      for (const layer of [0, 1]) for (let row = 0; row < 4; row++) for (let col = 0; col < 3; col++) {
-        faces = faces.concat(cx_(0.02 + col * (seg + 0.01), 0.07 + row * 0.12, 0.02 + cr + layer * cr * 2, cr, seg, 10));
-      }
-      faces = faces.concat(box(0.0, 0.03, 0.02, 0.02, 0.44, cr * 4, M3), box(0.88, 0.03, 0.02, 0.02, 0.44, cr * 4, M3));
-      for (const col of [0.3, 0.59]) faces = faces.concat(box(col - 0.005, 0.03, 0.02 + cr * 4, 0.02, 0.44, 0.008, M3));
-      faces = faces.concat(box(0.9, 0.18, 0.05, 0.08, 0.06, 0.05, '#c9a227'), box(0.9, 0.3, 0.06, 0.07, 0.03, 0.02, M3), box(0.02, 0.02, 0.02 + cr * 4, 0.86, 0.46, 0.006, M1));
-      c = [x + 0.45, y + 0.25, z + h / 2]; break;
+      // 24 x INR21700-P45B (21.55 mm dia x 70.15 mm) as two layers of 3 x 4 lying along X: 222 x 90 x 48 mm; nickel strips at the cell ends, XT90 and balance lead on the +X end
+      const cr = Math.max(0.006, (h - 0.005) / 4), seg = 0.07015;
+      faces = box(0, 0, 0, 0.222, 0.09, 0.002, M3);
+      for (const layer of [0, 1]) for (let row = 0; row < 4; row++) for (let col = 0; col < 3; col++) faces = faces.concat(cx_(0.004 + col * (seg + 0.002), 0.0115 + row * 0.0225, 0.002 + cr + layer * cr * 2, cr, seg, 10));
+      faces = faces.concat(box(0, 0.002, 0.002, 0.003, 0.086, cr * 4, M3), box(0.219, 0.002, 0.002, 0.003, 0.086, cr * 4, M3));
+      for (const col of [0.0745, 0.1465]) faces = faces.concat(box(col - 0.0015, 0.004, 0.002 + cr * 4, 0.003, 0.082, 0.001, M3));
+      faces = faces.concat(box(0.004, 0.004, 0.002 + cr * 4, 0.214, 0.082, 0.0015, M1), box(0.222, 0.03, 0.01, 0.016, 0.012, 0.012, GOLD), box(0.222, 0.055, 0.012, 0.012, 0.006, 0.004, M3));
+      c = [x + 0.111, y + 0.045, z + h / 2]; break;
     }
     case 'amprius': {
-      // six SA08 pouches (144.5 × 52 × 6.7 mm) stacked flat with tabs at one end, a BMS board and XT90 on top
-      const t = h * 0.14;
-      faces = box(0, 0, 0, 0.9, 0.5, 0.015, M3);
-      for (let i = 0; i < 6; i++) faces = faces.concat(box(0.03, 0.04, 0.015 + i * t, 0.8, 0.42, t * 0.9, i % 2 ? M1 : M2), box(0.83, 0.12 + (i % 2) * 0.2, 0.015 + i * t + t * 0.3, 0.05, 0.08, 0.004, M3));
-      const top = 0.015 + 6 * t;
-      faces = faces.concat(box(0.03, 0.04, top, 0.8, 0.42, 0.01, M3), box(0.1, 0.1, top + 0.01, 0.3, 0.2, 0.02, '#2f6b3a'), box(0.85, 0.2, top - 0.02, 0.08, 0.06, 0.05, '#c9a227'));
-      faces = faces.concat(box(0.0, 0.0, 0.015, 0.02, 0.5, top, M3), box(0.0, 0.0, 0.015, 0.9, 0.02, top, M3));
-      c = [x + 0.45, y + 0.25, z + h / 2]; break;
+      // 36 x SA08 pouches (144.5 x 52 x 6.25 mm) in four stacks of nine lying flat, tabs at the stack ends, a BMS board and XT90 on top: 289 x 104 x 70 mm
+      const t = Math.max(0.003, (h - 0.014) / 9), H = t * 9;
+      faces = box(0, 0, 0, 0.289, 0.104, 0.0015, M3);
+      for (const sx of [0, 0.1445]) for (const sy of [0, 0.052]) for (let i = 0; i < 9; i++) faces = faces.concat(box(sx + 0.0005, sy + 0.0005, 0.0015 + i * t, 0.1435, 0.051, t * 0.9, i % 2 ? M1 : M2), box(sx + (sx ? 0.1435 : -0.004), sy + 0.015 + (i % 2) * 0.016, 0.0015 + i * t + t * 0.3, 0.005, 0.008, 0.0004, M3));
+      faces = faces.concat(box(0, 0, 0.0015 + H, 0.289, 0.104, 0.002, M3), box(0.02, 0.02, 0.0035 + H, 0.06, 0.04, 0.006, PCB), box(0.289, 0.04, 0.02, 0.016, 0.012, 0.012, GOLD));
+      c = [x + 0.1445, y + 0.052, z + h / 2]; break;
     }
     case 'lepton': {
-      // Lepton 3.5 (11.8 × 12.7 × 7.2 mm) with its shutter housing, socketed on a breakout board
-      faces = box(-0.12, -0.12, 0, 0.24, 0.24, 0.012, '#2f6b3a').concat(holes([[-0.1, -0.1], [0.1, -0.1], [-0.1, 0.1], [0.1, 0.1]], 0.012));
-      faces = faces.concat(box(-0.07, -0.07, 0.012, 0.14, 0.14, 0.02, M3), box(-0.06, -0.065, 0.032, 0.12, 0.13, h * 0.3, M2), box(-0.06, -0.065, 0.032 + h * 0.3, 0.12, 0.07, h * 0.12, M3));
-      faces = faces.concat(cyl(0, 0.02, 0.032 + h * 0.3, 0.035, h * 0.18, 12, M3), cyl(0, 0.02, 0.032 + h * 0.48, 0.022, 0.006, 10, '#1b1f26'));
-      faces = faces.concat(box(-0.12, 0.1, 0.012, 0.1, 0.02, 0.02, M3));
-      c = [x, y, z + h * 0.3]; break;
+      // Lepton 3.5 (10.5 x 12.7 x 7.14 mm) with its shutter housing, socketed on a 25 x 25 mm breakout; positioned by its centre
+      const k = h / 0.012;
+      faces = box(-0.0125, -0.0125, 0, 0.025, 0.025, 0.0016, PCB).concat(holes(pattern(0, 0, 0.021, 0.021), 0.0016, 0.001));
+      faces = faces.concat(box(-0.007, -0.0075, 0.0016, 0.014, 0.015, 0.002, M3), box(-0.00525, -0.00635, 0.0036, 0.0105, 0.0127, 0.0055 * k, M2), box(-0.00525, -0.00635, 0.0036 + 0.0055 * k, 0.0105, 0.006, 0.0015 * k, M3));
+      faces = faces.concat(cyl(0, 0.002, 0.0036 + 0.0055 * k, 0.0025, 0.002 * k, 10, M3), cyl(0, 0.002, 0.0036 + 0.0075 * k, 0.0015, 0.0004, 8, BLACK), box(-0.0125, 0.009, 0.0016, 0.008, 0.003, 0.002, M3));
+      c = [x, y, z + h * 0.5]; break;
     }
     case 'boson': {
-      // Boson 640 core (21 × 21 × 11 mm body) with the stepped lens barrel forward along +X and the rear connector block
-      faces = box(-0.18, -0.18, 0, 0.36, 0.36, h * 0.55, M2);
-      for (const [hx, hy] of [[-0.15, -0.15], [0.15, -0.15], [-0.15, 0.15], [0.15, 0.15]] as [number, number][]) faces = faces.concat(cyl(hx, hy, h * 0.55, 0.012, 0.006, 8, M3));
-      faces = faces.concat(cx_(0.18, 0, h * 0.28, 0.12, 0.14, 16, M3), cx_(0.32, 0, h * 0.28, 0.1, 0.16, 16, M2), cx_(0.48, 0, h * 0.28, 0.105, 0.03, 16, M3));
-      faces = faces.concat(discX(x + 0.51, y, z + h * 0.28, 0.07, 1, slot, '#1b1f26'));
-      faces = faces.concat(box(-0.26, -0.1, h * 0.1, 0.08, 0.2, h * 0.3, M3), box(-0.3, -0.05, h * 0.18, 0.04, 0.1, h * 0.1, '#1b1f26'));
-      c = [x, y, z + h / 2]; break;
+      // Boson 640 core (21 x 21 x 11 mm body) with the stepped 14 mm lens barrel forward along +X and the rear connector; positioned by its centre
+      const k = h / 0.012, H = 0.011 * k;
+      faces = box(-0.0105, -0.0105, 0, 0.021, 0.021, H, M2);
+      for (const [hx, hy] of pattern(0, 0, 0.017, 0.017)) faces = faces.concat(cyl(hx, hy, H, 0.001, 0.0005, 8, M3));
+      faces = faces.concat(cx_(0.0105, 0, H / 2, 0.008, 0.008, 16, M3), cx_(0.0185, 0, H / 2, 0.0075, 0.01, 16, M2), cx_(0.0285, 0, H / 2, 0.0078, 0.002, 16, M3), discX(x + 0.0305, y, z + H / 2, 0.006, 1, slot, BLACK));
+      faces = faces.concat(box(-0.0145, -0.005, 0.002, 0.004, 0.01, 0.004, M3), box(-0.0165, -0.003, 0.003, 0.002, 0.006, 0.002, BLACK));
+      c = [x, y, z + H / 2]; break;
     }
     case 'icm': {
-      // ICM-42688-P: a 2.5 × 3 mm LGA on a breakout, pin header along one edge
-      faces = box(0, 0, 0, 0.22, 0.22, 0.012, '#2f6b3a').concat(holes([[0.02, 0.02], [0.2, 0.02], [0.02, 0.2], [0.2, 0.2]], 0.012));
-      faces = faces.concat(box(0.085, 0.09, 0.012, 0.05, 0.04, 0.012, '#1b1f26'), box(0.04, 0.04, 0.012, 0.02, 0.03, 0.006, M3), box(0.16, 0.05, 0.012, 0.03, 0.02, 0.006, M3));
-      for (let i = 0; i < 6; i++) faces = faces.concat(box(0.03 + i * 0.028, 0.19, 0.012, 0.012, 0.012, 0.05, M3));
-      c = [x + 0.11, y + 0.11, z + h * 0.15]; break;
+      // ICM-42688-P: a 2.5 x 3 x 0.9 mm LGA on a 25.4 x 25.4 mm breakout, eight-pin header along one edge
+      faces = box(0, 0, 0, 0.0254, 0.0254, 0.0016, PCB).concat(holes(pattern(0.0127, 0.0127, 0.0204, 0.0204), 0.0016, 0.0015));
+      faces = faces.concat(box(0.0112, 0.0115, 0.0016, 0.003, 0.0025, 0.0009, BLACK), box(0.005, 0.006, 0.0016, 0.002, 0.001, 0.0006, M3), box(0.018, 0.008, 0.0016, 0.001, 0.002, 0.0006, M3));
+      faces = faces.concat(box(0.0015, 0.0225, 0.0016, 0.0225, 0.0025, 0.0025, BLACK));
+      for (let i = 0; i < 8; i++) faces = faces.concat(box(0.0024 + i * 0.00254, 0.0234, 0.0041, 0.0006, 0.0006, Math.max(0.002, h - 0.0041), M3));
+      c = [x + 0.0127, y + 0.0127, z + h / 2]; break;
     }
     case 'hg5700': {
-      // HG5700: sealed aluminium block, 46 in³, 4 in tall, four-hole base flange and a circular connector on one side
-      const H = h * 1.4;
-      faces = box(-0.03, -0.03, 0, 0.28, 0.28, 0.02, M3).concat(holes([[-0.01, -0.01], [0.23, -0.01], [-0.01, 0.23], [0.23, 0.23]], 0.02, 0.014));
-      faces = faces.concat(box(0, 0, 0.02, 0.22, 0.22, H, M2), box(0.02, 0.02, 0.02 + H, 0.18, 0.18, 0.01, M1), box(0.05, 0.06, 0.02 + H + 0.01, 0.12, 0.1, 0.003, '#c8ccd2'));
-      faces = faces.concat(cy_(0.11, 0.22, 0.02 + H * 0.55, 0.045, 0.05, 12, M3), cy_(0.11, 0.27, 0.02 + H * 0.55, 0.035, 0.02, 12, '#1b1f26'));
-      for (let i = 0; i < 4; i++) faces = faces.concat(box(0.22, 0.02 + i * 0.05, 0.02 + H * 0.15, 0.01, 0.03, H * 0.7, M3));
-      c = [x + 0.11, y + 0.11, z + H / 2]; break;
+      // HG5700: 92 mm aluminium body on a 127 mm isolator ring, 102 mm tall; RS-422 circular connector on the side. The published height is drawn as is.
+      const H = 0.102, cx0 = 0.0635, cy0 = 0.0635;
+      faces = cyl(cx0, cy0, 0, 0.0635, 0.012, 28, M3).concat(holes([[cx0 - 0.055, cy0], [cx0 + 0.055, cy0], [cx0, cy0 - 0.055], [cx0, cy0 + 0.055]], 0.012, 0.003));
+      faces = faces.concat(cyl(cx0, cy0, 0.012, 0.046, H - 0.016, 24, M2), cyl(cx0, cy0, H - 0.004, 0.044, 0.004, 24, M1), box(cx0 - 0.02, cy0 - 0.012, H, 0.04, 0.024, 0.0004, ALU));
+      faces = faces.concat(cy_(cx0, cy0 + 0.046, 0.05, 0.008, 0.012, 12, M3), cy_(cx0, cy0 + 0.058, 0.05, 0.006, 0.004, 12, BLACK));
+      c = [x + cx0, y + cy0, z + H / 2]; break;
     }
     case 'imung': {
-      // tactical MEMS IMU puck (HG4930 class): flanged cylinder with a side connector
-      faces = box(-0.02, -0.02, 0, 0.26, 0.26, 0.015, M3).concat(holes([[0, 0], [0.22, 0], [0, 0.22], [0.22, 0.22]], 0.015, 0.012));
-      faces = faces.concat(cyl(0.11, 0.11, 0.015, 0.11, h * 1.1, 20, M2), cyl(0.11, 0.11, 0.015 + h * 1.1, 0.09, 0.01, 20, M1), cyl(0.11, 0.11, 0.025 + h * 1.1, 0.02, 0.008, 10, M3));
-      faces = faces.concat(cx_(0.21, 0.11, 0.015 + h * 0.5, 0.035, 0.05, 12, M3), cx_(0.26, 0.11, 0.015 + h * 0.5, 0.028, 0.02, 12, '#1b1f26'));
-      c = [x + 0.11, y + 0.11, z + h * 0.6]; break;
+      // fixture: tactical MEMS puck in the HG4930 class, a 40 mm diameter x 20 mm flanged cylinder with a side connector
+      const H = Math.max(h, 0.02);
+      faces = box(-0.003, -0.003, 0, 0.046, 0.046, 0.002, M3).concat(holes(pattern(0.02, 0.02, 0.04, 0.04), 0.002, 0.0015));
+      faces = faces.concat(cyl(0.02, 0.02, 0.002, 0.02, H - 0.004, 20, M2), cyl(0.02, 0.02, H - 0.002, 0.018, 0.002, 20, M1), cyl(0.02, 0.02, H, 0.004, 0.001, 10, M3));
+      faces = faces.concat(cx_(0.038, 0.02, H * 0.5, 0.005, 0.006, 12, M3), cx_(0.044, 0.02, H * 0.5, 0.004, 0.003, 12, BLACK));
+      c = [x + 0.02, y + 0.02, z + H / 2]; break;
     }
     case 'acc120': {
-      // accelerometer-grade IMU: squat finned box with a top connector
-      faces = box(-0.02, -0.02, 0, 0.26, 0.26, 0.015, M3).concat(box(0, 0, 0.015, 0.22, 0.22, h * 0.9, M2));
-      for (let i = 0; i < 5; i++) faces = faces.concat(box(0.01 + i * 0.044, -0.015, 0.03, 0.02, 0.25, h * 0.75, M3));
-      faces = faces.concat(cyl(0.11, 0.11, 0.015 + h * 0.9, 0.04, 0.04, 12, M3), cyl(0.11, 0.11, 0.055 + h * 0.9, 0.03, 0.01, 12, '#1b1f26'));
-      c = [x + 0.11, y + 0.11, z + h * 0.55]; break;
+      // fixture: accelerometer-grade IMU as a 45 x 45 x 25 mm finned box with a top connector
+      const H = Math.max(h, 0.025);
+      faces = box(-0.003, -0.003, 0, 0.051, 0.051, 0.002, M3).concat(box(0, 0, 0.002, 0.045, 0.045, H - 0.002, M2));
+      for (let i = 0; i < 5; i++) faces = faces.concat(box(0.003 + i * 0.009, -0.002, 0.005, 0.004, 0.049, H - 0.01, M3));
+      faces = faces.concat(cyl(0.0225, 0.0225, H, 0.006, 0.006, 12, M3), cyl(0.0225, 0.0225, H + 0.006, 0.0045, 0.002, 12, BLACK));
+      c = [x + 0.0225, y + 0.0225, z + H / 2]; break;
     }
     case 'h743': case 'h753': case 'h743m': {
-      // Pixhawk-class flight controller: PCB, MCU, crypto or second MCU, JST-GH rows on both long edges, USB-C, microSD, four holes
-      const pcb = pid === 'h743m' ? '#3a4a3e' : '#2f6b3a';
-      faces = box(0, 0, 0, 0.7, 0.45, h, pcb).concat(holes([[0.03, 0.03], [0.67, 0.03], [0.03, 0.42], [0.67, 0.42]], h));
-      faces = faces.concat(box(0.27, 0.15, h, 0.16, 0.16, 0.03, '#1b1f26'), box(0.29, 0.17, h + 0.03, 0.12, 0.12, 0.002, M3));
-      if (pid === 'h753') faces = faces.concat(box(0.5, 0.1, h, 0.1, 0.1, 0.025, '#1b1f26'), box(0.52, 0.12, h + 0.025, 0.06, 0.06, 0.002, '#c9a227'));
-      else faces = faces.concat(box(0.5, 0.1, h, 0.08, 0.08, 0.02, '#1b1f26'));
-      faces = faces.concat(box(0.08, 0.3, h, 0.12, 0.09, 0.025, '#1b1f26'), box(0.1, 0.12, h, 0.06, 0.06, 0.015, M3), box(0.18, 0.12, h, 0.06, 0.06, 0.015, M3));
-      for (let i = 0; i < 6; i++) faces = faces.concat(box(0.06 + i * 0.1, 0.0, h, 0.07, 0.05, 0.035, '#e6e2d6'), box(0.06 + i * 0.1, 0.4, h, 0.07, 0.05, 0.035, '#e6e2d6'));
-      faces = faces.concat(box(0.7, 0.18, h, 0.04, 0.09, 0.03, M3), box(-0.03, 0.18, h, 0.03, 0.12, 0.012, M3), box(0.62, 0.32, h + 0.01, 0.02, 0.02, 0.01, '#3b9d5a'), box(0.66, 0.32, h + 0.01, 0.02, 0.02, 0.01, '#d94b3d'));
-      c = [x + 0.35, y + 0.22, z + h / 2]; break;
+      // the LQFP-100 (14 x 14 x 1.4 mm) on a Pixhawk-6C-class 84.8 x 44 mm carrier: JST-GH rows on both long edges, microSD, USB-C, four M3 holes
+      const pcb = pid === 'h743m' ? '#3a4a3e' : PCB;
+      faces = box(0, 0, 0, 0.0848, 0.044, h, pcb).concat(holes(pattern(0.0424, 0.022, 0.0788, 0.038), h, 0.0015));
+      faces = faces.concat(box(0.03, 0.015, h, 0.014, 0.014, 0.0014, BLACK), box(0.032, 0.017, h + 0.0014, 0.01, 0.01, 0.0002, M3));
+      if (pid === 'h753') faces = faces.concat(box(0.055, 0.012, h, 0.008, 0.008, 0.001, BLACK), box(0.057, 0.014, h + 0.001, 0.004, 0.004, 0.0002, GOLD));
+      else faces = faces.concat(box(0.055, 0.012, h, 0.007, 0.007, 0.001, BLACK));
+      faces = faces.concat(box(0.006, 0.03, h, 0.012, 0.011, 0.002, BLACK), box(0.008, 0.01, h, 0.005, 0.005, 0.0012, M3), box(0.015, 0.01, h, 0.005, 0.005, 0.0012, M3));
+      jstRow(0.006, 0, h, 6, 0.012); jstRow(0.006, 0.0395, h, 6, 0.012);
+      faces = faces.concat(box(0.0848, 0.017, h, 0.003, 0.009, 0.0032, M3), box(-0.002, 0.018, h, 0.002, 0.012, 0.0012, M3), box(0.074, 0.03, h + 0.001, 0.002, 0.002, 0.0008, GREEN), box(0.078, 0.03, h + 0.001, 0.002, 0.002, 0.0008, RED));
+      c = [x + 0.0424, y + 0.022, z + h / 2]; break;
     }
     case 'neom9n': {
-      // NEO-M9N on a carrier: a 25 mm ceramic patch antenna on top, the 12.2 × 16 mm module beside it, SMA on the edge
-      faces = box(0, 0, 0, 0.22, 0.22, 0.012, '#2f6b3a').concat(holes([[0.02, 0.02], [0.2, 0.02], [0.02, 0.2], [0.2, 0.2]], 0.012));
-      faces = faces.concat(box(0.03, 0.05, 0.012, 0.15, 0.15, h * 0.7, '#d9d3c0'), box(0.06, 0.08, 0.012 + h * 0.7, 0.09, 0.09, 0.003, '#c8ccd2'), cyl(0.105, 0.125, 0.015 + h * 0.7, 0.008, 0.004, 8, M3));
-      faces = faces.concat(box(0.03, 0.005, 0.012, 0.06, 0.045, 0.015, M3), box(0.12, 0.005, 0.012, 0.05, 0.03, 0.02, '#e6e2d6'));
-      faces = faces.concat(cy_(0.2, 0.22, 0.03, 0.02, 0.05, 10, '#c9a227'));
-      c = [x + 0.11, y + 0.11, z + h / 2]; break;
+      // NEO-M9N (12.2 x 16 x 2.4 mm) on a 25 x 45 mm carrier under a 25 x 25 x 4 mm ceramic patch; JST-GH on the near edge
+      faces = box(0, 0, 0, 0.025, 0.045, 0.0016, PCB).concat(holes(pattern(0.0125, 0.0225, 0.021, 0.041), 0.0016, 0.0012));
+      faces = faces.concat(box(0.0064, 0.003, 0.0016, 0.0122, 0.016, 0.0024, ALU), box(0.0074, 0.004, 0.004, 0.0102, 0.014, 0.0003, M3));
+      faces = faces.concat(box(0, 0.02, 0.0016, 0.025, 0.025, Math.max(0.002, h - 0.004), '#d9d3c0'), box(0.005, 0.025, Math.max(0.0036, h - 0.0024), 0.015, 0.015, 0.0003, ALU), cyl(0.0125, 0.0325, Math.max(0.0039, h - 0.0021), 0.0008, 0.0004, 8, M3));
+      faces = faces.concat(box(0.002, -0.002, 0.0016, 0.0083, 0.0045, 0.004, JST), box(0.02, 0.001, 0.0016, 0.003, 0.003, 0.0012, M3));
+      c = [x + 0.0125, y + 0.0225, z + h / 2]; break;
     }
     case 'crpa': {
-      // four-element controlled reception pattern array: ground plane, four raised patches, electronics tray underneath
-      faces = box(-0.08, -0.08, 0, 0.38, 0.38, h * 0.5, M2).concat(box(-0.08, -0.08, h * 0.5, 0.38, 0.38, 0.012, M3));
-      for (const [hx, hy] of [[-0.04, -0.04], [0.14, -0.04], [-0.04, 0.14], [0.14, 0.14]] as [number, number][]) faces = faces.concat(box(hx, hy, h * 0.5 + 0.012, 0.12, 0.12, 0.035, '#d9d3c0'), box(hx + 0.025, hy + 0.025, h * 0.5 + 0.047, 0.07, 0.07, 0.003, '#c8ccd2'));
-      faces = faces.concat(cyl(0.11, 0.11, h * 0.5 + 0.012, 0.015, 0.02, 8, M3), cx_(-0.12, 0.11, h * 0.25, 0.03, 0.04, 10, M3), cx_(-0.16, 0.11, h * 0.25, 0.024, 0.02, 10, '#1b1f26'));
-      c = [x + 0.11, y + 0.11, z + h / 2]; break;
+      // fixture: four-element controlled reception pattern array, a 90 x 90 x 20 mm tray with four 30 mm patches and an electronics bay underneath
+      const H = Math.max(h, 0.02);
+      faces = box(0, 0, 0, 0.09, 0.09, H * 0.6, M2).concat(box(0, 0, H * 0.6, 0.09, 0.09, 0.002, M3));
+      for (const [hx, hy] of [[0.01, 0.01], [0.05, 0.01], [0.01, 0.05], [0.05, 0.05]] as [number, number][]) faces = faces.concat(box(hx, hy, H * 0.6 + 0.002, 0.03, 0.03, H * 0.3, '#d9d3c0'), box(hx + 0.006, hy + 0.006, H * 0.9 + 0.002, 0.018, 0.018, 0.0004, ALU));
+      faces = faces.concat(cyl(0.045, 0.045, H * 0.6 + 0.002, 0.003, 0.004, 8, M3), cx_(-0.008, 0.045, H * 0.3, 0.005, 0.008, 10, M3), cx_(-0.012, 0.045, H * 0.3, 0.004, 0.004, 10, BLACK));
+      c = [x + 0.045, y + 0.045, z + H / 2]; break;
     }
     case 'mcode': {
-      // PPS-capable receiver: ruggedised finned enclosure, circular power/data connector, two RF ports
-      faces = box(0, 0, 0, 0.22, 0.22, h * 1.5, M2);
-      for (let i = 0; i < 6; i++) faces = faces.concat(box(-0.01, 0.01 + i * 0.035, 0.02, 0.24, 0.015, h * 1.3, M3));
-      faces = faces.concat(cyl(0.06, 0.11, h * 1.5, 0.03, 0.04, 12, M3), cyl(0.06, 0.11, h * 1.5 + 0.04, 0.024, 0.01, 12, '#1b1f26'), cyl(0.16, 0.07, h * 1.5, 0.014, 0.05, 8, '#c9a227'), cyl(0.16, 0.15, h * 1.5, 0.014, 0.05, 8, '#c9a227'));
-      c = [x + 0.11, y + 0.11, z + h * 0.8]; break;
+      // fixture: PPS-capable receiver, a 40 x 40 x 15 mm finned enclosure with a circular connector and two RF ports on top
+      const H = Math.max(h, 0.015);
+      faces = box(0, 0, 0, 0.04, 0.04, H, M2);
+      for (let i = 0; i < 6; i++) faces = faces.concat(box(-0.002, 0.002 + i * 0.0064, 0.003, 0.044, 0.003, H - 0.005, M3));
+      faces = faces.concat(cyl(0.012, 0.02, H, 0.005, 0.006, 12, M3), cyl(0.012, 0.02, H + 0.006, 0.004, 0.002, 12, BLACK), cyl(0.03, 0.013, H, 0.0025, 0.008, 8, GOLD), cyl(0.03, 0.027, H, 0.0025, 0.008, 8, GOLD));
+      c = [x + 0.02, y + 0.02, z + H / 2]; break;
     }
     case 'pmddl': {
-      // pMDDL2450 OEM: 33.5 × 48.5 mm board, RF shield can, two MMCX antenna ports, board-to-board header
-      faces = box(0, 0, 0, 0.4, 0.25, 0.012, '#2f6b3a').concat(holes([[0.02, 0.02], [0.38, 0.02], [0.02, 0.23], [0.38, 0.23]], 0.012));
-      faces = faces.concat(box(0.06, 0.04, 0.012, 0.24, 0.17, h * 0.7, '#c8ccd2'), box(0.32, 0.05, 0.012, 0.05, 0.15, 0.03, '#1b1f26'));
-      faces = faces.concat(cyl(0.34, 0.06, 0.042, 0.012, 0.02, 8, '#c9a227'), cyl(0.34, 0.19, 0.042, 0.012, 0.02, 8, '#c9a227'));
-      faces = faces.concat(box(0.01, 0.06, 0.012, 0.03, 0.13, 0.04, M3));
-      c = [x + 0.2, y + 0.12, z + h / 2]; break;
+      // pMDDL2450 OEM motherboard: 27 x 33 x 4 mm, RF shield can, two U.FL antenna ports, the 80-pin SMT header along the near edge
+      faces = box(0, 0, 0, 0.027, 0.033, 0.001, PCB).concat(holes(pattern(0.0135, 0.0165, 0.023, 0.029), 0.001, 0.0008));
+      faces = faces.concat(box(0.003, 0.006, 0.001, 0.021, 0.02, Math.max(0.001, h - 0.0015), ALU), box(0.004, 0.0015, 0.001, 0.019, 0.003, 0.002, BLACK));
+      faces = faces.concat(cyl(0.005, 0.03, 0.001, 0.0012, 0.0012, 8, GOLD), cyl(0.022, 0.03, 0.001, 0.0012, 0.0012, 8, GOLD));
+      c = [x + 0.0135, y + 0.0165, z + h / 2]; break;
     }
     case 'aescustom': {
-      // enclosed proprietary radio: finned aluminium box, two SMA ports, circular connector
-      faces = box(0, 0, 0, 0.4, 0.25, h * 1.2, M2);
-      for (let i = 0; i < 7; i++) faces = faces.concat(box(0.03 + i * 0.05, -0.01, 0.02, 0.02, 0.27, h * 1.0, M3));
-      faces = faces.concat(cyl(0.1, 0.12, h * 1.2, 0.018, 0.05, 8, '#c9a227'), cyl(0.3, 0.12, h * 1.2, 0.018, 0.05, 8, '#c9a227'), cx_(0.4, 0.12, h * 0.6, 0.035, 0.04, 12, M3), cx_(0.44, 0.12, h * 0.6, 0.028, 0.015, 12, '#1b1f26'));
-      c = [x + 0.2, y + 0.12, z + h * 0.65]; break;
+      // fixture: enclosed proprietary radio, a 60 x 40 x 20 mm finned aluminium box with two SMA ports and a circular connector
+      const H = Math.max(h, 0.02);
+      faces = box(0, 0, 0, 0.06, 0.04, H, M2);
+      for (let i = 0; i < 7; i++) faces = faces.concat(box(0.004 + i * 0.0076, -0.002, 0.003, 0.003, 0.044, H - 0.005, M3));
+      faces = faces.concat(cyl(0.015, 0.02, H, 0.003, 0.008, 8, GOLD), cyl(0.045, 0.02, H, 0.003, 0.008, 8, GOLD), cx_(0.06, 0.02, H * 0.5, 0.005, 0.006, 12, M3), cx_(0.066, 0.02, H * 0.5, 0.004, 0.002, 12, BLACK));
+      c = [x + 0.03, y + 0.02, z + H / 2]; break;
     }
     case 'podeo': {
-      // two-axis EO gimbal: mounting plate, yaw ring, twin arms and a stacked-disc ball with the lens window forward
-      faces = box(0, 0, 0, 0.3, 0.3, h * 0.12, M3).concat(cyl(0.15, 0.15, h * 0.12, 0.13, h * 0.12, 20, M2), cyl(0.15, 0.15, h * 0.24, 0.05, h * 0.08, 12, M3));
-      faces = faces.concat(box(0.13, -0.02, h * 0.3, 0.04, 0.05, h * 0.5, M2), box(0.13, 0.27, h * 0.3, 0.04, 0.05, h * 0.5, M2));
-      const rs = [0.06, 0.1, 0.125, 0.135, 0.13, 0.115, 0.09, 0.05], step = h * 0.08;
-      rs.forEach((r, i) => { faces = faces.concat(cyl(0.15, 0.15, h * 0.32 + i * step, r, step, 18, i % 2 ? M2 : M1)); });
-      faces = faces.concat(cx_(0.27, 0.15, h * 0.62, 0.045, 0.03, 12, M3), discX(x + 0.3, y + 0.15, z + h * 0.62, 0.035, 1, slot, '#1b1f26'));
-      c = [x + 0.15, y + 0.15, z + h / 2]; break;
+      // in-house two-axis EO gimbal: 120 x 120 mm mounting plate, yaw ring, twin arms and a stacked-disc 120 mm ball with the lens window forward
+      faces = box(0, 0, 0, 0.12, 0.12, h * 0.05, M3).concat(cyl(0.06, 0.06, h * 0.05, 0.052, h * 0.06, 20, M2), cyl(0.06, 0.06, h * 0.11, 0.02, h * 0.06, 12, M3));
+      faces = faces.concat(box(0.052, -0.008, h * 0.15, 0.016, 0.02, h * 0.5, M2), box(0.052, 0.108, h * 0.15, 0.016, 0.02, h * 0.5, M2));
+      const rs = [0.024, 0.04, 0.05, 0.056, 0.058, 0.056, 0.05, 0.04, 0.024], step = h * 0.08;
+      rs.forEach((r, i) => { faces = faces.concat(cyl(0.06, 0.06, h * 0.2 + i * step, r, step, 18, i % 2 ? M2 : M1)); });
+      faces = faces.concat(cx_(0.108, 0.06, h * 0.56, 0.018, 0.012, 12, M3), discX(x + 0.12, y + 0.06, z + h * 0.56, 0.014, 1, slot, BLACK));
+      c = [x + 0.06, y + 0.06, z + h / 2]; break;
     }
     case 'imx477': {
-      // IMX477 module: 38 × 38 mm board, lens holder, C-mount style barrel, ribbon connector
-      faces = box(0, 0, 0, 0.2, 0.2, 0.012, '#2f6b3a').concat(holes([[0.02, 0.02], [0.18, 0.02], [0.02, 0.18], [0.18, 0.18]], 0.012));
-      faces = faces.concat(box(0.05, 0.05, 0.012, 0.1, 0.1, h * 0.25, '#1b1f26'), cyl(0.1, 0.1, 0.012 + h * 0.25, 0.05, h * 0.5, 16, M3), cyl(0.1, 0.1, 0.012 + h * 0.75, 0.042, h * 0.2, 16, M2), cyl(0.1, 0.1, 0.012 + h * 0.95, 0.03, 0.006, 12, '#1b1f26'));
-      faces = faces.concat(box(0.03, 0.0, 0.012, 0.14, 0.02, 0.015, M3), box(0.15, 0.14, 0.012, 0.03, 0.03, 0.01, M3));
-      c = [x + 0.1, y + 0.1, z + h / 2]; break;
+      // Raspberry Pi HQ camera (IMX477): 38 x 38 mm board, 30 mm hole pattern, 36 mm milled mount with the CS barrel and focus ring, 18.6 mm tall without lens; FPC and tripod boss
+      faces = box(0, 0, 0, 0.038, 0.038, 0.0016, PCB).concat(holes(pattern(0.019, 0.019, 0.03, 0.03), 0.0016, 0.00125));
+      const k = h / 0.0186;
+      faces = faces.concat(cyl(0.019, 0.019, 0.0016, 0.018, 0.006 * k, 20, M3), cyl(0.019, 0.019, 0.0016 + 0.006 * k, 0.0125, 0.009 * k, 20, M2), cyl(0.019, 0.019, 0.0016 + 0.015 * k, 0.0128, 0.002 * k, 20, M3), discZ(x + 0.019, y + 0.019, z + 0.0016 + 0.017 * k, 0.007, slot, BLACK));
+      faces = faces.concat(box(0.008, -0.001, 0.0016, 0.02, 0.003, 0.0025, M3), box(0.014, 0.034, 0.0016, 0.01, 0.005, 0.006, M3));
+      c = [x + 0.019, y + 0.019, z + h / 2]; break;
     }
     case 'lw20': {
-      // LW20/C: 20 × 30 × 35 mm IP67 housing, two round apertures on the front, cable gland at the back
-      faces = box(0, 0, 0, 0.18, 0.24, h, '#1b1f26').concat(box(0.01, 0.01, h, 0.16, 0.22, 0.008, M3));
-      faces = faces.concat(discX(x + 0.18, y + 0.07, z + h * 0.55, 0.045, 1, slot, '#2b3a55'), discX(x + 0.18, y + 0.17, z + h * 0.55, 0.045, 1, slot, '#2b3a55'), cx_(0.16, 0.07, h * 0.55, 0.05, 0.02, 12, M3), cx_(0.16, 0.17, h * 0.55, 0.05, 0.02, 12, M3));
-      faces = faces.concat(cx_(-0.05, 0.12, h * 0.4, 0.02, 0.05, 10, M3), cx_(-0.12, 0.12, h * 0.4, 0.008, 0.08, 8, '#1b1f26'));
-      c = [x + 0.09, y + 0.12, z + h / 2]; break;
+      // LW20/C: 43 x 30 x 20 mm IP67 housing with the beam along +X, two round apertures on the front face, cable gland at the back
+      faces = box(0, 0, 0, 0.043, 0.03, h, BLACK).concat(box(0.001, 0.001, h, 0.041, 0.028, 0.0008, M3));
+      faces = faces.concat(discX(x + 0.043, y + 0.009, z + h * 0.55, 0.0055, 1, slot, '#2b3a55'), discX(x + 0.043, y + 0.021, z + h * 0.55, 0.0055, 1, slot, '#2b3a55'), cx_(0.041, 0.009, h * 0.55, 0.006, 0.002, 12, M3), cx_(0.041, 0.021, h * 0.55, 0.006, 0.002, 12, M3));
+      faces = faces.concat(cx_(-0.006, 0.015, h * 0.4, 0.0025, 0.006, 10, M3), cx_(-0.016, 0.015, h * 0.4, 0.0012, 0.01, 8, BLACK));
+      c = [x + 0.0215, y + 0.015, z + h / 2]; break;
     }
     case 'alpha80': {
-      // Alpha 80A HV: 88.5 × 36.6 × 19 mm finned body, two power leads one end, three motor leads the other
-      faces = box(0, 0, 0, 0.4, 0.24, h * 0.55, '#1b1f26');
-      for (let i = 0; i < 9; i++) faces = faces.concat(box(0.03 + i * 0.04, 0.02, h * 0.55, 0.02, 0.2, h * 0.45, M2));
-      faces = faces.concat(box(0.12, 0.09, h * 0.55, 0.16, 0.06, h * 0.46, M3));
-      for (const [wy, col] of [[0.08, '#d94b3d'], [0.16, '#1b1f26']] as [number, string][]) faces = faces.concat(cx_(-0.12, wy, h * 0.25, 0.018, 0.12, 8, col));
-      for (const wy of [0.05, 0.12, 0.19]) faces = faces.concat(cx_(0.4, wy, h * 0.25, 0.016, 0.12, 8, '#1b1f26'));
-      c = [x + 0.2, y + 0.12, z + h / 2]; break;
+      // ALPHA 80A 12S: 88.5 x 36.6 x 19 mm finned body, two power leads on the -X end, three motor leads on the +X end
+      faces = box(0, 0, 0, 0.0885, 0.0366, h * 0.55, BLACK);
+      for (let i = 0; i < 9; i++) faces = faces.concat(box(0.005 + i * 0.009, 0.002, h * 0.55, 0.004, 0.0326, h * 0.45, M2));
+      faces = faces.concat(box(0.025, 0.012, h * 0.55, 0.04, 0.012, h * 0.46, M3));
+      for (const [wy, col] of [[0.012, RED], [0.024, BLACK]] as [number, string][]) faces = faces.concat(cx_(-0.025, wy, h * 0.25, 0.002, 0.025, 8, col));
+      for (const wy of [0.008, 0.018, 0.028]) faces = faces.concat(cx_(0.0885, wy, h * 0.25, 0.0018, 0.025, 8, BLACK));
+      c = [x + 0.044, y + 0.018, z + h / 2]; break;
     }
     case 'at7215': {
-      // AT7215: 81.4 mm outrunner (57.9 mm long) on its cross mount, axis along +X, prop adapter and shaft forward
-      const r = 0.15, cy0 = 0.15, cz0 = h * 0.5 + 0.02;
-      faces = box(0.0, 0.03, 0, 0.03, 0.24, 0.02, M3).concat(box(0.0, 0.13, 0, 0.03, 0.04, cz0, M3), box(-0.06, 0.13, cz0 - 0.02, 0.09, 0.04, 0.04, M3));
-      faces = faces.concat(cx_(0.03, cy0, cz0, r * 0.7, 0.05, 18, M3), cx_(0.08, cy0, cz0, r, 0.22, 24, M2), cx_(0.3, cy0, cz0, r * 0.92, 0.02, 24, M3));
-      for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; faces = faces.concat(box(0.1, cy0 + Math.cos(a) * r * 0.93 - 0.01, cz0 + Math.sin(a) * r * 0.93 - 0.01, 0.18, 0.02, 0.02, '#1b1f26')); }
-      faces = faces.concat(cx_(0.32, cy0, cz0, 0.05, 0.03, 12, M3), cx_(0.35, cy0, cz0, 0.02, 0.08, 10, '#c8ccd2'), cx_(0.43, cy0, cz0, 0.035, 0.015, 10, M3));
-      for (const wy of [0.1, 0.15, 0.2]) faces = faces.concat(cx_(-0.14, wy, cz0 - r * 0.5, 0.014, 0.12, 8, '#1b1f26'));
-      c = [x + 0.15, y + 0.15, z + cz0]; break;
+      // AT7215: 81.4 mm outrunner, 57.9 mm long, axis along +X on its cross mount; 10 mm shaft and prop adapter forward, three leads aft
+      const r = h / 2, cy0 = 0.0407, cz0 = r + 0.003;
+      faces = box(0, cy0 - 0.0357, 0, 0.006, 0.0714, 0.003, M3).concat(box(0, cy0 - 0.005, 0, 0.006, 0.01, cz0, M3), holes([[0.003, cy0 - 0.032], [0.003, cy0 + 0.032]], 0.003, 0.002));
+      faces = faces.concat(cx_(0.006, cy0, cz0, 0.02, 0.006, 16, M3), cx_(0.012, cy0, cz0, r, 0.0519, 24, M2), cx_(0.0639, cy0, cz0, r * 0.92, 0.004, 24, M3));
+      for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; faces = faces.concat(box(0.018, cy0 + Math.cos(a) * r * 0.94 - 0.0025, cz0 + Math.sin(a) * r * 0.94 - 0.0025, 0.04, 0.005, 0.005, BLACK)); }
+      faces = faces.concat(cx_(0.0679, cy0, cz0, 0.005, 0.03, 10, ALU), cx_(0.0979, cy0, cz0, 0.012, 0.006, 12, M3));
+      for (let i = 0; i < 3; i++) faces = faces.concat(cx_(-0.03, cy0 - 0.01 + i * 0.01, cz0 - r * 0.5, 0.0018, 0.03, 8, BLACK));
+      c = [x + 0.045, y + cy0, z + cz0]; break;
     }
     case 'hv6120': {
-      // MKS HV6120 slim wing servo (23 × 8 × 26.5 mm): thin case, mounting ears, output gear and arm, lead
-      faces = box(0.02, 0.02, 0, 0.2, 0.08, h * 0.8, '#1b1f26').concat(box(0, 0.035, h * 0.35, 0.02, 0.05, 0.012, M3), box(0.22, 0.035, h * 0.35, 0.02, 0.05, 0.012, M3));
-      faces = faces.concat(holes([[0.01, 0.06], [0.23, 0.06]], h * 0.35 + 0.012, 0.006));
-      faces = faces.concat(cyl(0.07, 0.06, h * 0.8, 0.03, h * 0.12, 12, M2), cyl(0.07, 0.06, h * 0.92, 0.018, h * 0.08, 10, M3), box(0.06, 0.055, h * 1.0, 0.16, 0.014, 0.008, '#e6e2d6'), cyl(0.2, 0.062, h * 1.0, 0.006, 0.008, 6, M3));
-      faces = faces.concat(cx_(-0.08, 0.05, h * 0.2, 0.008, 0.1, 6, '#d94b3d'), cx_(-0.08, 0.065, h * 0.2, 0.008, 0.1, 6, '#1b1f26'));
-      c = [x + 0.12, y + 0.06, z + h / 2]; break;
+      // MKS HV6120 slim wing servo (23 x 8 x 26.5 mm standing on its edge): thin case, mounting ears, output gear and arm, lead
+      faces = box(0.002, 0.002, 0, 0.02, 0.008, h * 0.8, BLACK).concat(box(0, 0.0035, h * 0.35, 0.002, 0.005, 0.0012, M3), box(0.022, 0.0035, h * 0.35, 0.002, 0.005, 0.0012, M3));
+      faces = faces.concat(holes([[0.001, 0.006], [0.023, 0.006]], h * 0.35 + 0.0012, 0.0006));
+      faces = faces.concat(cyl(0.007, 0.006, h * 0.8, 0.003, h * 0.12, 12, M2), cyl(0.007, 0.006, h * 0.92, 0.0018, h * 0.08, 10, M3), box(0.006, 0.0055, h, 0.016, 0.0014, 0.0008, JST), cyl(0.02, 0.0062, h, 0.0006, 0.0008, 6, M3));
+      faces = faces.concat(cx_(-0.008, 0.005, h * 0.2, 0.0008, 0.01, 6, RED), cx_(-0.008, 0.0065, h * 0.2, 0.0008, 0.01, 6, BLACK));
+      c = [x + 0.012, y + 0.006, z + h / 2]; break;
     }
     case 'ms4525': {
-      // MS4525DO board with two barbed ports, silicone lines to a pitot-static tube along +X
-      faces = box(0, 0, 0, 0.1, 0.08, 0.012, '#2f6b3a').concat(box(0.02, 0.02, 0.012, 0.05, 0.04, h * 0.5, '#1b1f26'));
-      faces = faces.concat(cyl(0.035, 0.04, 0.012 + h * 0.5, 0.008, h * 0.4, 8, M3), cyl(0.06, 0.04, 0.012 + h * 0.5, 0.008, h * 0.4, 8, M3), box(0.07, 0.0, 0.012, 0.03, 0.02, 0.012, '#e6e2d6'));
-      faces = faces.concat(cx_(0.035, 0.04, 0.012 + h * 0.9, 0.008, 0.16, 6, '#c8ccd2'), cx_(0.06, 0.055, 0.012 + h * 0.9, 0.008, 0.14, 6, '#c8ccd2'));
-      faces = faces.concat(cx_(0.18, 0.04, h * 0.6, 0.012, 0.22, 10, '#c8ccd2'), cx_(0.4, 0.04, h * 0.6, 0.006, 0.08, 8, '#c8ccd2'), cyl(0.2, 0.04, 0.012, 0.014, h * 0.6, 8, M3));
-      c = [x + 0.1, y + 0.04, z + h / 2]; break;
+      // MS4525DO on a 20 x 12 mm carrier, two barbed ports, silicone lines to a 100 mm pitot-static tube along +X on a short mast
+      faces = box(0, 0, 0, 0.02, 0.012, 0.0016, PCB).concat(box(0.003, 0.002, 0.0016, 0.012, 0.008, 0.005, BLACK));
+      faces = faces.concat(cyl(0.006, 0.006, 0.0066, 0.0015, 0.005, 8, M3), cyl(0.012, 0.006, 0.0066, 0.0015, 0.005, 8, M3), box(0.015, -0.001, 0.0016, 0.005, 0.004, 0.003, JST));
+      faces = faces.concat(cx_(0.006, 0.006, 0.0116, 0.0012, 0.04, 6, ALU), cx_(0.012, 0.0085, 0.0116, 0.0012, 0.036, 6, ALU));
+      faces = faces.concat(cx_(0.045, 0.006, h * 0.6, 0.003, 0.1, 10, ALU), cx_(0.145, 0.006, h * 0.6, 0.0015, 0.015, 8, ALU), cyl(0.05, 0.006, 0.0016, 0.0025, h * 0.6, 8, M3));
+      c = [x + 0.03, y + 0.006, z + h / 2]; break;
     }
     case 'ping200': {
-      // ping200X: 47 × 54 × 9 mm black anodised case, SMA on one edge, five-wire lead on the other, status LED
-      faces = box(0, 0, 0, 0.24, 0.18, h, '#1b1f26').concat(box(0.01, 0.01, h, 0.22, 0.16, 0.004, M3), box(0.05, 0.05, h + 0.004, 0.14, 0.08, 0.002, '#c8ccd2'));
-      faces = faces.concat(holes([[0.02, 0.02], [0.22, 0.02], [0.02, 0.16], [0.22, 0.16]], h + 0.004, 0.008));
-      faces = faces.concat(cx_(0.24, 0.09, h * 0.5, 0.016, 0.05, 8, '#c9a227'), box(-0.03, 0.06, h * 0.2, 0.03, 0.06, h * 0.5, M3), box(0.2, 0.14, h + 0.004, 0.012, 0.012, 0.006, '#3b9d5a'));
-      for (let i = 0; i < 5; i++) faces = faces.concat(cx_(-0.12, 0.065 + i * 0.012, h * 0.45, 0.004, 0.09, 6, i % 2 ? '#d94b3d' : '#1b1f26'));
-      c = [x + 0.12, y + 0.09, z + h / 2]; break;
+      // ping200X: 47 x 54 x 9 mm black anodised case, SMA on the +X edge, five-wire lead on the -X edge, status LED
+      faces = box(0, 0, 0, 0.047, 0.054, h, BLACK).concat(box(0.001, 0.001, h, 0.045, 0.052, 0.0006, M3), box(0.008, 0.015, h + 0.0006, 0.031, 0.024, 0.0003, ALU));
+      faces = faces.concat(holes(pattern(0.0235, 0.027, 0.039, 0.046), h + 0.0006, 0.0015));
+      faces = faces.concat(cx_(0.047, 0.027, h * 0.5, 0.003, 0.01, 8, GOLD), box(-0.004, 0.02, h * 0.2, 0.004, 0.014, h * 0.5, M3), box(0.04, 0.045, h + 0.0006, 0.002, 0.002, 0.001, GREEN));
+      for (let i = 0; i < 5; i++) faces = faces.concat(cx_(-0.022, 0.021 + i * 0.003, h * 0.45, 0.0007, 0.018, 6, i % 2 ? RED : BLACK));
+      c = [x + 0.0235, y + 0.027, z + h / 2]; break;
     }
     case 'orinnano': {
-      // Orin Nano developer kit (100 × 79 × 21 mm): carrier board, module, finned heatsink and fan, port stack on one edge
-      faces = box(0, 0, 0, 0.36, 0.28, 0.012, '#2f6b3a').concat(holes([[0.02, 0.02], [0.34, 0.02], [0.02, 0.26], [0.34, 0.26]], 0.012));
-      faces = faces.concat(box(0.06, 0.05, 0.012, 0.25, 0.16, 0.02, '#2f6b3a'), box(0.06, 0.05, 0.032, 0.25, 0.16, 0.01, M3));
-      for (let i = 0; i < 10; i++) faces = faces.concat(box(0.07 + i * 0.024, 0.05, 0.042, 0.012, 0.16, h * 0.55, M2));
-      faces = faces.concat(cyl(0.185, 0.13, 0.042 + h * 0.55, 0.07, h * 0.3, 16, '#1b1f26'), cyl(0.185, 0.13, 0.042 + h * 0.85, 0.02, 0.006, 8, M3));
-      faces = faces.concat(box(0.0, 0.22, 0.012, 0.09, 0.06, 0.05, M3), box(0.1, 0.23, 0.012, 0.06, 0.05, 0.04, M3), box(0.17, 0.23, 0.012, 0.06, 0.05, 0.04, M3), box(0.25, 0.24, 0.012, 0.04, 0.03, 0.02, '#1b1f26'), box(0.33, 0.1, 0.012, 0.03, 0.03, 0.02, '#1b1f26'));
-      c = [x + 0.18, y + 0.14, z + h / 2]; break;
+      // Jetson Orin Nano developer kit (100 x 79 x 21 mm): carrier board, module, finned heatsink and fan, RJ45, USB and HDMI along the far edge, barrel jack
+      faces = box(0, 0, 0, 0.1, 0.079, 0.0016, PCB).concat(holes(pattern(0.05, 0.0395, 0.092, 0.071), 0.0016, 0.0015));
+      faces = faces.concat(box(0.015, 0.012, 0.0016, 0.07, 0.045, 0.003, PCB), box(0.015, 0.012, 0.0046, 0.07, 0.045, 0.002, M3));
+      for (let i = 0; i < 12; i++) faces = faces.concat(box(0.017 + i * 0.0055, 0.012, 0.0066, 0.0025, 0.045, h * 0.55, M2));
+      faces = faces.concat(cyl(0.05, 0.0345, 0.0066 + h * 0.55, 0.02, h * 0.3, 16, BLACK), cyl(0.05, 0.0345, 0.0066 + h * 0.85, 0.005, 0.001, 8, M3));
+      faces = faces.concat(box(0, 0.062, 0.0016, 0.016, 0.017, 0.013, M3), box(0.02, 0.064, 0.0016, 0.013, 0.015, 0.007, M3), box(0.036, 0.064, 0.0016, 0.013, 0.015, 0.007, M3), box(0.055, 0.067, 0.0016, 0.015, 0.01, 0.005, BLACK), box(0.09, 0.03, 0.0016, 0.009, 0.009, 0.006, BLACK));
+      c = [x + 0.05, y + 0.0395, z + h / 2]; break;
     }
     case 'hg2409p': {
-      // HG2409P flat patch (114 × 114 × 32 mm): white radome on a bracket bar, pigtail to an SMA
-      faces = box(0.02, 0.09, 0, 0.16, 0.02, h * 0.5, M3).concat(box(0.0, 0.0, h * 0.5, 0.2, 0.2, h * 0.5, '#e6e2d6'), box(0.02, 0.02, h * 1.0, 0.16, 0.16, 0.004, '#efece4'));
-      faces = faces.concat(cy_(0.1, -0.06, h * 0.75, 0.006, 0.06, 6, '#1b1f26'), cy_(0.1, -0.09, h * 0.75, 0.014, 0.03, 8, '#c9a227'));
-      c = [x + 0.1, y + 0.1, z + h / 2]; break;
+      // HG2409P flat patch (114 x 114 x 23 mm): white radome on a bracket bar, pigtail to an SMA
+      faces = box(0.01, 0.052, 0, 0.094, 0.01, h * 0.3, M3).concat(box(0, 0, h * 0.3, 0.114, 0.114, h * 0.7, JST), box(0.004, 0.004, h, 0.106, 0.106, 0.0006, '#efece4'));
+      faces = faces.concat(cy_(0.057, -0.02, h * 0.6, 0.0015, 0.02, 6, BLACK), cy_(0.057, -0.03, h * 0.6, 0.003, 0.01, 8, GOLD));
+      c = [x + 0.057, y + 0.057, z + h / 2]; break;
     }
     case 'ifc60': {
-      // IFC-60 packed in its deployment bag (3.9 in dia × 5.1 in): cylinder bag, drawstring collar, shroud-line bundle and bridle loop
-      faces = cyl(0.15, 0.15, 0, 0.13, h * 0.75, 18, '#d94b3d').concat(cyl(0.15, 0.15, h * 0.75, 0.12, h * 0.12, 18, '#e6e2d6'), cyl(0.15, 0.15, h * 0.87, 0.1, h * 0.06, 14, '#d94b3d'));
-      for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; faces = faces.concat(box(0.15 + Math.cos(a) * 0.125 - 0.006, 0.15 + Math.sin(a) * 0.125 - 0.006, h * 0.1, 0.012, 0.012, h * 0.6, '#1b1f26')); }
-      faces = faces.concat(cyl(0.15, 0.15, h * 0.93, 0.03, h * 0.07, 10, '#c8ccd2'), box(0.03, 0.03, 0, 0.24, 0.24, 0.01, M3));
-      c = [x + 0.15, y + 0.15, z + h / 2]; break;
+      // IFC-60-S packed in its deployment bag (99 mm dia x 81 mm): cylinder bag, drawstring collar, shroud-line bundle and bridle loop on a base plate
+      const cx0 = 0.0495, cy0 = 0.0495;
+      faces = cyl(cx0, cy0, 0, 0.043, h * 0.75, 18, RED).concat(cyl(cx0, cy0, h * 0.75, 0.04, h * 0.12, 18, JST), cyl(cx0, cy0, h * 0.87, 0.033, h * 0.06, 14, RED));
+      for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; faces = faces.concat(box(cx0 + Math.cos(a) * 0.041 - 0.002, cy0 + Math.sin(a) * 0.041 - 0.002, h * 0.1, 0.004, 0.004, h * 0.6, BLACK)); }
+      faces = faces.concat(cyl(cx0, cy0, h * 0.93, 0.01, h * 0.07, 10, ALU), box(0.01, 0.01, 0, 0.079, 0.079, 0.002, M3));
+      c = [x + cx0, y + cy0, z + h / 2]; break;
+    }
+    case 'chimera7': {
+      // Chimera7 Pro V2 (270 x 199 x 34 mm): 3 mm carbon bottom plate, four 6 mm arms at the 327 mm wheelbase angle with motor pads, 21 mm standoffs, 2 mm top plate, camera cage forward
+      const cb = BLACK, cx0 = 0.135, cy0 = 0.0995, ang = Math.atan2(199, 270);
+      faces = box(0.045, 0.035, 0, 0.18, 0.13, 0.003, cb).concat(holes(pattern(cx0, cy0, 0.03, 0.03), 0.003, 0.0015));
+      const arm: [number, number][] = [[0.02, -0.008], [0.16, -0.008], [0.16, 0.008], [0.02, 0.008]];
+      for (const a of [ang, Math.PI - ang, Math.PI + ang, -ang]) {
+        faces = faces.concat(turned(arm, cx0, cy0, a, 0.003, 0.009, cb));
+        const ex = cx0 + Math.cos(a) * 0.1635, ey = cy0 + Math.sin(a) * 0.1635;
+        faces = faces.concat(cyl(ex, ey, 0.009, 0.015, 0.002, 12, M3), holes([[ex, ey]], 0.011, 0.004));
+      }
+      for (const [sx, sy] of pattern(cx0, cy0, 0.03, 0.03)) faces = faces.concat(cyl(sx, sy, 0.009, 0.0025, Math.max(0.005, h - 0.013), 8, ALU));
+      faces = faces.concat(box(0.075, 0.05, Math.max(0.014, h - 0.004), 0.12, 0.1, 0.002, cb), box(0.2, 0.07, 0.003, 0.003, 0.06, Math.max(0.01, h - 0.006), cb), box(0.203, 0.07, 0.003, 0.02, 0.003, Math.max(0.01, h - 0.006), cb), box(0.203, 0.127, 0.003, 0.02, 0.003, Math.max(0.01, h - 0.006), cb));
+      faces = faces.concat(box(0.04, 0.09, 0.003, 0.01, 0.02, 0.004, M3), box(0.037, 0.095, 0.005, 0.003, 0.01, 0.003, GOLD));
+      c = [x + cx0, y + cy0, z + h / 2]; break;
+    }
+    case 'px6cmini': {
+      // Pixhawk 6C Mini (54.3 x 39 x 17.5 mm): black case, JST-GH rows on both long edges, USB-C on the end, orientation arrow, status LEDs
+      const H = Math.max(h, 0.0175), cb = BLACK;
+      faces = box(0, 0, 0, 0.0543, 0.039, H, cb).concat(box(0.001, 0.001, H, 0.0523, 0.037, 0.0008, M2), box(0.012, 0.01, H + 0.0008, 0.028, 0.019, 0.0003, ALU));
+      faces = faces.concat(box(0.035, 0.017, H + 0.0011, 0.008, 0.004, 0.0004, RED), box(0.043, 0.015, H + 0.0011, 0.003, 0.008, 0.0004, RED));
+      jstRow(0.004, -0.002, H * 0.3, 5, 0.0095, 0.002, H * 0.4); jstRow(0.006, 0.039, H * 0.3, 4, 0.011, 0.002, H * 0.4);
+      faces = faces.concat(box(0.0543, 0.015, H * 0.35, 0.002, 0.009, H * 0.3, M3), box(0.0543, 0.028, H * 0.35, 0.0015, 0.005, H * 0.2, M3));
+      faces = faces.concat(box(0.003, 0.031, H + 0.0008, 0.002, 0.002, 0.0006, GREEN), box(0.007, 0.031, H + 0.0008, 0.002, 0.002, 0.0006, GOLD), box(0.011, 0.031, H + 0.0008, 0.002, 0.002, 0.0006, RED));
+      c = [x + 0.027, y + 0.0195, z + H / 2]; break;
+    }
+    case 'tekko65': {
+      // Tekko32 F4 Metal 4in1 65A (43 x 44 mm): PCB with the 30.5 mm M4 holes, eight metal-cased MOSFETs, F4 MCU, bulk capacitor along the pack edge, gold pads, JST-SH signal header
+      const T = 0.0016;
+      faces = box(0, 0, 0, 0.043, 0.044, T, PCB).concat(holes(pattern(0.0215, 0.022, 0.0305, 0.0305), T, 0.002));
+      for (const [mx, my] of [[0.011, 0.003], [0.027, 0.003], [0.011, 0.035], [0.027, 0.035], [0.003, 0.013], [0.003, 0.025], [0.035, 0.013], [0.035, 0.025]] as [number, number][]) faces = faces.concat(box(mx, my, T, 0.005, 0.006, 0.0012, ALU));
+      faces = faces.concat(box(0.018, 0.0185, T, 0.007, 0.007, 0.001, BLACK), box(0.019, 0.0195, T + 0.001, 0.005, 0.005, 0.0002, M3));
+      faces = faces.concat(cx_(0.011, 0.044, T + 0.005, 0.005, 0.02, 10, BLACK), discX(x + 0.031, y + 0.044, z + T + 0.005, 0.005, 1, slot, ALU));
+      faces = faces.concat(box(0, 0.015, T, 0.003, 0.005, 0.0004, GOLD), box(0, 0.023, T, 0.003, 0.005, 0.0004, GOLD));
+      for (const [px, py] of [[0.0005, 0.0005], [0.038, 0.0005], [0.0005, 0.0425], [0.038, 0.0425]] as [number, number][]) for (let k = 0; k < 3; k++) faces = faces.concat(box(px + k * 0.0015, py, T, 0.001, 0.001, 0.0003, GOLD));
+      faces = faces.concat(box(0.038, 0.014, T, 0.003, 0.012, 0.003, JST));
+      c = [x + 0.0215, y + 0.022, z + h / 2]; break;
+    }
+    case 'f60prov': {
+      // F60 PRO V 2207.5 (26.8 mm dia x 31.7 mm): cross base with the 16 mm M3 pattern, stator, bell with vent slots, cap, M5 shaft and prop nut, three leads
+      const cx0 = 0.015, cy0 = 0.015, r = 0.0134, bz = 0.0015 + h * 0.2, bh = h * 0.55;
+      faces = box(0.003, 0.013, 0, 0.024, 0.004, 0.0015, M3).concat(box(0.013, 0.003, 0, 0.004, 0.024, 0.0015, M3), holes([[0.007, cy0], [0.023, cy0], [cx0, 0.007], [cx0, 0.023]], 0.0015, 0.0015));
+      faces = faces.concat(cyl(cx0, cy0, 0.0015, 0.009, h * 0.2, 16, M3), cyl(cx0, cy0, bz, r, bh, 20, '#3a3f47'));
+      for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; faces = faces.concat(box(cx0 + Math.cos(a) * r * 0.96 - 0.0012, cy0 + Math.sin(a) * r * 0.96 - 0.0012, bz + bh * 0.2, 0.0024, 0.0024, bh * 0.5, BLACK)); }
+      faces = faces.concat(cyl(cx0, cy0, bz + bh, r, h * 0.06, 20, M2), cyl(cx0, cy0, bz + bh + h * 0.06, 0.006, h * 0.05, 14, M3), cyl(cx0, cy0, bz + bh + h * 0.11, 0.0025, h * 0.14, 8, ALU), cyl(cx0, cy0, bz + bh + h * 0.25, 0.004, h * 0.05, 6, M3));
+      for (let i = 0; i < 3; i++) faces = faces.concat(cx_(-0.012, 0.011 + i * 0.004, 0.002, 0.0009, 0.014, 6, BLACK));
+      c = [x + cx0, y + cy0, z + h / 2]; break;
+    }
+    case 'hq7035': {
+      // HQProp 7 x 3.5 x 3 V1S (177.8 mm dia, hub 13.2 mm dia x 6.7 mm): three tapered polycarbonate blades at 120 degrees, round hub with the 5 mm bore
+      const cx0 = 0.0889, cy0 = 0.0889, pc = ALU;
+      const blade: [number, number][] = [[0.006, -0.006], [0.03, -0.012], [0.06, -0.011], [0.086, -0.004], [0.086, 0.004], [0.06, 0.011], [0.03, 0.012], [0.006, 0.006]];
+      for (let i = 0; i < 3; i++) faces = faces.concat(turned(blade, cx0, cy0, (i / 3) * Math.PI * 2 + 0.3, h * 0.2, h * 0.45, pc));
+      faces = faces.concat(cyl(cx0, cy0, 0, 0.0066, h, 14, pc), discZ(x + cx0, y + cy0, z + h, 0.0025, slot, M3), cyl(cx0, cy0, h * 0.2, 0.0075, h * 0.2, 14, '#b4b9c2'));
+      c = [x + cx0, y + cy0, z + h / 2]; break;
+    }
+    case 'tattu1300': {
+      // Tattu R-Line V3 1300 mAh 6S (75 x 38 x 38 mm): shrink-wrapped brick with softened edges, label band, XT60 lead and balance lead out the +X end
+      const H = h, cb = BLACK;
+      faces = box(0.002, 0, 0.002, 0.071, 0.038, H - 0.004, cb).concat(box(0, 0.002, 0.002, 0.075, 0.034, H - 0.004, cb), box(0.002, 0.002, 0, 0.071, 0.034, H, cb));
+      faces = faces.concat(box(0.018, -0.0005, 0.006, 0.035, 0.039, H * 0.45, GOLD), box(0.018, 0.002, H + 0.0003, 0.035, 0.034, 0.0005, GOLD), box(0.025, 0.01, H + 0.0008, 0.02, 0.018, 0.0003, cb));
+      faces = faces.concat(cx_(0.075, 0.016, H * 0.5, 0.0015, 0.012, 6, RED), cx_(0.075, 0.021, H * 0.5, 0.0015, 0.012, 6, cb), box(0.087, 0.013, H * 0.5 - 0.004, 0.016, 0.008, 0.008, '#e0b52a'));
+      for (let i = 0; i < 4; i++) faces = faces.concat(cx_(0.075, 0.028 + i * 0.0015, H * 0.25, 0.0005, 0.011, 6, i % 2 ? BLACK : JST));
+      faces = faces.concat(box(0.086, 0.027, H * 0.25 - 0.002, 0.005, 0.008, 0.004, JST));
+      c = [x + 0.0375, y + 0.019, z + H / 2]; break;
+    }
+    case 'm10gps': {
+      // Holybro M10 GPS (50 mm dia x 14.4 mm): black puck over the 25 mm patch, orientation arrow, LED and safety switch on top, JST-GH lead out the side
+      const H = h, cb = BLACK;
+      faces = cyl(0.025, 0.025, 0, 0.025, H, 24, cb).concat(cyl(0.025, 0.025, H, 0.024, 0.0008, 24, M2), box(0.018, 0.023, H + 0.0008, 0.012, 0.004, 0.0003, JST), box(0.03, 0.02, H + 0.0008, 0.003, 0.01, 0.0003, JST));
+      faces = faces.concat(cyl(0.025, 0.038, H + 0.0008, 0.003, 0.0015, 10, M3), cyl(0.025, 0.038, H + 0.0023, 0.0015, 0.0006, 8, RED), box(0.012, 0.012, H + 0.0008, 0.002, 0.002, 0.0006, GREEN));
+      faces = faces.concat(cy_(0.025, -0.02, 0.004, 0.001, 0.021, 6, cb), box(0.021, -0.026, 0.0025, 0.008, 0.006, 0.003, JST));
+      c = [x + 0.025, y + 0.025, z + H / 2]; break;
+    }
+    case 'sik915': {
+      // SiK Telemetry Radio V3 (53 x 28 x 10.7 mm): black case, RP-SMA and rubber-duck antenna along +X, JST-GH and micro-USB on the other end, two LEDs
+      const H = h, cb = BLACK;
+      faces = box(0, 0, 0, 0.053, 0.028, H, cb).concat(box(0.001, 0.001, H, 0.051, 0.026, 0.0008, M3), box(0.01, 0.006, H + 0.0008, 0.025, 0.016, 0.0003, ALU));
+      faces = faces.concat(cx_(0.053, 0.014, H * 0.5, 0.0025, 0.005, 8, GOLD), cx_(0.058, 0.014, H * 0.5, 0.0018, 0.008, 8, cb), cx_(0.066, 0.014, H * 0.5, 0.0014, 0.04, 8, '#2b2f36'));
+      faces = faces.concat(box(-0.0025, 0.008, H * 0.25, 0.0025, 0.0083, H * 0.45, JST), box(-0.002, 0.02, H * 0.35, 0.002, 0.005, H * 0.2, M3));
+      faces = faces.concat(box(0.043, 0.003, H + 0.0008, 0.002, 0.002, 0.0006, GREEN), box(0.047, 0.003, H + 0.0008, 0.002, 0.002, 0.0006, RED));
+      c = [x + 0.0265, y + 0.014, z + H / 2]; break;
+    }
+    case 'thumbpro': {
+      // RunCam Thumb Pro W (54 x 25.5 x 21 mm): black body on a mount tab, lens barrel and glass forward along +X, record button on top, microSD slot on the side, 2-pin power at the rear
+      const H = Math.max(0.004, h - 0.0015), cb = BLACK;
+      faces = box(0.008, 0.008, 0, 0.012, 0.01, 0.0015, M3).concat(box(0, 0, 0.0015, 0.054, 0.0255, H, cb), box(0.001, 0.001, 0.0015 + H, 0.052, 0.0235, 0.0005, M3));
+      faces = faces.concat(cx_(0.054, 0.01275, 0.0015 + H * 0.5, 0.0075, 0.004, 14, M3), cx_(0.058, 0.01275, 0.0015 + H * 0.5, 0.0065, 0.002, 14, cb), discX(x + 0.06, y + 0.01275, z + 0.0015 + H * 0.5, 0.0045, 1, slot, '#2b3a55'));
+      faces = faces.concat(cyl(0.038, 0.01275, 0.002 + H, 0.0025, 0.0012, 8, RED), box(0.018, 0.0255, 0.006, 0.01, 0.0008, 0.0025, M3), box(-0.0025, 0.01, 0.006, 0.0025, 0.005, 0.004, JST), box(0.004, 0.003, 0.002 + H, 0.002, 0.002, 0.0005, GREEN));
+      c = [x + 0.027, y + 0.01275, z + 0.0015 + H / 2]; break;
     }
   }
   if (fs !== 1) {

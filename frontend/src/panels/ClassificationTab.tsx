@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore, intakeIncomplete } from '../store';
 import { CATALOG, CORE_SLOTS, GENERIC_NAME, SLOTS, type Node, type Slot } from '../lib/catalog';
 import { AF_THUMB, THUMBS, type ThumbFace } from '../lib/geometry';
 import type { Outcome, Rule } from '../lib/rules';
-import { destCellsOf, overallOf, slotStatus } from '../lib/viewmodel';
+import { attentionOf, destCellsOf, overallOf, slotStatus } from '../lib/viewmodel';
 
 type Level = 0 | 1 | 2 | 3 | 4;
 const LEVEL_COLOR: Record<Level, string> = { 0: 'var(--m2)', 1: 'var(--amber)', 2: 'var(--amber)', 3: 'var(--red)', 4: 'var(--black)' };
@@ -50,15 +50,22 @@ function RiskBar({ level }: { level: Level }) {
   );
 }
 
+/** the part as drawn in the viewport, 128x100 so the shape reads at a glance */
 function Thumb({ faces }: { faces: ThumbFace[] | null }) {
-  if (!faces) return <div className="w-14 h-11 border border-dashed border-line rounded-r" />;
-  return <svg viewBox="0 0 56 44" className="w-14 h-11 block">{faces.map((f, i) => <polygon key={i} points={f.pts} fill={f.fill} stroke={f.stroke} strokeWidth="0.8" strokeDasharray={f.dash || undefined} strokeLinejoin="round" />)}</svg>;
+  if (!faces) return <div className="w-32 h-[100px] border border-dashed border-line rounded-r" />;
+  return <svg viewBox="0 0 56 44" className="w-32 h-[100px] block">{faces.map((f, i) => <polygon key={i} points={f.pts} fill={f.fill} stroke={f.stroke} strokeWidth="0.5" strokeDasharray={f.dash || undefined} strokeLinejoin="round" />)}</svg>;
 }
 
 /** Classification: the part visually, why it trips, and the regulation behind an expand. Only parts of concern up front. */
 export function ClassificationTab({ o }: { o: Outcome }) {
   const s = useStore();
-  const [showClean, setShowClean] = useState(false);
+  const [reasonFor, setReasonFor] = useState<Node | null>(null);
+  useEffect(() => {
+    if (!reasonFor) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setReasonFor(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [reasonFor]);
   const overall = overallOf(o);
   const incomplete = intakeIncomplete(s.project?.intake ?? null);
   const components = s.project?.components ?? CORE_SLOTS;
@@ -69,7 +76,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
     return {
       node,
       name: node === 'airframe' ? 'Airframe' : GENERIC_NAME[node as Slot],
-      model: node === 'airframe' ? 'Kestrel bracket · span ' + s.span.toFixed(1) + ' m' : pid ? CATALOG[pid].name : 'slot empty',
+      model: node === 'airframe' ? (s.geo.kind === 'frame' && s.geo.frame ? CATALOG[s.geo.frame].name + ' · ' + CATALOG[s.geo.frame].mpn : (s.project?.name ?? 'Kestrel') + ' bracket · span ' + s.span.toFixed(1) + ' m') : pid ? CATALOG[pid].name : 'slot empty',
       thumb: node === 'airframe' ? AF_THUMB : pid ? THUMBS[pid] : null,
       level,
       why: whyOf(o, node, unconfirmed, level),
@@ -87,7 +94,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
     const cells = destCellsOf(o, r.node);
     return (
       <div className="border-t border-line2">
-        <div className="w-full text-left grid grid-cols-[56px_minmax(0,1fr)_auto] gap-4 items-center px-4 py-3 text-ink">
+        <div className="w-full text-left grid grid-cols-[128px_minmax(0,1fr)_auto] gap-4 items-center px-4 py-3 text-ink">
           <Thumb faces={r.thumb} />
           <span className="min-w-0">
             <span className="block text-[15px] font-semibold">{r.name} <span className="text-muted font-normal text-[13px]">· {r.model}</span></span>
@@ -96,7 +103,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
           <span className="grid justify-items-end gap-1"><RiskBar level={r.level} /><span className="text-[12px] font-semibold whitespace-nowrap" style={{ color: st.color }}>{st.word}</span></span>
         </div>
         {(
-          <div className="px-4 pb-4 pl-[88px] grid gap-3 text-[13px]">
+          <div className="px-4 pb-4 pl-[160px] grid gap-3 text-[13px]">
             {r.rules.map((rule) => (
               <div key={rule.id} className="border border-line rounded-r p-3 grid gap-2 bg-surface">
                 <div className="flex justify-between gap-2 flex-wrap"><span className="font-mono font-semibold">{rule.entry}</span><span className="flex gap-1"><span className="chip chip-sm">eCFR {rule.ecfr}</span><span className="chip chip-sm">effective {rule.eff}</span></span></div>
@@ -118,7 +125,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
             <div className="grid grid-cols-5 gap-2 border-t border-line2 pt-2">
               {cells.map((c) => <div key={c.code} className="min-w-0"><div className="font-mono text-[12px] text-muted">{c.code}</div><div className="font-mono font-bold text-[13px] inline-block px-1 rounded-r" style={{ color: c.color, background: c.bg }}>{c.word}</div><div className="text-[11px] text-muted leading-[1.3]">{c.para}</div></div>)}
             </div>
-            <div className="flex gap-2"><button onClick={() => { s.select(r.node); s.setWorkspace('design'); }} className="btn">Open in Design</button><button onClick={() => { s.select(r.node); s.openReasoning(); }} className="btn">Full reasoning</button></div>
+            <div className="flex gap-2"><button onClick={() => { s.select(r.node); s.setWorkspace('design'); }} className="btn">Open in Design</button><button onClick={() => setReasonFor(r.node)} className="btn" aria-haspopup="dialog">Full reasoning</button></div>
           </div>
         )}
       </div>
@@ -144,15 +151,79 @@ export function ClassificationTab({ o }: { o: Outcome }) {
 
       {clean.length > 0 && (
         <div className="panel">
-          <button onClick={() => setShowClean((v) => !v)} aria-expanded={showClean} className="row-hover w-full text-left flex justify-between items-center px-4 min-h-12 bg-transparent border-0 text-ink cursor-pointer">
-            <span className="text-[14px]"><b>{clean.length} part{clean.length === 1 ? '' : 's'}</b> <span className="text-muted">· no match in the modeled rows · {clean.map((r) => r.name).join(', ')}</span></span>
-            <span className="text-[13px] text-muted">{showClean ? 'hide' : 'show'}</span>
-          </button>
-          {showClean && clean.map((r) => <Row key={r.node} r={r} />)}
+          <div className="panel-head"><div className="panel-title">{clean.length} part{clean.length === 1 ? '' : 's'} <span className="sub">· no match in the modeled rows</span></div><span /></div>
+          {clean.map((r) => <Row key={r.node} r={r} />)}
         </div>
       )}
 
-      <div className="text-[12px] text-muted px-1">Every status pairs a colour with a word. Green never appears here because the modeled rows are a limited scan: “no match” is not NLR. Full reasoning, declared facts, routing and rule packs are one click away on any part.</div>
+      <div className="text-[12px] text-muted px-1">Every status pairs a colour with a word. Green never appears here because the modeled rows are a limited scan: “no match” is not NLR.</div>
+      {reasonFor && (() => {
+        const r = rows.find((x) => x.node === reasonFor);
+        if (!r) return null;
+        const st = slotStatus(o, s.unconfirmed, r.node);
+        const cells = destCellsOf(o, r.node);
+        const attention = attentionOf(o, s.unconfirmed).filter((t) => t.target?.slot === r.node);
+        const mtFixed = o.rules.some((x) => x.cols === 'MT');
+        return (
+          <>
+            <div className="fixed inset-0 z-[29] bg-scrim" onMouseDown={() => setReasonFor(null)} />
+            <div role="dialog" aria-label={r.name + ' reasoning'} className="fixed z-[30] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(94vw,760px)] max-h-[85vh] panel flex flex-col">
+              <div className="panel-head">
+                <div className="panel-title">{r.name} <span className="sub">· {r.model} · why it reads</span></div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] font-semibold whitespace-nowrap" style={{ color: st.color }}>{st.word}</span>
+                  <button onClick={() => setReasonFor(null)} className="btn btn-xs btn-icon" aria-label="Close" title="Close · Esc">×</button>
+                </div>
+              </div>
+              <div className="overflow-auto min-h-0 p-4 grid gap-3 text-[13px]">
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <span className="status-word text-[16px]" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>
+                  <span className="text-muted">{overall.sub}</span>
+                </div>
+                {attention.length > 0 && (
+                  <div className="grid gap-1">
+                    <div className="font-semibold">Needs attention</div>
+                    {attention.map((t, i) => (
+                      <div key={i} className="grid grid-cols-[auto_1fr] gap-2 items-start">
+                        <span className="font-mono font-bold px-[5px] py-px rounded-r whitespace-nowrap" style={{ color: t.color, background: t.bg }}>{t.glyph} {t.word}</span>
+                        <span>{t.text} <span className="text-muted">· {t.action}</span></span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {r.rules.length === 0 && r.cannot.length === 0 && r.advisories.length === 0 && <div className="text-muted">{r.why}</div>}
+                {r.rules.map((rule) => (
+                  <div key={rule.id} className="border border-line rounded-r p-3 grid gap-2 bg-surface">
+                    <div className="flex justify-between gap-2 flex-wrap"><span className="font-mono font-semibold">{rule.entry} <span className="text-muted font-normal">· {rule.kind === 'USML' ? 'USML candidate' : 'CCL candidate'}</span></span><span className="flex gap-1"><span className="chip chip-sm">eCFR {rule.ecfr}</span><span className="chip chip-sm">effective {rule.eff}</span></span></div>
+                    <div>{rule.reason}</div>
+                    <blockquote className="m-0 px-3 py-2 border-l-2 border-line leading-[1.45]">“{rule.sentence}”</blockquote>
+                    <div>number that crossed: <b className="font-mono">{rule.number}</b></div>
+                    <div className="text-muted text-[12px]">{rule.fr} · {rule.url}</div>
+                    {rule.atoms.map((a, i) => <div key={i} className="font-mono text-[12px] text-muted">{a}</div>)}
+                  </div>
+                ))}
+                {r.unconfirmed && <div className="border border-line rounded-r p-3 bg-surface flex justify-between gap-2 items-center"><span>The swap on this part has not been confirmed. Compare function, performance, form and fit, then attest.</span><button onClick={() => { setReasonFor(null); s.reopen(r.node as Slot); s.setWorkspace('design'); }} className="btn">Open the comparison</button></div>}
+                {r.advisories.map((a, i) => <div key={i} className="border border-line rounded-r p-3 bg-surface text-amber">{a}</div>)}
+                {r.cannot.length > 0 && (
+                  <div className="border border-line rounded-r p-3 bg-surface grid gap-1">
+                    <div className="font-semibold">Missing evidence · these rules could not be evaluated</div>
+                    {r.cannot.map((c, i) => <div key={i} className="font-mono text-[12px] text-muted">{c}</div>)}
+                  </div>
+                )}
+                <div className="grid gap-1 border-t border-line2 pt-3">
+                  <div className="font-semibold">Destinations <span className="text-muted font-normal">· {r.name}{r.node === 'airframe' ? ' (product)' : ''}</span></div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {cells.map((c) => <div key={c.code} className="min-w-0"><div className="font-mono text-[12px] text-muted">{c.code}</div><div className="font-mono font-bold inline-block px-1 rounded-r" style={{ color: c.color, background: c.bg }}>{c.word}</div><div className="text-[11px] text-muted leading-[1.3]">{c.para}</div></div>)}
+                  </div>
+                  {mtFixed && <div className="font-semibold">MT fired; strip fixed at the strictest column set.</div>}
+                  <div className="text-amber font-semibold text-[12px]">Limited scan only · a no-match result is not NLR or export authorization. Parts 744 and 746 are not modeled.</div>
+                </div>
+                <div className="flex gap-2 border-t border-line2 pt-3"><button onClick={() => { setReasonFor(null); s.select(r.node); s.setWorkspace('design'); }} className="btn">Open in Design</button></div>
+              </div>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 {
-  "generated_on": "2026-09-05",
+  "generated_on": "2026-09-06",
   "schema": "caddydaddy.native-source-artifacts/v1",
   "scope": "Exact corresponding-source and build-recipe coordinates for native files in the pinned Linux CPython 3.12 runtime. Hash verification is factual evidence, not a legal determination.",
   "source_sets": [
@@ -636,18 +636,18 @@
     {
       "artifacts": [
         {
-          "bytes": 435195,
-          "sha256": "7cb8bc3605c29176e1b105350d2e6474142d7c1bd1d9327c4a9bdb46bf827acc",
-          "url": "https://files.pythonhosted.org/packages/ad/88/5f2260bdfae97aabf98f1778d43f69574390ad787afb646292a638c923d4/pydantic_core-2.33.2.tar.gz",
-          "verified_bytes": 435195,
-          "verified_on": "2026-09-05",
-          "verified_sha256": "7cb8bc3605c29176e1b105350d2e6474142d7c1bd1d9327c4a9bdb46bf827acc"
+          "bytes": 472262,
+          "sha256": "10416c15b8839ecc4ef4d0885da76da6fd0f67333a0eb8aff6d93c4b8f2910fc",
+          "url": "https://files.pythonhosted.org/packages/af/f9/8a06bea35ef8daf588f707784c973a7046e0034c8d8cfb08828eeffb8b75/pydantic_core-2.46.5.tar.gz",
+          "verified_bytes": 472262,
+          "verified_on": "2026-09-06",
+          "verified_sha256": "10416c15b8839ecc4ef4d0885da76da6fd0f67333a0eb8aff6d93c4b8f2910fc"
         }
       ],
       "component": "pydantic-core",
-      "id": "pypi-source:pydantic-core@2.33.2",
+      "id": "pypi-source:pydantic-core@2.46.5",
       "relationship": "corresponding_source",
-      "version": "2.33.2"
+      "version": "2.46.5"
     }
   ]
 }

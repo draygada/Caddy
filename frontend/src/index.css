@@ -66,9 +66,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   .btn-primary:active { transform: translateY(1px); }
   .btn-lg { min-height: 44px; padding: 0 12px; font-weight: 600; font-size: 14px; }
   .btn-xs { min-height: 24px; padding: 0 8px; font-size: 12px; color: var(--muted); }
-  .btn-icon { min-width: 32px; padding: 0; font-family: var(--font-mono); }
+  .btn-icon { min-width: 32px; padding: 0; font-family: var(--font-mono); display: inline-flex; align-items: center; justify-content: center; }
+  /* a small icon button is a 28px square, muted until hovered */
+  .btn-icon.btn-xs { width: 28px; min-width: 28px; height: 28px; min-height: 28px; }
+  .btn-icon.btn-xs:hover { color: var(--ink); }
   .btn-primary.btn-xs { color: var(--accentfg); }
-  .panel { background: var(--surface); border: 1px solid var(--line2); border-radius: 6px; overflow: hidden; }
+  /* clip, not hidden: hidden zeroes the auto min-size of grid and flex items, so tall panels collapsed to the scroller height instead of growing it */
+  .panel { background: var(--surface); border: 1px solid var(--line2); border-radius: 6px; overflow: clip; }
   .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line2); }
   .panel-title { font-size: 13px; font-weight: 600; letter-spacing: .02em; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .panel-title .sub { color: var(--muted); font-weight: 400; }
@@ -101,8 +105,9 @@ input[type="checkbox"] { width: 24px; height: 24px; margin: 0; accent-color: var
   .btn, .nav-btn, [role="tab"], [role="radio"], .tree-row, .field { min-height: 44px; }
   button.chip, a.chip { min-height: 44px; display: inline-flex; align-items: center; }
   .btn-icon, .nav-btn { min-width: 44px; }
+  .btn-icon.btn-xs { width: 44px; height: 44px; min-height: 44px; }
   .row-hover { min-height: 44px; }
-  .btn-xs { min-height: 36px; }
+  .btn-xs { min-height: 44px; }
 }
 
 @media (max-width: 639px) {
@@ -136,8 +141,45 @@ input[type="checkbox"] { width: 24px; height: 24px; margin: 0; accent-color: var
   }
 
   .cad-authoring-workspace button {
+    min-height: 44px;
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  .cad-authoring-workspace input:not([type="file"]),
+  .cad-authoring-workspace select,
+  .cad-file-target,
+  .cad-mission-target,
+  .cad-viewport-target {
+    min-height: 44px;
+  }
+
+  .cad-file-target {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cad-mobile-stack {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .cad-entity-row {
+    grid-template-columns: minmax(0, 1fr) 44px !important;
+  }
+
+  .cad-entity-row > span:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .cad-mission-target,
+  .cad-viewport-target.nav-btn {
+    min-width: 44px;
+  }
+
+  .cad-feature-summary,
+  .cad-viewport-context-hint {
+    display: none;
   }
 
   .cad-output-download > span {

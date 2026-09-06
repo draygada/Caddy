@@ -43,7 +43,7 @@ export function ProjectsHome() {
           {creating && (
             <div className="fixed inset-0 z-[40] bg-scrim flex items-center justify-center p-4" onMouseDown={() => setCreating(false)}>
             <div role="dialog" aria-label="New project" onMouseDown={(e) => e.stopPropagation()} className="panel w-full max-w-[820px] max-h-full flex flex-col shadow-[0_16px_40px_rgba(0,0,0,.22)]">
-              <div className="panel-head"><div className="panel-title">New project <span className="sub">· the use case comes first</span></div><button onClick={() => setCreating(false)} className="btn">Cancel · Esc</button></div>
+              <div className="panel-head"><div className="panel-title">New project <span className="sub">· the use case comes first</span></div><button onClick={() => setCreating(false)} className="btn btn-xs btn-icon" aria-label="Cancel" title="Cancel · Esc">×</button></div>
               <div className="p-4 grid gap-4 overflow-auto">
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-3 text-[13px]">
                   <label className="grid gap-1 text-muted">project name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Kestrel v2" className="field" autoFocus /></label>
@@ -68,7 +68,7 @@ export function ProjectsHome() {
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
             {projects.map((p) => (
               <button key={p.id} onClick={() => openProject(p.id)} className="project-card panel text-left p-0 grid gap-0 cursor-pointer overflow-hidden">
-                <DesignPreview snap={p.snapshot ?? baselineSnapshotFor(p.id)} className="w-full block border-b border-line2" />
+                <DesignPreview snap={p.snapshot ?? baselineSnapshotFor(p.id)} components={p.components} className="w-full block border-b border-line2" />
                 <div className="p-4 grid gap-2">
                 <div className="flex justify-between gap-2 items-baseline"><span className="project-name text-[16px] font-semibold">{p.name}</span><span className="text-[12px] text-muted">opened {p.openedAt.slice(5)}</span></div>
                 <div className="text-[13px] text-muted min-h-[18px]">{p.description || 'no description'}</div>

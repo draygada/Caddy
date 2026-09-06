@@ -62,6 +62,14 @@ export interface ValidatedTripwireResult {
   request: TripwireRequest;
 }
 
+export interface TripwireRevisionGate {
+  status: 'CURRENT' | 'STALE' | 'UNAVAILABLE';
+  canCheck: boolean;
+  currentRevisionId: string | null;
+  evidenceRevisionId: string | null;
+  message: string;
+}
+
 export class TripwireClientError extends Error {
   code: string;
 
@@ -79,6 +87,8 @@ const PUBLIC_ERROR: Record<string, string> = {
   CANDIDATE_INVALID: 'The candidate response did not satisfy the revision-bound contract. No review result was accepted.',
   SELECTION_REQUIRED: 'Select one canonical mapped entity before running Tripwire.',
   SELECTION_BINDING_MISSING: 'That entity has no exact Candidate 0.1 request binding.',
+  CURRENT_REVISION_UNAVAILABLE: 'Tripwire is unavailable because the active candidate revision could not be established. Legacy evidence was not applied.',
+  CURRENT_REVISION_STALE: 'Tripwire is unavailable because the legacy evidence revision does not exactly match the active candidate revision. Legacy evidence was not applied.',
   STALE_FORGE_REVISION: 'The candidate changed before Tripwire could bind the result. Reload the candidate and select again.',
   REVIEW_SERVICE_UNAVAILABLE: 'Tripwire is temporarily unavailable. The selected entity is unchanged; retry.',
   REVIEW_RESPONSE_UNREADABLE: 'Tripwire returned an unreadable response. No review result was accepted; retry.',
@@ -124,6 +134,35 @@ export function listStableTargets(candidate: CandidatePayload): StableTripwireTa
   );
 }
 
+export function getTripwireRevisionGate(candidate: CandidatePayload | null, currentRevisionId: string | null | undefined): TripwireRevisionGate {
+  const evidenceRevisionId = candidate?.document?.revisionId ?? null;
+  if (!currentRevisionId || !evidenceRevisionId) {
+    return {
+      status: 'UNAVAILABLE',
+      canCheck: false,
+      currentRevisionId: currentRevisionId ?? null,
+      evidenceRevisionId,
+      message: PUBLIC_ERROR.CURRENT_REVISION_UNAVAILABLE,
+    };
+  }
+  if (currentRevisionId !== evidenceRevisionId) {
+    return {
+      status: 'STALE',
+      canCheck: false,
+      currentRevisionId,
+      evidenceRevisionId,
+      message: PUBLIC_ERROR.CURRENT_REVISION_STALE,
+    };
+  }
+  return {
+    status: 'CURRENT',
+    canCheck: true,
+    currentRevisionId,
+    evidenceRevisionId,
+    message: 'Tripwire evidence exactly matches the active candidate revision.',
+  };
+}
+
 export function createTripwireRequest(candidate: CandidatePayload, entityId: string | null): TripwireRequest {
   check(!!entityId, 'SELECTION_REQUIRED', PUBLIC_ERROR.SELECTION_REQUIRED);
   const target = listStableTargets(candidate).find((item) => item.entityId === entityId);
@@ -136,7 +175,10 @@ export function createTripwireRequest(candidate: CandidatePayload, entityId: str
   return structuredClone(request);
 }
 
-export async function runTripwire(candidate: CandidatePayload, entityId: string | null, fetchImpl: typeof fetch = fetch): Promise<ValidatedTripwireResult> {
+export async function runTripwire(candidate: CandidatePayload, entityId: string | null, currentRevisionId: string | null | undefined, fetchImpl: typeof fetch = fetch): Promise<ValidatedTripwireResult> {
+  const revisionGate = getTripwireRevisionGate(candidate, currentRevisionId);
+  const gateCode = revisionGate.status === 'UNAVAILABLE' ? 'CURRENT_REVISION_UNAVAILABLE' : 'CURRENT_REVISION_STALE';
+  check(revisionGate.canCheck, gateCode, revisionGate.message);
   const request = createTripwireRequest(candidate, entityId);
   let response: Response;
   try {
