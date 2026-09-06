@@ -41,7 +41,7 @@ export function CommandBox() {
   }, [q, recent, st, target, designMounted]);
   if (!open) return (
     <button type="button" aria-label="Open command palette" aria-keyshortcuts="Meta+K Control+K S" onClick={() => st.patch({ cmdOpen: true })}
-      className="fixed right-3 bottom-3 z-[28] min-h-10 px-3 flex items-center gap-3 bg-ink text-surface border border-ink rounded-r shadow-[0_8px_24px_rgba(0,0,0,.22)] cursor-pointer">
+      className="fixed right-3 bottom-[68px] md:bottom-3 z-[28] min-h-10 px-3 flex items-center gap-3 bg-ink text-surface border border-ink rounded-r shadow-[0_8px_24px_rgba(0,0,0,.22)] cursor-pointer">
       <span className="text-[13px] font-semibold">Commands</span>
       <span className="font-mono text-[11px] opacity-70">S · ⌘K</span>
     </button>
