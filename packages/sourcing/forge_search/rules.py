@@ -36,9 +36,19 @@ def atoms(when) -> list[dict]:
     return out
 
 
-def guards(when) -> list[dict]:
-    """A row's `not` atoms. One of them true suppresses the row; one that is false or unknown never does (P-C, fail-closed)."""
-    return [g for a in _as_list(when.get("not")) for g in atoms(a)] if isinstance(when, dict) else []
+def guards(when) -> list[list[dict]]:
+    """A row's `not` guards, each a conjunction of atoms. A guard whose every atom is true suppresses the row; one carrying an atom
+    that is false or unknown never does (P-C, fail-closed). An operand keyed `all` is ONE guard, because the DSL reads "suppress
+    when both hold"; `any`, or a bare list of operands, gives one guard per atom, which suppresses on any one of them."""
+    if not isinstance(when, dict):
+        return []
+    out: list[list[dict]] = []
+    for operand in _as_list(when.get("not")):
+        if isinstance(operand, dict) and "all" in operand:
+            out.append(atoms(operand))
+        else:
+            out.extend([atom] for atom in atoms(operand))
+    return out
 
 
 def load_rules(path: Path) -> dict:

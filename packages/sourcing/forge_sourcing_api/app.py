@@ -81,24 +81,12 @@ def candidate() -> dict:
             "mode": {"llm": PORTS.model.mode.lower() if PORTS.model.mode != "CACHED" else "cache", "api": "cached"}}
 
 
-class MissingKey(Exception):
-    """A required key is absent from the request body: the caller's mistake, not the lane's refusal and not a bug."""
-
-    def __init__(self, key: str):
-        super().__init__(key)
-        self.key = key
-
-
 class Body(dict):
-    """The request body. `b["x"]` on an absent key becomes a 422 naming the key, never a 409 and never a traceback."""
+    """The request body. `b["x"]` on an absent key becomes a 422 naming the key, never a 409 and never a traceback. The 422 is
+    raised here, on the path itself, so a router-only mount keeps it (an app-level handler would not travel with the router)."""
 
     def __missing__(self, key):
-        raise MissingKey(key)
-
-
-@app.exception_handler(MissingKey)
-async def missing_key(request: Request, exc: MissingKey):
-    return JSONResponse(status_code=422, content={"detail": {"error": "missing key", "key": exc.key}})
+        raise HTTPException(status_code=422, detail={"error": "missing key", "key": key})
 
 
 async def read_body(request: Request) -> Body:

@@ -185,14 +185,23 @@ def test_refine_with_a_non_integer_quantity_is_422(client):
     assert r.status_code == 200 and r.json()["result"]["changes"] == [{"field": "quantity", "from": 1, "to": 2}]
 
 
-def test_a_router_only_mount_keeps_the_409_and_its_envelope():
-    """P-F: the 409 is built on the refusal path itself, so an integrator who mounts only `router` (HANDOFF, Wiring) gets the same body."""
+def test_a_router_only_mount_keeps_the_409_and_the_body_422s():
+    """P-F: every body is built on the path itself — the 409 in `run`, the missing key in `Body.__missing__`, the malformed body and
+    the non-integer quantity in their own raises — so an integrator who mounts only `router` (HANDOFF, Wiring) gets the same bodies.
+    An app-level exception handler would not travel with the router and the missing key would reach him as a 500."""
     from fastapi import FastAPI
     from forge_sourcing_api.app import router
     host = FastAPI()
     host.include_router(router, prefix="/api/sourcing-lane")
-    r = TestClient(host).post("/api/sourcing-lane/packets/nope/close", json={"attestor": "charlie"})
+    mounted = TestClient(host)
+    r = mounted.post("/api/sourcing-lane/packets/nope/close", json={"attestor": "charlie"})
     assert r.status_code == 409 and r.json()["detail"]["code"] == "UNKNOWN_PACKET" and r.json()["candidate"]["git_sha"]
+    r = mounted.post("/api/sourcing-lane/rounds", json={"ship_to": "US-bench"})
+    assert r.status_code == 422 and r.json()["detail"] == {"error": "missing key", "key": "state"}
+    r = mounted.post("/api/sourcing-lane/rounds", content=b"{not json", headers={"content-type": "application/json"})
+    assert r.status_code == 422 and r.json()["detail"] == {"error": "malformed json"}
+    r = mounted.post("/api/sourcing-lane/rounds", json={"state": "baseline", "ship_to": "US-bench", "quantity": "abc", "request_key": "router-1"})
+    assert r.status_code == 422 and r.json()["detail"] == {"error": "quantity must be an integer"}
 
 
 def test_the_suite_pins_cache_mode_and_a_live_mode_would_be_budgeted(client):
