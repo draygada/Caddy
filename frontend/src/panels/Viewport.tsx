@@ -306,7 +306,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
         {s.viewSeq != null ? (
           <span className="text-[13px] font-semibold text-amber">replaying #{s.viewSeq} · read-only · <button onClick={() => s.viewAt(null)} className="underline">back to live</button></span>
         ) : (
-          <span />
+          <span role="status" className="sr-only">{mode} view</span>
         )}
       </div>
       {mode === 'sheet' && <SheetView span={s.span} />}
@@ -380,7 +380,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
               {/* invisible hit areas on top */}
               {scene.cube.cells.map((c, i) => <polygon key={'c' + i} points={c.pts} fill="transparent" stroke="none" onMouseEnter={() => setCubeHover(c.key)} onMouseLeave={() => setCubeHover(null)} onClick={() => snap(c.dir)} className="cursor-pointer"><title>{c.label ? c.label + ' view' : c.kind === 'edge' ? 'edge view' : 'corner view'}</title></polygon>)}
             </svg>
-            <button onClick={() => setCubeMenu((v) => !v)} aria-haspopup="menu" aria-expanded={cubeMenu} aria-label="View options" className="tree-btn absolute right-3 bottom-3 w-[46px] h-6 text-ink flex items-center gap-1 justify-center">
+            <button onClick={() => setCubeMenu((v) => !v)} aria-haspopup="menu" aria-expanded={cubeMenu} aria-label="View options" className="tree-btn absolute right-3 bottom-3 w-[46px] h-6 max-sm:h-11 max-sm:w-14 max-sm:bottom-1 text-ink flex items-center gap-1 justify-center">
               <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 21,7.5 12,12 3,7.5" fill="var(--cube-top)" stroke="var(--cube-ink)" strokeWidth="1" strokeLinejoin="round" /><polygon points="3,7.5 12,12 12,21 3,16.5" fill="var(--cube)" stroke="var(--cube-ink)" strokeWidth="1" strokeLinejoin="round" /><polygon points="21,7.5 12,12 12,21 21,16.5" fill="var(--cube)" stroke="var(--cube-ink)" strokeWidth="1" strokeLinejoin="round" /></svg>
               <svg viewBox="0 0 10 6" width="10" height="6" aria-hidden="true"><polygon points="0,0 10,0 5,6" fill="currentColor" /></svg>
             </button>

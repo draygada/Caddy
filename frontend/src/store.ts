@@ -66,7 +66,7 @@ export interface Intake {
   usedOn: 'none' | 'in-production unlisted aircraft' | 'listed military aircraft' | 'not sure yet';
   notes: string;
 }
-export const INTAKE_DEFAULT: Intake = { endUse: 'civil survey and mapping', endUser: 'commercial operator', shipTo: 'US', qty: 1, mode: 'air', civilProduct: true, bvlos: false, usedOn: 'none', notes: '' };
+export const INTAKE_DEFAULT: Intake = { endUse: 'civil survey and mapping', endUser: 'commercial operator', shipTo: 'US', qty: 1, mode: 'air', civilProduct: false, bvlos: false, usedOn: 'none', notes: '' };
 /** True when a required answer is still "not sure yet": classification and sourcing then ask for more information. */
 export const intakeIncomplete = (i: Intake | null) => !i || i.endUse === 'not sure yet' || i.endUser === 'not sure yet' || i.usedOn === 'not sure yet';
 
@@ -79,7 +79,7 @@ export interface Project {
   snapshot?: Snapshot;
 }
 export const SAMPLE_PROJECTS: Project[] = [
-  { id: 'kestrel', name: 'Kestrel', description: 'Fixed-wing survey drone · 7 slots · the demo design', intake: { ...INTAKE_DEFAULT }, createdAt: '2026-09-04 18:10', openedAt: '2026-09-05 09:12', components: [...CORE_SLOTS] },
+  { id: 'kestrel', name: 'Kestrel', description: 'Fixed-wing survey drone · 7 slots · the demo design', intake: { ...INTAKE_DEFAULT, civilProduct: true }, createdAt: '2026-09-04 18:10', openedAt: '2026-09-05 09:12', components: [...CORE_SLOTS] },
 ];
 export type OrderState = 'DRAFT' | 'DISPATCH_PENDING' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'EXCEPTION' | 'DISPATCH_UNKNOWN' | 'CLOSED';
 export interface Order { key: string; packetHash: string; state: OrderState; receipt: string | null; attempts: number; trail: string[] }

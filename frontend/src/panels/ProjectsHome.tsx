@@ -24,13 +24,12 @@ export function ProjectsHome() {
 
   return (
     <div className="h-full min-h-0 flex flex-col bg-bg text-ink">
-      <div className="h-12 flex-none flex items-center gap-3 px-4 border-b border-line2 bg-surface">
-        <img src="/logo.png" alt="" width={34} height={34} className="block w-[34px] h-[34px]" />
-        <span className="font-bold tracking-[.01em]">Caddy</span>
-        <span className="text-muted text-[13px]">Projects</span>
+      <header className="h-12 flex-none flex items-center gap-3 px-4 border-b border-line2 bg-surface">
+        <a href="/" onClick={(e) => e.preventDefault()} aria-label="Caddy home" className="flex items-center gap-3 text-ink no-underline min-h-11"><img src="/logo.png" alt="" width={34} height={34} className="block w-[34px] h-[34px]" /><span className="font-bold tracking-[.01em]">Caddy</span></a>
+        <span className="text-muted text-[13px]" role="status">{projects.length} project{projects.length === 1 ? '' : 's'}</span>
         <div className="flex-1" />
-        <button onClick={toggleTheme} className="btn">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</button>
-      </div>
+        <button onClick={toggleTheme} className="btn min-w-11" aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}><span className="hidden sm:inline">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</span><span className="sm:hidden" aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span></button>
+      </header>
       <div className="flex-1 min-h-0 overflow-auto p-6">
         <div className="max-w-[1040px] mx-auto grid gap-6">
           <div className="flex items-end justify-between gap-4 flex-wrap">
@@ -46,7 +45,7 @@ export function ProjectsHome() {
             <div role="dialog" aria-label="New project" onMouseDown={(e) => e.stopPropagation()} className="panel w-full max-w-[820px] max-h-full flex flex-col shadow-[0_16px_40px_rgba(0,0,0,.22)]">
               <div className="panel-head"><div className="panel-title">New project <span className="sub">· the use case comes first</span></div><button onClick={() => setCreating(false)} className="btn">Cancel · Esc</button></div>
               <div className="p-4 grid gap-4 overflow-auto">
-                <div className="grid grid-cols-[1fr_2fr] gap-3 text-[13px]">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-3 text-[13px]">
                   <label className="grid gap-1 text-muted">project name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Kestrel v2" className="field" autoFocus /></label>
                   <label className="grid gap-1 text-muted">what are you building?<input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="fixed-wing survey drone with a thermal payload" className="field" /></label>
                 </div>
@@ -57,7 +56,7 @@ export function ProjectsHome() {
                 <div className="flex justify-between gap-2 flex-wrap items-center border-t border-line2 pt-3">
                   <button onClick={() => createProject(name, description, null)} className="btn" title="just tinkering: the design opens, but classification and sourcing will ask for these answers before they complete">Skip for now · I don't know yet</button>
                   <div className="flex gap-2 items-center">
-                    {intakeIncomplete(intake) && <span className="text-[12px] text-amber">some answers are “not sure yet”; the project will ask again</span>}
+                    {intakeIncomplete(intake) && <span role="status" className="text-[12px] text-amber">some answers are “not sure yet”; the project will ask again</span>}
                     <button onClick={() => createProject(name, description, intake)} className="btn btn-primary btn-lg">Create project</button>
                   </div>
                 </div>

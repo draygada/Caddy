@@ -321,7 +321,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
         {header}
         <div className="flex-1 min-h-0 overflow-auto p-4 flex justify-center content-start">
           <div className="panel w-full max-w-[820px] self-start">
-            <div className="panel-head"><div className="panel-title">This application requires more information</div><span className="text-[12px] text-muted">answer before sourcing starts</span></div>
+            <div className="panel-head" role="status"><div className="panel-title">This application requires more information</div><span className="text-[12px] text-muted">answer before sourcing starts</span></div>
             <div className="p-4 grid gap-4 text-[13px]">
               <div>{s.project?.intake ? 'Some use-case answers are still “not sure yet”.' : 'The use-case questions were skipped when this project was created.'} Sourcing reads the ship-to, the quantity, the transport mode, the end use and the end user before it resolves a single offer, so nothing below runs until they are answered.</div>
               <IntakeForm value={draft} onChange={setDraft} />
@@ -370,7 +370,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                     <span className="text-muted">declared</span><span>{[intake.civilProduct ? 'civil product' : null, intake.bvlos ? 'BVLOS' : null].filter(Boolean).join(' · ') || 'none'}</span>
                   </div>
                   <div className="flex gap-2 flex-wrap items-center">
-                    <button onClick={start} disabled={s.viewSeq != null || running} className="btn btn-primary btn-lg disabled:opacity-50">Run the search · source this design</button>
+                    <button onClick={start} disabled={s.viewSeq != null || running} className="btn btn-primary btn-lg disabled:opacity-50 w-full sm:w-auto">Run the search · source this design</button>
                     <button onClick={() => s.patch({ intakeOpen: true })} className="btn" disabled={running}>Edit the use case</button>
                   </div>
                   <div className="text-[12px] text-muted">These answers are declared facts. They print on the round and beside every pick; they do not change what the rule engine computed for the design.</div>

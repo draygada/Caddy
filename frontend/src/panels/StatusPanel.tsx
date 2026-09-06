@@ -28,7 +28,7 @@ export function StatusPanel({ o }: { o: Outcome }) {
       {incomplete ? (
         <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-line2">
           <span className="status-word text-[14px]" style={{ color: 'var(--amber)' }}>? Requires more information</span>
-          <button onClick={() => useStore.getState().patch({ intakeOpen: true })} className="btn btn-xs btn-primary" title="the use-case answers are missing or not sure yet; the status is not complete until they are answered">Answer the questions</button>
+          <button onClick={() => useStore.getState().patch({ intakeOpen: true })} className="btn btn-xs" title="the use-case answers are missing or not sure yet; the status is not complete until they are answered">answer them</button>
         </div>
       ) : (
         <div className="px-3 py-2 border-b border-line2">

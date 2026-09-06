@@ -93,7 +93,7 @@ export function Browser() {
     <div data-panel="browser" className="panel h-full flex flex-col min-h-0">
       <div className="panel-head">
         <div className="panel-title">Browser</div>
-        <span className="text-[12px] text-muted flex items-center gap-2">
+        <span role="status" className="text-[12px] text-muted flex items-center gap-2">
           {s.isolated && <button onClick={() => s.isolate(null)} className="btn btn-xs">isolated · {BODY_LABEL[s.isolated]} · show all</button>}
           {readOnly ? <span className="text-amber font-semibold">replay #{s.viewSeq}</span> : placedCount + ' of ' + components.length + ' placed'}
         </span>
@@ -101,7 +101,7 @@ export function Browser() {
       <div className="flex items-center gap-2 px-2 py-[6px] border-b border-line2">
         <span className="text-muted inline-flex" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg></span>
         <input ref={search} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setQ(''); (e.target as HTMLInputElement).blur(); } }}
-          type="search" placeholder="Filter components and features" aria-label="Filter the browser tree" className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[13px] text-ink placeholder:text-muted" />
+          type="search" placeholder="Filter components and features" aria-label="Filter the browser tree" className="flex-1 min-w-0 min-h-[28px] bg-transparent border-0 outline-none text-[13px] text-ink placeholder:text-muted" />
         <kbd className="chip chip-sm">/</kbd>
       </div>
       {library && <ComponentLibrary onClose={() => setLibrary(false)} />}
