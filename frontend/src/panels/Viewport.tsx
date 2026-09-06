@@ -10,7 +10,6 @@ import { SketchView } from './SketchView';
 import { BoardView } from './BoardView';
 import { FeatureDialog } from './FeatureDialog';
 import { MarkingMenu } from './MarkingMenu';
-import { TimelineStrip } from './TimelineStrip';
 
 const VB_W = 760, VB_H = 490;
 const W = PLATE_W, T = PLATE_T;
@@ -418,7 +417,6 @@ export function Viewport({ o: _o }: { o: Outcome }) {
         <MarkingMenu />
       </div>
       <FeatureDialog />
-      <TimelineStrip />
     </div>
   );
 }
