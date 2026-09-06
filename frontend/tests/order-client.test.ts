@@ -114,7 +114,7 @@ async function portableState(): Promise<OrderStateToken> {
 }
 
 async function digestBytes(bytes: Uint8Array): Promise<string> {
-  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  const hash = await crypto.subtle.digest('SHA-256', Uint8Array.from(bytes));
   return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
