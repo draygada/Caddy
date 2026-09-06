@@ -128,6 +128,42 @@ class Service:
         self._maybe_confirm(rnd)
         return esc
 
+    # ------------------------------------------------------------ proposals (an agent proposes; a human resolves)
+    def _proposal(self, rnd: dict, proposal_id: str) -> dict:
+        try:
+            return next(p for p in rnd["proposals"] if p["proposal_id"] == proposal_id)
+        except StopIteration:
+            raise RoundRefused(f"unknown proposal {proposal_id}") from None
+
+    def record_proposal(self, round_id: str, proposal: dict) -> dict:
+        rnd = self._round(round_id)
+        receipt = self._append(rnd, f"{proposal['kind']}_proposed", "agent", line_id=proposal["line_id"], proposal_id=proposal["proposal_id"],
+                               escalation_reason=proposal.get("escalation_reason"), status=proposal["status"], confident=proposal["confident"],
+                               candidates=[{"mpn": c["mpn"], "status": c["status"]} for c in proposal["candidates"]], mode=proposal["mode"],
+                               prompt_sha256=proposal["prompt_sha256"], pool_sha256=proposal["pool_sha256"], rules_sha256=proposal["rules_sha256"],
+                               abstained=proposal.get("abstained"), proposed_at=proposal["proposed_at"])
+        proposal["seq"] = receipt["seq"]
+        rnd["proposals"].append(proposal)
+        return receipt
+
+    def accept_proposal(self, round_id: str, proposal_id: str, *, attestor: str) -> dict:
+        rnd = self._round(round_id)
+        p = self._proposal(rnd, proposal_id)
+        if p["kind"] == "escalation":
+            esc = self.resolve_escalation(round_id, p["line_id"], p["escalation_reason"], attestor=attestor,
+                                          resolution={"proposal_id": proposal_id, "basis": "a human read the proposed sources and resolved",
+                                                      "sources": [c.get("url") for c in p["candidates"]]})
+            p["accepted_by"] = attestor
+            return esc
+        raise RoundRefused("an alternative proposal is accepted in the design lane as a human part_swapped; open a new round on the new design state")
+
+    def reject_proposal(self, round_id: str, proposal_id: str, *, attestor: str, reason: str) -> dict:
+        rnd = self._round(round_id)
+        p = self._proposal(rnd, proposal_id)
+        p["rejected_by"] = attestor
+        p["rejection_reason"] = reason
+        return self._append(rnd, "proposal_rejected", "human", attestor, line_id=p["line_id"], proposal_id=proposal_id, reason=reason)
+
     def _screen_card(self, rnd: dict, line: dict, card: dict, tier: str, reasons: list[str], csl: dict, *, emit: bool = True) -> None:
         nodes = partiesmod.walk(partiesmod.extract_parties(card["offer"]), self.store, tier)
         for n in nodes:
@@ -418,7 +454,8 @@ class Service:
         for e in self.thread.events:
             if round_id and e.get("round_id") != round_id:
                 continue
-            rows.append({"seq": e["seq"], "kind": e["kind"], "lane": "order" if e["kind"].startswith("order_") else "sourcing",
+            lane = "order" if e["kind"].startswith("order_") else "proposal" if (e["kind"].endswith("_proposed") or e["kind"] == "proposal_rejected") else "sourcing"
+            rows.append({"seq": e["seq"], "kind": e["kind"], "lane": lane,
                          "actor_kind": e["actor_kind"], "attestor": e.get("attestor"), "hash": e["hash"][:8], "words": self._event_words(e)})
         return rows[-last:]
 
@@ -449,6 +486,12 @@ class Service:
             return f"package built · pre-entry lines {e['pre_entry_lines'][:8]} · diligence {e['diligence_record'][:8]} · export refs {e['export_references'][:8]}"
         if k == "order_dispatched":
             return f"order dispatched · {e['label']} · {e['provider_response_id']} · key {e['idempotency_key']}"
+        if k in ("alternative_proposed", "escalation_proposed"):
+            what = f"{len(e['candidates'])} candidates" if k == "alternative_proposed" else "sources"
+            return (f"agent proposed {what} for {e['line_id']} · {e['status']} · {'confident' if e['confident'] else 'not confident'} · {e['mode']}"
+                    + (f" · abstained: {e['abstained']}" if e.get("abstained") else "") + f" · pool {e['pool_sha256'][:8]} · rules {e['rules_sha256'][:8]}")
+        if k == "proposal_rejected":
+            return f"proposal rejected by {e['attestor']} · {e['reason']}"
         return k.replace("_", " ")
 
     def round_view(self, round_id: str) -> dict:
@@ -471,6 +514,7 @@ class Service:
             "supersedes": rnd["supersedes"], "superseded_by": rnd["superseded_by"], "superseded_note": rnd.get("superseded_note"),
             "fixtures": {k: dict(self.store.manifest[k]) for k in rnd["fixture_shas"]},
             "lines": lines, "refinements": rnd["refinements"], "declarations": rnd["declarations"], "package": rnd["package"],
+            "proposals": deepcopy(rnd["proposals"]),
             "timeline": self.timeline(round_id), "thread_head": self.thread.head, "signing": self.thread.signing,
             "affiliates_rule": self.store.tariff.get("affiliates_rule"),
             "first_run_checklist": list(pkgmod.FIRST_RUN_CHECKLIST) if rnd["package"] else None,

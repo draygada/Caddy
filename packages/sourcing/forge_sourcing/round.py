@@ -51,7 +51,7 @@ def new_round(design: dict, *, ship_to: str, quantity: int, transport_mode: str,
         "assembly_country": assembly_country or design.get("product", {}).get("final_assembly_country", "US"),
         "defaults_note": "ship-to, transport mode, quantity and assembly country are round defaults, refinable per offer and per shipment; a refinement re-runs screening and cost for the affected lines and records provenance and staleness",
         "opened_at": opened_at, "status": "opened", "supersedes": None, "superseded_by": None,
-        "fixture_shas": dict(fixture_shas), "lines": lines, "refinements": [], "declarations": [], "package": None,
+        "fixture_shas": dict(fixture_shas), "lines": lines, "refinements": [], "declarations": [], "package": None, "proposals": [],
     }
 
 
