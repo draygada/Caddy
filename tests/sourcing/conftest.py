@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import sys
 from datetime import datetime, timezone
@@ -24,9 +25,10 @@ def pytest_runtest_logreport(report):
 
 def pytest_sessionfinish(session, exitstatus):
     out = PKG / ".cache" / "last_pytest.json"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({"as_of": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-                               "counts": {k: len(v) for k, v in _RESULTS.items()}, "passed": sorted(_RESULTS["passed"]), "skipped": sorted(_RESULTS["skipped"])}, indent=1), encoding="utf-8")
+    with contextlib.suppress(OSError):                 # /now observes this file; failing to write it must never fail the suite
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps({"as_of": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+                                   "counts": {k: len(v) for k, v in _RESULTS.items()}, "passed": sorted(_RESULTS["passed"]), "skipped": sorted(_RESULTS["skipped"])}, indent=1), encoding="utf-8")
 
 
 @pytest.fixture

@@ -1,6 +1,8 @@
 """FastAPI adapter over the seam. Routes are the service verbs; the page computes nothing; every response carries the
-candidate envelope (engineering direction §3.10); a refusal is a 409 with the refusal's own words; GET /now is a
-read-only observation that defaults to UNKNOWN (F-25). Mount under /api so a Vite proxy forwards it unchanged.
+candidate envelope (engineering direction §3.10); a lane refusal — and only a lane refusal — is a 409 with the refusal's
+own words; a body this adapter cannot read is a 422 that says which key or what is malformed; anything else is a bug and
+surfaces as a 500. GET /now is a read-only observation that defaults to UNKNOWN (F-25). Mount under /api so a Vite proxy
+forwards it unchanged.
 """
 from __future__ import annotations
 
@@ -11,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from forge_search.propose import default_ports, propose_alternative, propose_escalation
 from forge_sourcing.gate import GateRefused
@@ -26,7 +28,7 @@ ROOT = Path(os.environ.get("FORGE_SOURCING_ROOT") or Path(__file__).resolve().pa
 DATA = ROOT / "data"
 MODE = os.environ.get("TRIPWIRE_LLM", "cache")
 PREFIX = os.environ.get("FORGE_SOURCING_PREFIX", "/api/sourcing")
-REFUSALS = (RoundRefused, SelectionRefused, AdjudicationRefused, GateRefused, PackageRefused, OrderRefused, ThreadRefused, KeyError, ValueError)
+REFUSALS = (RoundRefused, SelectionRefused, AdjudicationRefused, GateRefused, PackageRefused, OrderRefused, ThreadRefused)
 FEATURES = {"F-07": "test_7_the_poisoned_page", "F-08": "test_propose_alternative_thermal", "F-13": "test_s1_", "F-14": "test_s2_", "F-15": "test_s3_",
             "F-16": "test_package_builds", "F-17": "test_propose_escalation", "F-25": "test_now_is_read_only"}
 
@@ -46,6 +48,8 @@ def _now() -> str:
 
 
 def _state(name: str) -> dict:
+    if name not in STATES:
+        raise HTTPException(status_code=422, detail={"error": "unknown state", "state": name, "states": sorted(STATES)})
     base = STATES["baseline"]
     if name == "baseline":
         return base
@@ -58,6 +62,40 @@ def candidate() -> dict:
     return {"git_sha": GIT_SHA, "design_hash": SVC.current_design_hash, "log_head_seq": head["seq"], "log_head_hash": head["hash"],
             "fixture_manifest_shas": SVC.store.shas(), "search": {"pool_sha256": PORTS.pool_sha256, "rules_sha256": PORTS.rules["sha256"]},
             "mode": {"llm": PORTS.model.mode.lower() if PORTS.model.mode != "CACHED" else "cache", "api": "cached"}}
+
+
+class MissingKey(Exception):
+    """A required key is absent from the request body: the caller's mistake, not the lane's refusal and not a bug."""
+
+    def __init__(self, key: str):
+        super().__init__(key)
+        self.key = key
+
+
+class Body(dict):
+    """The request body. `b["x"]` on an absent key becomes a 422 naming the key, never a 409 and never a traceback."""
+
+    def __missing__(self, key):
+        raise MissingKey(key)
+
+
+@app.exception_handler(MissingKey)
+async def missing_key(request: Request, exc: MissingKey):
+    return JSONResponse(status_code=422, content={"detail": {"error": "missing key", "key": exc.key}})
+
+
+async def read_body(request: Request) -> Body:
+    """Parse the body here, inside the boundary: an unreadable body is 422, an absent body is {}."""
+    raw = await request.body()
+    if not raw:
+        return Body()
+    try:
+        parsed = json.loads(raw)
+    except ValueError:
+        parsed = None
+    if not isinstance(parsed, dict):
+        raise HTTPException(status_code=422, detail={"error": "malformed json"})
+    return Body(parsed)
 
 
 def run(fn, *, view_of: str | None = None):
@@ -98,7 +136,7 @@ def now():
 
 @router.post("/rounds")
 async def open_round(request: Request):
-    b = await request.json()
+    b = await read_body(request)
 
     def go():
         design = b["design"] if "design" in b else _state(b["state"])
@@ -128,7 +166,7 @@ VERBS = {
     "rescreen": lambda rid, b: SVC.rescreen(rid),
     "cost": lambda rid, b: SVC.cost(rid, entry_date=b.get("entry_date") or _now()[:10]) and {"ok": True},
     "refine": lambda rid, b: SVC.refine(rid, quantity=b.get("quantity"), transport_mode=b.get("transport_mode"), attestor=b.get("attestor", "engineer")),
-    "select": lambda rid, b: SVC.select(rid, b["line_id"], b["offer_hash"], declined=b.get("declined", []), attestor=b.get("attestor")),
+    "select": lambda rid, b: SVC.select(rid, b["line_id"], b["offer_hash"], declined=b.get("declined", []), attestor=b["attestor"]),
     "adjudicate": lambda rid, b: SVC.adjudicate(rid, b["offer_hash"], b["party_id"], role=b["role"], disposition=b["disposition"], reason_code=b["reason_code"], rationale=b["rationale"], attestor=b["attestor"]),
     "resolve_escalation": lambda rid, b: SVC.resolve_escalation(rid, b["line_id"], b["reason"], attestor=b["attestor"], resolution=b.get("resolution", {})),
     "gate": lambda rid, b: SVC.gate(rid, b.get("references")),
@@ -145,25 +183,25 @@ VERBS = {
 async def round_verb(round_id: str, verb: str, request: Request):
     if verb not in VERBS:
         raise HTTPException(status_code=404, detail=f"unknown verb {verb}; one of {sorted(VERBS)}")
-    b = await request.json() if int(request.headers.get("content-length") or 0) else {}
+    b = await read_body(request)
     return run(lambda: VERBS[verb](round_id, b), view_of=round_id)
 
 
 @router.post("/packets")
 async def create_packet(request: Request):
-    b = await request.json()
+    b = await read_body(request)
     return run(lambda: SVC.create_packet(b["round_id"], recipient_placeholder=b["recipient_placeholder"], approver=b["approver"], created_at=b.get("created_at") or _now()), view_of=b["round_id"])
 
 
 @router.post("/packets/{packet_id}/dispatch")
 async def dispatch(packet_id: str, request: Request):
-    b = await request.json()
+    b = await read_body(request)
     return run(lambda: SVC.dispatch(packet_id, idempotency_key=b["idempotency_key"], attestor=b["attestor"], dispatched_at=b.get("dispatched_at") or _now()))
 
 
 @router.post("/packets/{packet_id}/close")
 async def close_order(packet_id: str, request: Request):
-    b = await request.json()
+    b = await read_body(request)
     return run(lambda: SVC.close_order(packet_id, receiving=b.get("receiving"), inspection=b.get("inspection"), attestor=b["attestor"], closed_at=b.get("closed_at") or _now()))
 
 
@@ -174,7 +212,7 @@ def rederive():
 
 @router.post("/tamper")
 async def tamper(request: Request):
-    b = await request.json()
+    b = await read_body(request)
     return run(lambda: SVC.tamper(int(b["seq"]), b["field"], b["value"]) or {"tampered": {"seq": b["seq"], "field": b["field"]}})
 
 
