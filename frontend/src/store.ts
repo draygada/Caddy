@@ -20,20 +20,12 @@ import { PACKS, type PackId } from './lib/catalog';
 
 export type { Pos, Positions } from './lib/design';
 export type Theme = 'light' | 'dark';
-/** The three primary tabs plus the secondary surfaces reachable from "More" and the command box. */
-export type WorkspaceId = 'design' | 'classification' | 'sourcing' | 'core' | 'atlas' | 'collaboration' | 'sources' | 'record' | 'now';
+/** The three tabs. */
+export type WorkspaceId = 'design' | 'classification' | 'sourcing';
 export const PRIMARY_WORKSPACES: { id: WorkspaceId; label: string }[] = [
   { id: 'design', label: 'Design' },
   { id: 'classification', label: 'Classification' },
   { id: 'sourcing', label: 'Sourcing' },
-];
-export const MORE_WORKSPACES: { id: WorkspaceId; label: string; hint: string }[] = [
-  { id: 'sources', label: 'Sources', hint: 'datasheets, the verifier, Call B' },
-  { id: 'record', label: 'Record', hint: 'printable decision record' },
-  { id: 'core', label: 'Core / Assembly', hint: 'immutable kernel snapshot' },
-  { id: 'atlas', label: 'Tripwire atlas', hint: 'feature bibles and progress' },
-  { id: 'collaboration', label: 'Collaboration', hint: 'append-only history' },
-  { id: 'now', label: 'Now', hint: 'Shipyard observation' },
 ];
 export type ViewMode = 'model' | 'sheet' | 'sketch' | 'board';
 export type NavMode = 'orbit' | 'pan' | 'zoom';
@@ -332,7 +324,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     lane: 'all', copied: null, viewMode: 'model', grid: true, navMode: 'orbit', visualStyle: 'edges', hidden: {},
     round: null, sourcingOpen: false, injectException: false,
     workspace: 'design',
-    setWorkspace: (w) => set({ workspace: w, sourcingOpen: w === 'sourcing', sourcesOpen: w === 'sources', recordOpen: w === 'record', reasoningOpen: false, timelineOpen: false, marking: null, cmdOpen: false }),
+    setWorkspace: (w) => set({ workspace: w, sourcingOpen: w === 'sourcing', sourcesOpen: false, recordOpen: false, reasoningOpen: false, timelineOpen: false, marking: null, cmdOpen: false }),
     pack: 'v2', determination: null, apiWarm: false, apiNote: null, tamperedSeq: null, recordOpen: false, sourcesOpen: false,
     sources: { doc: null, slot: null, network: [], proposals: [], showHidden: false, candidates: [], candidateNode: null, llmNote: null },
     extracted: {}, escalations: {}, memos: [], slotList: null, target: null,

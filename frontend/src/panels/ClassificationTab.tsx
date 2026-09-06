@@ -107,7 +107,6 @@ export function ClassificationTab({ o }: { o: Outcome }) {
                 <div>number that crossed: <b className="font-mono">{rule.number}</b></div>
                 <div className="text-muted text-[12px]">{rule.fr}</div>
                 {rule.atoms.map((a, i) => <div key={i} className="font-mono text-[12px] text-muted">{a}</div>)}
-                {r.node !== 'airframe' && <button onClick={() => s.findAlternative(r.node, o)} className="btn justify-self-start">Find a compliant alternative</button>}
               </div>
             ))}
             {r.unconfirmed && <div className="border border-line rounded-r p-3 bg-surface flex justify-between gap-2 items-center"><span>The swap on this part has not been confirmed. Compare function, performance, form and fit, then attest.</span><button onClick={() => { s.reopen(r.node as Slot); s.setWorkspace('design'); }} className="btn">Open the comparison</button></div>}
@@ -116,7 +115,6 @@ export function ClassificationTab({ o }: { o: Outcome }) {
               <div className="border border-line rounded-r p-3 bg-surface grid gap-1">
                 <div className="font-semibold">Missing evidence · these rules could not be evaluated</div>
                 {r.cannot.map((c, i) => <div key={i} className="font-mono text-[12px] text-muted">{c}</div>)}
-                {r.node !== 'airframe' && (r.node === 'imu' || r.node === 'thermal') && <button onClick={() => { s.patch({ sources: { ...s.sources, slot: r.node as Slot } }); s.setWorkspace('sources'); }} className="btn justify-self-start">Import a datasheet</button>}
               </div>
             )}
             <div className="grid grid-cols-5 gap-2 border-t border-line2 pt-2">

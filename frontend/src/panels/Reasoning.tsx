@@ -7,7 +7,6 @@ import { callC } from '../lib/sources';
 import type { Memo } from '../lib/memo';
 import type { Ranked, TargetConstraints } from '../lib/propose';
 import { partName } from '../lib/propose';
-import { isBodyId } from '../store';
 
 function Section({ title, sub, children, right }: { title: string; sub?: string; children: React.ReactNode; right?: React.ReactNode }) {
   return (
@@ -51,7 +50,6 @@ export function Reasoning({ o }: { o: Outcome }) {
           <span className="text-[13px] font-semibold">Reasoning <span className="text-muted font-normal">· why the product reads</span></span>
           <span className="status-word text-[16px]" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>
           <span className="text-[13px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">{overall.sub}</span>
-          <span className="chip">RULE · eCFR {PACKS[s.pack].ecfr_date}</span><span className="chip">pack {s.pack} · effective {PACKS[s.pack].effective}</span>
         </div>
         <button onClick={s.closeAll} className="btn">Back to model · Esc</button>
       </div>
@@ -220,7 +218,6 @@ export function Reasoning({ o }: { o: Outcome }) {
                   {g.cards.map((c) => {
                     const open = !!s.open[c.id];
                     const isOpenFact = c.id.startsWith('of-');
-                    const node = o.rules.find((r) => r.id === c.id)?.node;
                     return (
                       <div key={c.id} data-rule={c.id} className="mx-3 mt-[6px] border border-line rounded-r bg-surface">
                         <button onClick={() => { if (c.expandable) s.toggleOpen(c.id); }} aria-expanded={open} className="row-hover grid grid-cols-[auto_1fr_auto] gap-2 min-h-11 px-[10px] py-2 text-left bg-transparent border-0 text-ink cursor-pointer w-full items-start">
@@ -236,7 +233,6 @@ export function Reasoning({ o }: { o: Outcome }) {
                             <div className="text-[13px] text-muted">{c.fr} · <a href="#" onClick={(e) => e.preventDefault()} className="text-muted">{c.url}</a></div>
                             {c.atoms.map((at, i) => <div key={i} className="text-[13px] font-mono text-muted">{at}</div>)}
                             <div className="flex gap-2 flex-wrap">
-                              {node && node !== 'airframe' && isBodyId(node) && <button onClick={() => s.findAlternative(node, o)} className="btn">Find a compliant alternative · Call B</button>}
                               {isOpenFact && <button onClick={() => { setMemo(s.draftMemo(o)); setMemoErr(null); }} className="btn">Draft the intent memo</button>}
                             </div>
                           </div>

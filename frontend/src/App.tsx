@@ -13,14 +13,8 @@ import { HelpOverlay } from './panels/HelpOverlay';
 import { DemoBar } from './panels/DemoBar';
 import { CommandBox } from './panels/CommandBox';
 import { TripwirePanel } from './panels/TripwirePanel';
-import { Sources } from './panels/Sources';
-import { Record } from './panels/Record';
-import { Now } from './panels/Now';
 import { MissionNav } from './panels/MissionNav';
 import { ClassificationTab } from './panels/ClassificationTab';
-import { CoreAssemblyWorkspace } from './panels/CoreAssemblyWorkspace';
-import { TripwireAtlasWorkspace } from './panels/TripwireAtlasWorkspace';
-import { CollaborationWorkspace } from './panels/CollaborationWorkspace';
 import { runCommand } from './commands';
 import { useTripwireStore } from './tripwire-store';
 
@@ -77,8 +71,6 @@ export default function App() {
   const unreachable = useStore((s) => s.serviceState === 'unreachable');
   const reasoningOpen = useStore((s) => s.reasoningOpen);
   const sourcingOpen = useStore((s) => s.sourcingOpen);
-  const sourcesOpen = useStore((s) => s.sourcesOpen);
-  const recordOpen = useStore((s) => s.recordOpen);
   const declared = useStore((s) => s.declared);
   const pack = useStore((s) => s.pack);
   const timelineOpen = useStore((s) => s.timelineOpen);
@@ -88,12 +80,10 @@ export default function App() {
   const setWorkspace = useStore((s) => s.setWorkspace);
   const compact = useCompactWorkspace();
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('model');
-  useEffect(() => { try { if (new URLSearchParams(location.search).get('now') === '1') setWorkspace('now'); } catch { /* no location */ } }, [setWorkspace]);
   const o = useMemo(() => service.evaluate({ parts, attrs, span, declared }, pack), [parts, attrs, span, declared, pack]);
   useKeyboard();
 
-  // Flags set by commands or buttons still route to their tab.
-  const active: WorkspaceId = recordOpen ? 'record' : sourcesOpen ? 'sources' : sourcingOpen ? 'sourcing' : workspace;
+  const active: WorkspaceId = sourcingOpen ? 'sourcing' : workspace;
   const goHome = () => { useStore.getState().closeAll(); useTripwireStore.getState().closePanel(); setWorkspace('design'); };
 
   const designSurface = !compact ? (
@@ -124,19 +114,9 @@ export default function App() {
     </div>
   );
 
-  const surface = (() => {
-    switch (active) {
-      case 'design': return designSurface;
-      case 'classification': return <ClassificationTab o={o} />;
-      case 'sourcing': return <div className="relative flex-1 min-h-0"><Sourcing o={o} embedded /></div>;
-      case 'sources': return <div className="relative flex-1 min-h-0"><Sources embedded /></div>;
-      case 'record': return <div className="relative flex-1 min-h-0"><Record embedded /></div>;
-      case 'core': return <main className="flex-1 min-h-0 overflow-auto p-2"><CoreAssemblyWorkspace /></main>;
-      case 'atlas': return <main className="flex-1 min-h-0 overflow-auto p-2"><TripwireAtlasWorkspace /></main>;
-      case 'collaboration': return <main className="flex-1 min-h-0 overflow-auto p-2"><CollaborationWorkspace /></main>;
-      case 'now': return <main className="flex-1 min-h-0 overflow-auto"><Now /></main>;
-    }
-  })();
+  const surface = active === 'classification' ? <ClassificationTab o={o} />
+    : active === 'sourcing' ? <div className="relative flex-1 min-h-0"><Sourcing o={o} embedded /></div>
+    : designSurface;
 
   return (
     <div data-theme={theme} className="relative h-full min-w-0 flex flex-col bg-bg text-ink overflow-hidden">

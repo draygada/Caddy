@@ -1,6 +1,5 @@
 import { useStore } from '../store';
 import { useTripwireStore } from '../tripwire-store';
-import { PACKS } from '../lib/catalog';
 
 interface TopBarProps {
   onHome?: () => void;
@@ -12,7 +11,6 @@ export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
   const toggleTheme = useStore((s) => s.toggleTheme);
   const toggleHelp = useStore((s) => s.toggleHelp);
   const patch = useStore((s) => s.patch);
-  const pack = useStore((s) => s.pack);
   const closeTripwire = useTripwireStore((s) => s.closePanel);
   const goHome = () => {
     if (onHome) {
@@ -30,12 +28,6 @@ export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
       </button>
       <span className="hidden sm:inline text-muted text-[13px]">Kestrel</span>
       <div className="flex-1" />
-      <div className="hidden xl:flex gap-[6px] items-center">
-        <span className="chip">Rule · eCFR {PACKS[pack].ecfr_date}</span>
-        <span className="chip">pack {pack}</span>
-        <span className="chip">Cached</span>
-      </div>
-      <div className="hidden sm:block w-px h-5 bg-line2" />
       <div className="flex gap-[6px]">
         {onOpenTripwire && <button onClick={onOpenTripwire} className="btn hidden">Tripwire</button>}
         <button onClick={toggleTheme} className="btn">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</button>
