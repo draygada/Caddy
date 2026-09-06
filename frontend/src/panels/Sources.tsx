@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { DOCS, type SourceDocId } from '../lib/sources';
 import { SLOT_LABEL, type Slot } from '../lib/catalog';
@@ -75,11 +75,14 @@ function ServiceProvenance() {
       <div className="panel-head flex-wrap gap-2"><div className="panel-title">Source provenance <span className="sub">· exact client-carried bytes</span></div><span className="chip">{evidence ? evidence.status : 'not run'}</span></div>
       <div className="p-3 grid gap-3 text-[13px]">
         <div className="flex flex-wrap items-end gap-2">
-          <label className="grid gap-1 text-muted">source lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink"><option value="live-bounded">Candidate 0.2 service input, available when connected</option><option value="offline-demo">Offline demo fixtures</option></select></label>
-          {inputMode === 'offline-demo' && <label className="grid gap-1 text-muted">Offline demo document<select value={documentId} onChange={(event) => { setDocumentId(event.target.value as ServiceDocumentId); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink">{Object.keys(SERVICE_PRESETS).map((id) => <option key={id}>{id}</option>)}</select></label>}
+          <div className="grid gap-1 text-muted">
+            <label htmlFor="source-provenance-lane">Source lane</label>
+            <select id="source-provenance-lane" aria-describedby="source-provenance-lane-description" value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink"><option value="live-bounded">Candidate 0.2 service input, available when connected</option><option value="offline-demo">Offline demo fixtures</option></select>
+          </div>
+          {inputMode === 'offline-demo' && <div className="grid gap-1 text-muted"><label htmlFor="source-offline-document">Offline demo document</label><select id="source-offline-document" aria-describedby="source-provenance-lane-description" value={documentId} onChange={(event) => { setDocumentId(event.target.value as ServiceDocumentId); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink">{Object.keys(SERVICE_PRESETS).map((id) => <option key={id}>{id}</option>)}</select></div>}
           <button className="btn btn-primary" disabled={busy !== null} onClick={inspect}>{busy === 'inspect' ? 'Inspecting…' : 'Inspect + verify source hash'}</button>
           <button className="btn disabled:opacity-40" disabled={!inspected || busy !== null} onClick={verify}>{busy === 'verify' ? 'Rereading…' : `Verify exact span · ${claim.quote}`}</button>
-          <button className="btn disabled:opacity-40" disabled={!verified || busy !== null} onClick={() => run('accept', async (api) => {
+          <button aria-label="Accept verified source change for local review" className="btn disabled:opacity-40" disabled={!verified || busy !== null} onClick={() => run('accept', async (api) => {
             const value = await api.acceptVerifiedChange(verified!.verification.receipt_sha256, verified!.verification.field);
             setAccepted(value);
             await appendProductEvent({
@@ -97,20 +100,21 @@ function ServiceProvenance() {
             });
           })}>Accept for local review</button>
         </div>
+        <div id="source-provenance-lane-description" className="text-[12px] text-muted">Choose connected operator-provided bytes or bounded offline fixtures. Changing lanes clears prior inspection, verification, and acceptance results.</div>
         {inputMode === 'live-bounded' && (
           <div className="border border-line2 rounded-r p-3 grid gap-2" aria-label="Candidate 0.2 source service input, available when connected">
             <div className="flex flex-wrap justify-between gap-2"><b>User-provided source bytes</b><span className="text-[12px] text-muted">no fetch · no authority/freshness claim · instruction-like content quarantines</span></div>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2">
-              <label className="grid gap-1 text-muted">document ID<input value={liveId} onChange={(event) => setLiveId(event.target.value)} className="field font-mono text-ink" /></label>
-              <label className="grid gap-1 text-muted">title<input value={liveTitle} onChange={(event) => setLiveTitle(event.target.value)} className="field text-ink" /></label>
-              <label className="grid gap-1 text-muted">source locator<input value={liveHost} onChange={(event) => setLiveHost(event.target.value)} className="field text-ink" /></label>
+              <div className="grid gap-1 text-muted"><label htmlFor="source-document-id">Document ID</label><input id="source-document-id" value={liveId} onChange={(event) => setLiveId(event.target.value)} className="field font-mono text-ink" /></div>
+              <div className="grid gap-1 text-muted"><label htmlFor="source-document-title">Source title</label><input id="source-document-title" value={liveTitle} onChange={(event) => setLiveTitle(event.target.value)} className="field text-ink" /></div>
+              <div className="grid gap-1 text-muted"><label htmlFor="source-document-locator">Source locator</label><input id="source-document-locator" value={liveHost} onChange={(event) => setLiveHost(event.target.value)} className="field text-ink" /></div>
             </div>
-            <label className="grid gap-1 text-muted">source text<textarea value={liveText} onChange={(event) => setLiveText(event.target.value)} rows={4} className="field text-ink resize-y" /></label>
+            <div className="grid gap-1 text-muted"><label htmlFor="source-document-text">Source text</label><textarea id="source-document-text" value={liveText} onChange={(event) => setLiveText(event.target.value)} rows={4} className="field text-ink resize-y" /></div>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2">
-              <label className="grid gap-1 text-muted">exact numeric quote<input value={liveQuote} onChange={(event) => setLiveQuote(event.target.value)} className="field font-mono text-ink" /></label>
-              <label className="grid gap-1 text-muted">target field<input value={liveField} onChange={(event) => setLiveField(event.target.value)} className="field font-mono text-ink" /></label>
-              <label className="grid gap-1 text-muted">numeric value<input type="number" value={liveValue} onChange={(event) => setLiveValue(Number(event.target.value))} className="field font-mono text-ink" /></label>
-              <label className="grid gap-1 text-muted">unit<input value={liveUnit} onChange={(event) => setLiveUnit(event.target.value)} className="field font-mono text-ink" /></label>
+              <div className="grid gap-1 text-muted"><label htmlFor="source-exact-quote">Exact numeric quote</label><input id="source-exact-quote" value={liveQuote} onChange={(event) => setLiveQuote(event.target.value)} className="field font-mono text-ink" /></div>
+              <div className="grid gap-1 text-muted"><label htmlFor="source-target-field">Target field</label><input id="source-target-field" value={liveField} onChange={(event) => setLiveField(event.target.value)} className="field font-mono text-ink" /></div>
+              <div className="grid gap-1 text-muted"><label htmlFor="source-numeric-value">Numeric value</label><input id="source-numeric-value" type="number" value={liveValue} onChange={(event) => setLiveValue(Number(event.target.value))} className="field font-mono text-ink" /></div>
+              <div className="grid gap-1 text-muted"><label htmlFor="source-unit">Unit</label><input id="source-unit" value={liveUnit} onChange={(event) => setLiveUnit(event.target.value)} className="field font-mono text-ink" /></div>
             </div>
           </div>
         )}
@@ -139,8 +143,15 @@ export function Sources() {
   const src = s.sources;
   const doc = src.doc ? DOCS[src.doc] : null;
   const [slot, setSlot] = useState<Slot>('imu');
+  const [acceptanceFocusKey, setAcceptanceFocusKey] = useState<string | null>(null);
+  const acceptanceConfirmationRef = useRef<HTMLSpanElement | null>(null);
   const accepted = src.proposals.filter((p) => p.verdict.ok);
   const rejected = src.proposals.filter((p) => !p.verdict.ok);
+  useEffect(() => {
+    if (!acceptanceFocusKey || s.extracted[acceptanceFocusKey]?.acceptance !== 'UNAUTHENTICATED_BROWSER_SESSION') return;
+    acceptanceConfirmationRef.current?.focus();
+    setAcceptanceFocusKey(null);
+  }, [acceptanceFocusKey, s.extracted]);
   return (
     <div role="dialog" aria-label="Sources" className="absolute inset-0 bg-bg z-[8] flex flex-col overflow-x-hidden">
       <div className="flex items-center justify-between gap-3 px-4 py-[10px] border-b border-line2 bg-surface flex-wrap">
@@ -157,9 +168,9 @@ export function Sources() {
           <div className="panel min-w-0">
             <div className="panel-head flex-wrap gap-2"><div className="panel-title min-w-0">Offline lab · drop a datasheet or vendor page</div><span className="min-w-0 text-[12px] text-muted">cached fixtures · never service evidence</span></div>
             <div className="p-3 grid gap-2 text-[13px]">
-              <label className="grid min-w-0 gap-1 text-muted">onto which part?<select value={slot} onChange={(e) => setSlot(e.target.value as Slot)} className="field min-w-0 w-full text-ink">{(['imu', 'thermal'] as Slot[]).map((x) => <option key={x} value={x}>{SLOT_LABEL[x]}</option>)}</select></label>
+              <div className="grid min-w-0 gap-1 text-muted"><label htmlFor="source-target-part">Target part</label><select id="source-target-part" aria-describedby="source-target-part-description" value={slot} onChange={(e) => setSlot(e.target.value as Slot)} className="field min-w-0 w-full text-ink">{(['imu', 'thermal'] as Slot[]).map((x) => <option key={x} value={x}>{SLOT_LABEL[x]}</option>)}</select><span id="source-target-part-description" className="text-[12px]">Choose which model part receives a verified offline extractor proposal.</span></div>
               <div className="flex gap-2 flex-wrap">
-                {DOC_IDS.map((id) => <button key={id} onClick={() => s.dropDocument(id, DOCS[id].slot ?? slot)} className={'btn whitespace-normal text-left ' + (src.doc === id ? 'btn-primary' : '')}>{DOCS[id].title}{DOCS[id].poisoned ? ' ☠' : ''}</button>)}
+                {DOC_IDS.map((id) => <button key={id} aria-label={`Load offline source fixture: ${DOCS[id].title}`} onClick={() => s.dropDocument(id, DOCS[id].slot ?? slot)} className={'btn whitespace-normal text-left ' + (src.doc === id ? 'btn-primary' : '')}>{DOCS[id].title}{DOCS[id].poisoned ? ' ☠' : ''}</button>)}
               </div>
               <div className="text-[12px] text-muted">Call A returns unverified claims (field, value, unit, quote, fixture string start/end, synthetic fixture marker). No classification field exists in the schema. The checker compares the selected cached string, parse and value in that order; its accept constructs a typed Spec but does not establish human review.</div>
             </div>
@@ -197,9 +208,13 @@ export function Sources() {
                     <div className="text-[12px] text-muted">{p.verdict.note}</div>
                     {p.verdict.ok && src.slot && (
                       <div className="flex gap-2 items-center flex-wrap">
-                        <button onClick={() => s.applyExtraction(src.slot!, p)} disabled={s.viewSeq != null} className="btn btn-primary disabled:opacity-50">Apply accepted span to {SLOT_LABEL[src.slot]} · extractor</button>
-                        {s.extracted[src.slot + '.' + p.claim.field] && s.extracted[src.slot + '.' + p.claim.field].acceptance === 'NONE' && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" onChange={(event) => { if (event.currentTarget.checked) s.acknowledgeExtraction(src.slot!, p.claim.field); }} /> Acknowledge unauthenticated browser-session acceptance · memory only · no identity</label>}
-                        {s.extracted[src.slot + '.' + p.claim.field]?.acceptance === 'UNAUTHENTICATED_BROWSER_SESSION' && <span className="chip chip-sm">SESSION ACCEPTED · MEMORY ONLY · NO IDENTITY · NOT HUMAN REVIEW</span>}
+                        <button aria-label={`Apply verified ${p.claim.field} span from ${p.label} to ${SLOT_LABEL[src.slot]}`} onClick={() => s.applyExtraction(src.slot!, p)} disabled={s.viewSeq != null} className="btn btn-primary disabled:opacity-50">Apply accepted span to {SLOT_LABEL[src.slot]} · extractor</button>
+                        {s.extracted[src.slot + '.' + p.claim.field] && s.extracted[src.slot + '.' + p.claim.field].acceptance === 'NONE' && (() => {
+                          const extractionKey = `${src.slot}.${p.claim.field}`;
+                          const controlId = `source-acceptance-${src.slot}-${p.claim.field}-${i}`;
+                          return <div className="flex items-center gap-2 text-[12px]"><input id={controlId} type="checkbox" aria-describedby={`${controlId}-description`} onChange={(event) => { if (!event.currentTarget.checked) return; setAcceptanceFocusKey(extractionKey); s.acknowledgeExtraction(src.slot!, p.claim.field); }} /><label htmlFor={controlId}>Acknowledge source acceptance for {SLOT_LABEL[src.slot]} {p.claim.field}</label><span id={`${controlId}-description`} className="sr-only">Records UNAUTHENTICATED_BROWSER_SESSION, MEMORY_ONLY, and NOT_HUMAN_REVIEWED. No identity or attestor is captured.</span></div>;
+                        })()}
+                        {s.extracted[src.slot + '.' + p.claim.field]?.acceptance === 'UNAUTHENTICATED_BROWSER_SESSION' && <span ref={acceptanceFocusKey === `${src.slot}.${p.claim.field}` ? acceptanceConfirmationRef : undefined} role="status" aria-live="polite" aria-atomic="true" aria-label="Source acceptance confirmed: UNAUTHENTICATED_BROWSER_SESSION, MEMORY_ONLY, NOT_HUMAN_REVIEWED" tabIndex={-1} className="chip chip-sm focus:outline focus:outline-2 focus:outline-offset-2">SESSION ACCEPTED · MEMORY ONLY · NO IDENTITY · NOT HUMAN REVIEW</span>}
                       </div>
                     )}
                   </div>
@@ -219,7 +234,7 @@ export function Sources() {
                     <div className="text-[12px]">{c.why}</div>
                     <div className="font-mono text-[12px] text-muted">{c.net.map((n) => n.method + ' ' + n.host + ' · ' + n.status).join(' · ')} · {c.verdict}</div>
                     <div className="text-[12px] text-muted">price {c.priceDelta >= 0 ? '+' : ''}{c.priceDelta.toFixed(0)} USD · {c.stock} · origin {c.origin} <span className="chip chip-sm">declared</span> · {c.dutyNote}</div>
-                    <button onClick={() => s.acceptCandidate(src.candidateNode!, c.pid)} disabled={c.state === 'abstained' || s.viewSeq != null} className="btn btn-primary justify-self-start disabled:opacity-40">Accept · a human part_swapped, then attest</button>
+                    <button aria-label={`Accept ${c.name} candidate; record human part swap before attestation`} onClick={() => s.acceptCandidate(src.candidateNode!, c.pid)} disabled={c.state === 'abstained' || s.viewSeq != null} className="btn btn-primary justify-self-start disabled:opacity-40">Accept · a human part_swapped, then attest</button>
                   </div>
                 ))}
                 <div className="text-[12px] text-muted">the agent proposes · never “the tool finds compliant parts”</div>
