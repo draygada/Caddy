@@ -2,8 +2,88 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { DOCS, type SourceDocId } from '../lib/sources';
 import { SLOT_LABEL, type Slot } from '../lib/catalog';
+import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type OperationsEnvelope, type ProvenanceAcceptEnvelope, type ProvenanceInspectEnvelope, type ProvenanceVerifyEnvelope } from '../lib/operations-client';
 
 const DOC_IDS: SourceDocId[] = ['gx220-vendor-page', 'hg5700-brochure', 'lepton-datasheet'];
+
+const SERVICE_PRESETS = {
+  'gx220-vendor-page': { quote: '0.3 deg/h', field: 'gyro_bias_stability', value: 0.3, unit: 'deg/h' },
+  'hg5700-brochure': { quote: '0.01 deg/h', field: 'gyro_bias_stability', value: 0.01, unit: 'deg/h' },
+  'lepton-datasheet': { quote: '19,200 active pixels', field: 'active_pixels', value: 19200, unit: 'active pixels' },
+  'fr-2026-16628': { quote: '3 hours', field: 'endurance_threshold', value: 3, unit: 'hours' },
+} as const;
+
+type ServiceDocumentId = keyof typeof SERVICE_PRESETS;
+
+function sourceServiceError(error: unknown): string {
+  return error instanceof OperationsServiceError ? `${error.code} · ${error.message}` : error instanceof Error ? error.message : 'Unknown service error';
+}
+
+function ServiceProvenance() {
+  const [documentId, setDocumentId] = useState<ServiceDocumentId>('gx220-vendor-page');
+  const [client, setClient] = useState<OperationsClient | null>(null);
+  const [inspected, setInspected] = useState<ProvenanceInspectEnvelope | null>(null);
+  const [verified, setVerified] = useState<ProvenanceVerifyEnvelope | null>(null);
+  const [accepted, setAccepted] = useState<ProvenanceAcceptEnvelope | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const preset = SERVICE_PRESETS[documentId];
+
+  const currentClient = async () => {
+    if (client) return client;
+    const identity = await loadOperationsCandidateIdentity();
+    const next = new OperationsClient(identity);
+    setClient(next);
+    return next;
+  };
+  const run = async (label: string, action: (value: OperationsClient) => Promise<void>) => {
+    setBusy(label);
+    setError(null);
+    try { await action(await currentClient()); } catch (caught) { setError(sourceServiceError(caught)); } finally { setBusy(null); }
+  };
+  const evidence: OperationsEnvelope | null = accepted ?? verified ?? inspected ?? client?.getLastValid('provenance') ?? null;
+  const inspect = () => run('inspect', async (api) => {
+    const value = await api.inspectSource(documentId);
+    setInspected(value);
+    setVerified(null);
+    setAccepted(null);
+  });
+  const verify = () => run('verify', async (api) => {
+    if (!inspected || inspected.document.document_id !== documentId) throw new OperationsServiceError('INSPECTION_REQUIRED', 'Inspect this exact document before verifying a span.');
+    const start = inspected.document.text_with_quarantine.indexOf(preset.quote);
+    if (start < 0) throw new OperationsServiceError('QUOTE_NOT_FOUND', 'The preset quote is not present in the inspected bytes.');
+    const value = await api.verifySourceSpan({ document_id: documentId, source_sha256: inspected.document.sha256, start, end: start + preset.quote.length, quote: preset.quote, field: preset.field, value: preset.value, unit: preset.unit });
+    setVerified(value);
+    setAccepted(null);
+  });
+
+  return (
+    <section className="panel min-w-0 lg:col-span-2" aria-label="Service-backed source provenance">
+      <div className="panel-head flex-wrap gap-2"><div className="panel-title">Service-backed source provenance <span className="sub">· exact committed bytes</span></div><span className="chip">{evidence ? evidence.status : 'not run'}</span></div>
+      <div className="p-3 grid gap-3 text-[13px]">
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="grid gap-1 text-muted">committed document<select value={documentId} onChange={(event) => { setDocumentId(event.target.value as ServiceDocumentId); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink">{Object.keys(SERVICE_PRESETS).map((id) => <option key={id}>{id}</option>)}</select></label>
+          <button className="btn btn-primary" disabled={busy !== null} onClick={inspect}>{busy === 'inspect' ? 'Inspecting…' : 'Inspect + verify source hash'}</button>
+          <button className="btn disabled:opacity-40" disabled={!inspected || busy !== null} onClick={verify}>{busy === 'verify' ? 'Rereading…' : `Verify exact span · ${preset.quote}`}</button>
+          <button className="btn disabled:opacity-40" disabled={!verified || busy !== null} onClick={() => run('accept', async (api) => setAccepted(await api.acceptVerifiedChange(verified!.verification.receipt_sha256, verified!.verification.field)))}>Accept for local review</button>
+        </div>
+        {client && <div className="font-mono text-[12px] break-all text-muted">candidate {client.candidate.candidate_id} · {client.candidate.revision_id} · snapshot {client.candidate.snapshot_sha256}</div>}
+        {error && <div role="alert" className="border border-red rounded-r p-2 text-red"><b>Service evidence not replaced.</b> {error}{evidence ? ' · Last valid result remains below.' : ''}</div>}
+        {inspected && (
+          <div className="grid gap-2">
+            <div className="font-mono text-[12px] break-all">{inspected.document.document_id} · {inspected.document.bytes} bytes · {inspected.document.sha256} · network performed {String(inspected.document.network.performed)}</div>
+            <pre className="font-mono text-[12px] whitespace-pre-wrap break-words leading-[1.5] p-2 rounded-r border border-line2 bg-surface2 m-0">{inspected.document.text_with_quarantine}</pre>
+            {inspected.document.quarantined_ranges.length > 0 && <div className="text-amber">{inspected.document.quarantined_ranges.length} prompt-like byte range quarantined and ineligible for verification.</div>}
+          </div>
+        )}
+        {verified && <div className="border border-line rounded-r p-2 font-mono text-[12px] break-all">BYTE REREAD VERIFIED · {verified.verification.start}–{verified.verification.end} · receipt {verified.verification.receipt_sha256}</div>}
+        {accepted && <div className="border border-line rounded-r p-2 text-[12px]"><b>{accepted.status}</b> · {accepted.change.target} = {accepted.change.value} {accepted.change.unit} · mutated CAD: {String(accepted.change.mutated_cad)}</div>}
+        {evidence && <div className="border-t border-line2 pt-2 grid gap-1 text-[12px] text-muted"><div><b className="text-ink">Claim ceiling:</b> {evidence.claim_ceiling}</div><div className="font-mono break-all">corpus {evidence.corpus.corpus_sha256} · {Object.keys(evidence.source_hashes).length} committed source hashes</div>{evidence.limitations.map((item) => <div key={item}>· {item}</div>)}</div>}
+        {!evidence && <div className="text-[12px] text-muted">Requires the mounted provenance adapter. No cached extractor result below is substituted for service evidence.</div>}
+      </div>
+    </section>
+  );
+}
 
 /** Sources panel: inspect cached extractor proposals, their fixture-span checks, and Call B catalog candidates with an engine dry-run. */
 export function Sources() {
@@ -17,16 +97,17 @@ export function Sources() {
     <div role="dialog" aria-label="Sources" className="absolute inset-0 bg-bg z-[8] flex flex-col overflow-x-hidden">
       <div className="flex items-center justify-between gap-3 px-4 py-[10px] border-b border-line2 bg-surface flex-wrap">
         <div className="flex min-w-0 items-baseline gap-3 flex-wrap">
-          <span className="min-w-0 break-words text-[13px] font-semibold">Sources <span className="text-muted font-normal">· cached extractor proposals are fixture-string checked before UI application; manual edits are separate</span></span>
+          <span className="min-w-0 break-words text-[13px] font-semibold">Sources <span className="text-muted font-normal">· service provenance + offline extractor lab</span></span>
           <span className="chip">{src.llmNote ? 'CACHED' : 'idle'}</span>
           {s.apiNote && <span className="min-w-0 break-words text-[12px] text-amber">{s.apiNote}</span>}
         </div>
         <button onClick={() => s.patch({ sourcesOpen: false })} className="btn">Back to model · Esc</button>
       </div>
       <div className="grid flex-1 min-h-0 min-w-0 grid-cols-1 content-start gap-4 overflow-y-auto overflow-x-hidden p-4 [overflow-wrap:anywhere] lg:grid-cols-2">
+        <ServiceProvenance />
         <div className="grid min-w-0 gap-3 content-start">
           <div className="panel min-w-0">
-            <div className="panel-head flex-wrap gap-2"><div className="panel-title min-w-0">Drop a datasheet or vendor page</div><span className="min-w-0 text-[12px] text-muted">fixtures · allowlisted fetcher</span></div>
+            <div className="panel-head flex-wrap gap-2"><div className="panel-title min-w-0">Offline lab · drop a datasheet or vendor page</div><span className="min-w-0 text-[12px] text-muted">cached fixtures · never service evidence</span></div>
             <div className="p-3 grid gap-2 text-[13px]">
               <label className="grid min-w-0 gap-1 text-muted">onto which part?<select value={slot} onChange={(e) => setSlot(e.target.value as Slot)} className="field min-w-0 w-full text-ink">{(['imu', 'thermal'] as Slot[]).map((x) => <option key={x} value={x}>{SLOT_LABEL[x]}</option>)}</select></label>
               <div className="flex gap-2 flex-wrap">

@@ -4,9 +4,100 @@ import type { Outcome } from '../lib/rules';
 import { GENERIC_NAME, type Slot } from '../lib/catalog';
 import { THUMBS, AF_THUMB } from '../lib/geometry';
 import { CHECKLIST, CLAIM_COST, CLAIM_OFFER, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
+import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type OperationsEnvelope, type ServiceOffer, type SourcingDispatchEnvelope, type SourcingPackageEnvelope, type SourcingRoundEnvelope } from '../lib/operations-client';
 
 const usd = (v: number | null | undefined) => (v == null ? 'rate not verified' : v.toLocaleString(undefined, { style: 'currency', currency: 'USD' }));
 const FEDERAL_BUYER_CLASSES = ['radio', 'motor', 'thermal_imager', 'ic', 'board', 'cell', 'pack', 'gnss', 'esc'];
+
+function serviceError(error: unknown): string {
+  return error instanceof OperationsServiceError ? `${error.code} · ${error.message}` : error instanceof Error ? error.message : 'Unknown service error';
+}
+
+function ownerNames(offer: ServiceOffer): string {
+  const names: string[] = [];
+  const visit = (node: ServiceOffer['ownership_walk']['seller']) => {
+    names.push(node.name + (node.pct ? ` (${node.pct}%)` : ''));
+    node.owners.forEach(visit);
+  };
+  visit(offer.ownership_walk.seller);
+  if (offer.ownership_walk.manufacturer) visit(offer.ownership_walk.manufacturer);
+  return names.join(' → ');
+}
+
+function ServiceSourcing() {
+  const [quantity, setQuantity] = useState(2);
+  const [mode, setMode] = useState<'air' | 'ocean'>('air');
+  const [client, setClient] = useState<OperationsClient | null>(null);
+  const [round, setRound] = useState<SourcingRoundEnvelope | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
+  const [pkg, setPkg] = useState<SourcingPackageEnvelope | null>(null);
+  const [dispatch, setDispatch] = useState<SourcingDispatchEnvelope | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const currentClient = async () => {
+    if (client) return client;
+    const identity = await loadOperationsCandidateIdentity();
+    const next = new OperationsClient(identity);
+    setClient(next);
+    return next;
+  };
+  const run = async (label: string, action: (value: OperationsClient) => Promise<void>) => {
+    setBusy(label);
+    setError(null);
+    try { await action(await currentClient()); } catch (caught) { setError(serviceError(caught)); } finally { setBusy(null); }
+  };
+  const evidence: OperationsEnvelope | null = dispatch ?? pkg ?? round ?? client?.getLastValid('sourcing') ?? null;
+
+  return (
+    <section className="panel min-w-0 lg:col-span-2" aria-label="Service-backed sourcing">
+      <div className="panel-head flex-wrap gap-2">
+        <div className="panel-title">Service-backed sourcing <span className="sub">· bounded flight-controller round</span></div>
+        <span className="chip">{evidence ? evidence.status : 'not run'}</span>
+      </div>
+      <div className="p-3 grid gap-3 text-[13px]">
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="grid gap-1 text-muted">quantity<input type="number" min={1} max={10000} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(10000, Number(event.target.value) || 1)))} className="field w-28 font-mono text-ink" /></label>
+          <label className="grid gap-1 text-muted">mode<select value={mode} onChange={(event) => setMode(event.target.value as 'air' | 'ocean')} className="field text-ink"><option value="air">air</option><option value="ocean">ocean</option></select></label>
+          <button className="btn btn-primary" disabled={busy !== null} onClick={() => run('round', async (api) => { const value = await api.createSourcingRound({ part_key: 'flight-controller', quantity, mode }); setRound(value); setSelectedOffer(value.round.selected_offer_id); setPkg(null); setDispatch(null); })}>{busy === 'round' ? 'Creating…' : 'Create service round'}</button>
+        </div>
+        {client && <div className="font-mono text-[12px] break-all text-muted">candidate {client.candidate.candidate_id} · {client.candidate.revision_id} · snapshot {client.candidate.snapshot_sha256}</div>}
+        {error && <div role="alert" className="border border-red rounded-r p-2 text-red"><b>Service evidence not replaced.</b> {error}{evidence ? ' · Last valid result remains below.' : ''}</div>}
+        {round && (
+          <div className="grid gap-2">
+            <div className="font-mono text-[12px] break-all">{round.round.round_id}</div>
+            {round.round.offers.map((offer) => (
+              <article key={offer.offer_id} className="border border-line rounded-r p-3 grid gap-2">
+                <div className="flex flex-wrap justify-between gap-2"><b>{offer.seller}</b><span className="chip">{offer.screening_disposition}</span></div>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(145px,1fr))] gap-2 text-[12px]"><span>origin <b>{offer.origin}</b></span><span>lead <b>{offer.lead_days} days</b></span><span>landed <b>${offer.landed_cost.total_usd}</b></span><span>per unit <b>${offer.landed_cost.per_unit_usd}</b></span></div>
+                <div className="text-[12px] text-muted">ownership walk · {ownerNames(offer)}</div>
+                <div className="text-[12px] text-muted">{offer.landed_cost.rows.map((row) => `${row.layer} $${row.amount_usd}`).join(' · ')}</div>
+                <div className="flex flex-wrap gap-2">
+                  <button className="btn btn-primary disabled:opacity-40" disabled={offer.screening_disposition !== 'eligible-fixture' || busy !== null} onClick={() => run('select', async (api) => { const value = await api.selectSourcingOffer(round.round.round_id, offer.offer_id); setSelectedOffer(value.selected_offer.offer_id); })}>{selectedOffer === offer.offer_id ? 'Selected' : 'Select eligible offer'}</button>
+                  <button className="btn" disabled={busy !== null} onClick={() => run('hold', async (api) => { await api.adjudicateSourcingOffer({ round_id: round.round.round_id, offer_id: offer.offer_id, decision: 'HOLD', attestor: 'reviewer:browser-session', rationale: 'Retain the offer and original screening state for bounded comparison.' }); })}>Record HOLD</button>
+                </div>
+              </article>
+            ))}
+            <div className="flex flex-wrap gap-2">
+              <button className="btn btn-primary disabled:opacity-40" disabled={!selectedOffer || busy !== null} onClick={() => run('package', async (api) => setPkg(await api.buildSourcingPackage(round.round.round_id)))}>{busy === 'package' ? 'Sealing…' : 'Build + reread sealed package'}</button>
+              <button className="btn disabled:opacity-40" disabled={!pkg || busy !== null} onClick={() => run('dispatch', async (api) => setDispatch(await api.stageSourcingDispatch(round.round.round_id, pkg!.package.manifest_sha256, `browser-${pkg!.package.manifest_sha256}`)))}>{dispatch ? 'Retry same idempotency key' : 'Stage dispatch · zero send'}</button>
+            </div>
+          </div>
+        )}
+        {pkg && <div className="border border-line rounded-r p-2 font-mono text-[12px] break-all">SEALED · reread {String(pkg.package.byte_reread_verified)} · payload {pkg.package.payload_sha256} · manifest {pkg.package.manifest_sha256} · {pkg.package.dispatch_ceiling}</div>}
+        {dispatch && <div className="border border-line rounded-r p-2 text-[12px]"><b>{dispatch.status}</b> · external_send {String(dispatch.dispatch.external_send)} · network_calls {dispatch.dispatch.network_calls} · retry returns the same staged receipt</div>}
+        {evidence && (
+          <div className="border-t border-line2 pt-2 grid gap-1 text-[12px] text-muted">
+            <div><b className="text-ink">Claim ceiling:</b> {evidence.claim_ceiling}</div>
+            <div className="font-mono break-all">corpus {evidence.corpus.corpus_sha256} · source hashes {Object.keys(evidence.source_hashes).length}</div>
+            {evidence.limitations.map((item) => <div key={item}>· {item}</div>)}
+          </div>
+        )}
+        {!evidence && <div className="text-[12px] text-muted">Requires the mounted local service adapters. No offline data is substituted when an endpoint is absent, stale, or malformed.</div>}
+      </div>
+    </section>
+  );
+}
 
 function Party({ n, depth = 0 }: { n: PartyNode; depth?: number }) {
   const color = n.screening === 'exact' || n.screening === 'normalized' ? 'var(--red)' : n.unknown ? 'var(--amber)' : 'var(--muted)';
@@ -78,7 +169,7 @@ export function Sourcing({ o }: { o: Outcome }) {
   const header = (
     <div className="flex items-center justify-between gap-3 px-4 py-[10px] border-b border-line2 bg-surface flex-wrap">
       <div className="flex items-baseline gap-3 min-w-0 flex-wrap">
-        <span className="text-[13px] font-semibold">Sourcing <span className="text-muted font-normal">· part by part</span></span>
+        <span className="text-[13px] font-semibold">Sourcing <span className="text-muted font-normal">· {r ? 'offline lab · part by part' : 'service + offline lab'}</span></span>
         {r && <span className="font-mono text-[13px]">{r.id} · design state #{r.designSeq}</span>}
         {r && <span className="chip">ship-to {r.shipTo}</span>}{r && <span className="chip">qty {r.qty}</span>}{r && <span className="chip">{r.mode}</span>}
         {rail}
@@ -101,8 +192,9 @@ export function Sourcing({ o }: { o: Outcome }) {
       <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
         {header}
         <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start justify-center" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))' }}>
+          <ServiceSourcing />
           <div className="panel">
-            <div className="panel-head"><div className="panel-title">Before the search runs</div><span className="text-[12px] text-muted">declared facts · badged, never inferred</span></div>
+            <div className="panel-head"><div className="panel-title">Offline lab · before the search runs</div><span className="text-[12px] text-muted">local fixtures · never service evidence</span></div>
             <div className="p-3 grid gap-3 text-[13px]">
               <div className="grid grid-cols-2 gap-3">
                 <label className="grid gap-1 text-muted">what is the product for?<select value={intake.endUse} onChange={(e) => setIntake({ ...intake, endUse: e.target.value as Intake['endUse'] })} className="field text-ink" disabled={running}>{['civil survey and mapping', 'agriculture', 'public safety', 'infrastructure inspection', 'defense-adjacent research', 'other'].map((x) => <option key={x}>{x}</option>)}</select></label>
