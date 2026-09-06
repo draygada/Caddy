@@ -2,7 +2,12 @@ import { useStore } from '../store';
 import { useTripwireStore } from '../tripwire-store';
 import { PACKS } from '../lib/catalog';
 
-export function TopBar() {
+interface TopBarProps {
+  onHome?: () => void;
+  onOpenTripwire?: () => void;
+}
+
+export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
   const toggleHelp = useStore((s) => s.toggleHelp);
@@ -10,9 +15,17 @@ export function TopBar() {
   const pack = useStore((s) => s.pack);
   const openTripwire = useTripwireStore((s) => s.openPanel);
   const closeTripwire = useTripwireStore((s) => s.closePanel);
+  const goHome = () => {
+    if (onHome) {
+      onHome();
+      return;
+    }
+    patch({ sel: null, timelineOpen: false, helpOpen: false });
+    closeTripwire();
+  };
   return (
     <div className="h-12 flex-none flex items-center gap-2 px-2 sm:gap-4 sm:pl-4 sm:pr-3 border-b border-line2 bg-surface">
-      <button onClick={() => { patch({ sel: null, timelineOpen: false, helpOpen: false }); closeTripwire(); }} title="Return to baseline" className="flex items-center gap-[10px] bg-transparent border-0 p-0 text-ink cursor-pointer min-h-6">
+      <button onClick={goHome} title="Return to Design" className="flex items-center gap-[10px] bg-transparent border-0 p-0 text-ink cursor-pointer min-h-6">
         <img src="/logo.png" alt="" width={34} height={34} className="block w-[34px] h-[34px]" />
         <span className="font-bold tracking-[.01em]">Caddy</span>
       </button>
@@ -25,7 +38,7 @@ export function TopBar() {
       </div>
       <div className="hidden sm:block w-px h-5 bg-line2" />
       <div className="flex gap-[6px]">
-        <button onClick={openTripwire} className="btn btn-primary">Tripwire</button>
+        <button onClick={onOpenTripwire ?? openTripwire} className="btn btn-primary">Tripwire</button>
         <button onClick={toggleTheme} className="btn">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</button>
         <button onClick={toggleHelp} aria-label="Keyboard and mouse help" className="btn btn-icon">?</button>
       </div>
