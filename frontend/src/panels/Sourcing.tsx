@@ -5,12 +5,13 @@ import { GENERIC_NAME, type Slot } from '../lib/catalog';
 import { THUMBS, AF_THUMB } from '../lib/geometry';
 import { CHECKLIST, CLAIM_COST, CLAIM_OFFER, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
 import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type OperationsEnvelope, type ServiceOffer, type SourcingDispatchEnvelope, type SourcingPackageEnvelope, type SourcingRoundEnvelope } from '../lib/operations-client';
+import { OrderClient, OrderServiceError, type OrderEnvelope, type RecordingOutcome } from '../lib/order-client';
 
 const usd = (v: number | null | undefined) => (v == null ? 'rate not verified' : v.toLocaleString(undefined, { style: 'currency', currency: 'USD' }));
 const FEDERAL_BUYER_CLASSES = ['radio', 'motor', 'thermal_imager', 'ic', 'board', 'cell', 'pack', 'gnss', 'esc'];
 
 function serviceError(error: unknown): string {
-  return error instanceof OperationsServiceError ? `${error.code} · ${error.message}` : error instanceof Error ? error.message : 'Unknown service error';
+  return error instanceof OperationsServiceError || error instanceof OrderServiceError ? `${error.code} · ${error.message}` : error instanceof Error ? error.message : 'Unknown service error';
 }
 
 function ownerNames(offer: ServiceOffer): string {
@@ -34,6 +35,17 @@ function ServiceSourcing() {
   const [dispatch, setDispatch] = useState<SourcingDispatchEnvelope | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [orderClient, setOrderClient] = useState<OrderClient | null>(null);
+  const [orderEvidence, setOrderEvidence] = useState<OrderEnvelope | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [orderBusy, setOrderBusy] = useState<string | null>(null);
+  const [orderRetry, setOrderRetry] = useState<{ label: string; action: (api: OrderClient) => Promise<OrderEnvelope> } | null>(null);
+  const [validatedManifest, setValidatedManifest] = useState<string | null>(null);
+  const [recordingOutcome, setRecordingOutcome] = useState<RecordingOutcome>('DISPATCHED');
+  const [orderKey, setOrderKey] = useState('');
+  const [acknowledgementRef, setAcknowledgementRef] = useState('evidence:operator-observed-recording');
+  const [resolutionRef, setResolutionRef] = useState('');
+  const [reconciledEffect, setReconciledEffect] = useState<'NOT_SENT' | 'SENT'>('NOT_SENT');
 
   const currentClient = async () => {
     if (client) return client;
@@ -47,7 +59,32 @@ function ServiceSourcing() {
     setError(null);
     try { await action(await currentClient()); } catch (caught) { setError(serviceError(caught)); } finally { setBusy(null); }
   };
+  const currentOrderClient = async () => {
+    if (orderClient) return orderClient;
+    const operations = await currentClient();
+    const next = new OrderClient(operations.candidate);
+    setOrderClient(next);
+    return next;
+  };
+  const runOrder = async (label: string, action: (value: OrderClient) => Promise<OrderEnvelope>) => {
+    setOrderBusy(label);
+    setOrderError(null);
+    try {
+      const value = await action(await currentOrderClient());
+      setOrderEvidence(value);
+      setOrderRetry(null);
+    } catch (caught) {
+      setOrderError(serviceError(caught));
+      setOrderRetry({ label, action });
+    } finally {
+      setOrderBusy(null);
+    }
+  };
   const evidence: OperationsEnvelope | null = dispatch ?? pkg ?? round ?? client?.getLastValid('sourcing') ?? null;
+  const visibleOrderEvidence = orderEvidence ?? orderClient?.getLastValid() ?? null;
+  const receipt = visibleOrderEvidence?.receipt;
+  const now = () => new Date().toISOString();
+  const actor = 'operator:browser-demo';
 
   return (
     <section className="panel min-w-0 lg:col-span-2" aria-label="Service-backed sourcing">
@@ -79,13 +116,52 @@ function ServiceSourcing() {
               </article>
             ))}
             <div className="flex flex-wrap gap-2">
-              <button className="btn btn-primary disabled:opacity-40" disabled={!selectedOffer || busy !== null} onClick={() => run('package', async (api) => setPkg(await api.buildSourcingPackage(round.round.round_id)))}>{busy === 'package' ? 'Sealing…' : 'Build + reread sealed package'}</button>
+              <button className="btn btn-primary disabled:opacity-40" disabled={!selectedOffer || busy !== null} onClick={() => run('package', async (api) => { const value = await api.buildSourcingPackage(round.round.round_id); setPkg(value); setDispatch(null); setValidatedManifest(null); setOrderEvidence(null); setOrderError(null); setOrderKey(`recording-${value.package.manifest_sha256.slice(0, 16)}-${Date.now().toString(36)}`); })}>{busy === 'package' ? 'Sealing…' : 'Build + reread sealed package'}</button>
               <button className="btn disabled:opacity-40" disabled={!pkg || busy !== null} onClick={() => run('dispatch', async (api) => setDispatch(await api.stageSourcingDispatch(round.round.round_id, pkg!.package.manifest_sha256, `browser-${pkg!.package.manifest_sha256}`)))}>{dispatch ? 'Retry same idempotency key' : 'Stage dispatch · zero send'}</button>
             </div>
           </div>
         )}
         {pkg && <div className="border border-line rounded-r p-2 font-mono text-[12px] break-all">SEALED · reread {String(pkg.package.byte_reread_verified)} · payload {pkg.package.payload_sha256} · manifest {pkg.package.manifest_sha256} · {pkg.package.dispatch_ceiling}</div>}
         {dispatch && <div className="border border-line rounded-r p-2 text-[12px]"><b>{dispatch.status}</b> · external_send {String(dispatch.dispatch.external_send)} · network_calls {dispatch.dispatch.network_calls} · retry returns the same staged receipt</div>}
+        {pkg && (
+          <div className="border border-line rounded-r p-3 grid gap-3" aria-label="Operator order lifecycle rehearsal">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <b>Operator order lifecycle rehearsal</b>
+              <div className="flex flex-wrap gap-1"><span className="chip">PROCESS_LOCAL_DEMO_ONLY</span><span className="chip">RECORDING_ONLY</span><span className="chip">external effect NONE</span></div>
+            </div>
+            <div className="text-[12px] text-muted">This rehearses immutable order records against the sealed fixture package. No supplier receives a message, request, acknowledgement, or order.</div>
+            <div className="flex flex-wrap items-end gap-2">
+              <button className="btn btn-primary disabled:opacity-40" disabled={orderBusy !== null} onClick={() => void runOrder('validate-order-package', async (api) => { const value = await api.validatePackage(pkg.package.manifest_file); setValidatedManifest(value.package?.manifest_sha256 ?? null); return value; })}>{orderBusy === 'validate-order-package' ? 'Validating…' : validatedManifest === pkg.package.manifest_sha256 ? 'Package validated' : '1 · Validate package bytes'}</button>
+              <label className="grid gap-1 text-muted">simulated recording outcome<select value={recordingOutcome} onChange={(event) => setRecordingOutcome(event.target.value as RecordingOutcome)} className="field text-ink" disabled={orderBusy !== null}><option value="DISPATCHED">DISPATCHED</option><option value="ACKNOWLEDGED">ACKNOWLEDGED</option><option value="EXCEPTION">EXCEPTION · known not sent</option><option value="UNKNOWN">UNKNOWN · reconciliation required</option></select></label>
+              <label className="grid gap-1 text-muted min-w-[240px] flex-1">idempotency key<input value={orderKey} onChange={(event) => setOrderKey(event.target.value)} className="field font-mono text-ink" disabled={orderBusy !== null} /></label>
+              <button className="btn btn-primary disabled:opacity-40" disabled={validatedManifest !== pkg.package.manifest_sha256 || !orderKey.trim() || orderBusy !== null} onClick={() => void runOrder('record-dispatch', (api) => api.dispatchRecording({ manifest_relative_path: pkg.package.manifest_file, manifest_sha256: pkg.package.manifest_sha256, recording_outcome: recordingOutcome, idempotency_key: orderKey.trim(), route_ref: 'supplier:recording-demo-only', actor_id: actor, occurred_at: now() }))}>{orderBusy === 'record-dispatch' ? 'Recording…' : '2 · Record simulated dispatch'}</button>
+            </div>
+            {orderError && <div role="alert" className="border border-red rounded-r p-2 text-red flex flex-wrap items-center justify-between gap-2"><span><b>Order evidence not replaced.</b> {orderError}{visibleOrderEvidence ? ' · Last valid record remains visible.' : ''}</span>{orderRetry && <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder(orderRetry.label, orderRetry.action)}>Retry failed operation</button>}</div>}
+            {receipt && (
+              <div className="grid gap-3">
+                <div className="border border-line2 rounded-r p-2 grid gap-1 text-[12px]">
+                  <div className="flex flex-wrap justify-between gap-2"><b>{receipt.state} · simulated</b><span className="font-mono break-all">{receipt.receipt_id}</span></div>
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2"><span>execution <b>{receipt.execution_mode}</b></span><span>external effect <b>{receipt.external_effect}</b></span><span>recorded send effect <b>{receipt.send_effect}</b></span><span>retry <b>{receipt.retry_disposition}</b></span></div>
+                  <div className="font-mono break-all text-muted">receipt sha256 {receipt.receipt_sha256} · detail {receipt.detail_code}</div>
+                </div>
+                <div className="flex flex-wrap items-end gap-2">
+                  <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder('read-receipt', (api) => api.readReceipt(receipt.receipt_id))}>{orderBusy === 'read-receipt' ? 'Reading…' : '3 · Read latest receipt'}</button>
+                  {receipt.state === 'DISPATCHED' && <><label className="grid gap-1 text-muted min-w-[260px] flex-1">recorded acknowledgement evidence<input value={acknowledgementRef} onChange={(event) => setAcknowledgementRef(event.target.value)} className="field font-mono text-ink" /></label><button className="btn disabled:opacity-40" disabled={!acknowledgementRef.trim() || orderBusy !== null} onClick={() => void runOrder('acknowledge', (api) => api.acknowledge(receipt.receipt_id, acknowledgementRef.trim(), actor, now()))}>4 · Record acknowledgement</button></>}
+                  {receipt.state === 'UNKNOWN' && <><label className="grid gap-1 text-muted min-w-[280px] flex-1">mandatory reconciliation evidence<input value={resolutionRef} onChange={(event) => setResolutionRef(event.target.value)} placeholder="evidence:confirmed-not-received" className="field font-mono text-ink" /></label><label className="grid gap-1 text-muted">definitive effect<select value={reconciledEffect} onChange={(event) => setReconciledEffect(event.target.value as 'NOT_SENT' | 'SENT')} className="field text-ink"><option value="NOT_SENT">NOT_SENT</option><option value="SENT">SENT</option></select></label><button className="btn btn-primary disabled:opacity-40" disabled={!resolutionRef.trim() || orderBusy !== null} onClick={() => void runOrder('reconcile', (api) => api.reconcileUnknown(receipt.receipt_id, resolutionRef.trim(), reconciledEffect, actor, now()))}>4 · Reconcile UNKNOWN + close</button></>}
+                  {(receipt.state === 'ACKNOWLEDGED' || receipt.state === 'EXCEPTION') && <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder('close', (api) => api.close(receipt.receipt_id, actor, now(), resolutionRef.trim() || undefined))}>5 · Close process-local order</button>}
+                  <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder('verify-audit', (api) => api.verifyAudit())}>{orderBusy === 'verify-audit' ? 'Verifying…' : 'Verify audit hash chain'}</button>
+                </div>
+              </div>
+            )}
+            {visibleOrderEvidence && (
+              <div className="border-t border-line2 pt-2 grid gap-1 text-[12px] text-muted">
+                <div><b className="text-ink">{visibleOrderEvidence.status}</b> · {visibleOrderEvidence.claim_ceiling}</div>
+                {visibleOrderEvidence.event_count != null && <div className="font-mono break-all">verified events {visibleOrderEvidence.event_count} · audit head {visibleOrderEvidence.audit_head_sha256}</div>}
+                {(visibleOrderEvidence.audit_events ?? visibleOrderEvidence.events ?? []).map((item) => <div key={item.event_id} className="font-mono break-all">#{item.sequence} {item.event_type} · {item.state} · {item.event_sha256}</div>)}
+              </div>
+            )}
+          </div>
+        )}
         {evidence && (
           <div className="border-t border-line2 pt-2 grid gap-1 text-[12px] text-muted">
             <div><b className="text-ink">Claim ceiling:</b> {evidence.claim_ceiling}</div>
