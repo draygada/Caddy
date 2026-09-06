@@ -31,7 +31,7 @@ const FACE_DEFS: { n: Vec3; u: Vec3; v: Vec3; label: string }[] = [
   { n: [-1, 0, 0], u: [0, 1, 0], v: [0, 0, 1], label: 'Left' },
 ];
 const CUTS = [-0.5, -0.28, 0.28, 0.5];
-function cubeCells(pr: Projector): { cells: CubeCell[]; faces: CubeFace[]; triad: CubeTriad; corners: [number, number][] } {
+function cubeCells(pr: Projector): { cells: CubeCell[]; faces: CubeFace[]; triad: CubeTriad } {
   const out: CubeCell[] = [];
   const faces: CubeFace[] = [];
   const add = (a: Vec3, b: Vec3, s: number): Vec3 => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
@@ -71,20 +71,13 @@ function cubeCells(pr: Projector): { cells: CubeCell[]; faces: CubeFace[]; triad
       out.push({ pts: corners.map(P).join(' '), fill, dir, key: dir.map((v) => Math.sign(v)).join(','), label: kind === 'face' ? f.label : undefined, m, d: dot, kind, cx, cy });
     }
   }
-  // one disc per visible cube vertex (a vertex shows when any of its three faces does)
-  const shown = new Set(faces.map((f) => f.n));
-  const corners: [number, number][] = [];
-  for (const sx of [-0.5, 0.5]) for (const sy of [-0.5, 0.5]) for (const sz of [-0.5, 0.5]) {
-    const vis = FACE_DEFS.some((f) => shown.has(f.n) && f.n[0] * sx + f.n[1] * sy + f.n[2] * sz > 0);
-    if (vis) corners.push(pr.pt(sx, sy, sz));
-  }
   // the triad is its own small gizmo at the bottom-left of the widget, oriented by the same camera
   const o0 = pr.pt(0, 0, 0);
   const dir = (x: number, y: number, z: number): [number, number] => { const p = pr.pt(x, y, z); return [p[0] - o0[0], p[1] - o0[1]]; };
   const og: [number, number] = [40, 158];
   const ax = (v: [number, number]) => [og[0] + v[0], og[1] + v[1]];
   const triad: CubeTriad = { o: og, x: ax(dir(0.85, 0, 0)), y: ax(dir(0, 0.85, 0)), z: ax(dir(0, 0, 0.85)), yBehind: pr.view[1] > 0 };
-  return { cells: out.sort((a, b) => a.d - b.d), faces: faces.sort((a, b) => a.d - b.d), triad, corners };
+  return { cells: out.sort((a, b) => a.d - b.d), faces: faces.sort((a, b) => a.d - b.d), triad };
 }
 
 interface Deco { stroke: string; sw: number; dash: string; hoverMix: boolean; selFace: boolean; tint?: string }
@@ -374,7 +367,6 @@ export function Viewport({ o: _o }: { o: Outcome }) {
               {scene.cube.faces.map((cf, i) => <polygon key={'f' + i} points={cf.pts} fill={cf.fill} stroke="none" />)}
               {scene.cube.faces.flatMap((cf, i) => cf.grooves.map((ln, j) => <polyline key={'g' + i + '-' + j} points={ln} fill="none" stroke="var(--cube-line)" strokeWidth={1.6} strokeLinecap="butt" />))}
               {scene.cube.faces.map((cf, i) => <polygon key={'fo' + i} points={cf.pts} fill="none" stroke="var(--cube-edge)" strokeWidth={1} strokeLinejoin="round" />)}
-              {scene.cube.corners.map(([x, y], i) => <circle key={'k' + i} cx={x} cy={y} r={4.2} fill="var(--cube-line)" stroke="var(--cube-edge)" strokeWidth={0.9} />)}
               {/* hover highlight: every cell sharing the direction (three at a corner, two along an edge) */}
               {scene.cube.cells.filter((c) => cubeHover === c.key).map((c, i) => <polygon key={'h' + i} points={c.pts} fill="var(--focus)" fillOpacity={0.45} stroke="none" />)}
               {scene.cube.cells.filter((cf) => cf.label).map((cf) => <text key={'t' + cf.label} transform={cf.m} x="0" y="0.02" fill="var(--cube-ink)" fontSize="0.27" fontWeight="600" fontFamily="Work Sans, system-ui, sans-serif" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: 'none' }}>{cf.label}</text>)}
