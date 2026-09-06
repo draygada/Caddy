@@ -65,6 +65,19 @@ describe('operations service client', () => {
     expect(client.getLastValid('sourcing')).toBe(first);
   });
 
+  it('invokes browser fetch without binding the OperationsClient as its receiver', async () => {
+    let receiver: unknown = 'not-called';
+    const fetchImpl = function (this: unknown) {
+      receiver = this;
+      if (this !== undefined) throw new TypeError('Illegal invocation');
+      return Promise.resolve(new Response(JSON.stringify(envelope('sourcing', { round })), { status: 200 }));
+    } as typeof fetch;
+    const client = new OperationsClient(IDENTITY, fetchImpl);
+
+    await expect(client.createSourcingRound({ part_key: 'flight-controller', quantity: 1, mode: 'air' })).resolves.toMatchObject({ round });
+    expect(receiver).toBeUndefined();
+  });
+
   it('requires byte-reread package seals and a zero-network STAGED dispatch', async () => {
     const fetchImpl = vi.fn(async (path: string | URL | Request) => {
       if (String(path).endsWith('/packages')) return new Response(JSON.stringify(envelope('sourcing', { status: 'PACKAGED', package: { round_id: 'round:fixture', payload_file: `payload-${HASH_A}.json`, payload_sha256: HASH_A, payload_bytes: 10, manifest_file: `manifest-${HASH_B}.json`, manifest_sha256: HASH_B, corpus_sha256: HASH_C, dispatch_ceiling: 'STAGED_ONLY', byte_reread_verified: true } })), { status: 200 });

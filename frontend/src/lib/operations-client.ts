@@ -427,7 +427,10 @@ export class OperationsClient {
     }
     let response: Response;
     try {
-      response = await this.fetchImpl(path, {
+      // Native browser fetch is a Web API method and must not inherit the
+      // OperationsClient instance as its receiver (Chromium: Illegal invocation).
+      const fetchRequest = this.fetchImpl;
+      response = await fetchRequest(path, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body,
