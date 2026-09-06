@@ -1,7 +1,7 @@
 // Door 3 (a prompt becomes a slot list) and design-to-target, both bounded:
 // the proposal can name only catalog parts or typed placeholders; the human is
 // on the accept button; the same rules, walk and cost function score every result.
-import { CATALOG, GENERIC_NAME, PALETTE, PART_IDS, SLOTS, type PartId, type Slot } from './catalog';
+import { CATALOG, CORE_SLOTS, GENERIC_NAME, PALETTE, PART_IDS, SLOTS, type PartId, type Slot } from './catalog';
 import { outcome, type Design, type Outcome } from './rules';
 
 export interface SlotProposal { slot: Slot; role: string; mpn: string | null; pid: PartId | null; placeholder: boolean; rejected?: string }
@@ -32,7 +32,8 @@ export interface Ranked { parts: Record<Slot, PartId | null>; cost: number; outc
 /** Brute force over the catalog's slot alternatives, scored by the same rules and the declared values. Status first; never ranked on price alone. */
 export function searchTarget(base: Design, c: TargetConstraints, pack: Outcome['pack']): Ranked[] {
   // the thermal core is optional in a target search (an empty slot is a legitimate configuration); the pod stays as designed
-  const options: Record<Slot, (PartId | null)[]> = Object.fromEntries(SLOTS.map((s) => [s, s === 'pod' ? [base.parts.pod] : s === 'thermal' ? [...PALETTE[s], null] : PALETTE[s]])) as Record<Slot, (PartId | null)[]>;
+  // library components (no modeled rule reads them) stay as designed, so the search only branches on the core slots
+  const options: Record<Slot, (PartId | null)[]> = Object.fromEntries(SLOTS.map((s) => [s, !(CORE_SLOTS as Slot[]).includes(s) || s === 'pod' ? [base.parts[s]] : s === 'thermal' ? [...PALETTE[s], null] : PALETTE[s]])) as Record<Slot, (PartId | null)[]>;
   const combos: Record<Slot, PartId | null>[] = [];
   const rec = (i: number, cur: Partial<Record<Slot, PartId | null>>) => {
     if (i === SLOTS.length) { combos.push(cur as Record<Slot, PartId | null>); return; }

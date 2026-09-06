@@ -13,7 +13,7 @@ interface Props {
   onCommit: (text: string | null) => void;
 }
 
-/** Numeric field in the spec panel: Enter or blur applies; the range is printed beside it; a cleared nullable field means "not published". */
+/** Numeric field in the spec panel: Enter or blur applies; the range is printed beside it; a cleared nullable field is empty. */
 export function NumField({ id, value, dp, unit, min, max, nullable, disabled, msg, onCommit }: Props) {
   const shown = value == null ? '' : value.toFixed(dp);
   const [text, setText] = useState(shown);
@@ -23,14 +23,14 @@ export function NumField({ id, value, dp, unit, min, max, nullable, disabled, ms
     <div>
       <div className="flex gap-2 items-center flex-wrap">
         <input
-          id={id} inputMode="decimal" value={text} disabled={disabled} placeholder={nullable ? 'not published' : String(min) + '–' + String(max)}
+          id={id} inputMode="decimal" value={text} disabled={disabled} placeholder={nullable ? 'empty' : String(min) + '–' + String(max)}
           onChange={(e) => setText(e.target.value)} onBlur={commit}
           onKeyDown={(e) => { if (e.key === 'Enter') { commit(); (e.target as HTMLInputElement).blur(); } }}
           aria-describedby={id + '-msg'}
           className="field w-[120px] font-mono text-[16px] font-semibold disabled:opacity-50"
         />
-        <span className="text-[13px] text-muted">{unit ? unit + ' · ' : ''}{min}–{max}{nullable ? ' · clear = not published' : ''}</span>
-        {nullable && value != null && !disabled && <button onClick={() => onCommit(null)} className="btn btn-xs">not published</button>}
+        <span className="text-[13px] text-muted">{unit ? unit + ' · ' : ''}{min}–{max}</span>
+        {nullable && value != null && !disabled && <button onClick={() => onCommit(null)} className="btn btn-xs">clear</button>}
       </div>
       <div id={id + '-msg'} role="status" className="text-[13px] text-muted min-h-[18px] mt-1">{msg || ''}</div>
     </div>

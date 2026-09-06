@@ -1,0 +1,20 @@
+[
+  {"id": "thermal_lepton_after_boson", "state": "f3_boson", "line_id": "line:thermal_core", "kind": "alternative", "tripped": ["6A003.b.4.b"],
+   "expect": {"mpn": "500-0771-01", "status": "green", "reason_contains": "6A003.b.4.b: no fire"}, "real": true,
+   "note": "F-08 words: Lepton 3.5 · 19,200 elements · 8.7 Hz · ACCEPTED · 6A003.b.4.b: no fire (Note 3.a)"},
+  {"id": "imu_icm_after_hg5700", "state": "f4_hg5700", "line_id": "line:imu", "kind": "alternative", "tripped": ["7A002.a.1.a", "7A003.d.1"],
+   "expect": {"mpn": "ICM-42688-P", "status": "grey", "reason_contains": "cannot fire"}, "real": true,
+   "note": "S2 verifier: the full DS-000347 v1.9 datasheet publishes no bias stability and no random walk"},
+  {"id": "imu_ng_synthetic", "state": "f4_hg5700", "line_id": "line:imu", "kind": "alternative", "tripped": ["7A002.a.1.a", "7A003.d.1"],
+   "expect": {"mpn": "IMU-NG", "status": "red", "reason_contains": "XII(e)(12)(i)"}, "real": false,
+   "note": "ARW 0.0008 < 0.001: USML XII(e)(12)(i) fires; a new control row is red"},
+  {"id": "gx220_poisoned", "state": "f4_hg5700", "line_id": "line:imu", "kind": "alternative", "tripped": ["7A002.a.1.a", "7A003.d.1"],
+   "expect": {"mpn": "GX-220", "status": "red", "reason_contains": "7A002.a.1.a"}, "real": false,
+   "note": "the poisoned page: the truthful span fires 7A002.a.1.a; the injected 'five degrees per hour' ends in REJECT"},
+  {"id": "cell_p45b_after_sicore", "state": "f11_sicore", "line_id": "line:battery_cells", "kind": "alternative", "tripped": ["3A001.e.1.b"],
+   "expect": {"mpn": "INR-21700-P45B", "status": "grey", "reason_contains": "rate not verified"}, "real": true,
+   "note": "242 Wh/kg from the v1.4 datasheet: 3A001.e.1.b does not fire; green once Charlie's HTS pass flips 8507.60 to verified"},
+  {"id": "io_mcu_origin_escalation", "state": "baseline", "line_id": "line:io_mcu", "kind": "escalation", "reason": "origin_depends_on_lot", "tripped": [],
+   "expect": {"status": "grey", "confident": false, "reason_contains": "not confident"}, "real": true,
+   "note": "measured on the 2026-09-06 recording run: estore.st.com/en/stm32f100c8t6b-cpn.html fetches (200) and www.st.com's datasheet PDF times out for a plain client, so one of the two pool sources resolves and the words read '1 source(s) fetched; a human reads them and resolves'. 'not confident' is the phrase every escalation prints: origin is a declaration, no span can settle it, the agent never goes green and the human decides. The earlier 'no source resolved' was written for a stricter assumption — that neither host would answer"}
+]

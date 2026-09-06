@@ -1,20 +1,20 @@
 import { useStore } from '../store';
-import { PLATE_W } from '../lib/catalog';
-import { CONSTRAINTS, SKETCH_COLOR, solveSketch } from '../lib/sketch';
+import { CONFLICT_L, CONSTRAINTS, HOLE_BIG_D, HOLE_INSET_X, HOLE_INSET_Y, SKETCH_COLOR, solveSketch } from '../lib/sketch';
 import { fmtNum } from '../lib/units';
 
 /** Top-down sketch of the plate profile with Fusion's constraint colours: black fully defined, blue under-constrained; amber redundant, red contradictory. */
 export function SketchView() {
   const s = useStore();
-  const L = s.span, W = PLATE_W;
+  const L = s.geo.plateL, W = s.geo.plateW;
   const r = solveSketch(s.sketch);
   const cRect = SKETCH_COLOR[r.entities.rect.state], cHoles = SKETCH_COLOR[r.entities.holes.state];
   const VBW = 760, VBH = 490;
   const sc = Math.min(560 / L, 300 / W);
   const ox = (VBW - L * sc) / 2, oy = (VBH - W * sc) / 2 + 10;
   const X = (x: number) => ox + x * sc, Y = (y: number) => oy + (W - y) * sc;
-  const holeR = (s.sketch.hole_big ? 0.6 : s.geo.holeD) / 2;
-  const holes: [number, number][] = [[0.25, 0.2], [L - 0.25, 0.2], [0.25, W - 0.2], [L - 0.25, W - 0.2]];
+  const holeR = (s.sketch.hole_big ? HOLE_BIG_D : s.geo.holeD) / 2;
+  const ix = HOLE_INSET_X, iy = HOLE_INSET_Y;
+  const holes: [number, number][] = [[ix, iy], [L - ix, iy], [ix, W - iy], [L - ix, W - iy]];
   const glyphs = (entity: 'rect' | 'holes') => CONSTRAINTS.filter((c) => c.entity === entity && s.sketch[c.id]).map((c) => c.glyph);
   const dim = (x1: number, y1: number, x2: number, y2: number, label: string, color: string) => (
     <g key={label} stroke={color} fill={color} fontFamily="Geist Mono, monospace" fontSize="12">
@@ -39,11 +39,11 @@ export function SketchView() {
         {holes.map(([x, y], i) => <circle key={i} cx={X(x)} cy={Y(y)} r={holeR * sc} fill="none" stroke={cHoles} strokeWidth={2} strokeDasharray={r.entities.holes.state === 'CONTRADICTORY' ? '6 4' : undefined} />)}
         {s.sketch.dim_span && dim(X(0), Y(0) + 28, X(L), Y(0) + 28, 'L = ' + fmtNum(L, s.units) + ' ' + s.units, cRect)}
         {s.sketch.dim_span_dup && dim(X(0), Y(0) + 48, X(L), Y(0) + 48, 'L = ' + fmtNum(L, s.units) + ' ' + s.units + ' (duplicate)', 'var(--amber)')}
-        {s.sketch.dim_span_conflict && dim(X(0), Y(0) + 48, X(2.0), Y(0) + 48, 'L = ' + fmtNum(2.0, s.units) + ' ' + s.units + ' ≠ ' + fmtNum(L, s.units), 'var(--red)')}
+        {s.sketch.dim_span_conflict && dim(X(0), Y(0) + 48, X(CONFLICT_L), Y(0) + 48, 'L = ' + fmtNum(CONFLICT_L, s.units) + ' ' + s.units + ' ≠ ' + fmtNum(L, s.units), 'var(--red)')}
         {s.sketch.dim_width && vdim(X(L) + 28, Y(W), Y(0), 'W = ' + fmtNum(W, s.units) + ' ' + s.units, cRect)}
-        {s.sketch.dim_holeD && dim(X(0.25) - holeR * sc, Y(W - 0.2) - 22, X(0.25) + holeR * sc, Y(W - 0.2) - 22, '⌀ ' + fmtNum(holeR * 2, s.units), cHoles)}
-        {s.sketch.hole_inset_x && dim(X(0), Y(W) - 14, X(0.25), Y(W) - 14, fmtNum(0.25, s.units), cHoles)}
-        {s.sketch.hole_inset_y && vdim(X(0) - 28, Y(W), Y(W - 0.2), fmtNum(0.2, s.units), cHoles)}
+        {s.sketch.dim_holeD && dim(X(ix) - holeR * sc, Y(W - iy) - 22, X(ix) + holeR * sc, Y(W - iy) - 22, '⌀ ' + fmtNum(holeR * 2, s.units, true), cHoles)}
+        {s.sketch.hole_inset_x && dim(X(0), Y(W) - 14, X(ix), Y(W) - 14, fmtNum(ix, s.units, true), cHoles)}
+        {s.sketch.hole_inset_y && vdim(X(0) - 28, Y(W), Y(W - iy), fmtNum(iy, s.units, true), cHoles)}
         {s.sketch.holes_symmetric && <g stroke={cHoles} strokeWidth="1" strokeDasharray="4 4"><line x1={X(L / 2)} y1={Y(W) - 6} x2={X(L / 2)} y2={Y(0) + 6} /><line x1={X(0) - 6} y1={Y(W / 2)} x2={X(L) + 6} y2={Y(W / 2)} /></g>}
         <text x={X(0)} y={Y(W) - 40} fontFamily="Geist Mono, monospace" fontSize="14" fontWeight="700" fill={cRect}>rect · {r.entities.rect.state} · {glyphs('rect').join(' ')}</text>
         <text x={X(L / 2) + 10} y={Y(W / 2) - 8} fontFamily="Geist Mono, monospace" fontSize="14" fontWeight="700" fill={cHoles}>holes · {r.entities.holes.state} · {glyphs('holes').join(' ')}</text>

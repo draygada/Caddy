@@ -1,0 +1,46 @@
+{
+  "fixture": "tariff",
+  "revision": "2026-09-05",
+  "hts_revision": "2026 Revision 17 (as of 2026-08-24)",
+  "retrieved_at": "2026-09-05T23:00:00Z",
+  "source": "Typed from THE BUILD §2.7 as corrected by Diego's 2026-09-03 research and 2026-09-05 validation and by the 2026-09-03 routing research. Base rates marked verified=false are 'expected' and were not read from the schedule this session. Overlay rows are data, never program logic; a rate change is a new fixture and old estimates keep pointing at the old one.",
+  "claim_ceiling": "Estimate from declared tariff code and origin against a dated tariff table. Not a customs determination.",
+  "disclaimer_h350722": "General reference at heading level, not tied to any actual or intended importation; the ten-digit line is a licensed broker's. Not an entry, not classification advice. (CBP HQ H350722, 2026-01-16)",
+  "report_order": ["Section 232", "Section 301", "Country action", "AD/CVD"],
+  "base_rows": [
+    {"heading": "8507.60", "description": "lithium-ion cells and batteries", "general_rate": "0.034", "verified": false, "note": "expected 3.4 %; read live before the demo (THE BUILD §2.4)"},
+    {"heading": "8542.31", "description": "processors and controllers (ICs)", "general_rate": "0", "verified": false, "note": "expected Free under the Information Technology Agreement"},
+    {"heading": "9029.90", "description": "parts of revolution counters, speed indicators (IMU as declared by LCSC)", "general_rate": "0", "verified": false, "note": "expected Free; the IMU sits between 9014, 9029 and 9031 (CROSS)"},
+    {"heading": "9014.20", "description": "instruments for aeronautical navigation", "general_rate": "0", "verified": false, "note": "expected Free; contested line for the HG5700 (9014 / 9029 / 9031)"},
+    {"heading": "9026.80", "description": "instruments for measuring pressure (barometer)", "general_rate": "0", "verified": false, "note": "expected Free; magnetometer 9030.40 not typed"},
+    {"heading": "8526.91", "description": "radio navigational aid apparatus (GNSS)", "general_rate": "0", "verified": false, "note": "expected Free; sub-line not confirmed"},
+    {"heading": "8525.80", "description": "television cameras, digital cameras (thermal core)", "general_rate": "0", "verified": false, "note": "expected Free; sub-line 8525.80.3050 as declared"},
+    {"heading": "8501.31", "description": "DC motors of an output not exceeding 750 W", "general_rate": "0.04", "verified": false, "note": "expected 4 %; fork printed: 8501.51-.53 per Kaohsiung Customs; Diego's worked example used ~2.4 %"},
+    {"heading": "8807.30", "description": "other parts of aeroplanes, helicopters or unmanned aircraft", "general_rate": "0", "verified": false, "note": "expected Free; unmanned-aircraft subheading to confirm"},
+    {"heading": "8534.00", "description": "printed circuits", "general_rate": "0", "verified": false, "note": "expected Free or low"}
+  ],
+  "overlays": [
+    {"id": "301-CN-L3", "program": "Section 301", "label": "Section 301, List 3", "citation": "9903.88.03", "rate": "0.25", "origins": ["CN"], "headings": ["8501.31", "8534.00", "8807.30"], "effective_from": "2018-09-24", "effective_to": null, "verified": false, "note": "List 3 at 25 %; per-heading list membership open for 8807.30"},
+    {"id": "301-CN-L4A", "program": "Section 301", "label": "Section 301, List 4A", "citation": "9903.88.15", "rate": "0.075", "origins": ["CN"], "headings": ["aggregate"], "effective_from": "2019-09-01", "effective_to": null, "verified": false, "note": "List 4A at 7.5 %; passives list membership per part open"},
+    {"id": "301-CN-SEMI", "program": "Section 301", "label": "Section 301, 2024 four-year review: semiconductors", "citation": "Chapter 99 heading not typed; 89 FR 76581", "rate": "0.50", "origins": ["CN"], "headings": ["8542.31"], "effective_from": "2025-01-01", "effective_to": null, "verified": false, "note": "50 % from 2025-01-01; applies only to a CN-origin lot"},
+    {"id": "301-CN-LIB", "program": "Section 301", "label": "Section 301, 2024 four-year review: non-EV lithium-ion batteries", "citation": "Chapter 99 heading not typed; 89 FR 76581", "rate": "0.25", "origins": ["CN"], "headings": ["8507.60"], "effective_from": "2026-01-01", "effective_to": null, "verified": false, "note": "25 % from 2026-01-01; the Molicel cells are TW-origin, so this row does not fire"},
+    {"id": "301-TW", "program": "Country action", "label": "Section 301, Taiwan (91 FR 47318)", "citation": "HTS U.S. note 52; Chapter 99 heading not typed", "rate": "0.10", "origins": ["TW"], "headings": ["*"], "exempt_headings": ["8542.31", "8517.62"], "effective_from": "2026-07-24", "effective_to": null, "verified": true, "note": "10 % net of MFN per heading; 8542.31 and 8517.62 exempt under note 52(b); the civil-aircraft list 52(d) is conditioned on General Note 6 (FAA 44704 certificate) and does not reach Kestrel parts"}
+  ],
+  "scope_notes": {
+    "Section 232": "not in scope for these part lines as declared: metals actions (50 % steel/aluminium, 25 % copper, on full value since 2026-04-06) reach only metal articles and derivatives; the unmanned-aircraft action (91 FR 53699, effective 2026-09-03) reads the product node and is the engine's row, not a part line",
+    "AD/CVD": "no case in scope for this code and origin; a scope-language check per component is owed before filing (battery-grade graphite orders 2026 do not reach these lines as declared)",
+    "Section 122": "check current status: Section 122 surcharge imposed 2026-02-24; CIT ruled against it 2026-05-07 for named plaintiffs; statutory 150 days ended 2026-07-24; Federal Circuit stay pending appeal. Printed as a banner, never a rate."
+  },
+  "fees": [
+    {"fiscal_year": "FY2026", "effective_from": "2025-10-01", "effective_to": "2026-09-30", "mpf_rate": "0.003464", "mpf_min": "33.58", "mpf_max": "651.50", "hmf_rate": "0.00125", "citation": "19 CFR 24.23; CBP FY2026 fee notice", "verified": true},
+    {"fiscal_year": "FY2027", "effective_from": "2026-10-01", "effective_to": "2027-09-30", "mpf_rate": "0.003464", "mpf_min": "34.58", "mpf_max": "670.86", "hmf_rate": "0.00125", "citation": "91 FR 48398 (required as of 2026-10-01)", "verified": true}
+  ],
+  "de_minimis": {
+    "suspended_from": "2025-08-29",
+    "authority": "EO 14324",
+    "codified_on": "2026-06-24",
+    "codified_document": "2026-12670 (CBP interim final rule)",
+    "text": "de minimis: suspended for all origins since 2025-08-29 (EO 14324); codified by CBP interim final rule 2026-06-24 (2026-12670); small parcels enter formally"
+  },
+  "affiliates_rule": "BIS Affiliates Rule suspended 2025-11-10; returns 10 November 2026"
+}

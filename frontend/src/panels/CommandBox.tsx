@@ -42,11 +42,12 @@ export function CommandBox() {
     }
     return searchCommands(visible, needle).map((c) => ({ c, recent: false }));
   }, [q, recent, st, target, designMounted]);
-  if (!open) return (
+  // the floating opener belongs to the design workspace; on the other tabs it only covered content
+  if (!open) return st.workspace !== 'design' ? null : (
     <button type="button" aria-label="Open command palette" aria-keyshortcuts="Meta+K Control+K S" onClick={() => st.patch({ cmdOpen: true })}
-      className="fixed right-3 bottom-[68px] md:bottom-3 z-[28] min-h-10 px-3 flex items-center gap-3 bg-ink text-surface border border-ink rounded-r shadow-[0_8px_24px_rgba(0,0,0,.22)] cursor-pointer">
-      <span className="text-[13px] font-semibold">Commands</span>
-      <span className="font-mono text-[11px] opacity-70">S · ⌘K</span>
+      className="btn btn-icon fixed sm:hidden left-3 bottom-[68px] md:bottom-3 z-[28] min-h-11 min-w-11 flex items-center justify-center bg-surface shadow-[0_4px_14px_rgba(0,0,0,.14)]">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+      <span className="sr-only">Commands</span>
     </button>
   );
   const run = (c: Command) => runCommand(c.id, target);

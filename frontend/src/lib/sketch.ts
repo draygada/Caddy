@@ -18,17 +18,22 @@ export interface ConstraintDef {
 
 export const CONSTRAINTS: ConstraintDef[] = [
   { id: 'horizontal', label: 'edges horizontal / vertical', entity: 'rect', kind: 'geometric', glyph: '⊥', dof: 2, role: 'required' },
-  { id: 'dim_span', label: 'span dimension · drives L', entity: 'rect', kind: 'dimension', glyph: '↔', dof: 1, role: 'required' },
-  { id: 'dim_width', label: 'width dimension · 1.2 m', entity: 'rect', kind: 'dimension', glyph: '↕', dof: 1, role: 'required' },
+  { id: 'dim_span', label: 'length dimension · drives L', entity: 'rect', kind: 'dimension', glyph: '↔', dof: 1, role: 'required' },
+  { id: 'dim_width', label: 'width dimension · drives W', entity: 'rect', kind: 'dimension', glyph: '↕', dof: 1, role: 'required' },
   { id: 'holes_symmetric', label: 'holes symmetric about both centre lines', entity: 'holes', kind: 'geometric', glyph: '⇔', dof: 6, role: 'required' },
   { id: 'dim_holeD', label: 'hole diameter · ⌀', entity: 'holes', kind: 'dimension', glyph: '⌀', dof: 1, role: 'required' },
-  { id: 'hole_inset_x', label: 'hole inset from plate end · 0.25 m', entity: 'holes', kind: 'dimension', glyph: '↦', dof: 1, role: 'required' },
-  { id: 'hole_inset_y', label: 'hole inset from plate edge · 0.20 m', entity: 'holes', kind: 'dimension', glyph: '↥', dof: 1, role: 'required' },
-  { id: 'dim_span_dup', label: 'a second span dimension · same value', entity: 'rect', kind: 'dimension', glyph: '↔', dof: 0, role: 'redundant' },
+  { id: 'hole_inset_x', label: 'hole inset from plate end · 25 mm', entity: 'holes', kind: 'dimension', glyph: '↦', dof: 1, role: 'required' },
+  { id: 'hole_inset_y', label: 'hole inset from plate edge · 20 mm', entity: 'holes', kind: 'dimension', glyph: '↥', dof: 1, role: 'required' },
+  { id: 'dim_span_dup', label: 'a second length dimension · same value', entity: 'rect', kind: 'dimension', glyph: '↔', dof: 0, role: 'redundant' },
   { id: 'holes_equal', label: 'holes equal diameter · already implied by symmetry', entity: 'holes', kind: 'geometric', glyph: '=', dof: 0, role: 'redundant' },
-  { id: 'dim_span_conflict', label: 'span dimension · 2.0 m while the driving span differs', entity: 'rect', kind: 'dimension', glyph: '↔', dof: 0, role: 'contradictory' },
-  { id: 'hole_big', label: 'hole diameter · 0.60 m, crosses the plate edge', entity: 'holes', kind: 'dimension', glyph: '⌀', dof: 0, role: 'contradictory' },
+  { id: 'dim_span_conflict', label: 'length dimension · 200 mm while the driving length differs', entity: 'rect', kind: 'dimension', glyph: '↔', dof: 0, role: 'contradictory' },
+  { id: 'hole_big', label: 'hole diameter · 60 mm, crosses the plate edge', entity: 'holes', kind: 'dimension', glyph: '⌀', dof: 0, role: 'contradictory' },
 ];
+/** Plate hole layout, metres: inset from the plate end and from the plate edge; the contradictory fixtures below. */
+export const HOLE_INSET_X = 0.025;
+export const HOLE_INSET_Y = 0.02;
+export const HOLE_BIG_D = 0.06;
+export const CONFLICT_L = 0.2;
 
 /** rect: 4 DOF (two corners, anchored at origin leaves L, W, and two edge angles); holes: 4 × (x, y, d) = 12 → symmetry shares them. */
 const TOTAL_DOF: Record<SketchEntity, number> = { rect: 4, holes: 9 };

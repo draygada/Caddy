@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Strafe Forge sourcing lane</title>
+<style>
+  body { margin: 0; background: #14161a; color: #e6e1d6; font: 14px/1.45 -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 12px 18px; border-bottom: 1px solid #2c3038; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  main { padding: 14px 18px; display: grid; gap: 14px; }
+  select, input, button { background: #1d2026; color: #e6e1d6; border: 1px solid #3a3f49; border-radius: 4px; padding: 5px 8px; font: inherit; }
+  button { cursor: pointer; } button.primary { border-color: #c9a227; color: #c9a227; }
+  .rail span { padding: 3px 8px; border: 1px solid #3a3f49; border-radius: 12px; margin-right: 4px; color: #8a8f99; }
+  .rail span.on { border-color: #c9a227; color: #c9a227; }
+  .chip { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 10px; border: 1px solid #3a3f49; margin-left: 6px; color: #b5b9c2; }
+  .chip.synthetic { border-color: #b8553a; color: #f0a48c; } .chip.cached { border-color: #4a7fb5; color: #9cc4ee; } .chip.live { border-color: #3f9b6b; color: #8fe3b5; }
+  .status { font-weight: 600; } .no_candidate_match, .green { color: #8fe3b5; } .review_required, .grey { color: #cfcfcf; } .abstained { color: #9a9a9a; } .review_blocked, .red { color: #f28b82; }
+  details { border: 1px solid #2c3038; border-radius: 6px; padding: 6px 10px; margin: 6px 0; } summary { cursor: pointer; }
+  ul.words { margin: 6px 0 0 0; padding-left: 18px; } ul.words li { margin: 2px 0; }
+  .err { color: #f28b82; white-space: pre-wrap; } .muted { color: #8a8f99; } .lane { font-size: 11px; color: #8a8f99; margin-right: 6px; }
+  section h2 { font-size: 15px; margin: 0 0 6px 0; color: #c9a227; }
+</style>
+</head>
+<body>
+<header>
+  <strong>Strafe Forge · sourcing lane</strong>
+  <select id="state"></select>
+  <select id="ship_to"><option>US-bench</option><option>TW-assembly</option></select>
+  <input id="qty" type="number" min="1" value="1" style="width:5em">
+  <button class="primary" onclick="openRound()">Open and run S1</button>
+  <button onclick="post('/api/sourcing/rederive', {}, showRederive)">Re-derive</button>
+  <input id="tamper_seq" placeholder="seq" style="width:4em"> <input id="tamper_field" placeholder="field" style="width:9em"> <input id="tamper_value" placeholder="value" style="width:7em">
+  <button onclick="tamper()">Tamper</button>
+  <span id="mode" class="muted"></span>
+</header>
+<main>
+  <div id="error" class="err"></div>
+  <section><h2>Round</h2><div id="headline" class="muted">no round open</div><div id="rail" class="rail"></div><div id="rederive"></div></section>
+  <section><h2>Lines</h2><div id="lines"></div></section>
+  <section><h2>Proposals <span class="muted">(the agent proposes; a human resolves)</span></h2><div id="proposals"></div></section>
+  <section><h2>Package and order</h2>
+    <button onclick="verb('package', {})">Build the package</button>
+    <input id="recipient" placeholder="recipient placeholder" value="[SYNTHETIC recipient]"> <input id="approver" placeholder="approver identity" value="charlie">
+    <input id="idem" placeholder="idempotency key" value="demo-1"> <button onclick="sendOrder()">Send the order (synthetic)</button>
+    <div id="package"></div></section>
+  <section><h2>Timeline <span class="muted">(last 8 of the thread; unsigned in this lane)</span></h2><div id="timeline"></div></section>
+</main>
+<script>
+// The page renders round_view and computes nothing: every count, every claim ceiling and every word comes from the response.
+let round = null;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+async function post(url, body, then) {
+  $("error").textContent = "";
+  const r = await fetch(url, {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body)});
+  const j = await r.json();
+  if (!r.ok) { const d = j.detail || j; $("error").textContent = (d.refused || "refused") + (d.code ? " · " + d.code : "") + " · " + (d.detail || JSON.stringify(d)); return null; }
+  $("mode").textContent = "llm " + j.candidate.mode.llm + " · git " + String(j.candidate.git_sha).slice(0, 8) + " · log head #" + j.candidate.log_head_seq;
+  if (j.view) render(j.view);
+  if (then) then(j.result);
+  return j.result;
+}
+async function openRound() {
+  await post("/api/sourcing/rounds", {state: $("state").value, ship_to: $("ship_to").value, quantity: Number($("qty").value), transport_mode: "air", request_key: "page-" + Date.now(), run: true});
+}
+function verb(name, body) { if (!round) return; return post(`/api/sourcing/rounds/${encodeURIComponent(round.round_id)}/${name}`, body); }
+function tamper() { post("/api/sourcing/tamper", {seq: $("tamper_seq").value, field: $("tamper_field").value, value: $("tamper_value").value}, () => post("/api/sourcing/rederive", {}, showRederive)); }
+function showRederive(r) { $("rederive").textContent = r.line; }
+function selectOffer(lineId, offerHash) {
+  const line = round.lines.find((l) => l.line_id === lineId);
+  const declined = line.offers.filter((c) => c.offer_hash !== offerHash).map((c) => ({offer_hash: c.offer_hash}));
+  verb("select", {line_id: lineId, offer_hash: offerHash, declined, attestor: prompt("attestor (a human name)", "benji")});
+}
+function words(list) { return `<ul class="words">${(list || []).map((w) => `<li>${esc(w)}</li>`).join("")}</ul>`; }
+function chips(o) { return (o.synthetic ? '<span class="chip synthetic">SYNTHETIC</span>' : "") + (o.mode ? `<span class="chip ${o.mode.toLowerCase()}">${esc(o.mode)}</span>` : ""); }
+function render(v) {
+  round = v;
+  $("headline").textContent = v.headline;
+  $("rail").innerHTML = v.status_rail.map((s) => `<span class="${s === v.status_label ? "on" : ""}">${esc(s)}</span>`).join("");
+  $("lines").innerHTML = v.lines.map((l) => `<details><summary><b>${esc(l.node_id)}</b> · ${esc(l.mpn)} · ${esc(l.entries.join(", "))}${l.flags.length ? " · amber " + esc(l.flags.join(", ")) : ""}
+      ${l.selection ? ' · <span class="muted">selected</span>' : ""}${l.gate ? " · gate " + esc(l.gate.state) : ""}
+      <button onclick="event.preventDefault(); verb('propose', {line_id: '${l.line_id}', kind: 'alternative'})">Propose alternative</button>
+      ${l.escalations.filter((e) => e.state === "open").map((e) => `<span class="muted">escalation: ${esc(e.reason)}</span> <button onclick="event.preventDefault(); verb('propose', {line_id: '${l.line_id}', kind: 'escalation', reason: '${e.reason}'})">Propose sources</button>`).join("")}</summary>
+      ${l.offers.map((c) => `<details><summary><span class="status ${c.status}">${esc(c.status_word)}</span> · ${esc(c.seller.display)}${chips(c)}
+        <button onclick="event.preventDefault(); selectOffer('${l.line_id}', '${c.offer_hash}')">Select</button></summary>${words(c.words)}</details>`).join("")}
+    </details>`).join("");
+  $("proposals").innerHTML = (v.proposals || []).map((p) => `<details open><summary><span class="status ${p.status}">${esc(p.status)}</span> · ${esc(p.kind)} · ${esc(p.line_id)}${chips(p)}
+      ${p.kind === "escalation" && !p.accepted_by ? `<button onclick="event.preventDefault(); verb('accept_proposal', {proposal_id: '${p.proposal_id}', attestor: prompt('attestor', 'charlie')})">Accept</button>` : ""}
+      <button onclick="event.preventDefault(); verb('reject_proposal', {proposal_id: '${p.proposal_id}', attestor: prompt('attestor', 'charlie'), reason: prompt('why', 'not needed')})">Reject</button></summary>
+      <div class="muted">${esc(p.claim_ceiling || "")}</div>${words(p.words)}${(p.candidates || []).map((c) => `<details><summary><span class="status ${c.status}">${esc(c.status)}</span> · ${esc(c.mpn)}${c.synthetic ? '<span class="chip synthetic">SYNTHETIC</span>' : ""}</summary>${words(c.words)}</details>`).join("")}
+    </details>`).join("") || '<span class="muted">none</span>';
+  $("package").innerHTML = v.package ? `<div>artefacts: ${Object.entries(v.package.artefacts).map(([k, s]) => `${esc(k)} ${esc(s.slice(0, 8))}`).join(" · ")}</div>${words(v.package.warnings)}${words(v.package.first_run_checklist)}<div class="muted">${esc(v.package.disclaimer)}</div>` : '<span class="muted">no package</span>';
+  $("timeline").innerHTML = v.timeline.map((t) => `<div><span class="lane">#${t.seq} ${esc(t.lane)}</span>${esc(t.words)}</div>`).join("") + `<div class="muted">${esc(v.signing)}</div>`;
+}
+async function sendOrder() {
+  const packet = await post("/api/sourcing/packets", {round_id: round.round_id, recipient_placeholder: $("recipient").value, approver: {identity: $("approver").value, authority_basis: "demo approver"}});
+  if (!packet) return;
+  await post(`/api/sourcing/packets/${encodeURIComponent(packet.packet_id)}/dispatch`, {idempotency_key: $("idem").value, attestor: $("approver").value}, (r) => { $("package").innerHTML += `<div>${esc(r.words)}</div>`; });
+  await fetch(`/api/sourcing/rounds/${encodeURIComponent(round.round_id)}`).then((r) => r.json()).then((j) => render(j.result));
+}
+fetch("/api/sourcing/states").then((r) => r.json()).then((j) => { $("state").innerHTML = j.result.map((s) => `<option>${esc(s)}</option>`).join(""); });
+</script>
+</body>
+</html>

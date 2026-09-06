@@ -1,0 +1,41 @@
+{
+  "kind": "extract",
+  "model": "claude-sonnet-5",
+  "prompt_sha256": "804e156deabd7660dcb60531c2357ad764b918a70ba04d66ed36916b905e9302",
+  "response": {
+    "specs": [
+      {
+        "doc_sha256": "d83747c28443ea6184696017bfdd949e8aa72c68836b24030e462c6e14c93a84",
+        "end": 167,
+        "field": "gyro_rate_range_deg_s",
+        "quote": "±300 °/s",
+        "start": 159,
+        "unit": "deg/s",
+        "value": "300"
+      },
+      {
+        "doc_sha256": "d83747c28443ea6184696017bfdd949e8aa72c68836b24030e462c6e14c93a84",
+        "end": 192,
+        "field": "gyro_bias_stability_1mo_deg_h",
+        "quote": "0.3 °/h",
+        "start": 185,
+        "unit": "deg/h",
+        "value": "0.3"
+      },
+      {
+        "doc_sha256": "d83747c28443ea6184696017bfdd949e8aa72c68836b24030e462c6e14c93a84",
+        "end": 310,
+        "field": "gyro_arw_deg_sqrt_h",
+        "quote": "0.02 °/√h",
+        "start": 301,
+        "unit": "deg/sqrt(h)",
+        "value": "0.02"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1774,
+    "model": "claude-sonnet-5",
+    "output_tokens": 2178
+  }
+}

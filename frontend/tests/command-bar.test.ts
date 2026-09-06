@@ -9,7 +9,7 @@ import {
 } from '../src/commands';
 import { handleCommandPaletteKeydown } from '../src/panels/CommandBox';
 import { useStore } from '../src/store';
-import type { WorkspaceId } from '../src/panels/MissionNav';
+import type { WorkspaceId } from '../src/store';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -30,12 +30,10 @@ describe('global command palette', () => {
   it('finds every primary surface through user-facing labels and aliases off Design', () => {
     const globalCommands = COMMANDS.filter((command) => commandAvailable(command, false));
     const expected: Array<[string, string]> = [
-      ['cad core', 'navigate.core'],
+      ['model viewport', 'navigate.design'],
       ['classify', 'navigate.classification'],
       ['supplier', 'navigate.sourcing'],
-      ['provenance', 'navigate.sources'],
-      ['record', 'navigate.record'],
-      ['team', 'navigate.collaboration'],
+      ['customs', 'navigate.sourcing'],
       ['tripwire', 'review.tripwire'],
       ['help', 'panels.help'],
       ['appearance', 'panels.theme'],
@@ -43,18 +41,14 @@ describe('global command palette', () => {
     for (const [query, id] of expected) {
       expect(searchCommands(globalCommands, query).map((command) => command.id)).toContain(id);
     }
-    expect(commandById('navigate.design')?.label).toContain('Kestrel Design');
-    expect(commandById('navigate.core')?.label).toContain('QX-0 hardened drone Core');
-    expect(commandById('navigate.classification')?.label).toContain('active revision required');
-    expect(commandById('navigate.record')?.label).toContain('device-local Product Thread');
   });
 
-  it('executes all mission-rail navigation commands through the registered app action', () => {
+  it('executes the three tab navigation commands through the registered app action', () => {
     const visited: WorkspaceId[] = [];
     const unregister = registerWorkspaceNavigation((workspace) => visited.push(workspace));
-    const expected: WorkspaceId[] = ['design', 'core', 'classification', 'source', 'sources', 'record', 'collaboration'];
+    const expected: WorkspaceId[] = ['design', 'classification', 'sourcing'];
     try {
-      for (const workspace of expected) expect(runCommand(`navigate.${workspace === 'source' ? 'sourcing' : workspace}`)).toBe(true);
+      for (const workspace of expected) expect(runCommand(`navigate.${workspace}`)).toBe(true);
       expect(visited).toEqual(expected);
     } finally {
       unregister();
@@ -67,6 +61,6 @@ describe('global command palette', () => {
       expect(commandAvailable(commandById(id)!, false)).toBe(false);
       expect(runCommand(id, 'plate')).toBe(false);
     }
-    expect(runCommand('navigate.core')).toBe(true);
+    expect(runCommand('navigate.design')).toBe(true);
   });
 });

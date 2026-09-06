@@ -1,0 +1,28 @@
+{
+  "fixture": "ownership",
+  "revision": "2026-09-05",
+  "retrieved_at": "2026-09-05T23:00:00Z",
+  "source": "Hand-typed. REAL rows are public corporate facts with a URL each; they were typed from memory of public filings on 2026-09-05 and are badged 'unverified this session' until the URL is read. SYNTHETIC rows exist for the demo and are badged. A party with no row prints 'ownership unknown'.",
+  "relation_vocabulary": ["owns_ge_50", "owns_lt_50", "controls", "no_controlling_owner"],
+  "aggregation_rule": "OFAC 50 percent rule (aggregate across blocked owners). BIS Affiliates Rule (50 % look-through for the Entity List and MEU list) is suspended; returns 10 November 2026.",
+  "rows": [
+    {"child": "E-One Moli Energy Corp.", "parent": "Taiwan Cement Corporation", "relation": "controls", "percent": null, "evidence_url": "https://www.molicel.com/about/", "synthetic": false, "note": "majority; the figure is to be typed from the TCC annual report"},
+    {"child": "Taiwan Cement Corporation", "parent": null, "relation": "no_controlling_owner", "percent": null, "evidence_url": "https://www.taiwancement.com/", "synthetic": false, "note": "TWSE-listed; no single owner at or above 50 % per filing (unverified this session)"},
+    {"child": "TDK InvenSense", "parent": "TDK Corporation", "relation": "owns_ge_50", "percent": 100, "evidence_url": "https://invensense.tdk.com/about/", "synthetic": false, "note": "wholly owned subsidiary"},
+    {"child": "TDK Corporation", "parent": null, "relation": "no_controlling_owner", "percent": null, "evidence_url": "https://www.tdk.com/en/ir/", "synthetic": false, "note": "TSE-listed; no single owner at or above 50 % (unverified this session)"},
+    {"child": "Teledyne FLIR LLC", "parent": "Teledyne Technologies Incorporated", "relation": "owns_ge_50", "percent": 100, "evidence_url": "https://www.teledyne.com/", "synthetic": false, "note": "wholly owned subsidiary"},
+    {"child": "Teledyne Technologies Incorporated", "parent": null, "relation": "no_controlling_owner", "percent": null, "evidence_url": "https://www.teledyne.com/investors", "synthetic": false, "note": "NYSE-listed; no single owner at or above 50 % (unverified this session)"},
+    {"child": "STMicroelectronics", "parent": null, "relation": "no_controlling_owner", "percent": null, "evidence_url": "https://investors.st.com/", "synthetic": false, "note": "STMicroelectronics N.V., listed; STMicroelectronics Holding N.V. holds 27.5 % (below 50 %) per filing (unverified this session)"},
+    {"child": "u-blox AG", "parent": null, "relation": "no_controlling_owner", "percent": null, "evidence_url": "https://www.u-blox.com/en/investors", "synthetic": false, "note": "u-blox Holding AG, SIX-listed; no single owner at or above 50 % (unverified this session)"},
+    {"child": "Bosch Sensortec GmbH", "parent": "Robert Bosch GmbH", "relation": "owns_ge_50", "percent": 100, "evidence_url": "https://www.bosch-sensortec.com/company/", "synthetic": false, "note": "wholly owned subsidiary"},
+    {"child": "Robert Bosch GmbH", "parent": "Robert Bosch Stiftung GmbH", "relation": "owns_ge_50", "percent": 94, "evidence_url": "https://www.bosch.com/company/", "synthetic": false, "note": "approximately 94 % of shares; voting rights held by Robert Bosch Industrietreuhand KG (unverified this session)"},
+    {"child": "Robert Bosch Stiftung GmbH", "parent": null, "relation": "no_controlling_owner", "percent": null, "evidence_url": "https://www.bosch-stiftung.de/", "synthetic": false, "note": "charitable foundation"},
+    {"child": "Microhard Systems Inc.", "parent": null, "relation": "no_controlling_owner", "percent": null, "evidence_url": "https://www.microhardcorp.com/", "synthetic": false, "note": "private Canadian company; no ownership filing read (recorded as no controlling owner found in the sources read, unverified)"},
+    {"child": "ModalAI, Inc.", "parent": null, "relation": "no_controlling_owner", "percent": null, "evidence_url": "https://www.modalai.com/", "synthetic": false, "note": "private US company; no ownership filing read (unverified)"},
+    {"child": "KDE Direct, LLC", "parent": null, "relation": "no_controlling_owner", "percent": null, "evidence_url": "https://www.kdedirect.com/", "synthetic": false, "note": "private US company; no ownership filing read (unverified)"},
+    {"child": "Honeywell International Inc.", "parent": null, "relation": "no_controlling_owner", "percent": null, "evidence_url": "https://investor.honeywell.com/", "synthetic": false, "note": "NASDAQ-listed; no single owner at or above 50 % (unverified this session)"},
+    {"child": "Brightwing Components Ltd.", "parent": "SZ DJI Technology Co.", "relation": "owns_ge_50", "percent": 60, "evidence_url": null, "synthetic": true, "note": "SYNTHETIC row; the parent is a real screening-list name"},
+    {"child": "Nordkap Sensor AS", "parent": "Nordkap Holding AS", "relation": "owns_ge_50", "percent": 80, "evidence_url": null, "synthetic": true, "note": "SYNTHETIC row; clean tree so one SYNTHETIC seller is not a hit"},
+    {"child": "Nordkap Holding AS", "parent": null, "relation": "no_controlling_owner", "percent": null, "evidence_url": null, "synthetic": true, "note": "SYNTHETIC terminal"}
+  ]
+}

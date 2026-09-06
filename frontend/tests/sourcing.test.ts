@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { BASELINE_PARTS } from '../src/lib/catalog';
+import { BASELINE_PARTS, SLOTS } from '../src/lib/catalog';
 import { estimate, gateFor, linesFor, offersFor, rollup, screen, sortOffers, tierFor, walk, type ResolvedOffer } from '../src/lib/sourcing';
-import { outcome } from '../src/lib/rules';
+import { outcome, type Attrs } from '../src/lib/rules';
 import { overallOf, slotStatus } from '../src/lib/viewmodel';
 import { useStore, INTAKE_DEFAULT } from '../src/store';
 
@@ -42,9 +42,9 @@ describe('sourcing lane (S1, S2)', () => {
     expect(imu.ladder.rows.every((r) => r.rate === 'not applicable' || r.layer === 'de minimis')).toBe(true);
   });
   it('positive controls stay strict, limited no-match paths require review, and domestic is not mislabeled NLR', () => {
-    const attrs = { battery: { pack_wh: 1000, wh_kg: 260 }, thermal: { hz: 9, elements: 19200 }, imu: { bias: 0.01, arw: 0.002 }, fc: { tmin: -40, tmax: 85 }, gnss: { gnss_speed: 500 }, datalink: { crypto_bits: 256 }, pod: {} };
+    const attrs = { ...(Object.fromEntries(SLOTS.map((s) => [s, {}])) as Attrs), battery: { pack_wh: 1000, wh_kg: 260 }, thermal: { hz: 9, elements: 19200 }, imu: { bias: 0.01, arw: 0.002 }, fc: { tmin: -40, tmax: 85 }, gnss: { gnss_speed: 500 }, datalink: { crypto_bits: 256 }, pod: {} };
     const parts = { ...BASELINE_PARTS, imu: 'hg5700' as const };
-    const o = outcome({ parts, attrs, span: 3 });
+    const o = outcome({ parts, attrs, span: 1.8 });
     const line = linesFor(parts).find((l) => l.id === 'l-imu')!;
     expect(gateFor(line, o, 'TW').blocks).toBe(true);
     expect(gateFor(line, o, 'US')).toMatchObject({ word: 'DOMESTIC', blocks: false });
@@ -94,7 +94,7 @@ describe('round state machine and order send-off', () => {
     const st = useStore.getState();
     st.reset();
     st.openRound('US', 1, 'air', INTAKE_DEFAULT);
-    useStore.getState().setSpan('3.4');
+    useStore.getState().setSpan('2.0');
     const o = outcome(useStore.getState().design());
     useStore.getState().buildPackage(o);
     expect(useStore.getState().round!.pkgRefusal).toContain('design state changed');

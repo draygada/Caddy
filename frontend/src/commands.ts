@@ -1,10 +1,8 @@
 // Every user-facing command in one registry: the S-key command box, the
 // right-click marking menu and the keyboard shortcuts all resolve here.
-import { DESIGN_PROJECT_NAME, useStore, nodeOfBody, type BodyId, type WorkbenchState } from './store';
-import { PRODUCT_NAME } from './lib/product-thread';
+import { useStore, nodeOfBody, type BodyId, type WorkbenchState, type WorkspaceId } from './store';
 import { UNITS } from './lib/units';
 import { useTripwireStore } from './tripwire-store';
-import type { WorkspaceId } from './panels/MissionNav';
 
 export type CommandGroup = 'navigate' | 'view' | 'create' | 'modify' | 'inspect' | 'select' | 'document' | 'review' | 'panels';
 export interface Command {
@@ -26,7 +24,7 @@ const needsSlot = (_st: WorkbenchState, t: BodyId | null) => t != null && t !== 
 type WorkspaceNavigation = (workspace: WorkspaceId) => void;
 let workspaceNavigation: WorkspaceNavigation | null = null;
 
-/** Register the same navigation action used by the mission rail for global commands. */
+/** Register the App's tab navigation so global commands switch tabs the same way the top bar does. */
 export function registerWorkspaceNavigation(navigate: WorkspaceNavigation) {
   workspaceNavigation = navigate;
   return () => {
@@ -34,16 +32,13 @@ export function registerWorkspaceNavigation(navigate: WorkspaceNavigation) {
   };
 }
 
-const navigate = (workspace: WorkspaceId) => () => workspaceNavigation?.(workspace);
+// the three tabs; a registered navigator (the App) wins, the store's setWorkspace is the fallback
+const navigate = (workspace: WorkspaceId) => () => { if (workspaceNavigation) workspaceNavigation(workspace); else useStore.getState().setWorkspace(workspace); };
 
 const NAVIGATION_COMMANDS: Command[] = [
-  { id: 'navigate.design', label: `${DESIGN_PROJECT_NAME} Design · separate legacy workspace`, aliases: ['CAD design', 'model viewport', 'home workspace', 'Kestrel active design revision'], group: 'navigate', scope: 'global', run: navigate('design') },
-  { id: 'navigate.core', label: `${PRODUCT_NAME} Core · active Product Thread context`, aliases: ['CAD core', 'live authoring', 'geometry engine', 'sketch extrusion', 'QX-0 active revision'], group: 'navigate', scope: 'global', run: navigate('core') },
-  { id: 'navigate.classification', label: `${PRODUCT_NAME} Classification · active revision required`, aliases: ['classify', 'compliance', 'export control', 'ordered route', 'QX-0 classification'], group: 'navigate', scope: 'global', run: navigate('classification') },
-  { id: 'navigate.sourcing', label: 'Source · sourcing workspace', aliases: ['sourcing', 'supplier', 'offers', 'landed cost', 'order send-off'], group: 'navigate', scope: 'global', run: navigate('source') },
-  { id: 'navigate.sources', label: 'Sources · provenance workspace', aliases: ['provenance', 'evidence', 'documents', 'citations', 'source network'], group: 'navigate', scope: 'global', run: navigate('sources') },
-  { id: 'navigate.record', label: `${PRODUCT_NAME} Record · device-local Product Thread`, aliases: ['record', 'decision record', 'audit log', 'product thread', 'history', 'QX-0 revision record'], group: 'navigate', scope: 'global', run: navigate('record') },
-  { id: 'navigate.collaboration', label: 'Collaboration · mission workspace', aliases: ['collaborate', 'team', 'comments', 'handoff'], group: 'navigate', scope: 'global', run: navigate('collaboration') },
+  { id: 'navigate.design', label: 'Design · workspace', aliases: ['CAD design', 'model viewport', 'home workspace'], group: 'navigate', scope: 'global', run: navigate('design') },
+  { id: 'navigate.classification', label: 'Classification · workspace', aliases: ['classify', 'compliance', 'export control', 'ordered route'], group: 'navigate', scope: 'global', run: navigate('classification') },
+  { id: 'navigate.sourcing', label: 'Sourcing · workspace', aliases: ['sourcing', 'supplier', 'offers', 'landed cost', 'order send-off', 'customs'], group: 'navigate', scope: 'global', run: navigate('sourcing') },
 ];
 
 export const COMMANDS: Command[] = [
@@ -61,7 +56,6 @@ export const COMMANDS: Command[] = [
   { id: 'view.wire', label: 'Visual style · Wireframe', group: 'view', run: (st) => st.patch({ visualStyle: 'wireframe' }) },
   { id: 'view.grid', label: 'Toggle layout grid', group: 'view', run: (st) => st.patch({ grid: !st.grid }) },
   { id: 'view.model', label: 'Model view', group: 'view', run: (st) => { st.closeDialog(); st.patch({ viewMode: 'model' }); } },
-  { id: 'view.sheet', label: 'Drawing sheet', group: 'view', run: (st) => { st.closeDialog(); st.patch({ viewMode: 'sheet' }); } },
   { id: 'view.named', label: 'Save named view…', group: 'view', run: (st) => st.openDialog('named_view', null) },
   { id: 'view.sethome', label: 'Set current view as home', group: 'view', run: (st) => st.setHome() },
 
@@ -84,13 +78,11 @@ export const COMMANDS: Command[] = [
   { id: 'select.body', label: 'Selection filter · Bodies', group: 'select', run: (st) => st.patch({ selFilter: 'body', selFace: null }) },
   { id: 'select.face', label: 'Selection filter · Faces', group: 'select', run: (st) => st.patch({ selFilter: 'face' }) },
 
-  { id: 'doc.source', label: 'Source this design…', group: 'document', run: (st) => st.patch({ sourcingOpen: true, reasoningOpen: false, timelineOpen: false }) },
-  { id: 'doc.sources', label: 'Sources · drop a datasheet, verifier, Call B', group: 'document', run: (st) => st.patch({ sourcesOpen: true }) },
-  { id: 'doc.record', label: '/record · printable design decision record', group: 'document', run: (st) => st.patch({ recordOpen: true }) },
+  { id: 'tab.design', label: 'Design tab', group: 'view', keys: '1', run: (st) => st.setWorkspace('design') },
+  { id: 'tab.classification', label: 'Classification tab · parts of concern', group: 'view', keys: '2', run: (st) => st.setWorkspace('classification') },
+  { id: 'doc.source', label: 'Sourcing tab · source this design', group: 'document', keys: '3', run: (st) => st.setWorkspace('sourcing') },
   { id: 'doc.door3', label: 'New from description… (Door 3)', group: 'create', run: (st) => st.openDialog('door3', null) },
-  { id: 'doc.target', label: 'Design to a target…', group: 'create', run: (st) => { st.openReasoning(); } },
   { id: 'view.board', label: 'Board view · flight controller', group: 'view', run: (st) => { st.closeDialog(); st.patch({ viewMode: 'board' }); } },
-  { id: 'doc.now', label: '/now · Shipyard observation', group: 'document', scope: 'global', run: () => { location.search = '?now=1'; } },
   { id: 'doc.version', label: 'Save version…', group: 'document', run: (st) => st.openDialog('save_version', null) },
   { id: 'doc.comment', label: 'Add comment…', group: 'document', run: (st) => st.openDialog('add_comment', null) },
   ...UNITS.map((u) => ({ id: 'doc.units.' + u, label: 'Units · ' + u, group: 'document' as CommandGroup, run: (st: WorkbenchState) => st.setUnits(u) })),
@@ -100,7 +92,6 @@ export const COMMANDS: Command[] = [
   { id: 'review.tripwire', label: 'Tripwire · review a canonical Candidate 0.1 entity…', aliases: ['tripwire', 'guardrail', 'review readiness'], group: 'review', keys: 'T', scope: 'global', run: () => useTripwireStore.getState().openPanel() },
 
   { id: 'panels.timeline', label: 'Timeline drawer', group: 'panels', keys: 'L', run: (st) => st.toggleTimeline() },
-  { id: 'panels.reasoning', label: 'Reasoning · why the product reads', group: 'panels', run: (st) => st.openReasoning() },
   { id: 'panels.help', label: 'Keyboard and mouse help', aliases: ['help', 'shortcuts', 'controls'], group: 'panels', keys: '?', scope: 'global', run: (st) => st.toggleHelp() },
   { id: 'panels.theme', label: 'Toggle dark theme', aliases: ['theme', 'appearance', 'dark mode', 'light mode'], group: 'panels', scope: 'global', run: (st) => st.toggleTheme() },
   { id: 'panels.rederive', label: 'Re-derive the log', group: 'panels', run: (st) => { st.rederiveLog(); st.openTimeline(); } },

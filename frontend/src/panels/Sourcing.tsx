@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useStore, designHashOf, ROUND_RAIL, INTAKE_DEFAULT, type Intake, type Round } from '../store';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useStore, designHashOf, INTAKE_DEFAULT, intakeIncomplete, type Intake, type Round } from '../store';
 import type { Outcome } from '../lib/rules';
-import { GENERIC_NAME, type Slot } from '../lib/catalog';
+import { CATALOG, CORE_SLOTS, GENERIC_NAME, type Slot } from '../lib/catalog';
 import { THUMBS, AF_THUMB } from '../lib/geometry';
-import { CHECKLIST, CLAIM_COST, CLAIM_OFFER, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
+import { IntakeForm } from './IntakeForm';
+import { filingDraftOf } from '../lib/customs';
+import { CHECKLIST, CLAIM_COST, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
 import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type LiveSourcingOffer, type OperationsEnvelope, type ServiceOffer, type SourcingDispatchEnvelope, type SourcingPackageEnvelope, type SourcingRoundEnvelope } from '../lib/operations-client';
 import { OrderClient, OrderServiceError, orderDisplayLabel, type OrderEnvelope, type RecordingOutcome } from '../lib/order-client';
 import { appendProductEvent, productArtifactGate, useProductThread, type ProductArtifactBinding, type ProductArtifactRef } from '../lib/product-thread';
@@ -26,11 +28,10 @@ function ownerNames(offer: ServiceOffer): string {
   return names.join(' → ');
 }
 
-function ServiceSourcing() {
+/** The connected service round (Benji's product service): offers, selection, adjudication, the sealed package and the order lifecycle for one part, all client-carried. */
+export function ServiceSourcing({ quantity, mode, partKey, partLabel }: { quantity: number; mode: 'air' | 'ocean'; partKey: string; partLabel: string }) {
   const productThread = useProductThread();
   const artifactGate = productArtifactGate(productThread.artifactBinding);
-  const [quantity, setQuantity] = useState(2);
-  const [mode, setMode] = useState<'air' | 'ocean'>('air');
   const [inputMode, setInputMode] = useState<'live-bounded' | 'offline-demo'>('live-bounded');
   const [seller, setSeller] = useState('Operator-provided supplier');
   const [manufacturer, setManufacturer] = useState('Operator-provided manufacturer');
@@ -121,7 +122,7 @@ function ServiceSourcing() {
   const visibleOrderEvidence = orderEvidence ?? orderClient?.getLastValid() ?? null;
   const receipt = visibleOrderEvidence?.receipt;
   const createRound = (api: OperationsClient) => {
-    if (inputMode === 'offline-demo') return api.createSourcingRound({ part_key: 'flight-controller', quantity, mode, input_mode: 'offline-demo' });
+    if (inputMode === 'offline-demo') return api.createSourcingRound({ part_key: partKey, quantity, mode, input_mode: 'offline-demo' });
     const evidence = {
       status: screeningStatus,
       source_name: screeningSource,
@@ -132,7 +133,7 @@ function ServiceSourcing() {
     } as const;
     const offer: LiveSourcingOffer = {
       offer_id: `offer:user:${seller.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'supplier'}`,
-      part_key: 'flight-controller',
+      part_key: partKey,
       seller,
       manufacturer,
       origin: origin.toUpperCase(),
@@ -143,13 +144,13 @@ function ServiceSourcing() {
       declared_eccn: 'not-independently-verified',
       screening_evidence: { seller: evidence, manufacturer: evidence, ownership_complete: ownershipComplete },
     };
-    return api.createSourcingRound({ part_key: 'flight-controller', quantity, mode, input_mode: 'live-bounded', offers: [offer] });
+    return api.createSourcingRound({ part_key: partKey, quantity, mode, input_mode: 'live-bounded', offers: [offer] });
   };
 
   return (
-    <section className="panel min-w-0 lg:col-span-2" aria-label="Service-backed sourcing">
-      <div className="panel-head flex-wrap gap-2">
-        <div className="panel-title">Service-backed sourcing <span className="sub">· client-carried continuity</span></div>
+    <section className="min-w-0" aria-label="Connected service round">
+      <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-line2">
+        <div className="text-[13px] font-semibold">{partLabel} <span className="text-muted font-normal">· {quantity} unit{quantity === 1 ? '' : 's'} · {mode} · client-carried continuity</span></div>
         <span className="chip">{evidence ? evidence.status : 'not run'}</span>
       </div>
       <div className="p-3 grid gap-3 text-[13px]">
@@ -159,8 +160,6 @@ function ServiceSourcing() {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <label className="grid gap-1 text-muted">input lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setRound(null); setSelectedOffer(null); setPkg(null); setPackageBinding(null); setDispatch(null); }} className="field text-ink"><option value="live-bounded">Connected Candidate 0.2 input</option><option value="offline-demo">Offline demo · 2-key fixture</option></select></label>
-          <label className="grid gap-1 text-muted">quantity<input type="number" min={1} max={10000} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(10000, Number(event.target.value) || 1)))} className="field w-28 font-mono text-ink" /></label>
-          <label className="grid gap-1 text-muted">mode<select value={mode} onChange={(event) => setMode(event.target.value as 'air' | 'ocean')} className="field text-ink"><option value="air">air</option><option value="ocean">ocean</option></select></label>
           <button className="btn btn-primary" disabled={busy !== null} onClick={() => run('round', async (api) => { const value = await createRound(api); setRound(value); setSelectedOffer(value.round.selected_offer_id); setPkg(null); setPackageBinding(null); setDispatch(null); await appendProductEvent({ sourceLane: 'sourcing', eventType: 'sourcing.round_created', summary: `${value.round.round_id} · ${value.round.offers.length} offer(s) · ${value.round.request.input_mode}.`, actorId: actor, actorAttestation: 'OPERATOR_ACTION_RECORDED', revisionId: value.candidate.revision_id, artifacts: [{ artifactId: value.candidate.candidate_id, kind: 'operations-candidate-snapshot', sha256: value.candidate.snapshot_sha256 }], payload: { roundId: value.round.round_id, offerCount: value.round.offers.length, partKey: value.round.request.part_key, quantity: value.round.request.quantity, claimCeiling: value.claim_ceiling } }); })}>{busy === 'round' ? 'Creating…' : inputMode === 'offline-demo' ? 'Run Offline demo' : 'Create connected bounded round'}</button>
         </div>
         {inputMode === 'live-bounded' && (
@@ -277,7 +276,6 @@ function consequences(ro: ResolvedOffer, line: Line, round: Round, o: Outcome): 
   if (it.endUser === 'military or defense prime') out.push({ tone: 'var(--amber)', text: 'declared end user: military or defense prime · 15 CFR 744.21 military end-use review applies for CN, RU, VE destinations · prime flow-down sets the full ownership walk on every line' });
   if (!it.civilProduct && line.partClass === 'thermal_imager') out.push({ tone: 'var(--amber)', text: 'not declared a civil product · the 6A003 “embedded in a civil product” clause is printed, not evaluated' });
   if (it.usedOn === 'listed military aircraft') out.push({ tone: 'var(--black)', text: 'declared used on a listed military aircraft · VIII(h)(1) via 120.41(a)(2) · the (b)(3) open fact is a question the engineer owns · every destination reads DDTC' });
-  if (it.bvlos) out.push({ tone: 'var(--muted)', text: 'declared BVLOS operation · an operating declaration, not a rule input this weekend' });
   const gate = gateFor(line, o, round.shipTo);
   if (round.shipTo !== 'US') out.push({ tone: gate.blocks ? 'var(--red)' : gate.word === 'STA' ? 'var(--amber)' : 'var(--green)', text: 'export gate to ' + round.shipTo + ': ' + gate.word + ' · ' + gate.para + (gate.blocks ? gate.word === 'REVIEW' ? ' · the package is blocked pending documented human review' : ' · the package is blocked until you type and attest an authorization reference' : '') });
   out.push({ tone: STATUS_COLOR[ro.status], text: STATUS_WORD[ro.status] + ' · ' + ro.because });
@@ -295,331 +293,185 @@ function consequences(ro: ResolvedOffer, line: Line, round: Round, o: Outcome): 
   return out;
 }
 
-export function Sourcing({ o }: { o: Outcome }) {
+type Step = 1 | 2 | 3 | 4;
+/** lucide pencil, 1.6 stroke, the same weight as the top bar gear */
+const EditIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" /></svg>;
+const STEPS: { n: Step; label: string }[] = [{ n: 1, label: 'Use case' }, { n: 2, label: 'Pick suppliers' }, { n: 3, label: 'Package and order' }, { n: 4, label: 'Customs filing' }];
+/** the product service names parts by key; the design names them by slot */
+const PART_KEY: Partial<Record<string, string>> = { fc: 'flight-controller', battery: 'battery-pack', imu: 'imu', gnss: 'gnss-receiver', datalink: 'datalink-radio', thermal: 'thermal-core', pod: 'sensor-pod', esc: 'esc', motor: 'motor', prop: 'propeller', camera: 'camera', transponder: 'transponder' };
+
+/** Three steps across the top, one screen each. Step two is a parts list beside the offers for the selected part. */
+export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boolean }) {
   const s = useStore();
   const r = s.round;
-  const [shipTo, setShipTo] = useState<ShipTo>('US');
-  const [qty, setQty] = useState(1);
-  const [mode, setMode] = useState<Mode>('air');
-  const [intake, setIntake] = useState<Intake>(INTAKE_DEFAULT);
-  const [stage, setStage] = useState<number>(-1); // -1 idle · 0..3 running · 4 done
-  const [k, setK] = useState<number | null>(null);
+  // the use-case answers come from the project; sourcing never asks for them itself
+  const intake: Intake = s.project?.intake ?? INTAKE_DEFAULT;
+  const incomplete = intakeIncomplete(s.project?.intake ?? null);
+  const shipTo: ShipTo = intake.shipTo, qty = intake.qty, mode: Mode = intake.mode;
+  const components: Slot[] = s.project?.components ?? [...CORE_SLOTS];
+  const [stepWanted, setStepWanted] = useState<Step | null>(null);
+  const [serviceOpen, setServiceOpen] = useState(false);
+  const [k, setK] = useState<number>(0);
   const [pick, setPick] = useState<string | null>(null);
+  const [openOffer, setOpenOffer] = useState<string | null>(null);
   const [reasons, setReasons] = useState<Record<string, DeclineReason>>({});
   const [attestor, setAttestor] = useState('');
   const [err, setErr] = useState<string | null>(null);
-  const [tab, setTab] = useState<'none' | 'owners' | 'estimate'>('none');
+  const [draft, setDraft] = useState<Intake>(() => s.project?.intake ?? INTAKE_DEFAULT);
   const [adj, setAdj] = useState<{ offerId: string; role: 'analyst' | 'empowered_official'; reason: string; rationale: string; action: 'false_positive' | 'resolve' | 'pin' } | null>(null);
   const [refDraft, setRefDraft] = useState('');
+  const signRef = useRef<HTMLDivElement>(null);
+  // on a phone the sign-off block renders below the fold; bring it into view when an offer is picked
+  useEffect(() => { if (pick && signRef.current && typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 639px)').matches) signRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, [pick]);
   const [decl, setDecl] = useState({ personStatus: 'foreign person' as 'US person' | 'foreign person', sharing: 'assembly drawings and the BOM', reference: '' });
-  const [askOpen, setAskOpen] = useState(false);
-  const stale = useMemo(() => (r ? designHashOf(s.snapshot()) !== r.designHash : false), [r, s]);
+  const designStale = useMemo(() => (r ? designHashOf(s.snapshot()) !== r.designHash : false), [r, s]);
+  // the round captured the use case when it opened; if the declared units, destination or transport moved since, say so
+  const intakeStale = !!r && (r.qty !== qty || r.shipTo !== shipTo || r.mode !== mode);
+  const stale = designStale || intakeStale;
   const close = () => s.patch({ sourcingOpen: false });
   const n = r?.lines.length ?? 0;
-  // start at the first part without a selection
-  useEffect(() => { if (r && k == null && stage >= 4) { const i = r.lines.findIndex((l) => !r.selections[l.id]); setK(i < 0 ? n : i); } if (!r) { setK(null); setStage(-1); } if (r && stage === -1 && k == null) setStage(4); }, [r, k, n, stage]);
-  useEffect(() => { setPick(null); setReasons({}); setErr(null); setTab('none'); setAdj(null); setRefDraft(''); }, [k]);
+  // the gate: with incomplete answers the tab shows only the questions; with no round yet it shows the use case; then the pick step
+  const step: Step = incomplete || !r ? 1 : stepWanted ?? 2;
+  useEffect(() => { setPick(null); setReasons({}); setErr(null); setOpenOffer(null); setAdj(null); setRefDraft(''); }, [k]);
+  useEffect(() => { if (r && k >= r.lines.length) setK(Math.max(0, r.lines.length - 1)); }, [r, k]);
+  const selectedCount = r ? Object.keys(r.selections).length : 0;
+  const total = r ? r.lines.reduce((sum, l) => { const sl = r.selections[l.id]; const ro = sl ? (r.offers[l.id] || []).find((x) => x.offer.id === sl.offerId) : null; return sum + (ro?.ladder.perUnit ?? 0) * l.qtyPerUnit * r.qty; }, 0) : 0;
+  const start = () => { s.openRound(shipTo, qty, mode, intake); setK(0); setStepWanted(2); };
 
-  const rail = r && (
-    <div className="flex items-center gap-1 flex-wrap">
-      {ROUND_RAIL.map((st, i) => { const idx = ROUND_RAIL.findIndex((x) => x.status === r.status); const done = i <= idx; return <span key={st.status} className="chip" style={{ color: done ? 'var(--accentfg)' : 'var(--muted)', background: done ? 'var(--accent)' : 'transparent', borderColor: done ? 'var(--accent)' : 'var(--line)' }}>{st.label}</span>; })}
-    </div>
-  );
-
-  const header = (
-    <div className="flex items-center justify-between gap-3 px-4 py-[10px] border-b border-line2 bg-surface flex-wrap">
-      <div className="flex items-baseline gap-3 min-w-0 flex-wrap">
-        <span className="text-[13px] font-semibold">Sourcing <span className="text-muted font-normal">· {r ? 'offline lab · part by part' : 'service + offline lab'}</span></span>
-        {r && <span className="font-mono text-[13px]">{r.id} · design state #{r.designSeq}</span>}
+  const stepper = (
+    <div className="grid grid-cols-[1fr_auto_1fr] max-md:grid-cols-1 items-center gap-3 px-4 py-2 border-b border-line2 bg-surface">
+      <span className="max-md:hidden" />
+      {/* four equal columns; each connector runs from the centre of one step to the centre of the next, behind the step button */}
+      <ol aria-label={'Sourcing steps · step ' + step + ' of 4'} className="m-0 p-0 list-none grid grid-cols-4 max-sm:flex max-sm:items-center max-sm:gap-1 justify-self-center w-[min(100%,760px)]">
+        {STEPS.map((st, i) => {
+          const done = st.n === 1 ? !incomplete : st.n === 2 ? r != null && n > 0 && selectedCount === n : st.n === 3 ? !!r?.pkg : false;
+          const on = st.n === step;
+          const reachable = st.n === 1 || (r != null && !incomplete);
+          return (
+            <li key={st.n} className={'relative flex justify-center min-w-0' + (on ? ' max-sm:flex-1' : ' max-sm:flex-none')}>
+              {i < STEPS.length - 1 && <span aria-hidden="true" className="absolute top-1/2 left-1/2 w-full h-[2px] -translate-y-1/2 max-sm:hidden" style={{ background: st.n < step ? 'var(--accent)' : 'var(--m1)' }} />}
+              <button onClick={() => reachable && setStepWanted(st.n)} disabled={!reachable} aria-current={on ? 'step' : undefined} className="relative flex items-center gap-2 bg-surface border-0 px-2 min-h-8 max-sm:min-h-11 max-sm:min-w-11 max-sm:max-w-full min-w-0 rounded-r text-[13px] cursor-pointer disabled:cursor-default" style={{ color: on ? 'var(--ink)' : 'var(--muted)', fontWeight: on ? 600 : 400 }}>
+                <span className="w-6 h-6 rounded-full grid place-items-center font-mono text-[12px] flex-none" style={{ background: on || done ? 'var(--accent)' : 'var(--m1)', color: on || done ? 'var(--accentfg)' : 'var(--ink)' }}>{done && !on ? '✓' : st.n}</span>
+                <span className={'whitespace-nowrap min-w-0 overflow-hidden text-ellipsis' + (on ? '' : ' max-sm:hidden')}>{st.label}{st.n === 2 && r && <span className="text-muted font-normal max-sm:hidden"> · {selectedCount} of {n}</span>}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="flex items-center gap-2 flex-wrap text-[12px] text-muted justify-self-end max-md:justify-self-center">
+        {r && <span className="font-mono">{r.id} · design #{r.designSeq}</span>}
         {r && <span className="chip">ship-to {r.shipTo}</span>}{r && <span className="chip">qty {r.qty}</span>}{r && <span className="chip">{r.mode}</span>}
-        {rail}
+        {r && step === 2 && <button onClick={() => s.refineRound({})} className="btn btn-xs" title="re-screen against the same fixture slice">Re-screen</button>}
+        {!embedded && <button onClick={close} className="btn btn-xs btn-icon" aria-label="Back to model" title="Back to model · Esc">×</button>}
       </div>
-      <button onClick={close} className="btn">Back to model · Esc</button>
     </div>
   );
 
-  if (!r || k == null) {
-    const stages = [
-      { label: 'resolve offers', detail: 'committed catalog · ' + FIXTURES.offers },
-      { label: 'walk owners', detail: 'seller and manufacturer · full walk where controlled, foreign or flagged · ' + FIXTURES.ownership },
-      { label: 'screen fixture names', detail: 'exact and suffix-normalised · ' + FIXTURES.csl },
-      { label: 'estimate modeled landed cost', detail: 'declared/fixture inputs · not a supplier quote or tariff determination · ' + FIXTURES.tariff },
-    ];
-    const running = stage >= 0 && stage < 4;
-    const start = () => { s.openRound(shipTo, qty, mode, intake); setStage(4); };
-    const counts = r ? { offers: Object.values(r.offers).flat().length, blocked: Object.values(r.offers).flat().filter((x) => x.status === 'review_blocked').length, review: Object.values(r.offers).flat().filter((x) => x.status === 'review_required').length } : null;
+  const staleBar = stale && r && (
+    <div role="status" className="px-4 py-2 border-b border-line2 bg-surface2 text-[13px] flex justify-between items-center gap-3 flex-wrap">
+      <span className="text-amber font-semibold">{designStale ? 'the design changed after this round opened (#' + r.designSeq + ')' : 'the use case changed after this round opened · round: ' + r.qty + ' units · ' + r.shipTo + ' · ' + r.mode + ' · now: ' + qty + ' units · ' + shipTo + ' · ' + mode} · this round stays openable; a new round takes the current state</span>
+      <button onClick={() => { s.openRound(shipTo, qty, mode, intake); setK(0); }} className="btn btn-primary">Open round r{parseInt(r.id.slice(1), 10) + 1}</button>
+    </div>
+  );
+
+  // step 1 · the use case: the form until it is complete, then the summary and the start button
+  if (step === 1) {
+    const stillIncomplete = intakeIncomplete(draft);
     return (
       <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
-        {header}
-        <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start justify-center" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))' }}>
-          <ServiceSourcing />
-          <div className="panel">
-            <div className="panel-head"><div className="panel-title">Offline lab · before the search runs</div><span className="text-[12px] text-muted">local fixtures · never service evidence</span></div>
-            <div className="p-3 grid gap-3 text-[13px]">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="grid gap-1 text-muted">what is the product for?<select value={intake.endUse} onChange={(e) => setIntake({ ...intake, endUse: e.target.value as Intake['endUse'] })} className="field text-ink" disabled={running}>{['civil survey and mapping', 'agriculture', 'public safety', 'infrastructure inspection', 'defense-adjacent research', 'other'].map((x) => <option key={x}>{x}</option>)}</select></label>
-                <label className="grid gap-1 text-muted">who is the end user?<select value={intake.endUser} onChange={(e) => setIntake({ ...intake, endUser: e.target.value as Intake['endUser'] })} className="field text-ink" disabled={running}>{['commercial operator', 'university', 'government agency (civil)', 'military or defense prime', 'unknown'].map((x) => <option key={x}>{x}</option>)}</select></label>
-                <label className="grid gap-1 text-muted">where does it ship?<select value={shipTo} onChange={(e) => setShipTo(e.target.value as ShipTo)} className="field text-ink" disabled={running}>{SHIP_TO.map((x) => <option key={x.code} value={x.code}>{x.label}</option>)}</select></label>
-                <label className="grid gap-1 text-muted">is the pod used on an aircraft?<select value={intake.usedOn} onChange={(e) => setIntake({ ...intake, usedOn: e.target.value as Intake['usedOn'] })} className="field text-ink" disabled={running}>{['none', 'in-production unlisted aircraft', 'listed military aircraft'].map((x) => <option key={x}>{x}</option>)}</select></label>
-                <label className="grid gap-1 text-muted">units<input type="number" min={1} max={500} value={qty} onChange={(e) => setQty(Math.max(1, Math.min(500, +e.target.value || 1)))} className="field font-mono text-ink" disabled={running} /></label>
-                <label className="grid gap-1 text-muted">transport<select value={mode} onChange={(e) => setMode(e.target.value as Mode)} className="field text-ink" disabled={running}><option value="air">air</option><option value="ocean">ocean</option></select></label>
-              </div>
-              <div className="flex gap-4 flex-wrap">
-                <label className="flex items-center gap-2"><input type="checkbox" checked={intake.civilProduct} onChange={(e) => setIntake({ ...intake, civilProduct: e.target.checked })} disabled={running} /> declared a civil product <span className="chip chip-sm">declared</span></label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={intake.bvlos} onChange={(e) => setIntake({ ...intake, bvlos: e.target.checked })} disabled={running} /> beyond visual line of sight</label>
-              </div>
-              <input aria-label="notes" placeholder="anything else about the use case · one line, goes on the round" value={intake.notes} onChange={(e) => setIntake({ ...intake, notes: e.target.value })} className="field" disabled={running} />
-              <div className="text-[12px] text-muted">These answers are declared facts. They print on the round and beside every pick; they do not change what the rule engine computed for the design.</div>
-              <button onClick={start} disabled={s.viewSeq != null || running} className="btn btn-primary btn-lg justify-self-start disabled:opacity-50">Run the search · source this design</button>
-            </div>
-          </div>
-          <div className="panel">
-            <div className="panel-head"><div className="panel-title">The pipeline</div><span className="text-[12px] text-muted">{running ? 'running' : r ? 'done' : 'idle'}</span></div>
-            <div className="p-3 grid gap-2 text-[13px]">
-              {stages.map((st, i) => {
-                const state = stage < 0 ? 'idle' : i < stage ? 'done' : i === stage ? 'running' : 'waiting';
-                return (
-                  <div key={st.label} className="grid grid-cols-[18px_1fr] gap-2 items-start">
-                    <span className="mt-[3px] w-[14px] h-[14px] rounded-full border flex items-center justify-center text-[10px]" style={{ borderColor: state === 'done' ? 'var(--accent)' : 'var(--line)', background: state === 'done' ? 'var(--accent)' : state === 'running' ? 'var(--focus)' : 'transparent', color: 'var(--accentfg)' }}>{state === 'done' ? '✓' : ''}</span>
-                    <span><b style={{ color: state === 'waiting' || state === 'idle' ? 'var(--muted)' : 'var(--ink)' }}>{st.label}</b><br /><span className="text-[12px] text-muted">{st.detail}</span>
-                      {state === 'done' && counts && i === 0 && <><br /><span className="font-mono text-[12px]">{r!.lines.length} lines · {counts.offers} offers</span></>}
-                      {state === 'done' && counts && i === 2 && <><br /><span className="font-mono text-[12px]">{counts.blocked} review blocked · {counts.review} review required</span></>}
-                      {state === 'done' && counts && i === 3 && <><br /><span className="font-mono text-[12px]">{counts.offers} ladders · every layer dated</span></>}
-                    </span>
+        {stepper}
+        <div className="flex-1 min-h-0 overflow-auto px-6 py-5 md:px-10 flex justify-center content-start">
+          <div className="w-full max-w-[1120px] self-start grid gap-5">
+            {incomplete ? (
+              <div className="panel">
+                <div className="panel-head" role="status"><div className="panel-title">This application requires more information</div><span className="text-[12px] text-muted">answer before sourcing starts</span></div>
+                <div className="p-4 grid gap-4 text-[13px]">
+                  <div>{s.project?.intake ? 'Some use-case answers are still “not sure yet”.' : 'The use-case questions were skipped when this project was created.'} Sourcing reads the ship-to, the quantity, the transport mode, the end use and the end user before it resolves a single offer.</div>
+                  <IntakeForm value={draft} onChange={setDraft} />
+                  <div className="flex gap-2 items-center flex-wrap border-t border-line2 pt-3">
+                    <button onClick={() => s.setProjectIntake(draft)} disabled={stillIncomplete} className="btn btn-primary btn-lg disabled:opacity-50" title={stillIncomplete ? 'every answer must be a real choice, not “not sure yet”' : 'save the answers to the project'}>Save answers</button>
+                    {stillIncomplete && <span className="text-[12px] text-amber">some answers are still “not sure yet”</span>}
                   </div>
-                );
-              })}
-              <div className="text-[12px] text-muted border-t border-line2 pt-2">no model on this path · every stage is a pure function over dated fixtures · the agent may only propose on the escalation lane</div>
-            </div>
+                </div>
+              </div>
+            ) : (() => {
+              const placed = components.filter((sl) => s.parts[sl]);
+              // keys read as labels: uppercase, tracked, muted; values keep their case
+              const KV = ({ k, v, mono = false }: { k: string; v: React.ReactNode; mono?: boolean }) => <><span className="text-[12px] uppercase tracking-[.05em] text-muted whitespace-nowrap leading-6">{k}</span><span className={'min-w-0 leading-6 ' + (mono ? 'font-mono' : '')}>{v}</span></>;
+              const shipLabel = SHIP_TO.find((x) => x.code === shipTo)?.label ?? shipTo;
+              return (
+                <>
+                  <div className="panel">
+                    <div className="panel-head"><div className="panel-title">{s.project?.name ?? 'Project'} <span className="sub">· what sourcing will read</span></div><span className="chip">declared</span></div>
+                    <div className="p-5 grid gap-3 text-[14px]">
+                      {s.project?.description && <div className="text-[15px]">{s.project.description}</div>}
+                      <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto_1fr] gap-x-8 gap-y-1.5 items-baseline">
+                        <KV k="design state" v={'#' + s.events.length + ' · ' + s.features.length + ' feature' + (s.features.length === 1 ? '' : 's')} mono />
+                        <KV k="span" v={s.span.toFixed(2) + ' m'} mono />
+                        <KV k="created" v={s.project?.createdAt ?? ''} mono />
+                        <KV k="components" v={placed.length + ' of ' + components.length + ' placed'} mono />
+                      </div>
+                    </div>
+                  </div>
+                  {/* the use case and the components side by side; each panel carries its own edit action */}
+                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-5 items-start">
+                    <div className="panel">
+                      <div className="panel-head"><div className="panel-title">Use case <span className="sub">· and shipping</span></div><button onClick={() => s.patch({ intakeOpen: true })} className="btn btn-xs btn-icon" aria-label="Edit use case" title="Edit use case"><EditIcon /></button></div>
+                      <div className="p-5 grid grid-cols-[auto_1fr] gap-x-8 gap-y-1.5 text-[14px] items-baseline">
+                        <KV k="product for" v={intake.endUse} />
+                        <KV k="end user" v={intake.endUser} />
+                        <KV k="used on an aircraft" v={intake.usedOn} />
+                        <KV k="civil product" v={intake.civilProduct ? 'declared' : 'not declared'} />
+                        <KV k="BVLOS" v={intake.bvlos ? 'declared' : 'not declared'} />
+                        <KV k="notes" v={intake.notes.trim() || <span className="text-muted">none</span>} />
+                        <span className="col-span-2 border-t border-line2 my-2" />
+                        <KV k="ships to" v={shipLabel} />
+                        <KV k="units" v={String(qty)} mono />
+                        <KV k="transport" v={mode} mono />
+                        <KV k="export gate" v={shipTo === 'US' ? 'domestic · no export gate' : 'read per part from the classification'} />
+                      </div>
+                    </div>
+                    <div className="panel">
+                      <div className="panel-head"><div className="panel-title">Components <span className="sub">· {placed.length} placed · {components.length - placed.length} not placed</span></div><button onClick={() => s.setWorkspace('design')} className="btn btn-xs btn-icon" aria-label="Edit components in Design" title="Edit components in Design"><EditIcon /></button></div>
+                      <div className="grid text-[14px]">
+                        {components.map((sl) => { const pid = s.parts[sl]; const part = pid ? CATALOG[pid] : null; return (
+                          <div key={sl} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] gap-4 items-center px-5 min-h-10 border-t border-line2">
+                            <span className="font-semibold whitespace-nowrap overflow-hidden text-ellipsis">{GENERIC_NAME[sl]}</span>
+                            <span className={part ? 'min-w-0 whitespace-nowrap overflow-hidden text-ellipsis' : 'text-muted'}>{part ? part.name : 'not placed · sourcing lists the empty line'}</span>
+                            <span className="font-mono text-[13px] text-muted whitespace-nowrap">{part ? part.vendor + ' · ' + part.origin : ''}</span>
+                          </div>
+                        ); })}
+                      </div>
+                    </div>
+                  </div>
+                  {/* one call to action; an existing round is a text link under it */}
+                  <div className="grid justify-items-center gap-2 pt-2 max-sm:sticky max-sm:bottom-0 max-sm:-mx-6 max-sm:px-6 max-sm:py-3 max-sm:bg-bg max-sm:border-t max-sm:border-line2">
+                    <button onClick={start} disabled={s.viewSeq != null} className="btn btn-primary min-h-12 px-10 text-[15px] disabled:opacity-50 w-full sm:w-auto sm:min-w-[260px]">{r ? 'Open a new round' : 'Find suppliers'}</button>
+                    {r && <button onClick={() => setStepWanted(2)} className="bg-transparent border-0 p-0 min-h-8 text-[13px] text-ink underline underline-offset-2 cursor-pointer">Continue round {r.id} instead</button>}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
     );
   }
 
-  const done = k >= n;
-  const line = done ? null : r.lines[k];
-  const list = line ? sortOffers(r.offers[line.id] || []) : [];
-  const sel = line ? r.selections[line.id] : undefined;
-  const picked = list.find((x) => x.offer.id === (pick ?? sel?.offerId));
-  const gate = line ? gateFor(line, o, r.shipTo) : null;
-  const slot = line?.slot ?? null;
-  const thumb = slot ? (s.parts[slot] ? THUMBS[s.parts[slot]!] : null) : line?.id === 'l-frame' ? AF_THUMB : null;
-  const selectedCount = Object.keys(r.selections).length;
+  if (!r) return null;
 
-  const confirm = () => {
-    if (!line || !picked) return;
-    const e = s.selectOffer(line.id, picked.offer.id, attestor, reasons);
-    setErr(e);
-    if (!e) setTimeout(() => setK(k + 1), 250);
-  };
-
-  return (
-    <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
-      {header}
-      {stale && (
-        <div role="status" className="px-4 py-2 border-b border-line2 bg-surface2 text-[13px] flex justify-between items-center gap-3 flex-wrap">
-          <span className="text-amber font-semibold">the design changed after this round opened (#{r.designSeq}) · this round stays openable; a new round names it</span>
-          <button onClick={() => { s.openRound(r.shipTo, r.qty, r.mode, r.intake); setK(null); }} className="btn btn-primary">Open round r{parseInt(r.id.slice(1), 10) + 1}</button>
-        </div>
-      )}
-      <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-line2 bg-surface">
-        <span className="font-mono text-[13px] font-bold whitespace-nowrap">{done ? 'review' : 'part ' + (k + 1) + ' of ' + n}</span>
-        <div className="flex-1 flex gap-[3px]">
-          {r.lines.map((l, i) => <button key={l.id} onClick={() => setK(i)} title={l.description} className="h-2 flex-1 rounded-[2px] border-0 cursor-pointer" style={{ background: i === k ? 'var(--focus)' : r.selections[l.id] ? 'var(--accent)' : 'var(--m2)' }} />)}
-          <button onClick={() => setK(n)} title="review · package · order" className="h-2 w-8 rounded-[2px] border-0 cursor-pointer" style={{ background: done ? 'var(--focus)' : r.pkg ? 'var(--accent)' : 'var(--m2)' }} />
-        </div>
-        <button onClick={() => s.refineRound({})} className="btn" title="re-screen against the same two-key synthetic fixture slice · K runs, 0 changed">Re-screen</button>
-        <span className="text-[12px] text-muted whitespace-nowrap">{selectedCount} of {n} picked</span>
-        <button onClick={() => setK(Math.max(0, k - 1))} disabled={k === 0} className="btn disabled:opacity-40">Back</button>
-        <button onClick={() => setK(Math.min(n, k + 1))} disabled={done} className="btn disabled:opacity-40">{sel || done ? 'Next' : 'Skip'}</button>
-      </div>
-
-      {!done && line && gate && (
+  // step 3 · review the picks, declare, build the package, send the order
+  if (step === 3) {
+    return (
+      <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
+        {stepper}
+        {staleBar}
         <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))' }}>
-          <div className="grid gap-3 content-start">
-            <div className="panel">
-              <div className="panel-head"><div className="panel-title">This is your {slot ? GENERIC_NAME[slot as Slot].toLowerCase() : line.description.split(' · ')[0].toLowerCase()}</div><span className="text-[12px] text-muted">× {line.qtyPerUnit * r.qty}</span></div>
-              <div className="p-3 grid gap-2">
-                <div className="flex gap-3 items-center">
-                  {thumb ? <svg viewBox="0 0 56 44" className="w-[84px] h-[66px] block flex-none">{thumb.map((f, i) => <polygon key={i} points={f.pts} fill={f.fill} stroke={f.stroke} strokeWidth="0.8" strokeDasharray={f.dash || undefined} strokeLinejoin="round" />)}</svg> : <div className="w-[84px] h-[66px] flex-none border border-dashed border-line rounded-r" />}
-                  <div className="min-w-0"><div className="font-semibold text-[15px]">{line.description}</div><div className="text-[13px] text-muted">{line.partClass} · HTS {line.heading}</div></div>
-                </div>
-                <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
-                  <span className="text-muted">manufacturer ECCN</span><span className="font-mono">{line.declaredEccn}</span>
-                  <span className="text-muted">export gate · {r.shipTo}</span><span className="font-mono font-semibold" style={{ color: gate.blocks ? 'var(--red)' : gate.word === 'STA' ? 'var(--amber)' : 'var(--green)' }}>{gate.word} <span className="font-normal text-muted">{gate.para}</span></span>
-                  <span className="text-muted">in the design</span><span>{slot ? (s.parts[slot] ? 'placed · change the model in Spec' : 'slot empty') : 'fixed BOM line'}</span>
-                </div>
-                {sel && <div className="text-[13px] border-t border-line2 pt-2">picked <b>{list.find((x) => x.offer.id === sel.offerId)?.offer.seller}</b> · attestor {sel.attestor} · #{sel.seq}{sel.declined.length ? <span className="text-muted"> · declined {sel.declined.map((d) => d.seller + ' (' + d.reason + ')').join(', ')}</span> : null}</div>}
-              </div>
-            </div>
-            {(() => {
-              const reason = escalationReason(line, list);
-              const esc = s.escalations[line.id];
-              if (!reason && !esc) return null;
-              return (
-                <div className="panel" style={{ borderColor: 'var(--amber)' }}>
-                  <div className="panel-head"><div className="panel-title">Escalation lane <span className="sub">· {reason ?? esc?.reason}</span></div>{esc && <span className="chip chip-sm">{esc.state}</span>}</div>
-                  <div className="p-3 grid gap-2 text-[13px]">
-                    {!esc && <><div className="text-muted">the agent may propose a seller, a part or a fact here; every deterministic check runs on a copy first; a human resolves.</div><button onClick={() => s.proposeEscalation(line.id, reason!)} className="btn justify-self-start">Ask the agent for a proposal</button></>}
-                    {esc && (
-                      <>
-                        <div className="border border-line rounded-r p-2 grid gap-1">
-                          <div className="font-mono text-[12px] text-muted">proposal · {esc.reason} · {esc.confident ? 'confident' : 'not confident'} · exact-quote citation first</div>
-                          <div>{esc.proposal}</div>
-                          {esc.state === 'proposed' && (
-                            <div className="flex gap-2 items-center flex-wrap"><input aria-label="attestor" placeholder="attestor · required" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field w-[160px]" /><button onClick={() => s.resolveEscalation(line.id, true, attestor)} disabled={!attestor.trim()} className="btn btn-primary disabled:opacity-50">Accept</button><button onClick={() => s.resolveEscalation(line.id, false, attestor)} disabled={!attestor.trim()} className="btn disabled:opacity-50">Reject</button></div>
-                          )}
-                          {esc.state !== 'proposed' && <div className="text-[12px] text-muted">{esc.state} · human-resolved · attestor {esc.attestor}</div>}
-                        </div>
-                        <div className="text-[12px] text-muted">the agent proposes; a human resolves · rejection as fast as acceptance · the agent has no path to a terminal state</div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-            <div className="panel">
-              <div className="panel-head"><div className="panel-title">Ask the supplier</div><button onClick={() => setAskOpen((v) => !v)} className="btn btn-xs">{askOpen ? 'hide' : 'generate the request'}</button></div>
-              {askOpen && (
-                <div className="p-3 grid gap-2 text-[13px]" id="supplier-request">
-                  <div className="font-semibold">Supplier request · {line.description}</div>
-                  <div className="text-muted">Please answer in the regulation’s words, with the source document and date for each value:</div>
-                  <ol className="m-0 pl-5 grid gap-1">{supplierQuestions(line).map((q, i) => <li key={i}>{q}</li>)}</ol>
-                  <div className="text-[12px] text-muted">generated from the rule fields · no model · the verified-answer loop (supplier PDF → extractor → verifier → extracted_by supplier_doc) is roadmap</div>
-                  <button onClick={() => window.print()} className="btn justify-self-start">Print the request</button>
-                </div>
-              )}
-            </div>
-            {r.shipTo !== 'US' && gate.blocks && (
-              <div className="panel" style={{ borderColor: 'var(--red)' }}>
-                <div className="panel-head"><div className="panel-title text-red">{gate.word === 'REVIEW' ? 'Human review required' : 'Your regulation changes here'}</div></div>
-                <div className="p-3 grid gap-2 text-[13px]">
-                  <div>Sending this part to {r.shipTo} reads <b>{gate.word}</b> ({gate.para}). {gate.word === 'REVIEW' ? 'The limited scan cannot authorize export; the package remains blocked until a human review is documented.' : 'The package is blocked until an authorization reference is typed and attested.'}</div>
-                  {gate.word === 'DENIAL' ? <div className="text-muted">DENIAL has no reference field. Change the design or the destination.</div> : r.references[line.id] ? (
-                    <div>reference <span className="font-mono">{r.references[line.id].ref}</span> · attestor {r.references[line.id].attestor} · <span className="text-amber font-semibold">reference typed, not validated</span></div>
-                  ) : (
-                    <div className="grid gap-2">
-                      <input aria-label="authorization reference" placeholder={gate.word === 'REVIEW' ? 'documented reviewer decision / evidence reference' : 'licence / agreement / exemption / DSP-5 number'} value={refDraft} onChange={(e) => setRefDraft(e.target.value)} className="field" />
-                      <div className="flex gap-2"><input aria-label="attestor for the reference" placeholder="attestor · required" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field flex-1" /><button onClick={() => { if (refDraft.trim() && attestor.trim()) s.setReference(line.id, refDraft.trim(), attestor.trim()); }} className="btn btn-primary">{gate.word === 'REVIEW' ? 'Attest review' : 'Attest reference'}</button></div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {list.length > 1 && (() => {
-              const cheapest = list.slice().sort((a, b) => (a.ladder.perUnit ?? Infinity) - (b.ladder.perUnit ?? Infinity))[0];
-              const clean = list.find((x) => x.status === 'no_candidate_match');
-              const delta = clean && cheapest && clean.ladder.perUnit != null && cheapest.ladder.perUnit != null ? clean.ladder.perUnit - cheapest.ladder.perUnit : null;
-              return (
-                <div className="panel">
-                  <div className="panel-head"><div className="panel-title">Price against regulation</div></div>
-                  <div className="p-3 grid gap-1 text-[13px]">
-                    <div className="grid grid-cols-[1fr_auto] gap-2"><span>lowest modeled landed estimate · <b>{cheapest.offer.seller}</b> <span style={{ color: STATUS_COLOR[cheapest.status] }}>· {STATUS_WORD[cheapest.status]}</span></span><span className="font-mono">{usd(cheapest.ladder.perUnit)}</span></div>
-                    {clean && clean !== cheapest && <div className="grid grid-cols-[1fr_auto] gap-2"><span>cheapest with no candidate match · <b>{clean.offer.seller}</b></span><span className="font-mono">{usd(clean.ladder.perUnit)}</span></div>}
-                    {delta != null && delta > 0 && <div className="text-muted">the cleaner seller costs <span className="font-mono text-ink">{usd(delta)}</span> more per unit · the cheaper one is {STATUS_WORD[cheapest.status]}{cheapest.offer.declaredOrigin === 'CN' ? ' and PRC-origin (Section 301 in the ladder, federal-buyer flag)' : ''}</div>}
-                    {!clean && <div className="text-amber">no offer on this line is free of a review flag · pick with the flag on the record, or escalate</div>}
-                    <div className="text-[12px] text-muted">status sorts above price, always · the human is on the pick button</div>
-                  </div>
-                </div>
-              );
-            })()}
-            {picked && (
-              <div className="panel" style={{ borderColor: 'var(--focus)' }}>
-                <div className="panel-head"><div className="panel-title">If you pick {picked.offer.seller}</div></div>
-                <div className="p-3 grid gap-2 text-[13px]">
-                  {consequences(picked, line, r, o).map((c, i) => <div key={i} className="grid grid-cols-[8px_1fr] gap-2 items-start"><span className="mt-[6px] w-2 h-2 rounded-full" style={{ background: c.tone }} /><span>{c.text}</span></div>)}
-                  <div className="text-[12px] text-muted">{CLAIM_OFFER}</div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="grid gap-3 content-start">
-            <div className="panel">
-              <div className="panel-head"><div className="panel-title">Where you can get it <span className="sub">· {list.length} offer{list.length === 1 ? '' : 's'} · status first, then modeled landed-cost estimate · blocked last</span></div></div>
-              <div className="p-3 grid gap-2">
-                {list.length === 0 && <div className="text-[13px] text-amber">no offer match · escalation lane: the agent may propose a seller; a human resolves.</div>}
-                {list.map((ro) => {
-                  const on = (pick ?? sel?.offerId) === ro.offer.id;
-                  const declined = sel?.declined.find((d) => d.offerId === ro.offer.id);
-                  return (
-                    <div key={ro.offer.id} className="border rounded-r bg-surface grid gap-2 p-3" style={{ borderColor: on ? 'var(--focus)' : 'var(--line)', boxShadow: on ? 'inset 0 0 0 1px var(--focus)' : 'none', opacity: declined ? 0.7 : 1 }}>
-                      <div className="flex justify-between gap-2 items-baseline flex-wrap">
-                        <button onClick={() => { setPick(ro.offer.id); setErr(null); }} className="text-left bg-transparent border-0 p-0 cursor-pointer text-ink font-semibold text-[14px]">{ro.offer.seller} <span className="text-muted font-normal">· {ro.offer.sellerCountry}</span>{ro.offer.synthetic && <span className="chip chip-sm ml-2">Synthetic</span>}{ro.offer.authorized && <span className="chip chip-sm ml-1">authorized</span>}</button>
-                        <span className="text-[13px] font-bold" style={{ color: STATUS_COLOR[ro.status] }}>{STATUS_WORD[ro.status]}</span>
-                      </div>
-                      <div className="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-x-3 gap-y-1 text-[12px]">
-                        <div><span className="text-muted">ship-from · origin</span><br /><span className="font-mono">{ro.offer.shipFrom} · {ro.offer.declaredOrigin} <span className="chip chip-sm">declared</span></span></div>
-                        <div><span className="text-muted">price</span><br /><span className="font-mono">{usd(ro.offer.unitPrice)}</span></div>
-                        <div><span className="text-muted">modeled landed estimate / unit</span><br /><span className="font-mono font-semibold" style={{ color: ro.ladder.unverified ? 'var(--grey)' : 'var(--ink)' }}>{usd(ro.ladder.perUnit)}</span></div>
-                        <div><span className="text-muted">stock · lead · MOQ</span><br /><span className="font-mono">{ro.offer.stock} · {ro.offer.leadDays} d · {ro.offer.moq}</span></div>
-                        <div><span className="text-muted">seller ECCN · HTS</span><br /><span className="font-mono">{ro.offer.declaredEccn} · {ro.offer.declaredHts}</span></div>
-                      </div>
-                      <div className="flex gap-1 flex-wrap items-center">
-                        <button onClick={() => { setPick(ro.offer.id); setTab(tab === 'owners' && on ? 'none' : 'owners'); }} className="btn">Owners · {ro.tier}</button>
-                        <button onClick={() => { setPick(ro.offer.id); setTab(tab === 'estimate' && on ? 'none' : 'estimate'); }} className="btn">Modeled landed estimate</button>
-                        {ro.status === 'review_blocked' && <button onClick={() => setAdj({ offerId: ro.offer.id, role: 'analyst', reason: 'name match on a different entity', rationale: '', action: 'false_positive' })} className="btn">Adjudicate…</button>}
-                        <span className="flex-1" />
-                        {sel?.offerId === ro.offer.id ? <span className="text-[13px] font-semibold text-green">picked</span> : declined ? <span className="text-[12px] text-muted">declined · {declined.reason}</span> : <button onClick={() => { setPick(ro.offer.id); setErr(null); }} className={'btn ' + (on ? 'btn-primary' : '')} disabled={ro.status === 'review_blocked'} title={ro.status === 'review_blocked' ? 'review blocked stops a pick · adjudicate first' : ''}>{on ? 'picked below' : 'Pick this'}</button>}
-                      </div>
-                      {on && tab === 'owners' && (
-                        <div className="border-t border-line2 pt-2"><div className="text-[13px] font-semibold mb-1">Who owns them · {FIXTURES.ownership}</div><Party n={ro.tree} /><div className="text-[12px] text-muted mt-1">{CLAIM_SCREEN} · Affiliates Rule returns 10 November 2026; the walk rests on the OFAC 50 % rule.</div></div>
-                      )}
-                      {on && tab === 'estimate' && (
-                        <div className="border-t border-line2 pt-2">
-                          <div className="text-[13px] font-semibold mb-1">Modeled landed-cost estimate · declared/fixture inputs · not a supplier quote or tariff determination · {ro.ladder.domestic ? 'domestic · no entry' : 'entering the US'}</div>
-                          <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-[2px] text-[12px]">
-                            {ro.ladder.rows.map((rw, i) => <div key={i} className="contents"><div className={rw.verified ? '' : 'text-grey'}><b>{rw.layer}</b> <span className="text-muted">· {rw.citation}</span><br /><span className="text-muted">{rw.note}</span></div><div className="font-mono text-right text-amber">{rw.rate}</div><div className="font-mono text-right text-amber">{rw.amount == null ? '' : '$ ' + rw.amount.toFixed(2)}</div></div>)}
-                          </div>
-                          <div className="flex justify-between gap-2 mt-2 font-mono text-[13px]"><span>total estimate</span><b>{usd(ro.ladder.total)}</b></div>
-                          <div className="text-[12px] text-muted">{ro.ladder.assumptions} · hash {ro.ladder.hash} · {CLAIM_COST}</div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            {adj && (
-              <div className="panel">
-                <div className="panel-head"><div className="panel-title">Adjudicate the match</div><button onClick={() => setAdj(null)} className="btn">Cancel</button></div>
-                <div className="p-3 grid gap-2 text-[13px]">
-                  <label className="grid gap-1 text-muted">role<select value={adj.role} onChange={(e) => setAdj({ ...adj, role: e.target.value as typeof adj.role, action: e.target.value === 'analyst' ? 'false_positive' : adj.action })} className="field text-ink"><option value="analyst">analyst · may record a false positive</option><option value="empowered_official">empowered official · resolves or pins</option></select></label>
-                  <label className="grid gap-1 text-muted">action<select value={adj.action} onChange={(e) => setAdj({ ...adj, action: e.target.value as typeof adj.action })} className="field text-ink"><option value="false_positive">record false positive · lowers to review required</option>{adj.role === 'empowered_official' && <option value="resolve">resolve · no candidate match</option>}{adj.role === 'empowered_official' && <option value="pin">pin review blocked</option>}</select></label>
-                  <label className="grid gap-1 text-muted">reason code<select value={adj.reason} onChange={(e) => setAdj({ ...adj, reason: e.target.value })} className="field text-ink">{['name match on a different entity', 'ownership below 50 %', 'list entry withdrawn', 'red flag confirmed', 'other'].map((x) => <option key={x}>{x}</option>)}</select></label>
-                  <input aria-label="rationale" placeholder="rationale · required" value={adj.rationale} onChange={(e) => setAdj({ ...adj, rationale: e.target.value })} className="field" />
-                  <input aria-label="attestor" placeholder="attestor · required" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field" />
-                  <button disabled={!adj.rationale.trim() || !attestor.trim()} onClick={() => { s.adjudicate(line.id, adj.offerId, adj.role, adj.reason, adj.rationale, attestor, adj.action); setAdj(null); }} className="btn btn-primary disabled:opacity-50">Record adjudication</button>
-                </div>
-              </div>
-            )}
-            {picked && !sel && (
-              <div className="panel" style={{ borderColor: 'var(--focus)' }}>
-                <div className="panel-head"><div className="panel-title">Pick {picked.offer.seller}</div></div>
-                <div className="p-3 grid gap-2 text-[13px]">
-                  {list.filter((x) => x.offer.id !== picked.offer.id).length > 0 && <div className="text-muted">the other offers you saw are recorded as declined, each with a reason and its status at the moment of decline:</div>}
-                  {list.filter((x) => x.offer.id !== picked.offer.id).map((x) => (
-                    <div key={x.offer.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center"><span>{x.offer.seller} <span className="text-muted">· was {STATUS_WORD[x.status]}</span></span><select value={reasons[x.offer.id] ?? ''} onChange={(e) => setReasons({ ...reasons, [x.offer.id]: e.target.value as DeclineReason })} className="btn text-ink"><option value="">reason from status</option>{DECLINE_REASONS.map((d) => <option key={d} value={d}>{d}</option>)}</select></div>
-                  ))}
-                  <input aria-label="attestor" placeholder="attestor · required · a pick is a human act" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field" />
-                  {err && <div role="alert" className="text-red font-semibold">{err}</div>}
-                  <button onClick={confirm} disabled={s.viewSeq != null} className="btn btn-primary btn-lg text-left disabled:opacity-50">Confirm pick · next part</button>
-                </div>
-              </div>
-            )}
-            {sel && <button onClick={() => setK(k + 1)} className="btn btn-primary btn-lg justify-self-end">Next part →</button>}
-          </div>
-        </div>
-      )}
-
-      {done && (
-        <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))' }}>
-          <div className="panel">
-            <div className="panel-head"><div className="panel-title">Your picks <span className="sub">· {selectedCount} of {n}</span></div></div>
+          <div className="panel max-md:order-2">
+            <div className="panel-head"><div className="panel-title">Your picks <span className="sub">· {selectedCount} of {n}</span></div><span className="font-mono text-[13px]">{usd(total)}</span></div>
             <div className="grid text-[13px]">
               {r.lines.map((l, i) => { const sl = r.selections[l.id]; const ro = sl ? (r.offers[l.id] || []).find((x) => x.offer.id === sl.offerId) : null; const g = gateFor(l, o, r.shipTo); return (
-                <button key={l.id} onClick={() => setK(i)} className="row-hover grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-3 items-center px-3 min-h-10 border-t border-line2 text-left bg-transparent text-ink cursor-pointer">
+                <button key={l.id} onClick={() => { setK(i); setStepWanted(2); }} className="row-hover grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-3 items-center px-3 min-h-10 border-t border-line2 text-left bg-transparent text-ink cursor-pointer">
                   <span className="min-w-0 whitespace-nowrap overflow-hidden text-ellipsis">{l.description.split(' · ')[0]}</span>
                   <span className="text-muted">{ro ? ro.offer.seller : <span className="text-amber">not picked</span>}</span>
                   {r.shipTo !== 'US' ? <span className="font-mono font-bold text-[12px]" style={{ color: g.blocks ? (r.references[l.id] ? 'var(--amber)' : 'var(--red)') : 'var(--green)' }}>{g.word}{g.blocks && r.references[l.id] ? ' · ref typed' : ''}</span> : <span />}
@@ -648,18 +500,21 @@ export function Sourcing({ o }: { o: Outcome }) {
               </div>
             )}
             <div className="panel">
-              <div className="panel-head"><div className="panel-title">Build the package</div>{r.pkg && <span className="chip">ready</span>}</div>
+              <div className="panel-head"><div className="panel-title">Package</div>{r.pkg && <span className="chip">ready</span>}</div>
               <div className="p-3 grid gap-2 text-[13px]">
                 <button onClick={() => s.buildPackage(o)} disabled={s.viewSeq != null} className="btn btn-primary btn-lg justify-self-start disabled:opacity-50">Build the package</button>
-                {r.pkgRefusal && <div role="alert" className="text-red font-semibold">refused: {r.pkgRefusal}</div>}
+                {r.pkgRefusal && (() => { const i = r.lines.findIndex((l) => !r.selections[l.id]); return (
+                  <div role="alert" className="grid gap-2 justify-items-start">
+                    <div className="text-red font-semibold">refused: {r.pkgRefusal}</div>
+                    {i >= 0 && <button onClick={() => { setK(i); setStepWanted(2); }} className="btn">Go to {r.lines[i].description.split(' · ')[0]} · the first open line</button>}
+                  </div>
+                ); })()}
                 {r.pkg && (
                   <div className="grid gap-1 border-t border-line2 pt-2">
                     <div className="grid grid-cols-[1fr_auto] gap-2"><span>pre-entry lines for broker validation</span><span className="font-mono">{r.pkg.preEntry}</span></div>
                     <div className="grid grid-cols-[1fr_auto] gap-2"><span>diligence record</span><span className="font-mono">{r.pkg.diligence}</span></div>
                     <div className="grid grid-cols-[1fr_auto] gap-2"><span>export references</span><span className="font-mono">{r.pkg.exportRefs}</span></div>
-                    <div className="text-[12px] text-muted mt-1">{CLAIM_PACKAGE} Draft prepared for review by a licensed customs broker. Not a customs entry, not a broker engagement or power of attorney, not legal, customs or tax advice. The importer of record remains responsible under 19 CFR 141.1.</div>
-                    <div className="text-[12px] mt-1"><b>first-run checklist</b> · {CHECKLIST.join(' · ')}</div>
-                    <div className="text-[12px]"><b>warnings</b> · {WARNINGS.join(' · ')}</div>
+                    <details className="text-[12px] text-muted"><summary className="cursor-pointer flex items-center min-h-8 max-sm:min-h-11">what this package is, checklist and warnings</summary><div className="mt-1">{CLAIM_PACKAGE} Draft prepared for review by a licensed customs broker. Not a customs entry, not a broker engagement or power of attorney, not legal, customs or tax advice. The importer of record remains responsible under 19 CFR 141.1.</div><div className="mt-1"><b>first-run checklist</b> · {CHECKLIST.join(' · ')}</div><div><b>warnings</b> · {WARNINGS.join(' · ')}</div></details>
                   </div>
                 )}
               </div>
@@ -667,19 +522,326 @@ export function Sourcing({ o }: { o: Outcome }) {
             <div className="panel">
               <div className="panel-head"><div className="panel-title">Stage the order <span className="sub">· simulated, exactly once</span></div>{r.order && <span className="chip" style={{ color: r.order.state === 'EXCEPTION' ? 'var(--red)' : undefined }}>{orderDisplayLabel(r.order.state)}</span>}</div>
               <div className="p-3 grid gap-2 text-[13px]">
-                <label className="flex items-center gap-2 text-muted"><input type="checkbox" checked={s.injectException} onChange={(e) => s.patch({ injectException: e.target.checked })} disabled={!!r.order} /> inject a lost response after dispatch</label>
                 <div className="flex gap-2 flex-wrap">
                   <button onClick={s.sendOrder} disabled={!r.pkg || !!r.order} className="btn btn-primary disabled:opacity-40">Stage order (simulated)</button>
                   <button onClick={s.retrySend} disabled={!r.order || r.order.state === 'CLOSED'} className="btn disabled:opacity-40">Retry staged action with the same key</button>
                   <button onClick={s.closeOrder} disabled={!r.order || r.order.state !== 'ACKNOWLEDGED'} className="btn disabled:opacity-40">Receive · inspect · close</button>
                 </div>
+                <label className="flex items-center gap-2 text-muted text-[12px]"><input type="checkbox" checked={s.injectException} onChange={(e) => s.patch({ injectException: e.target.checked })} disabled={!!r.order} /> inject a lost response after the staged action</label>
                 {r.order && <div className="grid gap-1 border-t border-line2 pt-2 font-mono text-[12px]"><div>PURCHASE_ORDER · design state #{r.designSeq} · qty {r.qty} · recipient: [placeholder] · SIMULATED</div><div>packet {r.order.packetHash} · key {r.order.key} · attempts {r.order.attempts}</div>{r.order.trail.map((tl, i) => <div key={i} className="text-muted">· {orderDisplayLabel(tl)}</div>)}</div>}
                 <div className="text-[12px] text-muted">a retry with the same key returns the first receipt · nothing leaves the machine · any real external send is a separately authorized communication</div>
               </div>
             </div>
           </div>
         </div>
-      )}
+        <div className="flex items-center gap-2 px-4 py-2 border-t border-line2 bg-surface text-[13px]">
+          <button onClick={() => setStepWanted(2)} className="btn">Back to suppliers</button>
+          <span className="flex-1" />
+          <span className="text-muted hidden sm:inline">modeled landed estimate · {r.qty} units</span><b className="font-mono">{usd(total)}</b>
+          <button onClick={() => setStepWanted(4)} className={'btn ' + (r.pkg ? 'btn-primary' : '')} title={r.pkg ? 'the filing draft for this package' : 'the draft can be read before the package is built; it covers picked lines only'}>Customs filing</button>
+        </div>
+      </div>
+    );
+  }
+
+  // step 4 · the customs filing draft: one pre-entry line per picked part, from the round's own ladders
+  if (step === 4) {
+    const f = filingDraftOf(r, o);
+    const money = (v: number | null | undefined) => (v == null ? 'not verified' : usd(v));
+    return (
+      <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
+        {stepper}
+        {staleBar}
+        <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start" id="customs-filing">
+          <div className="panel">
+            <div className="panel-head"><div className="panel-title">Customs filing draft <span className="sub">· {f.roundId} · design #{f.designSeq} · entry date {f.entryDate}</span></div><div className="flex gap-1"><span className="chip">{f.shipTo === 'US' ? 'import leg' : 'export leg · ' + f.shipTo}</span>{r.pkg ? <span className="chip">package {r.pkg.preEntry}</span> : <span className="chip" style={{ color: 'var(--amber)' }}>no package yet</span>}</div></div>
+            <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 text-[13px]">
+              <div><div className="text-muted">declared value</div><div className="font-mono text-[16px] font-bold">{money(f.totals.declared)}</div></div>
+              <div><div className="text-muted">duties · base and overlays</div><div className="font-mono text-[16px] font-bold">{money(f.totals.duties)}</div></div>
+              <div><div className="text-muted">fees · MPF and HMF</div><div className="font-mono text-[16px] font-bold">{money(f.totals.fees)}</div></div>
+              <div><div className="text-muted">modeled landed</div><div className="font-mono text-[16px] font-bold">{money(f.totals.landed)}</div></div>
+            </div>
+            {f.open.length > 0 && <div role="status" className="px-4 pb-3 text-[13px] text-amber">{f.open.length} line{f.open.length === 1 ? ' has' : 's have'} no pick and {f.open.length === 1 ? 'is' : 'are'} not on the draft: {f.open.join(', ')}</div>}
+          </div>
+
+          <div className="panel">
+            <div className="panel-head"><div className="panel-title">Pre-entry lines <span className="sub">· {f.lines.length} · declared data, heading level only</span></div><span className="text-[12px] text-muted">{f.totals.unverified > 0 ? f.totals.unverified + ' rate' + (f.totals.unverified === 1 ? '' : 's') + ' not verified' : 'every rate dated'}</span></div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[13px]">
+                <thead><tr className="text-left text-[12px] text-muted"><th className="px-4 py-2 font-medium">Part</th><th className="px-3 py-2 font-medium">HTS</th><th className="px-3 py-2 font-medium">Origin</th><th className="px-3 py-2 font-medium text-right">Qty</th><th className="px-3 py-2 font-medium text-right">Unit value</th><th className="px-3 py-2 font-medium text-right">Duties</th><th className="px-3 py-2 font-medium text-right">Fees</th><th className="px-3 py-2 font-medium">Entry</th></tr></thead>
+                <tbody>
+                  {f.lines.map((l) => (
+                    <tr key={l.lineId} className="border-t border-line2 align-top">
+                      <td className="px-4 py-2 min-w-[220px]"><div className="font-semibold">{l.description.split(' · ')[0]}</div><div className="text-[12px] text-muted">{l.seller} · ships {l.shipFrom}{l.manufacturer !== 'not declared' ? ' · made by ' + l.manufacturer : ''}</div>
+                        {l.importModelled && (
+                          <details className="text-[12px] text-muted mt-1"><summary className="cursor-pointer min-h-6 flex items-center">layers, valuation, flags</summary>
+                            <div className="grid gap-1 mt-1">
+                              <div>valuation · {l.valuationBasis}</div>
+                              <div>tariff code · {l.htsBy}</div>
+                              <div>origin · {l.originBasis}</div>
+                              {l.base && <div className="font-mono">{l.base.layer} · {l.base.citation} · {l.base.rate}{l.base.amount != null ? ' · ' + usd(l.base.amount) : ''}</div>}
+                              {l.overlays.map((x, i) => <div key={i} className="font-mono">{x.program} · {x.citation} · {x.rate} · {usd(x.amount)}</div>)}
+                              <div>AD/CVD · {l.adcvd}</div>
+                              {l.mpf && <div className="font-mono">MPF · {l.mpf.citation} · {l.mpf.rate}{l.mpf.amount != null ? ' · ' + usd(l.mpf.amount) : ''} · {l.mpf.note}</div>}
+                              {l.hmf && <div className="font-mono">HMF · {l.hmf.citation} · {l.hmf.rate}{l.hmf.amount != null ? ' · ' + usd(l.hmf.amount) : ''}</div>}
+                              {l.flags.map((x, i) => <div key={'f' + i} className="text-amber">{x}</div>)}
+                              <div className="font-mono">estimate {l.estimateHash}</div>
+                            </div>
+                          </details>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 font-mono whitespace-nowrap">{l.hts}</td>
+                      <td className="px-3 py-2 font-mono">{l.origin}</td>
+                      <td className="px-3 py-2 font-mono text-right">{l.qty}</td>
+                      <td className="px-3 py-2 font-mono text-right whitespace-nowrap">{usd(l.unitValue)}</td>
+                      <td className="px-3 py-2 font-mono text-right whitespace-nowrap" style={{ color: l.unverified ? 'var(--grey)' : undefined }}>{l.importModelled ? usd(l.duties) : ''}</td>
+                      <td className="px-3 py-2 font-mono text-right whitespace-nowrap">{l.importModelled ? usd(l.fees) : ''}</td>
+                      <td className="px-3 py-2 text-[12px]">{l.importModelled ? <span className="font-mono font-bold text-green">MODELLED</span> : <span className="text-muted">{l.note}</span>}</td>
+                    </tr>
+                  ))}
+                  {f.lines.length === 0 && <tr><td colSpan={8} className="px-4 py-6 text-muted">No picked line yet. Pick suppliers and the draft fills in.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {f.exportRefs.length > 0 && (
+              <div className="panel">
+                <div className="panel-head"><div className="panel-title">Export references <span className="sub">· {f.shipTo} · EEI per line</span></div></div>
+                <div className="grid text-[13px]">
+                  {f.exportRefs.map((x) => (
+                    <div key={x.lineId} className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 items-center px-4 min-h-10 border-t border-line2">
+                      <span className="min-w-0"><span className="font-semibold">{x.description}</span> <span className="text-muted">· {x.eccn} · {x.para}</span><br /><span className="text-[12px] text-muted">{x.why}</span></span>
+                      <span className="font-mono font-bold text-[12px]" style={{ color: x.gate === 'DENIAL' || x.gate === 'DDTC' ? 'var(--red)' : x.gate === 'LIC' || x.gate === 'STA' || x.gate === 'REVIEW' ? 'var(--amber)' : 'var(--green)' }}>{x.gate}</span>
+                      <span className="chip chip-sm">{x.eeiRequired ? 'EEI' : 'NOEEI'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="panel">
+              <div className="panel-head"><div className="panel-title">Records and warnings</div></div>
+              <div className="p-4 grid gap-3 text-[13px]">
+                <div><div className="font-semibold">Retention · {f.retention.years} years · until {f.retention.until}</div>{f.retention.basis.map((b, i) => <div key={i} className="text-muted">{b}</div>)}</div>
+                <div><div className="font-semibold">Warnings</div>{f.warnings.map((w, i) => <div key={i} className="text-amber">{w}</div>)}</div>
+                <div><div className="font-semibold">First-run checklist</div>{f.checklist.map((c, i) => <div key={i} className="text-muted">{c}</div>)}</div>
+              </div>
+            </div>
+            <div className="panel md:col-span-2">
+              <div className="p-4 grid gap-1 text-[12px] text-muted">{f.disclaimer.map((d, i) => <div key={i}>{d}</div>)}</div>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 border-t border-line2 bg-surface text-[13px]">
+          <button onClick={() => setStepWanted(3)} className="btn">Back to package</button>
+          <span className="flex-1" />
+          <span className="text-muted hidden sm:inline">{f.lines.length} line{f.lines.length === 1 ? '' : 's'} · modeled landed</span><b className="font-mono">{money(f.totals.landed)}</b>
+          <button onClick={() => window.print()} className="btn btn-primary btn-lg">Print the draft</button>
+        </div>
+      </div>
+    );
+  }
+
+  // step 2 · parts on the left, the offers for the selected part on the right
+  const line = r.lines[k];
+  const list = line ? sortOffers(r.offers[line.id] || []) : [];
+  const sel = line ? r.selections[line.id] : undefined;
+  const picked = list.find((x) => x.offer.id === (pick ?? sel?.offerId));
+  const gate = line ? gateFor(line, o, r.shipTo) : null;
+  const slot = line?.slot ?? null;
+  const thumb = slot ? (s.parts[slot] ? THUMBS[s.parts[slot]!] : null) : line?.id === 'l-frame' ? AF_THUMB : null;
+  const dotFor = (l: Line) => { const g = gateFor(l, o, r.shipTo); const sl = r.selections[l.id]; if (sl && g.blocks && !r.references[l.id]) return 'var(--red)'; if (sl) { const ro = (r.offers[l.id] || []).find((x) => x.offer.id === sl.offerId); return ro && ro.status !== 'no_candidate_match' ? 'var(--amber)' : 'var(--green)'; } return 'var(--m2)'; };
+  const confirm = () => {
+    if (!line || !picked) return;
+    const e = s.selectOffer(line.id, picked.offer.id, attestor, reasons);
+    setErr(e);
+    if (!e) setTimeout(() => { if (k + 1 < n) setK(k + 1); else setStepWanted(3); }, 250);
+  };
+  const reason = line ? escalationReason(line, list) : null;
+  const esc = line ? s.escalations[line.id] : undefined;
+
+  return (
+    <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
+      {stepper}
+      {staleBar}
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[320px_minmax(0,1fr)]">
+        <nav aria-label="Parts in this round" className="border-b md:border-b-0 md:border-r border-line2 bg-surface overflow-auto max-h-[30vh] md:max-h-none">
+          {([['Components', r.lines.filter((l) => l.slot)], ['Fixed lines', r.lines.filter((l) => !l.slot)]] as const).filter(([, ls]) => ls.length > 0).map(([group, ls]) => (
+          <div key={group} role="group" aria-label={group}>
+          <div className="px-4 pt-2 pb-1 text-[12px] font-mono uppercase tracking-[.06em] text-muted">{group} · {ls.length}</div>
+          {ls.map((l) => { const i = r.lines.indexOf(l); const sl = r.selections[l.id]; const ro = sl ? (r.offers[l.id] || []).find((x) => x.offer.id === sl.offerId) : null; const g = gateFor(l, o, r.shipTo); const offers = (r.offers[l.id] || []).length; return (
+            <button key={l.id} onClick={() => setK(i)} aria-current={i === k ? 'true' : undefined} className="row-hover w-full grid grid-cols-[10px_minmax(0,1fr)_auto] gap-3 items-center px-4 min-h-12 border-b border-line2 text-left bg-transparent text-ink cursor-pointer" style={i === k ? { background: 'var(--hover)', boxShadow: 'inset 3px 0 0 var(--accent)' } : undefined}>
+              <span className="w-[8px] h-[8px] rounded-full" style={{ background: dotFor(l) }} />
+              <span className="min-w-0"><span className="block text-[13px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis">{l.description.split(' · ')[0]}</span><span className="block text-[12px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">{ro ? ro.offer.seller + (g.blocks ? ' · ' + g.word + (r.references[l.id] ? ' · ref typed' : '') : ro.status !== 'no_candidate_match' ? ' · ' + STATUS_WORD[ro.status] : '') : offers + ' offer' + (offers === 1 ? '' : 's') + ' · pick one'}</span></span>
+              <span className="font-mono text-[12px]">{ro ? usd(ro.ladder.perUnit) : ''}</span>
+            </button>
+          ); })}
+          </div>
+          ))}
+        </nav>
+        {line && gate && (
+          <div className="min-h-0 overflow-auto p-4 grid gap-3 content-start">
+            <div className="flex gap-3 items-center flex-wrap">
+              {thumb ? <svg viewBox="0 0 56 44" className="w-[70px] h-[55px] block flex-none">{thumb.map((f, i) => <polygon key={i} points={f.pts} fill={f.fill} stroke={f.stroke} strokeWidth="0.8" strokeDasharray={f.dash || undefined} strokeLinejoin="round" />)}</svg> : <div className="w-[70px] h-[55px] flex-none border border-dashed border-line rounded-r" />}
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-[16px]">{slot ? GENERIC_NAME[slot as Slot] : line.description.split(' · ')[0]} <span className="text-muted font-normal text-[13px]">· {line.description}</span></div>
+                <div className="text-[12px] text-muted flex gap-2 flex-wrap items-center">
+                  <span className="font-mono">{line.declaredEccn.split(' · ')[0]}</span><span>HTS {line.heading}</span><span>× {line.qtyPerUnit * r.qty}</span>
+                  {r.shipTo !== 'US' && <span className="font-mono font-bold" style={{ color: gate.blocks ? 'var(--red)' : gate.word === 'STA' ? 'var(--amber)' : 'var(--green)' }}>{gate.word} to {r.shipTo} <span className="font-normal text-muted">· {gate.para}</span></span>}
+                  {sel && <span className="text-green font-semibold">picked {list.find((x) => x.offer.id === sel.offerId)?.offer.seller} · attestor {sel.attestor}</span>}
+                </div>
+              </div>
+            </div>
+
+            {r.shipTo !== 'US' && gate.blocks && (
+              <div className="panel p-3 grid gap-2 text-[13px]" style={{ borderColor: 'var(--red)' }}>
+                <div><b className="text-red">{gate.word === 'REVIEW' ? 'Human review required.' : 'Authorization needed.'}</b> Sending this part to {r.shipTo} reads <b>{gate.word}</b> ({gate.para}). {gate.word === 'REVIEW' ? 'The package stays blocked until a human review is documented.' : 'The package stays blocked until an authorization reference is typed and attested.'}</div>
+                {gate.word === 'DENIAL' ? <div className="text-muted">DENIAL has no reference field. Change the design or the destination.</div> : r.references[line.id] ? (
+                  <div>reference <span className="font-mono">{r.references[line.id].ref}</span> · attestor {r.references[line.id].attestor} · <span className="text-amber font-semibold">typed, not validated</span></div>
+                ) : (
+                  <div className="flex gap-2 flex-wrap">
+                    <input aria-label="authorization reference" placeholder={gate.word === 'REVIEW' ? 'documented reviewer decision / evidence reference' : 'licence / agreement / exemption / DSP-5 number'} value={refDraft} onChange={(e) => setRefDraft(e.target.value)} className="field flex-1 min-w-[200px]" />
+                    <input aria-label="attestor for the reference" placeholder="attestor · required" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field w-[160px]" />
+                    <button onClick={() => { if (refDraft.trim() && attestor.trim()) s.setReference(line.id, refDraft.trim(), attestor.trim()); }} className="btn btn-primary">{gate.word === 'REVIEW' ? 'Attest review' : 'Attest reference'}</button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div role="radiogroup" aria-label="Offers" className="grid gap-2">
+              {list.length === 0 && <div className="text-[13px] text-amber">no offer match · ask the agent for a proposal below; a human resolves.</div>}
+              {list.map((ro) => {
+                const on = (pick ?? sel?.offerId) === ro.offer.id;
+                const declined = sel?.declined.find((d) => d.offerId === ro.offer.id);
+                const blocked = ro.status === 'review_blocked';
+                const open = openOffer === ro.offer.id;
+                return (
+                  <div key={ro.offer.id} className="panel grid gap-2 p-3" style={{ borderColor: on ? 'var(--focus)' : undefined, boxShadow: on ? 'inset 0 0 0 1px var(--focus)' : 'none', opacity: declined ? 0.7 : 1 }}>
+                    <div className="grid grid-cols-[24px_minmax(0,1fr)_auto] gap-3 items-center">
+                      <button role="radio" aria-checked={on} aria-label={'pick ' + ro.offer.seller} disabled={blocked || !!sel} onClick={() => { setPick(ro.offer.id); setErr(null); }} className="w-6 h-6 max-sm:w-11 max-sm:h-11 max-sm:-m-2.5 rounded-full border-0 bg-transparent p-0 grid place-items-center cursor-pointer disabled:cursor-default disabled:opacity-40"><span aria-hidden="true" className="block w-6 h-6 rounded-full border-2" style={{ borderColor: on ? 'var(--accent)' : 'var(--muted)', background: on ? 'var(--accent)' : 'transparent', boxShadow: on ? 'inset 0 0 0 4px var(--surface)' : 'none' }} /></button>
+                      <button onClick={() => { if (!blocked && !sel) { setPick(ro.offer.id); setErr(null); } }} className="min-w-0 text-left bg-transparent border-0 p-0 cursor-pointer text-ink">
+                        <span className="block text-[14px] font-semibold">{ro.offer.seller} <span className="text-muted font-normal text-[12px]">· ships {ro.offer.shipFrom} · origin {ro.offer.declaredOrigin} · {ro.offer.stock} in stock · {ro.offer.leadDays} d · MOQ {ro.offer.moq}</span></span>
+                        <span className="flex gap-2 flex-wrap items-center text-[12px]">
+                          <span className="font-bold" style={{ color: STATUS_COLOR[ro.status] }}>{STATUS_WORD[ro.status]}</span>
+                          {ro.offer.synthetic && <span className="chip chip-sm">Synthetic</span>}{ro.offer.authorized && <span className="chip chip-sm">authorized</span>}
+                          {ro.offer.declaredOrigin === 'CN' && FEDERAL_BUYER_CLASSES.includes(line.partClass) && <span className="chip chip-sm" style={{ color: 'var(--amber)' }}>federal buyer flag</span>}
+                          {sel?.offerId === ro.offer.id && <span className="text-green font-semibold">picked</span>}{declined && <span className="text-muted">declined · {declined.reason}</span>}
+                        </span>
+                      </button>
+                      <span className="text-right"><span className="block font-mono text-[16px] font-bold" style={{ color: ro.ladder.unverified ? 'var(--grey)' : 'var(--ink)' }}>{usd(ro.ladder.perUnit)}</span><span className="block text-[12px] text-muted">landed / unit · list {usd(ro.offer.unitPrice)}</span></span>
+                    </div>
+                    <div className="flex gap-1 flex-wrap items-center">
+                      <button onClick={() => setOpenOffer(open ? null : ro.offer.id)} aria-expanded={open} className="btn">{open ? 'Hide details' : 'Details · owners, estimate'}</button>
+                      {blocked && <button onClick={() => setAdj({ offerId: ro.offer.id, role: 'analyst', reason: 'name match on a different entity', rationale: '', action: 'false_positive' })} className="btn">Adjudicate</button>}
+                    </div>
+                    {open && (
+                      <div className="border-t border-line2 pt-2 grid gap-3 text-[12px]">
+                        <div><div className="text-[13px] font-semibold mb-1">Who owns them · {ro.tier} · {FIXTURES.ownership}</div><Party n={ro.tree} /><div className="text-muted mt-1">{CLAIM_SCREEN}</div></div>
+                        <div>
+                          <div className="text-[13px] font-semibold mb-1">Modeled landed-cost estimate · {ro.ladder.domestic ? 'domestic · no entry' : 'entering the US'}</div>
+                          <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-[2px]">
+                            {ro.ladder.rows.map((rw, i) => <div key={i} className="contents"><div className={rw.verified ? '' : 'text-grey'}><b>{rw.layer}</b> <span className="text-muted">· {rw.citation}</span></div><div className="font-mono text-right text-amber">{rw.rate}</div><div className="font-mono text-right text-amber">{rw.amount == null ? '' : '$ ' + rw.amount.toFixed(2)}</div></div>)}
+                          </div>
+                          <div className="flex justify-between gap-2 mt-2 font-mono text-[13px]"><span>total estimate</span><b>{usd(ro.ladder.total)}</b></div>
+                          <div className="text-muted">{ro.ladder.assumptions} · {CLAIM_COST}</div>
+                        </div>
+                        <div className="text-muted">seller ECCN {ro.offer.declaredEccn} · HTS {ro.offer.declaredHts} · {ro.offer.sellerCountry}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {adj && (
+              <div className="panel">
+                <div className="panel-head"><div className="panel-title">Adjudicate the match</div><button onClick={() => setAdj(null)} className="btn btn-xs btn-icon" aria-label="Cancel">×</button></div>
+                <div className="p-3 grid gap-2 text-[13px]">
+                  <label className="grid gap-1 text-muted">role<select value={adj.role} onChange={(e) => setAdj({ ...adj, role: e.target.value as typeof adj.role, action: e.target.value === 'analyst' ? 'false_positive' : adj.action })} className="field text-ink"><option value="analyst">analyst · may record a false positive</option><option value="empowered_official">empowered official · resolves or pins</option></select></label>
+                  <label className="grid gap-1 text-muted">action<select value={adj.action} onChange={(e) => setAdj({ ...adj, action: e.target.value as typeof adj.action })} className="field text-ink"><option value="false_positive">record false positive · lowers to review required</option>{adj.role === 'empowered_official' && <option value="resolve">resolve · no candidate match</option>}{adj.role === 'empowered_official' && <option value="pin">pin review blocked</option>}</select></label>
+                  <label className="grid gap-1 text-muted">reason code<select value={adj.reason} onChange={(e) => setAdj({ ...adj, reason: e.target.value })} className="field text-ink">{['name match on a different entity', 'ownership below 50 %', 'list entry withdrawn', 'red flag confirmed', 'other'].map((x) => <option key={x}>{x}</option>)}</select></label>
+                  <input aria-label="rationale" placeholder="rationale · required" value={adj.rationale} onChange={(e) => setAdj({ ...adj, rationale: e.target.value })} className="field" />
+                  <input aria-label="attestor" placeholder="attestor · required" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field" />
+                  <button disabled={!adj.rationale.trim() || !attestor.trim()} onClick={() => { s.adjudicate(line.id, adj.offerId, adj.role, adj.reason, adj.rationale, attestor, adj.action); setAdj(null); }} className="btn btn-primary disabled:opacity-50">Record adjudication</button>
+                </div>
+              </div>
+            )}
+
+            {picked && !sel && (() => {
+              const others = list.filter((x) => x.offer.id !== picked.offer.id);
+              const signed = attestor.trim();
+              const after = k + 1 < n ? 'part ' + (k + 2) + ' of ' + n : 'the package step';
+              return (
+              <div className="panel grid text-[13px]" style={{ borderColor: 'var(--focus)' }}>
+                <div className="p-4 grid gap-2">
+                  <div className="font-semibold text-[14px]">Pick {picked.offer.seller} for {line.description.split(' · ')[0]} <span className="font-normal text-muted">· part {k + 1} of {n}</span></div>
+                  {consequences(picked, line, r, o).slice(0, 4).map((c, i) => <div key={i} className="grid grid-cols-[8px_1fr] gap-2 items-start text-[12px]"><span className="mt-[5px] w-2 h-2 rounded-full" style={{ background: c.tone }} /><span>{c.text}</span></div>)}
+                  {others.length > 0 && (
+                    <details className="text-[12px] text-muted"><summary className="cursor-pointer flex items-center gap-3 flex-wrap min-h-8 max-sm:min-h-11 list-none"><span>{others.length === 1 ? 'The other offer is declined by this pick · reason taken from its status' : 'The other ' + others.length + ' offers are declined by this pick · reasons taken from their status'}</span><span className="text-ink underline underline-offset-2 whitespace-nowrap">change the reason{others.length === 1 ? '' : 's'}</span></summary>
+                      <div className="grid gap-1 mt-1">{others.map((x) => (
+                        <div key={x.offer.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center"><span>{x.offer.seller} <span className="text-muted">· was {STATUS_WORD[x.status]}</span></span><select value={reasons[x.offer.id] ?? ''} onChange={(e) => setReasons({ ...reasons, [x.offer.id]: e.target.value as DeclineReason })} className="btn text-ink"><option value="">reason from status</option>{DECLINE_REASONS.map((d) => <option key={d} value={d}>{d}</option>)}</select></div>
+                      ))}</div>
+                    </details>
+                  )}
+                </div>
+                {/* the sign-off: a pick is a human act, so the name comes first and the button follows it */}
+                <div ref={signRef} className="border-t border-line2 bg-surface2 p-4 grid gap-2">
+                  <label htmlFor="pick-attestor" className="grid gap-[2px]"><span className="font-semibold">Sign the pick</span><span className="text-[12px] text-muted">A pick is a human act. Your name goes on the record as the attestor.</span></label>
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <input id="pick-attestor" aria-label="attestor" placeholder="your name" autoComplete="name" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field flex-1 min-w-[200px]" />
+                    <button onClick={confirm} disabled={s.viewSeq != null || !signed} className="btn btn-primary btn-lg px-6 disabled:opacity-50">Pick {picked.offer.seller}</button>
+                  </div>
+                  <div className="text-[12px] text-muted" aria-live="polite">{signed ? 'Records the pick under ' + signed + ' and opens ' + after + '.' : 'Type your name to turn the button on. Picking records the choice and opens ' + after + '.'}</div>
+                  {err && <div role="alert" className="text-red font-semibold">{err}</div>}
+                </div>
+              </div>
+              );
+            })()}
+
+            {(reason || esc) && (
+              <details className="panel p-3 text-[13px]" style={{ borderColor: 'var(--amber)' }} open={!!esc}>
+                <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Escalation <span className="text-muted font-normal">· {reason ?? esc?.reason}</span>{esc && <span className="chip chip-sm ml-2">{esc.state}</span>}</summary>
+                <div className="grid gap-2 mt-2">
+                  {!esc && <><div className="text-muted">the agent may propose a seller, a part or a fact here; every deterministic check runs on a copy first; a human resolves.</div><button onClick={() => s.proposeEscalation(line.id, reason!)} className="btn justify-self-start">Ask the agent for a proposal</button></>}
+                  {esc && (
+                    <div className="border border-line rounded-r p-2 grid gap-1">
+                      <div className="font-mono text-[12px] text-muted">proposal · {esc.reason} · {esc.confident ? 'confident' : 'not confident'}</div>
+                      <div>{esc.proposal}</div>
+                      {esc.state === 'proposed' && (
+                        <div className="flex gap-2 items-center flex-wrap"><input aria-label="attestor" placeholder="attestor · required" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field w-[160px]" /><button onClick={() => s.resolveEscalation(line.id, true, attestor)} disabled={!attestor.trim()} className="btn btn-primary disabled:opacity-50">Accept</button><button onClick={() => s.resolveEscalation(line.id, false, attestor)} disabled={!attestor.trim()} className="btn disabled:opacity-50">Reject</button></div>
+                      )}
+                      {esc.state !== 'proposed' && <div className="text-[12px] text-muted">{esc.state} · human-resolved · attestor {esc.attestor}</div>}
+                    </div>
+                  )}
+                </div>
+              </details>
+            )}
+
+            <details className="panel p-3 text-[13px]" open={serviceOpen} onToggle={(e) => setServiceOpen((e.currentTarget as HTMLDetailsElement).open)}>
+              <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Connected service round <span className="text-muted font-normal">· the product service screens, walks owners, costs and seals a package for this part</span></summary>
+              {serviceOpen && <div className="mt-2"><ServiceSourcing quantity={r.qty} mode={r.mode} partKey={PART_KEY[line.slot ?? ''] ?? line.id.replace(/^l-/, '')} partLabel={(slot ? GENERIC_NAME[slot as Slot] : line.description.split(' · ')[0])} /></div>}
+            </details>
+
+            <details className="panel p-3 text-[13px]">
+              <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Ask the supplier <span className="text-muted font-normal">· {supplierQuestions(line).length} questions from the rule fields</span></summary>
+              <div className="grid gap-2 mt-2" id="supplier-request">
+                <div className="text-muted">Please answer in the regulation’s words, with the source document and date for each value:</div>
+                <ol className="m-0 pl-5 grid gap-1">{supplierQuestions(line).map((q, i) => <li key={i}>{q}</li>)}</ol>
+                <button onClick={() => window.print()} className="btn justify-self-start">Print the request</button>
+              </div>
+            </details>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 px-4 py-2 border-t border-line2 bg-surface text-[13px]">
+        <button onClick={() => setK(Math.max(0, k - 1))} disabled={k === 0} className="btn disabled:opacity-40">Back</button>
+        <span role="status" className="text-muted whitespace-nowrap">part {k + 1} of {n}{sel ? ' · picked' : ''}</span>
+        <span className="flex-1" />
+        <span className="text-muted hidden sm:inline">modeled landed estimate</span><b className="font-mono">{usd(total)}</b>
+        {k + 1 < n ? <button onClick={() => setK(k + 1)} className="btn">{sel ? 'Next part' : 'Skip for now'}</button> : null}
+        <button onClick={() => setStepWanted(3)} className={'btn ' + (selectedCount === n ? 'btn-primary' : '')}>Package{selectedCount < n ? ' · ' + (n - selectedCount) + ' open' : ''}</button>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,84 @@
+{
+  "offers": {
+    "file": "offers.json",
+    "source": "Typed from THE BUILD §2.4 (sellers, origins, headings) and Diego's 2026-09-03 research (worked prices). Prices marked 'typed, unverified' were not read from a vendor page this session. SYNTHETIC sellers are invented for the demo and badged.",
+    "retrieved_at": "2026-09-05T23:00:00Z",
+    "revision": "2026-09-05",
+    "sha256": "fb1a82ef3f93ad2a753723c6d7dd219e7cef583dadf3d7dc155512316c8f7fa1",
+    "row_count": 17
+  },
+  "ownership": {
+    "file": "ownership.json",
+    "source": "Hand-typed. REAL rows are public corporate facts with a URL each; they were typed from memory of public filings on 2026-09-05 and are badged 'unverified this session' until the URL is read. SYNTHETIC rows exist for the demo and are badged. A party with no row prints 'ownership unknown'.",
+    "retrieved_at": "2026-09-05T23:00:00Z",
+    "revision": "2026-09-05",
+    "sha256": "51960858c52a06eb6bf9030ee2b142cdba3c05e131ae646ca5fd077504b7efd0",
+    "row_count": 18
+  },
+  "tariff": {
+    "file": "tariff.json",
+    "source": "Typed from THE BUILD §2.7 as corrected by Diego's 2026-09-03 research and 2026-09-05 validation and by the 2026-09-03 routing research. Base rates marked verified=false are 'expected' and were not read from the schedule this session. Overlay rows are data, never program logic; a rate change is a new fixture and old estimates keep pointing at the old one.",
+    "retrieved_at": "2026-09-05T23:00:00Z",
+    "revision": "2026-09-05",
+    "sha256": "c4e6878929f1582cef3e05eb68652a9cc72d72bb5b357ff38b5dc758b959d67d",
+    "row_count": 10
+  },
+  "csl": {
+    "file": "csl_subset.csv",
+    "source": "Consolidated Screening List, data.trade.gov consolidated.csv; committed subset of the 2026-09-04 snapshot (full file sha256 44f89e8fe741992455c03cf6516a70f20984a38bafe5b91327dad31599bfafec, 26,082 data rows); rows copied verbatim",
+    "retrieved_at": "2026-09-04T00:00:00Z",
+    "revision": "subset-2026-09-05",
+    "sha256": "fa863267f01d3367159a7fbe9d67173d6123a435aa795e3625f1aab551f145eb",
+    "row_count": 7
+  },
+  "search": {
+    "search/documents.json": {
+      "sha256": "a8f67b9cbfbd03ce3a622d8ce95551f61f95cd8594d417606158cc9ef541aae4",
+      "bytes": 6769
+    },
+    "search/engine/evaluate-camera-flag.json": {
+      "sha256": "6acb9faee0466c5882b1954d8311ccf24caf3554711583a858861688e3664b8f",
+      "bytes": 5713
+    },
+    "search/engine/evaluate-missing-evidence.json": {
+      "sha256": "a60654b8957e3f0df2ede6949fe856258c4f964503879fe97d735e0193d129c5",
+      "bytes": 3974
+    },
+    "search/engine/kestrel-baseline.design.json": {
+      "sha256": "84f3ab7bae30fdb6886104b3d7f26a2d90f55ba3fdad3370fdf43108f866e821",
+      "bytes": 9737
+    },
+    "search/fixtures/gx220_vendor_page.html": {
+      "sha256": "164ab9e7c1a3a9f82dfd28e1afbd0d3b496e4a3f3bf3404d24695310cf1fc660",
+      "bytes": 854
+    },
+    "search/fixtures/icm42688p_test_excerpt.txt": {
+      "sha256": "522ea1b7da6a4a0ff094d9262e8962b6b9b590478b8381d35c0e48bf342339be",
+      "bytes": 427
+    },
+    "search/fixtures/imu_ng_synthetic_sheet.txt": {
+      "sha256": "be5751c90231b68d10c1508d230eb17036b7770eef660c071da78a8716fbe7f8",
+      "bytes": 281
+    },
+    "search/fixtures/lepton35_test_sheet.txt": {
+      "sha256": "9f686b5c9915c3073c2f98b9a9cd0547aa940d805a37ce2e9f9e6ea1f772f23b",
+      "bytes": 319
+    },
+    "search/fixtures/molicel_p45b_test_excerpt.txt": {
+      "sha256": "d7828393aec2a5ed29dc322dcd3025912aec262e886284bbc94db629fa26f2b8",
+      "bytes": 380
+    },
+    "search/gold_swaps.json": {
+      "sha256": "609da5232bf30bb3b11891d7154288d66cac39ec50ee19e342f7292a5a0ba082",
+      "bytes": 2601
+    },
+    "search/pool.json": {
+      "sha256": "56682ab9e537405df1e051e3bec2d9b9c188cf71e3172d9f2dd3aa2b8188cd46",
+      "bytes": 14294
+    },
+    "search/rules.DRAFT.json": {
+      "sha256": "ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f",
+      "bytes": 38805
+    }
+  }
+}

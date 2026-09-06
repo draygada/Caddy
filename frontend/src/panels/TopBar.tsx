@@ -1,46 +1,56 @@
-import { useStore } from '../store';
+import { useState } from 'react';
+import { useStore, intakeIncomplete, PRIMARY_WORKSPACES, type WorkspaceId } from '../store';
 import { useTripwireStore } from '../tripwire-store';
-import { PACKS } from '../lib/catalog';
+import { SettingsDialog } from './SettingsDialog';
 
 interface TopBarProps {
   onHome?: () => void;
+  /** the active workspace tab; omitted on the projects page */
+  active?: WorkspaceId;
+  onSelect?: (workspace: WorkspaceId) => void;
 }
 
-export function TopBar({ onHome }: TopBarProps = {}) {
-  const theme = useStore((s) => s.theme);
-  const toggleTheme = useStore((s) => s.toggleTheme);
-  const toggleHelp = useStore((s) => s.toggleHelp);
-  const patch = useStore((s) => s.patch);
-  const pack = useStore((s) => s.pack);
-  const openTripwire = useTripwireStore((s) => s.openPanel);
+/** One bar: logo, project, the three workspace tabs, and a gear for settings (use case, theme, commands, help). */
+export function TopBar({ onHome, active, onSelect }: TopBarProps = {}) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const project = useStore((s) => s.project);
+  const closeProject = useStore((s) => s.closeProject);
+  const projectName = project?.name ?? 'Kestrel';
   const closeTripwire = useTripwireStore((s) => s.closePanel);
+  const incomplete = project ? intakeIncomplete(project.intake) : false;
+  // The logo goes back to the projects page.
   const goHome = () => {
-    if (onHome) {
-      onHome();
-      return;
-    }
-    patch({ sel: null, timelineOpen: false, helpOpen: false });
+    onHome?.();
     closeTripwire();
+    closeProject();
   };
   return (
-    <div className="h-12 flex-none flex items-center gap-2 px-2 sm:gap-4 sm:pl-4 sm:pr-3 border-b border-line2 bg-surface">
-      <button onClick={goHome} title="Return to Design" className="flex items-center gap-[10px] bg-transparent border-0 p-0 text-ink cursor-pointer min-h-6">
+    <header className="h-12 flex-none flex items-center gap-2 px-2 sm:gap-3 sm:pl-4 sm:pr-3 border-b border-line2 bg-surface">
+      <a href="/" onClick={(e) => { e.preventDefault(); goHome(); }} aria-label="Back to all projects" title="Back to all projects" className="flex shrink-0 items-center gap-[10px] bg-transparent border-0 p-0 text-ink no-underline cursor-pointer min-h-11">
         <img src="/logo.png" alt="" width={34} height={34} className="block w-[34px] h-[34px]" />
         <span className="font-bold tracking-[.01em]">Caddy</span>
-      </button>
-      <span className="hidden sm:inline text-muted text-[13px]">Kestrel</span>
+      </a>
+      <span className="hidden md:inline shrink-0 text-muted text-[13px] max-w-[160px] whitespace-nowrap overflow-hidden text-ellipsis">{projectName}</span>
+      {project && active && onSelect && (
+        <div role="tablist" aria-label="Primary workspaces" className="flex items-stretch gap-1 sm:ml-2">
+          {PRIMARY_WORKSPACES.map((w) => {
+            const selected = active === w.id;
+            return (
+              <button key={w.id} type="button" role="tab" aria-selected={selected} data-workspace={w.id} onClick={() => onSelect(w.id)}
+                className="min-h-8 whitespace-nowrap rounded-r border px-3 sm:px-4 text-[13px] font-semibold cursor-pointer"
+                style={{ borderColor: selected ? 'var(--accent)' : 'transparent', background: selected ? 'var(--accent)' : 'transparent', color: selected ? 'var(--accentfg)' : 'var(--ink)' }}>
+                {w.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="flex-1" />
-      <div className="hidden xl:flex gap-[6px] items-center">
-        <span className="chip">Rule · eCFR {PACKS[pack].ecfr_date}</span>
-        <span className="chip">pack {pack}</span>
-        <span className="chip">Cached</span>
-      </div>
-      <div className="hidden sm:block w-px h-5 bg-line2" />
-      <div className="flex gap-[6px]">
-        <button onClick={openTripwire} className="btn btn-primary">Tripwire</button>
-        <button onClick={toggleTheme} className="btn">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</button>
-        <button onClick={toggleHelp} aria-label="Keyboard and mouse help" className="btn btn-icon">?</button>
-      </div>
-    </div>
+      <button onClick={() => setSettingsOpen(true)} aria-haspopup="dialog" aria-label="Settings" title={incomplete ? 'Settings · the use case requires more information' : 'Settings'} className="btn btn-icon relative">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
+        {incomplete && <span aria-hidden="true" className="absolute -top-[2px] -right-[2px] w-2 h-2 rounded-full" style={{ background: 'var(--amber)' }} />}
+      </button>
+      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
+    </header>
   );
 }

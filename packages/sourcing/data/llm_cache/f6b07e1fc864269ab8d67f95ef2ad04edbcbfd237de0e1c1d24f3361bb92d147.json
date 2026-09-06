@@ -1,0 +1,13 @@
+{
+  "kind": "extract",
+  "model": "claude-sonnet-5",
+  "prompt_sha256": "f6b07e1fc864269ab8d67f95ef2ad04edbcbfd237de0e1c1d24f3361bb92d147",
+  "response": {
+    "specs": []
+  },
+  "usage": {
+    "input_tokens": 2589,
+    "model": "claude-sonnet-5",
+    "output_tokens": 10
+  }
+}

@@ -107,7 +107,7 @@ export function TripwirePanel() {
           </div>
           <div className="flex gap-2 items-center">
             <span className="chip">Draft review only</span>
-            <button onClick={closePanel} className="btn">Close · Esc</button>
+            <button onClick={closePanel} className="btn btn-xs btn-icon" aria-label="Close" title="Close · Esc">×</button>
           </div>
         </header>
 

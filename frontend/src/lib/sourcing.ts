@@ -2,7 +2,7 @@
 // over committed-style fixtures: resolve offers, walk owners, screen names against a synthetic CSL fixture slice,
 // roll up, estimate landed cost, gate on the engine's destination cell.
 // Every number here is declared and dated; nothing is a determination.
-import { CATALOG, type PartId, type Slot } from './catalog';
+import { CATALOG, CORE_SLOTS, type PartId, type Slot } from './catalog';
 import { hashOf } from './hash';
 import type { Outcome, Parts } from './rules';
 import type { DestWord } from './catalog';
@@ -64,11 +64,28 @@ const SLOT_LINE: Record<Slot, Omit<Line, 'id' | 'slot' | 'declaredEccn' | 'usdVa
   gnss: { description: 'GNSS receiver module', partClass: 'gnss', qtyPerUnit: 1, heading: '8526.91' },
   datalink: { description: 'Datalink radio', partClass: 'radio', qtyPerUnit: 1, heading: '8517.62' },
   pod: { description: 'Sensor pod · gimbal', partClass: 'payload', qtyPerUnit: 1, heading: '9013.80' },
+  camera: { description: 'EO camera module', partClass: 'camera', qtyPerUnit: 1, heading: '8525.89' },
+  lidar: { description: 'LiDAR rangefinder', partClass: 'sensor', qtyPerUnit: 1, heading: '9015.10' },
+  esc: { description: 'Motor controller', partClass: 'board', qtyPerUnit: 1, heading: '8504.40' },
+  motor: { description: 'Propulsion motor', partClass: 'motor', qtyPerUnit: 1, heading: '8501.31' },
+  servo: { description: 'Control-surface servo', partClass: 'actuator', qtyPerUnit: 4, heading: '8501.10' },
+  airspeed: { description: 'Airspeed sensor', partClass: 'sensor', qtyPerUnit: 1, heading: '9026.20' },
+  transponder: { description: 'ADS-B transponder', partClass: 'radio', qtyPerUnit: 1, heading: '8526.10' },
+  companion: { description: 'Companion computer', partClass: 'board', qtyPerUnit: 1, heading: '8471.50' },
+  antenna: { description: 'Telemetry antenna', partClass: 'antenna', qtyPerUnit: 1, heading: '8517.71' },
+  parachute: { description: 'Recovery parachute', partClass: 'recovery', qtyPerUnit: 1, heading: '8804.00' },
+  frame: { description: 'Frame kit', partClass: 'structure', qtyPerUnit: 1, heading: '8807.30' },
+  prop: { description: 'Propeller', partClass: 'propeller', qtyPerUnit: 4, heading: '8807.30' },
 };
 const PART_ECCN: Record<PartId, string> = {
   p45b: 'EAR99 · Molicel product page · 2026-08-20', amprius: 'EAR99 · Amprius spec sheet · 2026-08-22', lepton: '6A003.b.4.a · Teledyne FLIR · 2026-07-30', boson: '6A003.b.4.b · Teledyne FLIR · 2026-07-30',
   icm: 'EAR99 · TDK InvenSense · 2026-06-11', hg5700: '7A002.a.1.a · Honeywell · 2026-05-02', imung: 'not yet classified · SYNTHETIC part', acc120: 'not yet classified · SYNTHETIC part', h743: '3A991.a.2 · STMicroelectronics · 2026-03-15', h753: '5A992.c · STMicroelectronics self-classification · 2026-03-15', h743m: 'not yet classified · SYNTHETIC part',
   neom9n: '7A994 · u-blox · 2026-04-01', crpa: 'not yet classified · SYNTHETIC part', mcode: 'not yet classified · SYNTHETIC part', pmddl: '5A992.c · Microhard self-classification · 2026-02-19', aescustom: 'not yet classified · SYNTHETIC part', podeo: 'EAR99 · in-house',
+  imx477: 'EAR99 · Sony product page · 2026-06-02', lw20: 'EAR99 · LightWare spec sheet · 2026-05-14', alpha80: 'EAR99 · T-Motor product page · 2026-04-22', at7215: 'EAR99 · T-Motor product page · 2026-04-22', hv6120: 'EAR99 · MKS product page · 2026-03-30',
+  ms4525: 'EAR99 · TE Connectivity datasheet · 2026-02-11', ping200: '7A994 · uAvionix self-classification · 2026-05-05', orinnano: '4A994 · NVIDIA export page · 2026-06-18', hg2409p: 'EAR99 · L-com datasheet · 2026-01-27', ifc60: 'EAR99 · Fruity Chutes product page · 2026-03-03',
+  // Merlin parts: consumer FPV components; the vendor pages publish no ECCN, so the seller's declaration is the only source
+  chimera7: 'EAR99 · declared by seller · 2026-09-05', px6cmini: 'EAR99 · declared by seller · 2026-09-05', tekko65: 'EAR99 · declared by seller · 2026-09-05', f60prov: 'EAR99 · declared by seller · 2026-09-05', hq7035: 'EAR99 · declared by seller · 2026-09-05',
+  tattu1300: 'EAR99 · declared by seller · 2026-09-05', m10gps: '7A994 · declared by seller · 2026-09-05', sik915: '5A992.c · declared by seller · 2026-09-05', thumbpro: 'EAR99 · declared by seller · 2026-09-05',
 };
 const PART_VALUE = (pid: PartId) => CATALOG[pid].value_usd;
 
@@ -84,12 +101,15 @@ const FIXED_LINES: Line[] = [
 
 /** Twelve lines: the four slots follow the design, the other eight are the fixed BOM. */
 export function linesFor(parts: Parts): Line[] {
-  const slotLines: Line[] = (Object.keys(SLOT_LINE) as Slot[]).map((slot) => {
+  // every core slot gets a line (empty ones say so); library components only once a part is placed
+  const slotLines: Line[] = (Object.keys(SLOT_LINE) as Slot[]).filter((slot) => (CORE_SLOTS as Slot[]).includes(slot) || parts[slot]).map((slot) => {
     const pid = parts[slot];
     const base = SLOT_LINE[slot];
     return { id: 'l-' + slot, slot, ...base, description: pid ? base.description + ' · ' + CATALOG[pid].name : base.description + ' · slot empty', declaredEccn: pid ? PART_ECCN[pid] : 'no part', usdValue: pid ? PART_VALUE(pid) : 0 };
   });
-  return [...slotLines, ...FIXED_LINES];
+  // a placed motor controller, motor, propeller or frame from the library replaces the fixed BOM's generic line for it
+  const fixed = FIXED_LINES.filter((l) => !(l.id === 'l-esc' && parts.esc) && !(l.id === 'l-motor' && parts.motor) && !(l.id === 'l-prop' && parts.prop) && !(l.id === 'l-frame' && parts.frame));
+  return [...slotLines, ...fixed];
 }
 
 /** ~20 offers over the lines. Real sellers with real absences; two synthetic sellers badged. */
@@ -112,6 +132,20 @@ export function offersFor(parts: Parts): Offer[] {
   if (dl === 'pmddl') add({ lineId: 'l-datalink', seller: 'Microhard Systems', sellerCountry: 'CA', shipFrom: 'CA', declaredOrigin: 'CA', unitPrice: 420, stock: 15, leadDays: 10, moq: 1, authorized: true, declaredEccn: '5A992.c', declaredHts: '8517.62', synthetic: false, manufacturer: 'Microhard Systems' });
   if (dl === 'aescustom') add({ lineId: 'l-datalink', seller: 'synthetic vendor', sellerCountry: '·', shipFrom: 'US', declaredOrigin: '·', unitPrice: 1900, stock: 3, leadDays: 30, moq: 1, authorized: false, declaredEccn: 'not yet classified', declaredHts: '8517.62', synthetic: true, manufacturer: 'synthetic vendor' });
   if (pod) add({ lineId: 'l-pod', seller: 'in-house machining', sellerCountry: 'US', shipFrom: 'US', declaredOrigin: 'US', unitPrice: 1500, stock: 0, leadDays: 21, moq: 1, authorized: true, declaredEccn: 'EAR99', declaredHts: '9013.80', synthetic: false, manufacturer: 'in-house machining' });
+  // Merlin parts: the manufacturer's own store ships from CN; GetFPV stocks them in the US. No ownership row is typed for these makers, so a full walk says "ownership unknown".
+  const fpv = (lineId: string, maker: string, price: number, hts: string, eccn = 'EAR99', stock = 40, lead = 10) => {
+    add({ lineId, seller: maker, sellerCountry: 'CN', shipFrom: 'CN', declaredOrigin: 'CN', unitPrice: price, stock, leadDays: lead, moq: 1, authorized: true, declaredEccn: eccn, declaredHts: hts, synthetic: false, manufacturer: maker });
+    add({ lineId, seller: 'GetFPV', sellerCountry: 'US', shipFrom: 'US', declaredOrigin: 'CN', unitPrice: +(price * 1.12).toFixed(2), stock: Math.round(stock / 2), leadDays: 3, moq: 1, authorized: true, declaredEccn: eccn, declaredHts: hts, synthetic: false, manufacturer: maker });
+  };
+  if (parts.frame === 'chimera7') fpv('l-frame', 'iFlight', 109.99, '8807.30');
+  if (fc === 'px6cmini') fpv('l-fc', 'Holybro', 149.99, '8542.31');
+  if (parts.esc === 'tekko65') fpv('l-esc', 'Holybro', 74.99, '8504.40');
+  if (parts.motor === 'f60prov') fpv('l-motor', 'T-Motor', 27.99, '8501.31', 'EAR99', 120, 7);
+  if (parts.prop === 'hq7035') fpv('l-prop', 'HQProp', 2.99, '8807.30', 'EAR99', 800, 5);
+  if (bat === 'tattu1300') fpv('l-battery', 'Tattu (Grepow)', 34.99, '8507.60');
+  if (gn === 'm10gps') fpv('l-gnss', 'Holybro', 39.99, '8526.91', '7A994');
+  if (dl === 'sik915') fpv('l-datalink', 'Holybro', 44.99, '8517.62', '5A992.c');
+  if (parts.camera === 'thumbpro') fpv('l-camera', 'RunCam', 89.99, '8525.89');
   add({ lineId: 'l-esc', seller: 'T-Motor', sellerCountry: 'CN', shipFrom: 'CN', declaredOrigin: 'CN', unitPrice: 45, stock: 60, leadDays: 12, moq: 1, authorized: true, declaredEccn: 'EAR99', declaredHts: '8504.40', synthetic: false, manufacturer: 'T-Motor' });
   add({ lineId: 'l-motor', seller: 'T-Motor', sellerCountry: 'CN', shipFrom: 'CN', declaredOrigin: 'CN', unitPrice: 60, stock: 80, leadDays: 12, moq: 1, authorized: true, declaredEccn: 'EAR99', declaredHts: '8501.31', synthetic: false, manufacturer: 'T-Motor' });
   add({ lineId: 'l-motor', seller: 'Brightwing Components', sellerCountry: 'HK', shipFrom: 'HK', declaredOrigin: 'CN', unitPrice: 49, stock: 30, leadDays: 18, moq: 1, authorized: false, declaredEccn: 'EAR99', declaredHts: '8501.31', synthetic: true, manufacturer: 'T-Motor' });
