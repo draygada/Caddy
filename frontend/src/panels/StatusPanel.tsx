@@ -24,7 +24,10 @@ export function StatusPanel({ o, onClose }: { o: Outcome; onClose?: () => void }
     <div data-panel="status" aria-live="polite" className="panel flex-none">
       <div className="panel-head py-[6px]">
         <div className="panel-title">Product status</div>
-        {onClose && <button onClick={onClose} className="btn btn-xs">Close · Esc</button>}
+        <div className="flex gap-1">
+          <button onClick={() => useStore.getState().setWorkspace('classification')} className="btn btn-xs" title="the full reasoning, part by part">Classification tab</button>
+          {onClose && <button onClick={onClose} className="btn btn-xs" aria-label="Collapse product status">Close · Esc</button>}
+        </div>
       </div>
       {incomplete ? (
         <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-line2">

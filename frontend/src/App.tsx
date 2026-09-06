@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useStore, type WorkspaceId } from './store';
+import { useStore, intakeIncomplete, type WorkspaceId } from './store';
 import { service } from './lib/service';
 import { TopBar } from './panels/TopBar';
 import { Browser } from './panels/Browser';
@@ -95,6 +95,21 @@ export default function App() {
   }, [statusOpen]);
   const o = useMemo(() => service.evaluate({ parts, attrs, span, declared }, pack), [parts, attrs, span, declared, pack]);
   useKeyboard();
+  const overall = overallOf(o);
+  const placed = Object.values(parts).filter(Boolean).length;
+  const incomplete = intakeIncomplete(project?.intake ?? null);
+  // always on top of the model, bottom right: the word and the part count; click to see the parts behind it
+  const statusCard = statusOpen ? (
+    <div role="dialog" aria-label="Product status" className="absolute right-3 bottom-3 z-[21] w-[min(92%,380px)] max-h-[70%] flex flex-col shadow-[0_8px_28px_rgba(20,24,31,.18)] [&>*]:min-h-0 [&>*]:overflow-auto">
+      <StatusPanel o={o} onClose={() => setStatusOpen(false)} />
+    </div>
+  ) : (
+    <button onClick={() => setStatusOpen(true)} aria-haspopup="dialog" aria-expanded={false} title="product status · click to see the parts behind it"
+      className="panel absolute right-3 bottom-3 z-[21] flex items-center gap-3 px-3 min-h-10 cursor-pointer text-left shadow-[0_8px_28px_rgba(20,24,31,.18)]">
+      <span className="status-word text-[13px]" style={incomplete ? { color: 'var(--amber)' } : { color: overall.color, background: overall.bg }}>{incomplete ? '? Requires more information' : overall.glyph + ' ' + overall.word}</span>
+      <span className="text-[12px] text-muted whitespace-nowrap">{placed} part{placed === 1 ? '' : 's'}</span>
+    </button>
+  );
 
   const active: WorkspaceId = sourcingOpen ? 'sourcing' : workspace;
   if (!project) return <div data-theme={theme} className="h-full min-w-0 bg-bg text-ink">
@@ -106,8 +121,11 @@ export default function App() {
     <div className="flex-1 min-h-0 grid grid-cols-[340px_minmax(0,1fr)] gap-2 p-2">
       <Browser />
       <div className="flex flex-col gap-2 min-h-0 min-w-0">
-        <Viewport o={o} />
-        {sel && <div className="flex-none h-[260px] flex flex-col min-h-0 [&>*]:h-full"><SpecPanel o={o} /></div>}
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <Viewport o={o} />
+          {statusCard}
+        </div>
+        {sel && <div className="flex-none"><SpecPanel o={o} /></div>}
       </div>
     </div>
   ) : (
@@ -133,7 +151,7 @@ export default function App() {
 
   return (
     <div data-theme={theme} className="relative h-full min-w-0 flex flex-col bg-bg text-ink overflow-hidden">
-      <TopBar onHome={goHome} active={active} onSelect={setWorkspace} status={overallOf(o)} onStatus={() => setStatusOpen(true)} />
+      <TopBar onHome={goHome} active={active} onSelect={setWorkspace} />
       {unreachable && (
         <div role="status" className="flex-none px-4 py-2 border-b border-line2 bg-surface2 text-[14px] flex gap-3 items-center">
           <span className="chip">Cached</span>
@@ -142,14 +160,6 @@ export default function App() {
       )}
       {active !== 'sourcing' && <NeedsInfoBanner compact />}
       {surface}
-      {statusOpen && (
-        <>
-          <div className="fixed inset-0 z-[29] bg-scrim" onMouseDown={() => setStatusOpen(false)} />
-          <div role="dialog" aria-label="Product status" className="fixed z-[30] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(92vw,560px)] max-h-[80vh] flex flex-col [&>*]:min-h-0 [&>*]:overflow-auto">
-            <StatusPanel o={o} onClose={() => setStatusOpen(false)} />
-          </div>
-        </>
-      )}
       <IntakeDialog />
       {reasoningOpen && <Reasoning o={o} />}
       {timelineOpen && <Timeline />}

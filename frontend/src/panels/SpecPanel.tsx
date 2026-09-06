@@ -27,7 +27,7 @@ export function SpecPanel({ o }: { o: Outcome }) {
   const title = slot ? GENERIC_NAME[slot] + ' Specifications' : sel === 'airframe' ? 'Airframe Specifications' : 'Specifications';
 
   return (
-    <div data-panel="spec" className="panel flex-1 flex flex-col min-h-0 relative">
+    <div data-panel="spec" className="panel flex flex-col relative">
       <div className="panel-head">
         <div className="panel-title">{title}{!sel && <span className="sub"> · select a body</span>}</div>
         <div className="flex items-center gap-1">
@@ -37,12 +37,12 @@ export function SpecPanel({ o }: { o: Outcome }) {
           {slot && pid && !readOnly && <button onClick={() => s.removePart(slot)} className="btn btn-xs btn-icon" aria-label="Remove from design" title="Remove from design">×</button>}
         </div>
       </div>
-      <div className="overflow-auto min-h-0">
-        {readOnly && <div role="status" className="px-3 py-2 border-b border-line2 text-[13px] text-amber font-semibold">replaying #{s.viewSeq} · read-only · <button onClick={() => s.viewAt(null)} className="underline">back to live</button> or restore from the timeline</div>}
+      <div className="grid gap-x-4 px-3 py-1 items-start" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+        {readOnly && <div role="status" className="col-span-full py-2 text-[13px] text-amber font-semibold">replaying #{s.viewSeq} · read-only · <button onClick={() => s.viewAt(null)} className="underline">back to live</button> or restore from the timeline</div>}
         {pending && (() => {
           const from = CATALOG[pending.from], to = CATALOG[pending.to];
           return (
-            <div data-card="swap-comparison" className="px-3 py-[10px] border-b border-line2 grid gap-2">
+            <div data-card="swap-comparison" className="col-span-full py-2 grid gap-2">
               <div className="flex justify-between gap-2 items-baseline">
                 <span className="text-[14px] font-semibold">Swap · {SLOT_LABEL[pending.slot]}</span>
                 <span className="text-[13px] font-bold text-amber whitespace-nowrap">? unconfirmed</span>
@@ -69,9 +69,9 @@ export function SpecPanel({ o }: { o: Outcome }) {
             </div>
           );
         })()}
-        {!sel && <div className="p-3 text-[14px] text-muted">Select a body in the model or the browser to see and edit its specification.</div>}
+        {!sel && <div className="col-span-full py-2 text-[14px] text-muted">Select a body in the model or the browser to see and edit its specification.</div>}
         {slot && (
-          <div className="px-3 py-[10px] border-b border-line2 grid gap-1">
+          <div className="py-2 grid gap-1">
             <label htmlFor={slot + '.model'} className="text-[13px] text-muted">model</label>
             <select id={slot + '.model'} value={pid ?? ''} disabled={readOnly} onChange={(e) => { const next = e.target.value as PartId; if (!next) return; if (pid) s.swap(slot, next); else s.place(slot, next); }} className="field text-[14px] disabled:opacity-50">
               {!pid && <option value="">Choose a model</option>}
@@ -81,20 +81,20 @@ export function SpecPanel({ o }: { o: Outcome }) {
           </div>
         )}
         {sel === 'airframe' && selPart && (
-          <div className="px-3 py-[10px] border-b border-line2 text-[13px] text-muted flex flex-wrap gap-x-3 gap-y-1 items-center">
+          <div className="col-span-full py-2 text-[13px] text-muted flex flex-wrap gap-x-3 gap-y-1 items-center">
             <span className="text-ink font-semibold">{selPart.name}</span>
             <span>{selPart.vendor}</span>
             <span>origin {selPart.origin}</span>
           </div>
         )}
         {unconfirmedSeq != null && slot && (
-          <div className="px-3 py-[10px] border-b border-line2 flex justify-between items-center gap-2">
+          <div className="col-span-full py-2 flex justify-between items-center gap-2">
             <span className="text-[13px] font-semibold text-amber">? unconfirmed swap · seq #{unconfirmedSeq}</span>
             <button onClick={() => s.reopen(slot)} className="btn">Show comparison</button>
           </div>
         )}
         {sel === 'airframe' && (
-          <div className="px-3 py-[10px] border-b border-line2">
+          <div className="py-2">
             <label htmlFor="span" className="block text-[13px] text-muted mb-1">span</label>
             <div className="flex gap-2 items-center">
               <input id="span" name="span" inputMode="decimal" key={u + s.span} defaultValue={toUnit(s.span, u).toFixed(u === 'mm' ? 0 : 2)} disabled={readOnly} onBlur={(e) => commitSpan(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') commitSpan((e.target as HTMLInputElement).value); }} aria-describedby="span-msg" className="field w-[120px] font-mono text-[16px] font-semibold disabled:opacity-50" />
@@ -106,7 +106,7 @@ export function SpecPanel({ o }: { o: Outcome }) {
         {slot && specAttrs.map((a) => {
           const key = fieldKey(slot, a.field);
           return (
-            <div key={key} className="px-3 py-[10px] border-b border-line2">
+            <div key={key} className="py-2">
               <div className="flex justify-between gap-2 items-baseline mb-1">
                 <label htmlFor={key} className="text-[13px] text-muted">{a.field.label}</label>
                 {a.level === 'missing' && <span className="chip chip-sm" style={{ color: 'var(--amber)' }}>missing</span>}
@@ -116,7 +116,7 @@ export function SpecPanel({ o }: { o: Outcome }) {
           );
         })}
         {slot && pid && BOOL_FIELDS[slot].length > 0 && (
-          <div className="px-3 py-[10px] border-b border-line2 grid gap-1">
+          <div className="py-2 grid gap-1">
             <div className="text-[13px] text-muted">features</div>
             {BOOL_FIELDS[slot].map((b) => (
               <label key={b.key} className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={!!s.attrs[slot][b.key]} disabled={readOnly} onChange={(e) => s.setBool(slot, b.key, e.target.checked)} /> {b.label}</label>
@@ -124,7 +124,7 @@ export function SpecPanel({ o }: { o: Outcome }) {
           </div>
         )}
         {slot === 'fc' && pid && (
-          <div className="px-3 py-[10px] border-b border-line2">
+          <div className="py-2">
             <label htmlFor="fc.crypto" className="block text-[13px] text-muted mb-1">crypto</label>
             <select id="fc.crypto" value={s.attrs.fc.crypto || 'none'} disabled={readOnly} onChange={(e) => s.setCrypto('fc', e.target.value)} className="field font-mono text-[14px]">
               {CRYPTO_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}

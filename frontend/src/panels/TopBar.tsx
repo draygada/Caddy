@@ -6,13 +6,10 @@ interface TopBarProps {
   /** the active workspace tab; omitted on the projects page */
   active?: WorkspaceId;
   onSelect?: (workspace: WorkspaceId) => void;
-  /** the overall product status word; clicking it opens the status modal */
-  status?: { glyph: string; word: string; color: string; bg: string } | null;
-  onStatus?: () => void;
 }
 
-/** One bar: logo, project, the three workspace tabs, the status and use-case chips, commands, theme, help. */
-export function TopBar({ onHome, active, onSelect, status, onStatus }: TopBarProps = {}) {
+/** One bar: logo, project, the three workspace tabs, the use-case chip, commands, theme, help. */
+export function TopBar({ onHome, active, onSelect }: TopBarProps = {}) {
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
   const toggleHelp = useStore((s) => s.toggleHelp);
@@ -55,12 +52,6 @@ export function TopBar({ onHome, active, onSelect, status, onStatus }: TopBarPro
           {incomplete
             ? <button onClick={() => patch({ intakeOpen: true })} className="chip" style={{ color: 'var(--amber)', borderColor: 'var(--amber)', cursor: 'pointer' }}>requires more information</button>
             : <button onClick={() => patch({ intakeOpen: true })} className="chip" style={{ cursor: 'pointer' }} title="edit the use case">use case declared</button>}
-          {status && onStatus && (
-            <button onClick={onStatus} className="chip" title="product status · what the design means for compliance" aria-haspopup="dialog"
-              style={{ cursor: 'pointer', color: incomplete ? 'var(--amber)' : status.color, background: incomplete ? 'transparent' : status.bg, borderColor: incomplete ? 'var(--amber)' : status.bg === 'transparent' ? 'var(--line)' : status.bg }}>
-              {incomplete ? '? status' : status.glyph + ' ' + status.word}
-            </button>
-          )}
         </div>
       )}
       <div className="flex gap-[6px]">
