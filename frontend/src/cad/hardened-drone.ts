@@ -70,6 +70,19 @@ function circle(id: string, center: [number, number], radius: number): SketchEnt
   return { id, kind: 'circle', construction: false, center: { x: center[0], y: center[1] }, radius };
 }
 
+function regularPolygon(id: string, center: [number, number], radius: number, sides: number): SketchEntity {
+  return {
+    id,
+    kind: 'spline',
+    construction: false,
+    closed: true,
+    points: Array.from({ length: sides }, (_, index) => {
+      const angle = (Math.PI * 2 * index) / sides;
+      return { x: center[0] + Math.cos(angle) * radius, y: center[1] + Math.sin(angle) * radius };
+    }),
+  };
+}
+
 function line(id: string, start: [number, number], end: [number, number]): SketchEntity {
   return { id, kind: 'line', construction: false, start: { x: start[0], y: start[1] }, end: { x: end[0], y: end[1] } };
 }
@@ -155,14 +168,14 @@ export function createHardenedDroneFixture(options: { frameSpanMm?: number } = {
     ], { entityId: 'entity:frame-x', value: frameSpanMm, expression: 'frame_span' }),
     sketch('sketch:deck', 'Deck profile', 'XY', [rectangle('entity:deck', [-25, -25], 50, 50)]),
     sketch('sketch:deck-holes', 'Deck hole pattern', 'XY', [
-      circle('entity:deck-hole-ne', [15, 15], 3), circle('entity:deck-hole-nw', [-15, 15], 3),
-      circle('entity:deck-hole-se', [15, -15], 3), circle('entity:deck-hole-sw', [-15, -15], 3),
+      regularPolygon('entity:deck-hole-ne', [15, 15], 3, 8), regularPolygon('entity:deck-hole-nw', [-15, 15], 3, 8),
+      regularPolygon('entity:deck-hole-se', [15, -15], 3, 8), regularPolygon('entity:deck-hole-sw', [-15, -15], 3, 8),
     ]),
-    sketch('sketch:guard-outer', 'Guard outer profile', 'XY', [circle('entity:guard-outer', [0, 0], 24)]),
-    sketch('sketch:guard-inner', 'Guard opening', 'XY', [circle('entity:guard-inner', [0, 0], 18)]),
-    sketch('sketch:puck', 'Dummy rotor puck profile', 'XY', [circle('entity:puck', [0, 0], 12)]),
+    sketch('sketch:guard-outer', 'Guard outer profile', 'XY', [regularPolygon('entity:guard-outer', [0, 0], 24, 16)]),
+    sketch('sketch:guard-inner', 'Guard opening', 'XY', [regularPolygon('entity:guard-inner', [0, 0], 18, 16)]),
+    sketch('sketch:puck', 'Dummy rotor puck profile', 'XY', [regularPolygon('entity:puck', [0, 0], 12, 12)]),
     sketch('sketch:esc', 'ESC envelope profile', 'XY', [rectangle('entity:esc', [-14, -6], 28, 12)]),
-    sketch('sketch:standoff', 'Standoff profile', 'XY', [circle('entity:standoff', [0, 0], 2.5)]),
+    sketch('sketch:standoff', 'Standoff profile', 'XY', [regularPolygon('entity:standoff', [0, 0], 2.5, 8)]),
     sketch('sketch:canopy', 'Canopy revolve section', 'XY', [
       line('entity:canopy-1', [0, 0], [20, 0]), line('entity:canopy-2', [20, 0], [20, 4]),
       line('entity:canopy-3', [20, 4], [8, 12]), line('entity:canopy-4', [8, 12], [0, 12]),

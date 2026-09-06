@@ -105,9 +105,9 @@ describe('QX-0 hardened drone CAD benchmark', () => {
     await expect(recomputeCadInBrowser({ document: fixture.document, operation: fixture.operation, expectedRevisionId: 'revision:stale' })).rejects.toMatchObject({ code: 'BROWSER_CAD_STALE' });
 
     const zeroRadius = clone(fixture.document);
-    const puck = zeroRadius.sketches.find((item) => item.id === 'sketch:puck');
-    if (!puck || puck.entities[0]?.kind !== 'circle') throw new Error('Pinned puck sketch is missing.');
-    puck.entities[0].radius = 0;
+    const mast = zeroRadius.sketches.find((item) => item.id === 'sketch:mast');
+    if (!mast || mast.entities[0]?.kind !== 'circle') throw new Error('Pinned mast sketch is missing.');
+    mast.entities[0].radius = 0;
     await expect(run(zeroRadius, fixture.operation)).rejects.toMatchObject({ code: 'BROWSER_CAD_INVALID' });
 
     const invalidParameter = clone(fixture.document);

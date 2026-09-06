@@ -21,7 +21,7 @@ npm test -- --run tests/hardened-drone-cad.test.ts
 | Operations | 81 |
 | Recorded mates | 24 |
 | Mesh groups | 25 |
-| Triangles | 5020 |
+| Triangles | 1724 |
 | Kernel errors | 0 |
 
 ## Acceptance checks

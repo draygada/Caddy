@@ -8,14 +8,14 @@
     {
       "path": "hardened-drone.cad-document.json",
       "kind": "CAD_DOCUMENT",
-      "sizeBytes": 78808,
-      "sha256": "b827ef52d56153812fc10bf71c947fad102346ab4956d23c571455ec61c7475c"
+      "sizeBytes": 95128,
+      "sha256": "cbe7c3b2ba206774071bf58cb3ddcdf8585185c7aeae5bc346b95c38cde04787"
     },
     {
       "path": "hardened-drone.stl",
       "kind": "ASCII_STL",
-      "sizeBytes": 926552,
-      "sha256": "e3f17baa6870ac4d3a9d3d3cf233066d6cf64c4ca690f56337886dbb91421025"
+      "sizeBytes": 301070,
+      "sha256": "5b500bf48d68c6d7836dcc412d648be598894c7359e2bc668f3e3fae71a12a72"
     },
     {
       "path": "hardened-drone.bom.csv",

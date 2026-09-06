@@ -20,11 +20,11 @@
     "mode": "BROWSER_JSCAD_BOUNDED"
   },
   "identities": {
-    "revisionId": "revision:d5daae9c9cdbec105c569d99",
-    "documentHash": "sha256:4b45b4be464ce573ff90b385728316bb551a65b54bafc76243ec64a5dc7c5cae",
+    "revisionId": "revision:f7ed4e2d9747adcb019977f0",
+    "documentHash": "sha256:14e17b2b3bf3b7471696b2a172188ce69740ec024c26c9b22ac1eb5ea04cb1a2",
     "dependencyGraphHash": "sha256:c4b7f73d39b21b422a5215ca630c181b8bc26de5e6ca50a9c346b555b1501ea3",
-    "meshArtifactHash": "sha256:d51b6e095cf909e9f05b76faa2a5cc851df286c5714f3f27d508696e4c8744d5",
-    "manifestSha256": "2b08a099ff401cd645c02c1fef50a37f61f37788f80c316e3c2ec4a994d81593"
+    "meshArtifactHash": "sha256:f78042cd9d9d231ef8c790986f5671ad856dcd45ad59bddaec9273610077b9f7",
+    "manifestSha256": "c5ebc6b91c4f0405a750922f4c99f6dade659a335fde937c18dbd2e5571ed425"
   },
   "counts": {
     "bomLines": 12,
@@ -38,7 +38,7 @@
     "dependencyNodes": 93,
     "dependencyEdges": 103,
     "meshGroups": 25,
-    "triangles": 5020,
+    "triangles": 1724,
     "diagnostics": 12,
     "diagnosticErrors": 0
   },
@@ -81,11 +81,11 @@
             18
           ]
         },
-        "volume": 19097.79011602906,
+        "volume": 19185.41886122668,
         "topology": {
-          "faces": 490,
-          "edges": 1106,
-          "vertices": 596
+          "faces": 90,
+          "edges": 220,
+          "vertices": 112
         }
       },
       {
@@ -94,20 +94,20 @@
         "bounds": {
           "min": [
             91,
-            -24.000000000000007,
+            -24,
             5
           ],
           "max": [
             139,
-            24.000000000000007,
+            24,
             9
           ]
         },
-        "volume": 3157.6896421874853,
+        "volume": 3085.9591985920897,
         "topology": {
-          "faces": 196,
-          "edges": 544,
-          "vertices": 288
+          "faces": 68,
+          "edges": 192,
+          "vertices": 96
         }
       },
       {
@@ -116,20 +116,20 @@
         "bounds": {
           "min": [
             -139,
-            -24.000000000000007,
+            -24,
             5
           ],
           "max": [
             -91,
-            24.000000000000007,
+            24,
             9
           ]
         },
-        "volume": 3157.6896421874826,
+        "volume": 3085.9591985920874,
         "topology": {
-          "faces": 196,
-          "edges": 544,
-          "vertices": 288
+          "faces": 68,
+          "edges": 192,
+          "vertices": 96
         }
       },
       {
@@ -147,11 +147,11 @@
             9
           ]
         },
-        "volume": 3157.6896421874985,
+        "volume": 3085.959198592092,
         "topology": {
-          "faces": 196,
-          "edges": 544,
-          "vertices": 288
+          "faces": 68,
+          "edges": 192,
+          "vertices": 96
         }
       },
       {
@@ -169,11 +169,11 @@
             9
           ]
         },
-        "volume": 3157.6896421874817,
+        "volume": 3085.9591985920842,
         "topology": {
-          "faces": 196,
-          "edges": 544,
-          "vertices": 288
+          "faces": 68,
+          "edges": 192,
+          "vertices": 96
         }
       },
       {
@@ -191,11 +191,11 @@
             15
           ]
         },
-        "volume": 2706.591121874984,
+        "volume": 2592.0000000000005,
         "topology": {
-          "faces": 188,
-          "edges": 282,
-          "vertices": 96
+          "faces": 44,
+          "edges": 66,
+          "vertices": 24
         }
       },
       {
@@ -213,11 +213,11 @@
             15
           ]
         },
-        "volume": 2706.591121874987,
+        "volume": 2592,
         "topology": {
-          "faces": 188,
-          "edges": 282,
-          "vertices": 96
+          "faces": 44,
+          "edges": 66,
+          "vertices": 24
         }
       },
       {
@@ -235,11 +235,11 @@
             15
           ]
         },
-        "volume": 2706.5911218749907,
+        "volume": 2591.9999999999986,
         "topology": {
-          "faces": 188,
-          "edges": 282,
-          "vertices": 96
+          "faces": 44,
+          "edges": 66,
+          "vertices": 24
         }
       },
       {
@@ -257,11 +257,11 @@
             15
           ]
         },
-        "volume": 2706.5911218749884,
+        "volume": 2591.999999999999,
         "topology": {
-          "faces": 188,
-          "edges": 282,
-          "vertices": 96
+          "faces": 44,
+          "edges": 66,
+          "vertices": 24
         }
       },
       {
@@ -367,11 +367,11 @@
             15
           ]
         },
-        "volume": 195.78928833007762,
+        "volume": 176.7766952966367,
         "topology": {
-          "faces": 188,
-          "edges": 282,
-          "vertices": 96
+          "faces": 28,
+          "edges": 42,
+          "vertices": 16
         }
       },
       {
@@ -389,11 +389,11 @@
             15
           ]
         },
-        "volume": 195.7892883300783,
+        "volume": 176.77669529663672,
         "topology": {
-          "faces": 188,
-          "edges": 282,
-          "vertices": 96
+          "faces": 28,
+          "edges": 42,
+          "vertices": 16
         }
       },
       {
@@ -411,11 +411,11 @@
             15
           ]
         },
-        "volume": 195.7892883300769,
+        "volume": 176.77669529663677,
         "topology": {
-          "faces": 188,
-          "edges": 282,
-          "vertices": 96
+          "faces": 28,
+          "edges": 42,
+          "vertices": 16
         }
       },
       {
@@ -433,11 +433,11 @@
             15
           ]
         },
-        "volume": 195.78928833007745,
+        "volume": 176.77669529663683,
         "topology": {
-          "faces": 188,
-          "edges": 282,
-          "vertices": 96
+          "faces": 28,
+          "edges": 42,
+          "vertices": 16
         }
       },
       {
@@ -607,7 +607,7 @@
         50
       ]
     },
-    "totalVolume": 172610.80258940932
+    "totalVolume": 171877.09470059158
   },
   "diagnosticCodes": [
     "BROWSER_GEOMETRY_PROVENANCE",
@@ -619,14 +619,14 @@
     {
       "path": "hardened-drone.cad-document.json",
       "kind": "CAD_DOCUMENT",
-      "sizeBytes": 78808,
-      "sha256": "b827ef52d56153812fc10bf71c947fad102346ab4956d23c571455ec61c7475c"
+      "sizeBytes": 95128,
+      "sha256": "cbe7c3b2ba206774071bf58cb3ddcdf8585185c7aeae5bc346b95c38cde04787"
     },
     {
       "path": "hardened-drone.stl",
       "kind": "ASCII_STL",
-      "sizeBytes": 926552,
-      "sha256": "e3f17baa6870ac4d3a9d3d3cf233066d6cf64c4ca690f56337886dbb91421025"
+      "sizeBytes": 301070,
+      "sha256": "5b500bf48d68c6d7836dcc412d648be598894c7359e2bc668f3e3fae71a12a72"
     },
     {
       "path": "hardened-drone.bom.csv",
