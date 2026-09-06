@@ -6,6 +6,7 @@ import {
   HUMAN_OPERATOR,
   MERGE_SERVICE,
   assessChangeFootprints,
+  getPageSessionCollaborationWorkspace,
   replayCollaboration,
   type CollaborationEvent,
 } from '../src/lib/collaboration-workspace';
@@ -155,6 +156,35 @@ describe('collaboration workspace event graph', () => {
     })).toThrowError(/MERGE_INELIGIBLE/);
     expect(workspace.events).toHaveLength(before);
     expect(workspace.project().authorizations['auth:a'].status).toBe('AUTHORIZED');
+  });
+
+  it('preserves an applied merge in the page-session graph across workspace remounts', () => {
+    const mounted = getPageSessionCollaborationWorkspace();
+    mounted.recordReview({ reviewId: 'review:assembly-004', decision: 'APPROVE', actor: HUMAN_OPERATOR });
+    mounted.transitionAuthorization({
+      authorizationId: 'authorization:assembly-004',
+      status: 'AUTHORIZED',
+      actor: HUMAN_OPERATOR,
+    });
+    const merge = mounted.merge({
+      mergeId: 'merge:assembly-004',
+      reviewId: 'review:assembly-004',
+      authorizationId: 'authorization:assembly-004',
+      actor: MERGE_SERVICE,
+      evidenceRefs: ['test:page-session-remount'],
+    });
+    const eventCount = mounted.events.length;
+
+    const remounted = getPageSessionCollaborationWorkspace();
+    expect(remounted).toBe(mounted);
+    expect(remounted.events).toHaveLength(eventCount);
+    expect(remounted.project().authorizations['authorization:assembly-004'].status).toBe('APPLIED');
+    expect(remounted.mergeEligibility('review:assembly-004', 'authorization:assembly-004')).toEqual({
+      state: 'MERGED',
+      eligible: false,
+      reasons: [],
+      mergedRevisionId: merge.payload.revisionId,
+    });
   });
 
   it('rejects conflicts and leaves both the event log and target head untouched', () => {

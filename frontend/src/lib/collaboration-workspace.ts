@@ -865,6 +865,13 @@ export const BROWSER_AGENT: Actor = {
 };
 export const MERGE_SERVICE: Actor = { actorId: 'service:local-merge', actorKind: 'SERVICE' };
 
+let pageSessionWorkspace: CollaborationWorkspaceModel | null = null;
+
+export function getPageSessionCollaborationWorkspace(): CollaborationWorkspaceModel {
+  if (!pageSessionWorkspace) pageSessionWorkspace = createDemoCollaborationWorkspace();
+  return pageSessionWorkspace;
+}
+
 export function createDemoCollaborationWorkspace(): CollaborationWorkspaceModel {
   const workspace = new CollaborationWorkspaceModel();
   workspace.createBranch({

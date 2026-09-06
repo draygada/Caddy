@@ -5,7 +5,7 @@ import {
   CollaborationWorkspaceModel,
   HUMAN_OPERATOR,
   MERGE_SERVICE,
-  createDemoCollaborationWorkspace,
+  getPageSessionCollaborationWorkspace,
   type Actor,
   type ReviewDecision,
 } from '../lib/collaboration-workspace';
@@ -13,7 +13,7 @@ import {
 const short = (value: string | null) => value ? value.replace(/^event:/, '').slice(0, 10) : 'genesis';
 
 export function CollaborationWorkspace() {
-  const [workspace] = useState<CollaborationWorkspaceModel>(() => createDemoCollaborationWorkspace());
+  const workspace: CollaborationWorkspaceModel = getPageSessionCollaborationWorkspace();
   const [version, setVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState('Open review is ready for a binding human decision.');
