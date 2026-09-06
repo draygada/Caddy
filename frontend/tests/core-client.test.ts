@@ -11,12 +11,14 @@ import {
 describe('core Candidate client', () => {
   it('loads the real endpoint shape and preserves the immutable two-body graph', async () => {
     const fixture = loadCachedCoreCandidate().candidate;
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(fixture), { status: 200, headers: { 'Content-Type': 'application/json' } })) as unknown as typeof fetch;
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(candidate02Envelope(fixture)), { status: 200, headers: { 'Content-Type': 'application/json' } })) as unknown as typeof fetch;
     const result = await loadCoreCandidate(fetchImpl);
 
     expect(fetchImpl).toHaveBeenCalledWith('/api/candidate', { headers: { Accept: 'application/json' } });
     expect(result.source).toBe('api');
     expect(result.warning).toBeNull();
+    expect(result.releaseIdentity?.candidateId).toBe('candidate:0.2');
+    expect(result.evidenceRole).toBe('IMMUTABLE_CANDIDATE_0_1_SOURCE_EVIDENCE_ONLY');
     expect(result.candidate.document.bodies.map((body) => body.label)).toEqual(['Left bracket', 'Right bracket']);
     expect(result.candidate.document.operations[0].parameterBindings).toEqual({ height: 'param:height', length: 'param:length', width: 'param:width' });
     expect(result.candidate.document.parameters.map((parameter) => `${parameter.name}=${parameter.literal}${parameter.unit}`)).toEqual(['length=24mm', 'width=12mm', 'height=4mm']);
@@ -73,3 +75,31 @@ describe('core Candidate client', () => {
     await expect(loadCoreCandidate(malformed)).rejects.toMatchObject({ code: 'CORE_CANDIDATE_INVALID' });
   });
 });
+
+function candidate02Envelope(publicSnapshot: ReturnType<typeof loadCachedCoreCandidate>['candidate']) {
+  const snapshotSha256 = 'a'.repeat(64);
+  return {
+    candidate: {
+      id: 'candidate:0.2',
+      version: '0.2',
+      revisionId: 'revision:caddydaddy-candidate-0.2',
+      status: 'CANDIDATE_0_2_RUNTIME',
+    },
+    releaseIdentity: {
+      schemaVersion: 'caddydaddy.release-identity/1',
+      candidateId: 'candidate:0.2',
+      candidateVersion: '0.2',
+      revisionId: 'revision:caddydaddy-candidate-0.2',
+      snapshotSha256,
+    },
+    legacySnapshotEvidence: {
+      role: 'IMMUTABLE_CANDIDATE_0_1_SOURCE_EVIDENCE_ONLY',
+      candidateVersion: '0.1',
+      revisionId: publicSnapshot.document.revisionId,
+      snapshotSha256,
+      immutable: true,
+      currentCapabilityAuthority: false,
+      publicSnapshot,
+    },
+  };
+}
