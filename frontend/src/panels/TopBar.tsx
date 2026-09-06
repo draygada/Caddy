@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useStore, intakeIncomplete, PRIMARY_WORKSPACES, type WorkspaceId } from '../store';
 import { useTripwireStore } from '../tripwire-store';
+import { SettingsDialog } from './SettingsDialog';
 
 interface TopBarProps {
   onHome?: () => void;
@@ -8,12 +10,9 @@ interface TopBarProps {
   onSelect?: (workspace: WorkspaceId) => void;
 }
 
-/** One bar: logo, project, the three workspace tabs, the use-case chip, commands, theme, help. */
+/** One bar: logo, project, the three workspace tabs, and a gear for settings (use case, theme, commands, help). */
 export function TopBar({ onHome, active, onSelect }: TopBarProps = {}) {
-  const theme = useStore((s) => s.theme);
-  const toggleTheme = useStore((s) => s.toggleTheme);
-  const toggleHelp = useStore((s) => s.toggleHelp);
-  const patch = useStore((s) => s.patch);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const project = useStore((s) => s.project);
   const closeProject = useStore((s) => s.closeProject);
   const projectName = project?.name ?? 'Kestrel';
@@ -47,24 +46,11 @@ export function TopBar({ onHome, active, onSelect }: TopBarProps = {}) {
         </div>
       )}
       <div className="flex-1" />
-      {project && (
-        <div className="hidden sm:flex items-center gap-[6px]">
-          {incomplete
-            ? <button onClick={() => patch({ intakeOpen: true })} className="chip" style={{ color: 'var(--amber)', borderColor: 'var(--amber)', cursor: 'pointer' }}>requires more information</button>
-            : <button onClick={() => patch({ intakeOpen: true })} className="chip" style={{ cursor: 'pointer' }} title="edit the use case">use case declared</button>}
-        </div>
-      )}
-      <div className="flex gap-[6px]">
-        {project && (
-          <button onClick={() => patch({ cmdOpen: true, marking: null })} className="btn hidden sm:inline-flex items-center gap-2 text-muted" title="search every command and operation" aria-label="Open command search">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-            <span className="hidden lg:inline">Commands</span>
-            <kbd className="chip chip-sm hidden lg:inline">⌘ K</kbd>
-          </button>
-        )}
-        <button onClick={toggleTheme} className="btn min-w-11" aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}><span className="hidden lg:inline">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</span><span className="lg:hidden" aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span></button>
-        <button onClick={toggleHelp} aria-label="Keyboard and mouse help" className="btn btn-icon">?</button>
-      </div>
+      <button onClick={() => setSettingsOpen(true)} aria-haspopup="dialog" aria-label="Settings" title={incomplete ? 'Settings · the use case requires more information' : 'Settings'} className="btn btn-icon relative">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
+        {incomplete && <span aria-hidden="true" className="absolute -top-[2px] -right-[2px] w-2 h-2 rounded-full" style={{ background: 'var(--amber)' }} />}
+      </button>
+      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </header>
   );
 }
