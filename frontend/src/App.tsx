@@ -84,7 +84,6 @@ export default function App() {
   const pack = useStore((s) => s.pack);
   const timelineOpen = useStore((s) => s.timelineOpen);
   const helpOpen = useStore((s) => s.helpOpen);
-  const eventCount = useStore((s) => s.events.length);
   const openTimeline = useStore((s) => s.openTimeline);
   const workspace = useStore((s) => s.workspace);
   const setWorkspace = useStore((s) => s.setWorkspace);
@@ -99,7 +98,7 @@ export default function App() {
   const goHome = () => { useStore.getState().closeAll(); useTripwireStore.getState().closePanel(); setWorkspace('design'); };
 
   const designSurface = !compact ? (
-    <div className="flex-1 min-h-0 grid grid-cols-[340px_minmax(0,1fr)_400px_32px] gap-2 pt-2 pb-2 pl-2">
+    <div className="flex-1 min-h-0 grid grid-cols-[340px_minmax(0,1fr)_400px] gap-2 p-2">
       <Browser />
       <div className="flex flex-col gap-2 min-h-0 min-w-0">
         <Viewport o={o} />
@@ -108,9 +107,6 @@ export default function App() {
         <StatusPanel o={o} />
         <SpecPanel o={o} />
       </div>
-      <button onClick={openTimeline} aria-label="Open timeline" className="w-8 min-h-full bg-surface border border-line2 border-r-0 rounded-l-r text-ink cursor-pointer text-[13px] font-semibold tracking-[.04em] py-3 hover:bg-hover" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-        Timeline · {eventCount} events
-      </button>
     </div>
   ) : (
     <div className="flex-1 min-h-0 flex flex-col bg-bg">
