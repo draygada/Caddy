@@ -17,7 +17,9 @@ const W = PLATE_W, T = PLATE_T;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** ViewCube cells: each face split 3×3; centre = face view, edge strips = edge views, corners = corner views (26 directions). */
-interface CubeCell { pts: string; fill: string; dir: Vec3; label?: string; m?: string; d: number; kind: 'face' | 'edge' | 'corner' }
+interface CubeCell { pts: string; fill: string; dir: Vec3; key: string; label?: string; m?: string; d: number; kind: 'face' | 'edge' | 'corner' }
+/** One visible face: its outline (rounded via a soft stroke) and the short inset lines that run along each edge. */
+interface CubeFace { pts: string; fill: string; d: number; edgeLines: string[] }
 const FACE_DEFS: { n: Vec3; u: Vec3; v: Vec3; label: string }[] = [
   { n: [0, 0, 1], u: [1, 0, 0], v: [0, -1, 0], label: 'Top' },
   { n: [0, 0, -1], u: [1, 0, 0], v: [0, 1, 0], label: 'Bottom' },
@@ -27,14 +29,24 @@ const FACE_DEFS: { n: Vec3; u: Vec3; v: Vec3; label: string }[] = [
   { n: [-1, 0, 0], u: [0, 1, 0], v: [0, 0, 1], label: 'Left' },
 ];
 const CUTS = [-0.5, -0.28, 0.28, 0.5];
-function cubeCells(pr: Projector): CubeCell[] {
+function cubeCells(pr: Projector): { cells: CubeCell[]; faces: CubeFace[] } {
   const out: CubeCell[] = [];
+  const faces: CubeFace[] = [];
   const add = (a: Vec3, b: Vec3, s: number): Vec3 => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
+  const P = (p: Vec3) => pr.pt(p[0], p[1], p[2]).map((v) => v.toFixed(1)).join(',');
   for (const f of FACE_DEFS) {
     const dot = f.n[0] * pr.view[0] + f.n[1] * pr.view[1] + f.n[2] * pr.view[2];
     if (dot <= 0.02) continue;
     const nx = f.n[0] * pr.ca - f.n[1] * pr.sa;
     const fill = f.n[2] > 0.5 ? 'var(--m1)' : f.n[2] < -0.5 ? 'var(--m3)' : nx < 0 ? 'var(--m2)' : 'var(--m3)';
+    const at = (a: number, b: number): Vec3 => add(add(add([0, 0, 0], f.n, 0.5), f.u, a), f.v, b);
+    const outline = [at(-0.5, -0.5), at(0.5, -0.5), at(0.5, 0.5), at(-0.5, 0.5)].map(P).join(' ');
+    // a short line along each edge, inset by the edge-zone width, open at the corners
+    const k = CUTS[1], e = CUTS[2];
+    const edgeLines = [
+      P(at(-e, k)) + ' ' + P(at(e, k)), P(at(-e, -k)) + ' ' + P(at(e, -k)), P(at(k, -e)) + ' ' + P(at(k, e)), P(at(-k, -e)) + ' ' + P(at(-k, e)),
+    ];
+    faces.push({ pts: outline, fill, d: dot, edgeLines });
     for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
       const corners: Vec3[] = [[CUTS[i], CUTS[j]], [CUTS[i + 1], CUTS[j]], [CUTS[i + 1], CUTS[j + 1]], [CUTS[i], CUTS[j + 1]]].map(([a, b]) => add(add(add([0, 0, 0], f.n, 0.5), f.u, a), f.v, b));
       const du = i === 0 ? -1 : i === 2 ? 1 : 0, dv = j === 0 ? -1 : j === 2 ? 1 : 0;
@@ -47,10 +59,11 @@ function cubeCells(pr: Projector): CubeCell[] {
         const pu = pr.pt(c[0] + f.u[0], c[1] + f.u[1], c[2] + f.u[2]), pv = pr.pt(c[0] + f.v[0], c[1] + f.v[1], c[2] + f.v[2]);
         m = 'matrix(' + [pu[0] - pc[0], pu[1] - pc[1], -(pv[0] - pc[0]), -(pv[1] - pc[1]), pc[0], pc[1]].map((v) => v.toFixed(3)).join(' ') + ')';
       }
-      out.push({ pts: corners.map((p) => pr.pt(p[0], p[1], p[2]).map((v) => v.toFixed(1)).join(',')).join(' '), fill, dir, label: kind === 'face' ? f.label : undefined, m, d: dot, kind });
+      // cells that share a direction (the three cells meeting at a corner, the two along an edge) share a key and highlight together
+      out.push({ pts: corners.map(P).join(' '), fill, dir, key: dir.map((v) => Math.sign(v)).join(','), label: kind === 'face' ? f.label : undefined, m, d: dot, kind });
     }
   }
-  return out.sort((a, b) => a.d - b.d);
+  return { cells: out.sort((a, b) => a.d - b.d), faces: faces.sort((a, b) => a.d - b.d) };
 }
 
 interface Deco { stroke: string; sw: number; dash: string; hoverMix: boolean; selFace: boolean; tint?: string }
@@ -103,6 +116,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
   const prRef = useRef<{ pr: Projector; ca: number; sa: number; extents: Record<Slot, Extent> } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [dispOpen, setDispOpen] = useState(false);
+  const [cubeHover, setCubeHover] = useState<string | null>(null);
 
   const L = s.span;
   const dims = s.preview?.dims ?? s.dims, geo = s.preview?.geo ?? s.geo, pos = s.preview?.pos ?? s.pos;
@@ -167,7 +181,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
       const t = pr.pt(-0.6 + v[0] * 1.25, -0.6 + v[1] * 1.25, v[2] * 1.25);
       return { label, x1: o0[0].toFixed(1), y1: o0[1].toFixed(1), x2: p[0].toFixed(1), y2: p[1].toFixed(1), tx: t[0].toFixed(1), ty: (t[1] + 4).toFixed(1) };
     });
-    const cubeFaces = cubeCells(proj(s.az, s.el, 40, 60, 60));
+    const cube = cubeCells(proj(s.az, s.el, 40, 60, 60));
     const d1 = pr.pt(0, W + 0.3, 0), d2 = pr.pt(L, W + 0.3, 0);
     const dim = { x1: d1[0].toFixed(1), y1: d1[1].toFixed(1), x2: d2[0].toFixed(1), y2: d2[1].toFixed(1), tx: ((d1[0] + d2[0]) / 2).toFixed(1), ty: (Math.max(d1[1], d2[1]) + 18).toFixed(1) };
     let plane: string | null = null;
@@ -177,7 +191,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
       plane = corners.map((p) => pr.pt(p[0], p[1], p[2]).map((v) => v.toFixed(1)).join(',')).join(' ');
     }
     prRef.current = { pr, ca: Math.cos(s.az), sa: Math.sin(s.az), extents };
-    return { faces, gridLines, axes, cubeFaces, dim, plane, faceCount: boxFaces.length };
+    return { faces, gridLines, axes, cube, dim, plane, faceCount: boxFaces.length };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.az, s.el, s.zoom, s.pan, L, dims, geo, pos, s.parts, s.attrs, s.sel, s.selBody, s.selFace, s.selFilter, s.hover, s.dragPart, s.grid, s.hidden, s.isolated, s.visualStyle, s.section, s.tint]);
 
@@ -303,8 +317,16 @@ export function Viewport({ o: _o }: { o: Outcome }) {
             <button onClick={() => s.patch({ az: s.az - Math.PI / 12 })} aria-label="Rotate view 15° left" title="Rotate left" className="tree-btn absolute left-0 bottom-0 w-6 h-6 text-ink text-[14px]">⟲</button>
             <button onClick={() => s.patch({ az: s.az + Math.PI / 12 })} aria-label="Rotate view 15° right" title="Rotate right" className="tree-btn absolute right-0 bottom-0 w-6 h-6 text-ink text-[14px]">⟳</button>
             <svg viewBox="0 0 120 120" role="group" aria-label="View cube: drag to orbit; click a face, edge or corner to snap" onMouseDown={cubeDown} className="absolute left-2 top-2 w-[120px] h-[120px] block select-none cursor-grab">
-              {scene.cubeFaces.map((cf, i) => <polygon key={i} points={cf.pts} fill={cf.fill} stroke="var(--ink)" strokeWidth={cf.kind === 'face' ? 0.8 : 0.35} strokeOpacity={cf.kind === 'face' ? 1 : 0.5} strokeLinejoin="round" onClick={() => snap(cf.dir)} className="cube-cell cursor-pointer"><title>{cf.label || (cf.kind === 'edge' ? 'edge view' : 'corner view')}</title></polygon>)}
-              {scene.cubeFaces.filter((cf) => cf.label).map((cf) => <text key={'t' + cf.label} transform={cf.m} x="0" y="0.02" fill="var(--ink)" fontSize="0.2" fontWeight="600" fontFamily="Work Sans, system-ui, sans-serif" textAnchor="middle" dominantBaseline="middle" onClick={() => snap(cf.dir)} className="cursor-pointer" style={{ pointerEvents: 'all', letterSpacing: '0.01em' }}>{(cf.label || '').toUpperCase()}</text>)}
+              {/* faces: a wide same-colour round-joined stroke softens the silhouette corners */}
+              {scene.cube.faces.map((cf, i) => <polygon key={'f' + i} points={cf.pts} fill={cf.fill} stroke={cf.fill} strokeWidth={6} strokeLinejoin="round" />)}
+              {scene.cube.faces.map((cf, i) => <polygon key={'o' + i} points={cf.pts} fill="none" stroke="var(--ink)" strokeWidth={0.9} strokeLinejoin="round" strokeLinecap="round" />)}
+              {/* edge zones are lines running along each edge, open at the corners */}
+              {scene.cube.faces.flatMap((cf, i) => cf.edgeLines.map((ln, j) => <polyline key={'e' + i + '-' + j} points={ln} fill="none" stroke="var(--ink)" strokeOpacity={0.35} strokeWidth={0.6} strokeLinecap="round" />))}
+              {/* hover highlight: every cell sharing the direction (three at a corner, two along an edge) */}
+              {scene.cube.cells.filter((c) => cubeHover === c.key).map((c, i) => <polygon key={'h' + i} points={c.pts} fill="var(--focus)" fillOpacity={0.55} stroke="none" />)}
+              {scene.cube.cells.filter((cf) => cf.label).map((cf) => <text key={'t' + cf.label} transform={cf.m} x="0" y="0.02" fill="var(--ink)" fontSize="0.2" fontWeight="600" fontFamily="Work Sans, system-ui, sans-serif" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: 'none', letterSpacing: '0.01em' }}>{(cf.label || '').toUpperCase()}</text>)}
+              {/* invisible hit areas on top */}
+              {scene.cube.cells.map((c, i) => <polygon key={'c' + i} points={c.pts} fill="transparent" stroke="none" onMouseEnter={() => setCubeHover(c.key)} onMouseLeave={() => setCubeHover(null)} onClick={() => snap(c.dir)} className="cursor-pointer"><title>{c.label ? c.label + ' view' : c.kind === 'edge' ? 'edge view' : 'corner view'}</title></polygon>)}
             </svg>
           </div>
         </div>
