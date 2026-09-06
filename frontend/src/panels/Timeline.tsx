@@ -1,6 +1,8 @@
 import { useStore } from '../store';
 import { LANES } from '../lib/catalog';
 import { hashOf } from '../lib/hash';
+import { PACKS } from '../lib/catalog';
+import { useState } from 'react';
 
 export function Timeline() {
   const events = useStore((s) => s.events);
@@ -11,6 +13,11 @@ export function Timeline() {
   const patch = useStore((s) => s.patch);
   const copy = useStore((s) => s.copy);
   const rederiveLog = useStore((s) => s.rederiveLog);
+  const tamper = useStore((s) => s.tamper);
+  const tamperedSeq = useStore((s) => s.tamperedSeq);
+  const pack = useStore((s) => s.pack);
+  const [tamperOpen, setTamperOpen] = useState(false);
+  const [tamperSeq, setTamperSeq] = useState(4);
   const filtered = lane === 'all' ? events : events.filter((e) => e.lane === lane);
   const shown = filtered;
   return (
@@ -51,13 +58,22 @@ export function Timeline() {
           })}
         </div>
         <div className="px-[14px] py-[10px] border-t border-line2 grid gap-2">
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center flex-wrap">
             <button onClick={rederiveLog} className="btn btn-lg px-[14px]">Re-derive</button>
-            <span className="text-[13px] text-muted">replays the log through the rules; nothing is deletable · undo is supersede.</span>
+            <button onClick={() => setTamperOpen((v) => !v)} className="btn btn-lg" title="demo only: edit one stored value in the file">Tamper</button>
+            <span className="chip">pack {pack} · {PACKS[pack].sha}</span>
+            <span className="text-[13px] text-muted">replays the log through the rules under the committed pack; nothing is deletable · undo is supersede.</span>
           </div>
+          {tamperOpen && (
+            <div className="border border-line rounded-r p-2 grid gap-2 text-[13px]" style={{ borderColor: 'var(--red)' }}>
+              <div>Tamper edits one stored number in event <span className="font-mono">#{tamperSeq}</span> in the file. Re-derive then prints BREAK at that seq.</div>
+              <div className="flex gap-2 items-center"><input type="number" min={1} max={events.length} value={tamperSeq} onChange={(e) => setTamperSeq(+e.target.value)} className="field w-[90px] font-mono" aria-label="event to tamper" /><button onClick={() => { tamper(tamperSeq); setTamperOpen(false); }} className="btn" style={{ borderColor: 'var(--red)', color: 'var(--red)' }}>Edit the stored value</button></div>
+            </div>
+          )}
+          {tamperedSeq != null && <div className="text-[13px] font-semibold" style={{ color: 'var(--red)' }}>tampered: event #{tamperedSeq} was edited in the file · Re-derive to see the break</div>}
           {rederive && (
             <>
-              <div role="status" className="font-mono text-[18px] font-bold">{rederive.line}</div>
+              <div role="status" className="font-mono text-[18px] font-bold" style={{ color: rederive.line.startsWith('BREAK') ? 'var(--red)' : 'var(--ink)' }}>{rederive.line}</div>
               <div className="text-[13px] text-muted">{rederive.detail} · ephemeral demo key (production: KMS/HSM)</div>
             </>
           )}

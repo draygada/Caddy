@@ -10,10 +10,10 @@ const design = (over: Partial<Parts> = {}, span = 3.0, edit: Partial<Record<Slot
 };
 
 describe('outcome (synthetic rule table)', () => {
-  it('baseline: nothing fires, every column NLR, three IMU rows cannot fire', () => {
+  it('baseline: nothing fires, every column NLR, four IMU rows cannot fire', () => {
     const o = outcome(design());
     expect(o.rules).toHaveLength(0);
-    expect(o.cannot.filter((c) => c.node === 'imu')).toHaveLength(3);
+    expect(o.cannot.filter((c) => c.node === 'imu')).toHaveLength(4);
     for (const node of Object.keys(o.cols) as (keyof typeof o.cols)[]) expect(o.cols[node].every((d) => d.word === 'NLR')).toBe(true);
   });
   it('F1 Amprius: endurance crosses 3.0 h, 9A012.a.2 fires, DE STA, TW/VN/CN LIC', () => {

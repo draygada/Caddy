@@ -55,6 +55,7 @@ export function attentionOf(o: Outcome, unconfirmed: Unconfirmed): Attention[] {
   else if (licDest.length) a.push({ glyph: '●', word: 'LIC', color: col('red'), bg: 'transparent', text: 'licence required at ' + licDest.join(' · '), action: 'apply before shipping, or change the design', target: { kind: 'go', slot: 'airframe' } });
   if (staDest.length && !mt) a.push({ glyph: '?', word: 'STA', color: col('amber'), bg: 'transparent', text: 'exception path at ' + staDest.join(' · '), action: '740.20 conditions and consignee statement', target: { kind: 'go', slot: 'airframe' } });
   (Object.keys(unconfirmed) as Slot[]).forEach((slot) => a.push({ glyph: '?', word: 'attest', color: col('amber'), bg: 'transparent', text: 'swap on ' + SLOT_LABEL[slot] + ' unconfirmed', action: 'Confirm with an attestor, or leave amber', target: { kind: 'reopen', slot } }));
+  o.advisories.filter((x) => x.entry.startsWith('§848')).forEach((x) => a.push({ glyph: '$', word: 'buyer', color: col('amber'), bg: 'transparent', text: 'PRC-origin part on ' + SLOT_LABEL[x.node], action: 'federal-buyer flags · amber, never red', target: { kind: 'go', slot: x.node } }));
   o.cannot.forEach((c) => a.push({ glyph: '○', word: 'data', color: col('grey'), bg: 'transparent', text: c.entry + ' cannot fire on ' + SLOT_LABEL[c.node], action: 'a datasheet with the field is needed', target: { kind: 'go', slot: c.node } }));
   if (!a.length) a.push({ glyph: '●', word: 'none', color: col('green'), bg: 'transparent', text: 'nothing to act on', action: 'every row evaluated, every destination NLR', target: null });
   return a;
@@ -77,7 +78,7 @@ export interface SpecAttr {
 }
 
 /** One row per editable regulated field: current value, evidence level, and where the value came from. */
-export function specAttrsOf(sel: Slot, pid: PartId | null, attrs: PartAttrs): SpecAttr[] {
+export function specAttrsOf(sel: Slot, pid: PartId | null, attrs: PartAttrs, extracted: Record<string, { by: string; verified: boolean }> = {}): SpecAttr[] {
   const tpl = pid ? CATALOG[pid] : null;
   return FIELDS[sel].map((field) => {
     const value = attrs[field.key] as number | null | undefined;
@@ -87,6 +88,9 @@ export function specAttrsOf(sel: Slot, pid: PartId | null, attrs: PartAttrs): Sp
       const inrun = sel === 'imu' && field.key === 'bias' && attrs.inrun != null ? 'not published · vendor quotes in-run bias instability ' + attrs.inrun + ' °/h instead' : 'not published by the vendor';
       return { field, value, template, level: 'missing', levelColor: 'var(--amber)', source: inrun };
     }
+    const ex = extracted[sel + '.' + field.key];
+    if (ex && !ex.verified) return { field, value, template, level: 'L1 ' + ex.by, levelColor: 'var(--amber)', source: 'extracted by the ' + ex.by + ' · verified bytes · not yet ticked “verified against datasheet” by a human' };
+    if (ex && ex.verified) return { field, value, template, level: 'L2 datasheet', levelColor: 'var(--muted)', source: 'extracted by the ' + ex.by + ' · verified against the datasheet by a human' };
     if (value !== template) return { field, value, template, level: 'L1 edited', levelColor: 'var(--amber)', source: 'typed in the spec · datasheet said ' + (template == null ? 'not published' : template.toFixed(field.dp) + (field.unit ? ' ' + field.unit : '')) };
     return { field, value, template, level: tpl.real === false ? 'synthetic' : 'L2 datasheet', levelColor: 'var(--muted)', source: tpl.real === false ? 'SYNTHETIC fixture row' : 'vendor datasheet' };
   });

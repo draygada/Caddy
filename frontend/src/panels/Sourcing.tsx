@@ -3,7 +3,7 @@ import { useStore, designHashOf, ROUND_RAIL, INTAKE_DEFAULT, type Intake, type R
 import type { Outcome } from '../lib/rules';
 import { GENERIC_NAME, type Slot } from '../lib/catalog';
 import { THUMBS, AF_THUMB } from '../lib/geometry';
-import { CHECKLIST, CLAIM_COST, CLAIM_OFFER, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, gateFor, sortOffers, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
+import { CHECKLIST, CLAIM_COST, CLAIM_OFFER, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
 
 const usd = (v: number | null | undefined) => (v == null ? 'rate not verified' : v.toLocaleString(undefined, { style: 'currency', currency: 'USD' }));
 const FEDERAL_BUYER_CLASSES = ['radio', 'motor', 'thermal_imager', 'ic', 'board', 'cell', 'pack', 'gnss', 'esc'];
@@ -61,6 +61,7 @@ export function Sourcing({ o }: { o: Outcome }) {
   const [adj, setAdj] = useState<{ offerId: string; role: 'analyst' | 'empowered_official'; reason: string; rationale: string; action: 'false_positive' | 'resolve' | 'pin' } | null>(null);
   const [refDraft, setRefDraft] = useState('');
   const [decl, setDecl] = useState({ personStatus: 'foreign person' as 'US person' | 'foreign person', sharing: 'assembly drawings and the BOM', reference: '' });
+  const [askOpen, setAskOpen] = useState(false);
   const stale = useMemo(() => (r ? designHashOf(s.snapshot()) !== r.designHash : false), [r, s]);
   const close = () => s.patch({ sourcingOpen: false });
   const n = r?.lines.length ?? 0;
@@ -177,6 +178,7 @@ export function Sourcing({ o }: { o: Outcome }) {
           {r.lines.map((l, i) => <button key={l.id} onClick={() => setK(i)} title={l.description} className="h-2 flex-1 rounded-[2px] border-0 cursor-pointer" style={{ background: i === k ? 'var(--focus)' : r.selections[l.id] ? 'var(--accent)' : 'var(--m2)' }} />)}
           <button onClick={() => setK(n)} title="review · package · order" className="h-2 w-8 rounded-[2px] border-0 cursor-pointer" style={{ background: done ? 'var(--focus)' : r.pkg ? 'var(--accent)' : 'var(--m2)' }} />
         </div>
+        <button onClick={() => s.refineRound({})} className="btn" title="re-screen against the same list snapshot · K runs, 0 changed">Re-screen</button>
         <span className="text-[12px] text-muted whitespace-nowrap">{selectedCount} of {n} picked</span>
         <button onClick={() => setK(Math.max(0, k - 1))} disabled={k === 0} className="btn disabled:opacity-40">Back</button>
         <button onClick={() => setK(Math.min(n, k + 1))} disabled={done} className="btn disabled:opacity-40">{sel || done ? 'Next' : 'Skip'}</button>
@@ -199,6 +201,44 @@ export function Sourcing({ o }: { o: Outcome }) {
                 </div>
                 {sel && <div className="text-[13px] border-t border-line2 pt-2">picked <b>{list.find((x) => x.offer.id === sel.offerId)?.offer.seller}</b> · attestor {sel.attestor} · #{sel.seq}{sel.declined.length ? <span className="text-muted"> · declined {sel.declined.map((d) => d.seller + ' (' + d.reason + ')').join(', ')}</span> : null}</div>}
               </div>
+            </div>
+            {(() => {
+              const reason = escalationReason(line, list);
+              const esc = s.escalations[line.id];
+              if (!reason && !esc) return null;
+              return (
+                <div className="panel" style={{ borderColor: 'var(--amber)' }}>
+                  <div className="panel-head"><div className="panel-title">Escalation lane <span className="sub">· {reason ?? esc?.reason}</span></div>{esc && <span className="chip chip-sm">{esc.state}</span>}</div>
+                  <div className="p-3 grid gap-2 text-[13px]">
+                    {!esc && <><div className="text-muted">the agent may propose a seller, a part or a fact here; every deterministic check runs on a copy first; a human resolves.</div><button onClick={() => s.proposeEscalation(line.id, reason!)} className="btn justify-self-start">Ask the agent for a proposal</button></>}
+                    {esc && (
+                      <>
+                        <div className="border border-line rounded-r p-2 grid gap-1">
+                          <div className="font-mono text-[12px] text-muted">proposal · {esc.reason} · {esc.confident ? 'confident' : 'not confident'} · exact-quote citation first</div>
+                          <div>{esc.proposal}</div>
+                          {esc.state === 'proposed' && (
+                            <div className="flex gap-2 items-center flex-wrap"><input aria-label="attestor" placeholder="attestor · required" value={attestor} onChange={(e) => setAttestor(e.target.value)} className="field w-[160px]" /><button onClick={() => s.resolveEscalation(line.id, true, attestor)} disabled={!attestor.trim()} className="btn btn-primary disabled:opacity-50">Accept</button><button onClick={() => s.resolveEscalation(line.id, false, attestor)} disabled={!attestor.trim()} className="btn disabled:opacity-50">Reject</button></div>
+                          )}
+                          {esc.state !== 'proposed' && <div className="text-[12px] text-muted">{esc.state} · human-resolved · attestor {esc.attestor}</div>}
+                        </div>
+                        <div className="text-[12px] text-muted">the agent proposes; a human resolves · rejection as fast as acceptance · the agent has no path to a terminal state</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+            <div className="panel">
+              <div className="panel-head"><div className="panel-title">Ask the supplier</div><button onClick={() => setAskOpen((v) => !v)} className="btn btn-xs">{askOpen ? 'hide' : 'generate the request'}</button></div>
+              {askOpen && (
+                <div className="p-3 grid gap-2 text-[13px]" id="supplier-request">
+                  <div className="font-semibold">Supplier request · {line.description}</div>
+                  <div className="text-muted">Please answer in the regulation’s words, with the source document and date for each value:</div>
+                  <ol className="m-0 pl-5 grid gap-1">{supplierQuestions(line).map((q, i) => <li key={i}>{q}</li>)}</ol>
+                  <div className="text-[12px] text-muted">generated from the rule fields · no model · the verified-answer loop (supplier PDF → extractor → verifier → extracted_by supplier_doc) is roadmap</div>
+                  <button onClick={() => window.print()} className="btn justify-self-start">Print the request</button>
+                </div>
+              )}
             </div>
             {r.shipTo !== 'US' && gate.blocks && (
               <div className="panel" style={{ borderColor: 'var(--red)' }}>

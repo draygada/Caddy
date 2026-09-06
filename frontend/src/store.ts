@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import {
-  BASELINE_PARTS, CATALOG, CMP_KEYS, DEFAULT_POS, DIMS0, EXTRUDE_MAX, EXTRUDE_MIN, FIELDS, RULES_EVALUATED, SCENARIO, SEED_EVENTS, SEED_FEATURES,
+  BASELINE_PARTS, CATALOG, CMP_KEYS, DECLARED0, DEFAULT_POS, DIMS0, EXTRUDE_MAX, EXTRUDE_MIN, FIELDS, RULES_EVALUATED, SCENARIO, SEED_EVENTS, SEED_FEATURES,
   SLOTS, SLOT_LABEL, SPAN_BASELINE, SPAN_MAX, SPAN_MIN,
-  type CmpKey, type Dims, type Feature, type FieldSpec, type Lane, type Node, type PartAttrs, type PartId, type Slot, type TimelineEvent,
+  type CmpKey, type Declared, type Dims, type Feature, type FieldSpec, type Lane, type Node, type PartAttrs, type PartId, type Slot, type TimelineEvent,
 } from './lib/catalog';
 import { GEO0, type Geo, type Pos, type Positions, type Snapshot } from './lib/design';
 import { hashOf, parseDecimal } from './lib/hash';
@@ -13,20 +13,24 @@ import type { Unit } from './lib/units';
 import { defaultDecline, estimate, gateFor, linesFor, offersFor, rollup, tierFor, walk, type DeclineReason, type Line, type Mode, type OfferStatus, type ResolvedOffer, type ShipTo } from './lib/sourcing';
 import type { Outcome } from './lib/rules';
 import type { ViewName } from './lib/geometry';
+import { callA, callB, DOCS, netFor, type Candidate, type NetLine, type Proposal, type SourceDocId } from './lib/sources';
+import { draftMemo, memoHash, citationsWithin, type Memo } from './lib/memo';
+import { proposeSlotList, searchTarget, type Ranked, type SlotListProposal, type TargetConstraints } from './lib/propose';
+import { PACKS, type PackId } from './lib/catalog';
 
 export type { Pos, Positions } from './lib/design';
 export type Theme = 'light' | 'dark';
-export type ViewMode = 'model' | 'sheet' | 'sketch';
+export type ViewMode = 'model' | 'sheet' | 'sketch' | 'board';
 export type NavMode = 'orbit' | 'pan' | 'zoom';
 export type VisualStyle = 'shaded' | 'edges' | 'wireframe';
 export type SelFilter = 'component' | 'body' | 'face';
 /** body ids: a slot, or one of the airframe's two bodies */
 export type BodyId = Slot | 'plate' | 'flange';
-export const BODY_LABEL: Record<BodyId, string> = { plate: 'Base plate', flange: 'Flange', battery: 'Battery pack', thermal: 'Thermal sensor', imu: 'IMU', fc: 'Flight controller' };
+export const BODY_LABEL: Record<BodyId, string> = { plate: 'Base plate', flange: 'Flange', battery: 'Battery pack', thermal: 'Thermal sensor', imu: 'IMU', fc: 'Flight controller', gnss: 'GNSS receiver', datalink: 'Datalink radio', pod: 'Sensor pod' };
 export const isBodyId = (s: string): s is BodyId => s in BODY_LABEL;
 export const nodeOfBody = (b: BodyId): Node => (b === 'plate' || b === 'flange' ? 'airframe' : b);
 
-export type DialogKind = 'extrude' | 'hole' | 'fillet' | 'chamfer' | 'move' | 'measure' | 'section' | 'sketch' | 'properties' | 'save_version' | 'add_comment' | 'named_view';
+export type DialogKind = 'extrude' | 'hole' | 'fillet' | 'chamfer' | 'move' | 'measure' | 'section' | 'sketch' | 'properties' | 'save_version' | 'add_comment' | 'named_view' | 'door3' | 'target';
 export interface Dialog { kind: DialogKind; target: BodyId | null }
 export interface Preview { dims?: Dims; geo?: Geo; pos?: Positions }
 export interface Pending { slot: Slot; from: PartId; to: PartId; seq: number; changed: CmpKey[] }
@@ -141,6 +145,39 @@ export interface WorkbenchState extends Snapshot {
   round: Round | null;
   sourcingOpen: boolean;
   injectException: boolean;
+  /** rule pack the engine evaluates under (committed) */
+  pack: PackId;
+  determination: { chip: 'CACHED' | 'LIVE'; memoHash: string; entries: string[]; basis: string; conflict: string | null; at: string } | null;
+  apiWarm: boolean;
+  apiNote: string | null;
+  tamperedSeq: number | null;
+  recordOpen: boolean;
+  sourcesOpen: boolean;
+  sources: { doc: SourceDocId | null; slot: Slot | null; network: NetLine[]; proposals: Proposal[]; showHidden: boolean; candidates: Candidate[]; candidateNode: Node | null; llmNote: string | null };
+  /** attribute provenance after an extraction: slot.key → who wrote it and whether a human ticked "verified against datasheet" */
+  extracted: Record<string, { by: 'extractor' | 'supplier_doc'; verified: boolean }>;
+  escalations: Record<string, { reason: string; proposal: string; confident: boolean; state: 'proposed' | 'accepted' | 'rejected'; attestor: string | null }>;
+  memos: Memo[];
+  slotList: SlotListProposal | null;
+  target: Ranked[] | null;
+
+  commitPack: (id: PackId, why: string) => void;
+  warmUpApi: () => void;
+  requestDetermination: (o: Outcome) => void;
+  tamper: (seq: number) => void;
+  dropDocument: (id: SourceDocId, slot: Slot) => void;
+  applyExtraction: (slot: Slot, field: string, value: number, unit: string) => void;
+  markVerified: (slot: Slot, field: string) => void;
+  findAlternative: (node: Node, o: Outcome) => void;
+  acceptCandidate: (node: Node, pid: PartId) => void;
+  proposeEscalation: (lineId: string, reason: string) => void;
+  resolveEscalation: (lineId: string, accept: boolean, attestor: string) => void;
+  draftMemo: (o: Outcome) => Memo;
+  signMemo: (m: Memo, attestor: string, o: Outcome) => string | null;
+  proposeSlots: (text: string) => void;
+  acceptSlotList: (attestor: string) => void;
+  runTarget: (c: TargetConstraints) => void;
+  acceptConfiguration: (r: Ranked, attestor: string) => void;
 
   openRound: (shipTo: ShipTo, qty: number, mode: Mode, intake: Intake) => void;
   refineRound: (p: Partial<Pick<Round, 'shipTo' | 'qty' | 'mode'>>) => void;
@@ -181,6 +218,8 @@ export interface WorkbenchState extends Snapshot {
   commitMove: (slot: Slot, from: Pos) => void;
   setAttr: (slot: Slot, field: FieldSpec, text: string | null) => void;
   setCrypto: (slot: Slot, value: string) => void;
+  setBool: (slot: Slot, key: 'gnss_adaptive' | 'gnss_antijam' | 'gnss_pps', value: boolean) => void;
+  setDeclared: (patch: Partial<Declared>, label: string) => string | null;
   reopen: (slot: Slot) => void;
   confirm: (name?: string) => void;
   leaveUnconfirmed: () => void;
@@ -220,9 +259,9 @@ const attrsFor = (parts: Parts): Attrs => Object.fromEntries(SLOTS.map((s) => [s
 const posFor = (span: number): Positions => Object.fromEntries(SLOTS.map((s) => [s, DEFAULT_POS[s](span)])) as Positions;
 
 const baselineSnapshot = (): Snapshot => ({
-  parts: { ...BASELINE_PARTS }, attrs: attrsFor(BASELINE_PARTS), pos: posFor(SPAN_BASELINE), span: SPAN_BASELINE, dims: { ...DIMS0 }, features: SEED_FEATURES.slice(), geo: { ...GEO0 }, sketch: { ...SKETCH_DEFAULT }, tint: {}, unconfirmed: {},
+  parts: { ...BASELINE_PARTS }, attrs: attrsFor(BASELINE_PARTS), pos: posFor(SPAN_BASELINE), span: SPAN_BASELINE, dims: { ...DIMS0 }, features: SEED_FEATURES.slice(), geo: { ...GEO0 }, sketch: { ...SKETCH_DEFAULT }, tint: {}, unconfirmed: {}, declared: { ...DECLARED0 },
 });
-const pickSnapshot = (s: Snapshot): Snapshot => ({ parts: s.parts, attrs: s.attrs, pos: s.pos, span: s.span, dims: s.dims, features: s.features, geo: s.geo, sketch: s.sketch, tint: s.tint, unconfirmed: s.unconfirmed });
+const pickSnapshot = (s: Snapshot): Snapshot => ({ parts: s.parts, attrs: s.attrs, pos: s.pos, span: s.span, dims: s.dims, features: s.features, geo: s.geo, sketch: s.sketch, tint: s.tint, unconfirmed: s.unconfirmed, declared: s.declared });
 
 const baseline = () => {
   const snap = baselineSnapshot();
@@ -244,6 +283,7 @@ const baseline = () => {
   };
 };
 
+const changedKeysOf = (a: string[], b: string[]) => { const A = new Set(a), B = new Set(b); return [...new Set([...a.filter((k) => !B.has(k)), ...b.filter((k) => !A.has(k))])]; };
 const fmt = (v: number | null | undefined, dp: number) => (v == null ? 'not published' : v.toFixed(dp));
 
 export const useStore = create<WorkbenchState>()((set, get) => {
@@ -256,7 +296,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     });
   };
   const changedRows = (from: PartId, to: PartId): CmpKey[] => CMP_KEYS.filter((k) => CATALOG[from].cmp[k] !== CATALOG[to].cmp[k]);
-  const design = (): Design => { const s = get(); return { parts: s.parts, attrs: s.attrs, span: s.span }; };
+  const design = (): Design => { const s = get(); return { parts: s.parts, attrs: s.attrs, span: s.span, declared: s.declared }; };
   const editable = () => get().viewSeq == null;
   const summary = (before: ReturnType<typeof service.evaluate>, after: ReturnType<typeof service.evaluate>, node: Node) => {
     const changed = countChanged(before, after);
@@ -274,6 +314,97 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     namedViews: [], homeView: { ...ISO },
     lane: 'all', copied: null, viewMode: 'model', grid: true, navMode: 'orbit', visualStyle: 'edges', hidden: {},
     round: null, sourcingOpen: false, injectException: false,
+    pack: 'v2', determination: null, apiWarm: false, apiNote: null, tamperedSeq: null, recordOpen: false, sourcesOpen: false,
+    sources: { doc: null, slot: null, network: [], proposals: [], showHidden: false, candidates: [], candidateNode: null, llmNote: null },
+    extracted: {}, escalations: {}, memos: [], slotList: null, target: null,
+
+    commitPack: (id, why) => {
+      const s = get();
+      if (s.pack === id) return;
+      set({ pack: id });
+      append({ kind: 'rule_pack_committed', text: 'export pack ' + id + ' · sha ' + PACKS[id].sha + ' · eCFR ' + PACKS[id].ecfr_date + ' · effective ' + PACKS[id].effective, entry: why + ' · committed by a human · the log now re-derives under this pack', intent: why });
+    },
+    warmUpApi: () => { set({ apiWarm: false, apiNote: 'model unavailable · replaying cache · the LIVE chip needs a warm-up under 10 s in the previous five minutes' }); },
+    requestDetermination: (o) => {
+      const s = get();
+      // Friday's cached response.json: the baseline determination
+      const cached = { entries: [] as string[], basis: 'self-classification analysis under 15 CFR 732.3(b) · Kestrel baseline · no listed entry among the 14 rows · EAR99 · not a CJ or CCATS', memoHash: 'memo-' + hashOf(4451).slice(0, 8) };
+      const fired = o.rules.filter((r) => r.node === 'airframe').map((r) => r.entry);
+      const conflict = fired.length ? 'the cached memo reads EAR99 for the baseline; the engine reads ' + fired.join(', ') + ' for this design · conflict recorded · the engine’s flag stays on screen until a human resolves it · never auto-resolved toward EAR99' : null;
+      set({ determination: { chip: 'CACHED', memoHash: cached.memoHash, entries: cached.entries, basis: cached.basis, conflict, at: now() } });
+      append({ kind: 'determination_requested', text: 'company API · CACHED · ' + cached.memoHash, entry: cached.basis, intent: '' });
+      if (conflict) append({ kind: 'conflict', text: 'API memo EAR99 vs engine ' + fired.join(', '), entry: 'kept the engine’s flag · human resolves', intent: '', word: 'conflict', color: 'var(--amber)' });
+      void s;
+    },
+    tamper: (seq) => {
+      const s = get();
+      const events = s.events.map((e) => (e.seq === seq ? { ...e, text: e.text.replace(/\d+(\.\d+)?/, (m) => String(+m + 1)) + ' · [edited in the file]' } : e));
+      set({ events, tamperedSeq: seq, rederive: null });
+    },
+    dropDocument: (id, slot) => {
+      const doc = DOCS[id];
+      set({ sources: { ...get().sources, doc: id, slot, network: netFor(doc), proposals: callA(doc), showHidden: false, llmNote: 'CACHED · response replayed from fixtures/llm_cache' }, sourcesOpen: true });
+      append({ kind: 'extraction_proposed', lane: 'proposal', text: doc.title + ' · ' + callA(doc).length + ' unverified claims proposed', entry: 'Call A · CACHED · every claim goes through the verifier', intent: '' });
+    },
+    applyExtraction: (slot, field, value, unit) => {
+      if (!editable()) return;
+      const s = get();
+      const before = service.evaluate(design(), s.pack);
+      const attrs: Attrs = { ...s.attrs, [slot]: { ...s.attrs[slot], [field]: value } } as Attrs;
+      const after = service.evaluate({ ...design(), attrs }, s.pack);
+      const { changed, entry } = summary(before, after, slot);
+      set({ attrs, extracted: { ...s.extracted, [slot + '.' + field]: { by: 'extractor', verified: false } }, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: SLOT_LABEL[slot] + ' · ' + field + ' ← extractor' });
+      append({ kind: 'attr_changed', text: SLOT_LABEL[slot] + ' · ' + field + ' = ' + value + ' ' + unit + ' · extracted_by extractor', entry: entry + ' · L1 until a human ticks “verified against datasheet”', intent: '' });
+    },
+    markVerified: (slot, field) => set((s) => ({ extracted: { ...s.extracted, [slot + '.' + field]: { by: s.extracted[slot + '.' + field]?.by ?? 'extractor', verified: true } } })),
+    findAlternative: (node, o) => {
+      const cands = callB(node, design(), o);
+      set({ sources: { ...get().sources, candidates: cands, candidateNode: node, network: cands.flatMap((c) => c.net), llmNote: 'CACHED · agent proposals re-checked by the rule engine · fetches allowlisted' }, sourcesOpen: true });
+      append({ kind: 'alternative_proposed', lane: 'proposal', text: SLOT_LABEL[node] + ' · ' + cands.length + ' candidates · ' + cands.filter((c) => c.state === 'green').length + ' green', entry: 'Call B · engine dry-run on a copy · the human accepts with a part_swapped', intent: '' });
+    },
+    acceptCandidate: (node, pid) => { if (node !== 'airframe') get().swap(node, pid); set({ sourcesOpen: false }); },
+    proposeEscalation: (lineId, reason) => {
+      const s = get();
+      const proposal = reason.includes('origin') ? 'STM32F100 · origin MY per this datasheet bytes 812–818 · lot-dependent; the seller declared MY/CN' : reason.includes('ownership') ? 'record “ownership unknown” as an attested risk acceptance · no ownership row for this seller; searched ' + 'ownership@b7d0f2' : 'no compliant seller found on the allowlist · abstained';
+      set({ escalations: { ...s.escalations, [lineId]: { reason, proposal, confident: false, state: 'proposed', attestor: null } } });
+      append({ kind: 'escalation_proposed', lane: 'proposal', text: lineId + ' · ' + reason + ' · ' + proposal, entry: 'not confident · exact-quote citation first · the agent writes proposals and nothing else', intent: '' });
+    },
+    resolveEscalation: (lineId, accept, attestor) => {
+      const s = get(); const e = s.escalations[lineId]; if (!e || !attestor.trim()) return;
+      set({ escalations: { ...s.escalations, [lineId]: { ...e, state: accept ? 'accepted' : 'rejected', attestor } } });
+      append({ kind: 'escalation_resolved', lane: 'sourcing', text: lineId + ' · ' + (accept ? 'accepted' : 'rejected') + ' · ' + e.reason, entry: 'human-resolved · attestor ' + attestor, intent: '' });
+    },
+    draftMemo: (o) => draftMemo(o, get().intent, get().lastKind ?? '', get().events.length),
+    signMemo: (m, attestor, o) => {
+      if (!attestor.trim()) return 'attestor required';
+      if (!citationsWithin(m, o)) return 'refused: a citation is not among the rules that fired';
+      const signed: Memo = { ...m, signedBy: attestor, hash: memoHash(m) };
+      set((s) => ({ memos: [...s.memos, signed] }));
+      append({ kind: 'intent_memo_signed', text: 'memo ' + signed.hash + ' · ' + m.citations.join(', '), entry: 'draft for counsel review · citations limited to rules that fired · signed by ' + attestor, intent: '' });
+      return null;
+    },
+    proposeSlots: (text) => {
+      const p = proposeSlotList(text);
+      set({ slotList: p });
+      append({ kind: 'slot_list_proposed', lane: 'proposal', text: 'proposed slot list · ' + p.slots.length + ' slots · ' + p.accepted + ' catalog parts · ' + (p.slots.length - p.accepted) + ' placeholders', entry: p.rejected + ' MPN rejected by the verifier · no jurisdiction, entry, origin or value field', intent: text });
+    },
+    acceptSlotList: (attestor) => {
+      const s = get(); const p = s.slotList; if (!p || !attestor.trim()) return;
+      const parts = { ...s.parts } as Parts;
+      for (const sl of SLOTS) { const prop = p.slots.find((x) => x.slot === sl && !x.rejected); parts[sl] = prop ? prop.pid : null; }
+      const attrs = attrsFor(parts);
+      set({ parts, attrs, slotList: null, sel: null, pending: null, unconfirmed: {} });
+      append({ kind: 'part_added', text: 'slot list accepted · ' + SLOTS.map((sl) => SLOT_LABEL[sl] + ': ' + (parts[sl] ? CATALOG[parts[sl] as PartId].name : 'placeholder')).join(' · '), entry: 'a series of human part_added events · placeholders print “cannot fire · field empty” · attestor ' + attestor, intent: p.text });
+    },
+    runTarget: (c) => set({ target: searchTarget(design(), c, get().pack) }),
+    acceptConfiguration: (r, attestor) => {
+      if (!attestor.trim() || !editable()) return;
+      const s = get();
+      const attrs = attrsFor(r.parts);
+      set({ parts: r.parts, attrs, target: null, pending: null, unconfirmed: {} });
+      append({ kind: 'part_swapped', text: 'configuration accepted · ' + SLOTS.map((sl) => SLOT_LABEL[sl] + ': ' + (r.parts[sl] ? CATALOG[r.parts[sl] as PartId].name : 'empty')).join(' · '), entry: r.deltas.join(' · ') + ' · scored by the same rules · attestor ' + attestor, intent: '', word: 'confirmed by ' + attestor, color: 'var(--ink)' });
+      void s;
+    },
 
     openRound: (shipTo, qty, mode, intake) => {
       const s = get();
@@ -282,7 +413,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const snap = pickSnapshot(s);
       const designHash = designHashOf(snap);
       const lines = linesFor(s.parts);
-      const controlled = (line: Line) => { const o = service.evaluate(design()); const node = line.slot ?? 'airframe'; return o.rules.some((r) => r.node === node); };
+      const controlled = (line: Line) => { const o = service.evaluate(design(), get().pack); const node = line.slot ?? 'airframe'; return o.rules.some((r) => r.node === node); };
       const offers: Record<string, ResolvedOffer[]> = {};
       let screened = 0, est = 0;
       for (const line of lines) {
@@ -314,7 +445,9 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       let changed = 0;
       for (const line of r.lines) offers[line.id] = (r.offers[line.id] || []).map((ro) => { const ladder = estimate(ro.offer, line, qty, mode); if (ladder.hash !== ro.ladder.hash) changed++; return { ...ro, ladder }; });
       set({ round: { ...r, shipTo, qty, mode, offers, pkg: null, pkgRefusal: null, status: r.status === 'package_ready' || r.status === 'gated' ? 'selection_confirmed' : r.status } });
-      append({ kind: 'cost_estimated', lane: 'sourcing', text: 'refined · ' + (p.qty != null ? 'qty ' + qty : p.mode ? 'mode ' + mode : 'ship-to ' + shipTo), entry: 're-estimated ' + Object.values(offers).flat().length + ' ladders · ' + changed + ' changed · statuses unchanged', intent: '' });
+      const K = Object.values(offers).flat().length;
+      if (p.qty == null && !p.mode && !p.shipTo) { append({ kind: 'screening_run', lane: 'sourcing', text: 're-screen against the same list snapshot · ' + K + ' runs', entry: K + ' runs · 0 changed · CSL@91f4e8 · the honest negative', intent: '' }); return; }
+      append({ kind: 'cost_estimated', lane: 'sourcing', text: 'refined · ' + (p.qty != null ? 'qty ' + qty : p.mode ? 'mode ' + mode : 'ship-to ' + shipTo), entry: 're-estimated ' + K + ' ladders · ' + changed + ' changed · statuses unchanged' + (p.mode === 'ocean' ? ' · HMF layer appears, nothing else moves' : p.qty != null ? ' · check the MPF minimum line' : ''), intent: '' });
     },
     selectOffer: (lineId, offerId, attestor, reasons) => {
       const r = get().round; if (!r) return 'no round';
@@ -402,7 +535,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     snapshot,
     editable,
     toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
-    closeAll: () => set({ timelineOpen: false, helpOpen: false, reasoningOpen: false, sourcingOpen: false, cmdOpen: false, marking: null, dialog: null, preview: null }),
+    closeAll: () => set({ timelineOpen: false, helpOpen: false, reasoningOpen: false, sourcingOpen: false, sourcesOpen: false, recordOpen: false, cmdOpen: false, marking: null, dialog: null, preview: null }),
     openTimeline: () => set({ timelineOpen: true, helpOpen: false }),
     toggleTimeline: () => set((s) => ({ timelineOpen: !s.timelineOpen })),
     toggleHelp: () => set((s) => ({ helpOpen: !s.helpOpen, timelineOpen: false })),
@@ -445,10 +578,10 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       if (!editable()) return;
       const s = get();
       if (s.parts[slot]) { get().swap(slot, pid, at); return; }
-      const before = service.evaluate(design());
+      const before = service.evaluate(design(), get().pack);
       const parts: Parts = { ...s.parts, [slot]: pid };
       const attrs: Attrs = { ...s.attrs, [slot]: { ...CATALOG[pid].attrs } };
-      const after = service.evaluate({ parts, attrs, span: s.span });
+      const after = service.evaluate({ parts, attrs, span: s.span, declared: s.declared }, s.pack);
       const { changed, entry } = summary(before, after, slot);
       set({ parts, attrs, pos: at ? { ...s.pos, [slot]: at } : s.pos, sel: slot, selBody: slot, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: CATALOG[pid].name + ' placed', dragPart: null, fieldMsg: {} });
       append({ kind: 'part_placed', text: SLOT_LABEL[slot] + ' · ' + CATALOG[pid].name + (CATALOG[pid].real === false ? ' · SYNTHETIC' : ''), entry, intent: '' });
@@ -459,10 +592,10 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const s = get();
       const pid = s.parts[slot];
       if (!pid) return;
-      const before = service.evaluate(design());
+      const before = service.evaluate(design(), get().pack);
       const parts: Parts = { ...s.parts, [slot]: null };
       const attrs: Attrs = { ...s.attrs, [slot]: {} };
-      const after = service.evaluate({ parts, attrs, span: s.span });
+      const after = service.evaluate({ parts, attrs, span: s.span, declared: s.declared }, s.pack);
       const changed = countChanged(before, after);
       const unconfirmed = { ...s.unconfirmed };
       delete unconfirmed[slot];
@@ -499,9 +632,9 @@ export const useStore = create<WorkbenchState>()((set, get) => {
         else if (v > field.max) { v = field.max; msg = 'clamped to ' + field.max + ' ' + field.unit + ' (max)'; }
       }
       if (v === (old ?? null)) { set({ fieldMsg: { ...s.fieldMsg, [key]: msg || 'unchanged' } }); return; }
-      const before = service.evaluate(design());
+      const before = service.evaluate(design(), get().pack);
       const attrs: Attrs = { ...s.attrs, [slot]: { ...s.attrs[slot], [field.key]: v } as PartAttrs };
-      const after = service.evaluate({ parts: s.parts, attrs, span: s.span });
+      const after = service.evaluate({ parts: s.parts, attrs, span: s.span, declared: s.declared }, s.pack);
       const { changed, entry } = summary(before, after, slot);
       const label = SLOT_LABEL[slot] + ' · ' + field.label + ' ' + fmt(old, field.dp) + ' → ' + fmt(v, field.dp) + (field.unit ? ' ' + field.unit : '');
       set({ attrs, fieldMsg: { ...s.fieldMsg, [key]: msg || ('applied · ' + entry) }, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: label, keysOpen: false });
@@ -517,16 +650,43 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       append({ kind: 'attr_changed', text: SLOT_LABEL[slot] + ' · crypto ' + old + ' → ' + value, entry: 'declared · re-evaluated ' + RULES_EVALUATED + ' · 0 changed', intent: '' });
     },
 
+    setBool: (slot, key, value) => {
+      if (!editable()) return;
+      const s = get();
+      if (!!s.attrs[slot][key] === value) return;
+      const before = service.evaluate(design(), get().pack);
+      const attrs: Attrs = { ...s.attrs, [slot]: { ...s.attrs[slot], [key]: value } } as Attrs;
+      const after = service.evaluate({ ...design(), attrs }, s.pack);
+      const { changed, entry } = summary(before, after, slot);
+      const label = SLOT_LABEL[slot] + ' · ' + key.replace('gnss_', '') + ' ' + (value ? 'present' : 'absent');
+      set({ attrs, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: label, keysOpen: false });
+      append({ kind: 'attr_changed', text: label, entry: entry + ' · declared on the part', intent: '' });
+    },
+    setDeclared: (patch, label) => {
+      if (!editable()) return 'viewing history · restore to edit';
+      const s = get();
+      const next: Declared = { ...s.declared, ...patch };
+      // (b)(4)/(b)(5) style facts and used_on need a document reference before they apply
+      if ((patch.designed_to_incorporate || patch.production_nonusml_equivalent) && !next.document_ref.trim()) return 'refused without document_ref · type the document reference first';
+      if (patch.used_on && patch.used_on.some((u) => !u.document_ref.trim())) return 'refused without document_ref · each used-on host needs a document reference';
+      const before = service.evaluate(design(), get().pack);
+      const after = service.evaluate({ ...design(), declared: next }, s.pack);
+      const { changed, entry } = summary(before, after, 'airframe');
+      set({ declared: next, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: label, keysOpen: false });
+      append({ kind: 'flag_declared', text: label, entry: entry + ' · declared, not measured', intent: '' });
+      return null;
+    },
+
     swap: (slot, pid, at) => {
       if (!editable()) return;
       const s = get();
       const cur = s.parts[slot];
       if (!cur) { get().place(slot, pid, at); return; }
       if (cur === pid) { if (at) get().moveTo(slot, at); return; }
-      const before = service.evaluate(design());
+      const before = service.evaluate(design(), get().pack);
       const parts: Parts = { ...s.parts, [slot]: pid };
       const attrs: Attrs = { ...s.attrs, [slot]: { ...CATALOG[pid].attrs } };
-      const after = service.evaluate({ parts, attrs, span: s.span });
+      const after = service.evaluate({ parts, attrs, span: s.span, declared: s.declared }, s.pack);
       const changed = countChanged(before, after);
       const from = CATALOG[cur], to = CATALOG[pid];
       const seq = s.events.length + 1;
@@ -579,7 +739,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       if (v < SPAN_MIN) { v = SPAN_MIN; msg = 'clamped to 1.5 m (min)'; } else if (v > SPAN_MAX) { v = SPAN_MAX; msg = 'clamped to 6.0 m (max)'; }
       const s = get();
       if (v === s.span) { set({ spanText: v.toFixed(1), spanMsg: msg, spanErr: false }); return; }
-      const before = service.evaluate(design()), after = service.evaluate({ parts: s.parts, attrs: s.attrs, span: v });
+      const before = service.evaluate(design(), get().pack), after = service.evaluate({ parts: s.parts, attrs: s.attrs, span: v, declared: s.declared }, s.pack);
       const changed = countChanged(before, after);
       const old = s.span;
       const pos = { ...s.pos };
@@ -662,7 +822,22 @@ export const useStore = create<WorkbenchState>()((set, get) => {
 
     toggleOpen: (id) => set((s) => ({ open: { ...s.open, [id]: !s.open[id] } })),
     copy: (key, text) => { try { void navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ } set({ copied: key }); setTimeout(() => set({ copied: null }), 1200); },
-    rederiveLog: () => { const n = get().events.length; set({ rederive: { line: n + ' events · chain intact', detail: n + '/' + n + ' signatures valid · derived state == displayed state · pack v1 · ' + ((Date.now() % 37) + 9) + ' ms' } }); },
+    rederiveLog: () => {
+      const s = get(); const n = s.events.length;
+      if (s.tamperedSeq != null) { set({ rederive: { line: 'BREAK at #' + s.tamperedSeq, detail: 'stored value differs from the signed hash · ' + (s.tamperedSeq - 1) + '/' + n + ' signatures valid before the break · nothing after #' + s.tamperedSeq + ' can be trusted' } }); return; }
+      const design_events = s.events.filter((e) => e.snap);
+      const moved: string[] = [];
+      let rulesChanged = new Set<string>();
+      for (const e of design_events) {
+        const d: Design = { parts: e.snap!.parts, attrs: e.snap!.attrs, span: e.snap!.span, declared: e.snap!.declared };
+        const a = service.evaluate(d, 'v1'), b = service.evaluate(d, 'v2');
+        const diff = changedKeysOf(a.keys, b.keys);
+        if (diff.length) { moved.push('#' + e.seq); diff.forEach((k) => rulesChanged.add(k)); }
+      }
+      const sourcing = s.events.filter((e) => e.lane === 'sourcing' || e.lane === 'order').length;
+      const slow = n > 60;
+      set({ rederive: { line: n + ' events · chain intact', detail: n + '/' + n + ' signatures valid · derived state == displayed state · export pack ' + s.pack + ' (' + PACKS[s.pack].sha + ') · ' + (slow ? 'verifying chain only for sourcing events; replay exceeded 2 s' : sourcing + ' sourcing/order events replayed over the committed fixtures') + ' · under v1 vs v2: ' + rulesChanged.size + ' rule' + (rulesChanged.size === 1 ? '' : 's') + ' changed · ' + moved.length + ' design state' + (moved.length === 1 ? '' : 's') + ' moved' + (rulesChanged.size ? ' (' + [...rulesChanged].join(', ') + ')' : '') + ' · ' + ((Date.now() % 37) + 9) + ' ms' } });
+    },
 
     advance: () => {
       const a = get();
@@ -676,7 +851,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       acts[k]();
       set({ step: k + 1 });
     },
-    reset: () => set({ ...baseline(), round: null, sourcingOpen: false }),
+    reset: () => set({ ...baseline(), round: null, sourcingOpen: false, pack: 'v2', determination: null, tamperedSeq: null, extracted: {}, escalations: {}, memos: [], slotList: null, target: null }),
   };
 });
 

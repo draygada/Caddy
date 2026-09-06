@@ -93,7 +93,7 @@ export function renderSolid<T extends object = Record<never, never>>(
   return out;
 }
 
-const FOOTPRINT: Record<string, [number, number]> = { battery: [0.9, 0.5], imu: [0.22, 0.22], fc: [0.7, 0.45], thermal: [0.36, 0.36] };
+const FOOTPRINT: Record<string, [number, number]> = { battery: [0.9, 0.5], imu: [0.22, 0.22], fc: [0.7, 0.45], thermal: [0.36, 0.36], gnss: [0.22, 0.22], datalink: [0.4, 0.25], pod: [0.3, 0.3] };
 
 /** Dashed outline of the slot footprint when no part is placed. */
 export function emptySolid(slot: Slot, x: number, y: number, z: number, dims: Dims): Solid {
@@ -155,6 +155,39 @@ export function partSolid(pid: PartId, slot: Slot, x: number, y: number, z: numb
       faces = boxFaces(x, y, z, 0.7, 0.45, h, slot).concat(boxFaces(x + 0.25, y + 0.12, z + h, 0.16, 0.16, 0.03, slot, 'var(--m3)'), boxFaces(x + 0.5, y + 0.1, z + h, 0.1, 0.1, 0.03, slot, 'var(--m3)'), boxFaces(x + 0.05, y + 0.32, z + h, 0.12, 0.08, 0.03, slot, 'var(--m3)'));
       c = [x + 0.35, y + 0.22, z + h / 2]; break;
     }
+    case 'h743m': {
+      faces = boxFaces(x, y, z, 0.7, 0.45, h, slot, 'var(--m2)').concat(boxFaces(x + 0.25, y + 0.12, z + h, 0.16, 0.16, 0.03, slot, 'var(--m3)'), boxFaces(x + 0.05, y + 0.32, z + h, 0.12, 0.08, 0.03, slot, 'var(--m3)'));
+      c = [x + 0.35, y + 0.22, z + h / 2]; break;
+    }
+    case 'acc120': {
+      faces = boxFaces(x, y, z, 0.22, 0.22, h * 1.1, slot).concat(boxFaces(x + 0.04, y + 0.04, z + h * 1.1, 0.14, 0.14, 0.02, slot, 'var(--m3)'));
+      c = [x + 0.11, y + 0.11, z + h * 0.55]; break;
+    }
+    case 'neom9n': {
+      faces = boxFaces(x, y, z, 0.22, 0.22, 0.02, slot, 'var(--m3)').concat(cylFaces(x + 0.11, y + 0.11, z + 0.02, 0.09, h, slot, 14));
+      c = [x + 0.11, y + 0.11, z + h / 2]; break;
+    }
+    case 'crpa': {
+      faces = boxFaces(x - 0.08, y - 0.08, z, 0.38, 0.38, 0.02, slot, 'var(--m3)');
+      for (const [cx, cy] of [[0.03, 0.03], [0.19, 0.03], [0.03, 0.19], [0.19, 0.19]] as [number, number][]) faces = faces.concat(cylFaces(x + cx, y + cy, z + 0.02, 0.06, h, slot, 12));
+      c = [x + 0.11, y + 0.11, z + h / 2]; break;
+    }
+    case 'mcode': {
+      faces = boxFaces(x, y, z, 0.22, 0.22, h * 1.6, slot).concat(cylFaces(x + 0.11, y + 0.11, z + h * 1.6, 0.05, h * 0.8, slot, 10));
+      c = [x + 0.11, y + 0.11, z + h * 0.8]; break;
+    }
+    case 'pmddl': {
+      faces = boxFaces(x, y, z, 0.4, 0.25, h, slot).concat(cylFaces(x + 0.36, y + 0.12, z + h, 0.015, 0.35, slot, 8));
+      c = [x + 0.2, y + 0.12, z + h / 2]; break;
+    }
+    case 'aescustom': {
+      faces = boxFaces(x, y, z, 0.4, 0.25, h * 1.3, slot, 'var(--m2)').concat(cylFaces(x + 0.36, y + 0.12, z + h * 1.3, 0.015, 0.4, slot, 8), cylFaces(x + 0.06, y + 0.12, z + h * 1.3, 0.015, 0.4, slot, 8));
+      c = [x + 0.2, y + 0.12, z + h * 0.65]; break;
+    }
+    case 'podeo': {
+      faces = boxFaces(x, y, z, 0.3, 0.3, h * 0.3, slot).concat(cylFaces(x + 0.15, y + 0.15, z + h * 0.3, 0.12, h * 0.7, slot, 16), cylFaces(x + 0.15, y + 0.15, z + h, 0.05, 0.03, slot, 10));
+      c = [x + 0.15, y + 0.15, z + h / 2]; break;
+    }
   }
   if (fs !== 1) {
     const sc = (p: Vec3): Vec3 => [x + (p[0] - x) * fs, y + (p[1] - y) * fs, p[2]];
@@ -176,7 +209,7 @@ export function fitThumb(faces: (ProjectedFace & { stroke: string; dash: string 
   }));
 }
 
-const THUMB_DIMS: Dims = { battery: 0.35, imu: 0.1, fc: 0.03, thermal: 0.3, airframe: 0.8 };
+const THUMB_DIMS: Dims = { battery: 0.35, imu: 0.1, fc: 0.03, thermal: 0.3, airframe: 0.8, gnss: 0.06, datalink: 0.12, pod: 0.3 };
 const THUMB_PR = proj(Math.PI / 4, 0.6155, 1, 0, 0);
 
 export function thumbFaces(pid: PartId): ThumbFace[] {
@@ -195,8 +228,8 @@ export type ViewName = 'iso' | 'top' | 'bottom' | 'front' | 'back' | 'right' | '
 export const CUBE_NAMES: Record<string, [string, ViewName]> = {
   '0,0,1': ['Top', 'top'], '0,0,-1': ['Bottom', 'bottom'], '0,1,0': ['Front', 'front'], '0,-1,0': ['Back', 'back'], '1,0,0': ['Right', 'right'], '-1,0,0': ['Left', 'left'],
 };
-export const isSlot = (s: string): s is Slot => s === 'battery' || s === 'thermal' || s === 'imu' || s === 'fc';
-export const isNode = (s: string): s is Node => s === 'airframe' || s === 'battery' || s === 'thermal' || s === 'imu' || s === 'fc';
+export const isSlot = (s: string): s is Slot => s === 'battery' || s === 'thermal' || s === 'imu' || s === 'fc' || s === 'gnss' || s === 'datalink' || s === 'pod';
+export const isNode = (s: string): s is Node => s === 'airframe' || isSlot(s);
 
 /** Number faces within a solid so a selection can name one (index is stable for the same shape, not a durable topology id). */
 export function indexFaces(solid: Solid, body?: string): Solid {

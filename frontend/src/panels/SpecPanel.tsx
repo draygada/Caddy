@@ -1,5 +1,5 @@
 import { useStore, fieldKey } from '../store';
-import { CATALOG, CMP_KEYS, CRYPTO_OPTIONS, KEY_GROUPS, PALETTE, RULES_EVALUATED, SLOT_LABEL, type PartId } from '../lib/catalog';
+import { BOOL_FIELDS, CATALOG, CMP_KEYS, CRYPTO_OPTIONS, KEY_GROUPS, PALETTE, RULES_EVALUATED, SLOT_LABEL, type PartId } from '../lib/catalog';
 import type { Outcome } from '../lib/rules';
 import { partOf, specAttrsOf } from '../lib/viewmodel';
 import { fmtNum, fromUnit, toUnit } from '../lib/units';
@@ -12,7 +12,7 @@ export function SpecPanel({ o }: { o: Outcome }) {
   const selPart = sel ? partOf(sel, s.parts, s.span) : null;
   const slot = sel && sel !== 'airframe' ? sel : null;
   const pid = slot ? s.parts[slot] : null;
-  const specAttrs = slot ? specAttrsOf(slot, pid, s.attrs[slot]) : [];
+  const specAttrs = slot ? specAttrsOf(slot, pid, s.attrs[slot], s.extracted) : [];
   const showNoChange = !!(s.lastDiff && s.lastDiff.changed === 0);
   const pending = s.pending;
   const unconfirmedSeq = slot ? s.unconfirmed[slot] : undefined;
@@ -137,6 +137,14 @@ export function SpecPanel({ o }: { o: Outcome }) {
             </div>
           );
         })}
+        {slot && pid && BOOL_FIELDS[slot].length > 0 && (
+          <div className="px-3 py-[10px] border-b border-line2 grid gap-1">
+            <div className="text-[13px] text-muted">features · declared on the part</div>
+            {BOOL_FIELDS[slot].map((b) => (
+              <label key={b.key} className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={!!s.attrs[slot][b.key]} disabled={readOnly} onChange={(e) => s.setBool(slot, b.key, e.target.checked)} /> {b.label} <span className="chip chip-sm">declared</span></label>
+            ))}
+          </div>
+        )}
         {slot === 'fc' && pid && (
           <div className="px-3 py-[10px] border-b border-line2">
             <div className="flex justify-between gap-2 items-baseline mb-1">

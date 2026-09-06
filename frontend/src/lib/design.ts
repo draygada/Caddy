@@ -1,7 +1,7 @@
 // The replayable design state. Every timeline event carries the Snapshot that
 // resulted from it, so dragging the timeline marker to seq N shows exactly the
 // state at N without deleting anything: undo is supersede.
-import type { Dims, Feature, Slot } from './catalog';
+import type { Declared, Dims, Feature, Slot } from './catalog';
 import type { Attrs, Parts } from './rules';
 
 export interface Pos { x: number; y: number }
@@ -31,4 +31,6 @@ export interface Snapshot {
   tint: Partial<Record<Slot, string>>;
   /** swaps awaiting a human attestation: slot → seq of the part_swapped event */
   unconfirmed: Partial<Record<Slot, number>>;
+  /** declared facts, product-level and per node */
+  declared: Declared;
 }
