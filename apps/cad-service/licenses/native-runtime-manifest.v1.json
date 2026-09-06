@@ -1,0 +1,1563 @@
+{
+  "artifact": {
+    "bytes": 67439751,
+    "filename": "cadquery_ocp_novtk-7.9.3.1-cp312-cp312-manylinux_2_31_x86_64.whl",
+    "name": "cadquery-ocp-novtk",
+    "sha256": "8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b",
+    "url": "https://files.pythonhosted.org/packages/89/6b/ee2d35470b0136c7435eff392d6617795219dad46a176f168fcd4d26f19e/cadquery_ocp_novtk-7.9.3.1-cp312-cp312-manylinux_2_31_x86_64.whl",
+    "version": "7.9.3.1"
+  },
+  "auditwheel_sbom": {
+    "bytes": 9760,
+    "license_declarations": "UNDECLARED in wheel-generated SBOM; supplemented by this manifest and exact package notices",
+    "path": "licenses/native/OCP-WHEEL-AUDITWHEEL-CDX-1.4.json",
+    "sha256": "9acbb7d86c746873c40a970bd1afc89855986aa1e5b9ae85e6a53032f7201b10",
+    "upstream_component_count": 19
+  },
+  "build_provenance": {
+    "built_at": "2026-02-14",
+    "commit": "648499040b66a769293edfa844ff170ff8046619",
+    "occt_commit": "a016080bf6738d6aeae020badee4e888ad1540a5",
+    "ocp_commit": "d69b064a3a604ebf245b1f3b14fb54c835a3a571",
+    "repository": "https://github.com/CadQuery/ocp-build-system",
+    "workflow_run": "https://github.com/CadQuery/ocp-build-system/actions/runs/22015284255",
+    "workflow_run_id": 22015284255
+  },
+  "components": [
+    {
+      "declared_license": "Apache-2.0",
+      "id": "ocp",
+      "license_evidence": [
+        {
+          "bytes": 11346,
+          "path": "licenses/OCP-APACHE-2.0.txt",
+          "sha256": "a13caea71627202ad33cc4cafafdd18e667e16716488f8d9c568127121fb89fd"
+        }
+      ],
+      "name": "OCP",
+      "origin": "pypi-wheel",
+      "source_sets": [
+        "github:CadQuery/OCP@d69b064a3a604ebf245b1f3b14fb54c835a3a571",
+        "github:CadQuery/ocp-build-system@648499040b66a769293edfa844ff170ff8046619"
+      ],
+      "version": "7.9.3.1"
+    },
+    {
+      "declared_license": "LGPL-2.1-only WITH OCCT-LGPL-exception-1.0",
+      "id": "occt",
+      "license_evidence": [
+        {
+          "bytes": 26434,
+          "path": "licenses/OCCT-LGPL-2.1.txt",
+          "sha256": "e237fa56668030e928551ddd60f05df5fe957f75eab874bbd017e085ed722e7c"
+        },
+        {
+          "bytes": 663,
+          "path": "licenses/OCCT-LGPL-EXCEPTION-1.0.txt",
+          "sha256": "04580a884ea6cea294402649ff7b5cbb167d47462d1340a4ed33e550db10a81b"
+        }
+      ],
+      "name": "Open CASCADE Technology",
+      "origin": "built-into-ocp-wheel",
+      "source_sets": [
+        "github:Open-Cascade-SAS/OCCT@a016080bf6738d6aeae020badee4e888ad1540a5",
+        "github:CadQuery/ocp-build-system@648499040b66a769293edfa844ff170ff8046619"
+      ],
+      "version": "7.9.3"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libjxr0",
+      "license_evidence": [
+        {
+          "bytes": 1549,
+          "path": "licenses/native/ubuntu/libjxr0.copyright",
+          "sha256": "21c5395ffb35d6eaa9365480e800f58aece55072614a25426546a91ddb6462ab"
+        }
+      ],
+      "license_fields": [
+        "Redistribution and use in source and binary forms, with or without",
+        "Same as above"
+      ],
+      "name": "libjxr0",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 157508,
+        "changes_url": "https://launchpad.net/ubuntu/+source/jxrlib/1.1-6build1/+build/14528302/+files/jxrlib_1.1-6build1_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/131827777",
+        "sha256": "c851ab88ee89803ee5b6ddb9629377c5b20808c1e6c066d15e94ab07c7d1d2a2",
+        "url": "https://launchpad.net/ubuntu/+source/jxrlib/1.1-6build1/+build/14528302/+files/libjxr0_1.1-6build1_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:jxrlib@1.1-6build1"
+      ],
+      "version": "1.1-6build1"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libopenexr24",
+      "license_evidence": [
+        {
+          "bytes": 12326,
+          "path": "licenses/native/ubuntu/libopenexr24.copyright",
+          "sha256": "8bbbb0526e77fadacb006faec445ca36865acc576d0729a95efca1f705ed7dc9"
+        }
+      ],
+      "license_fields": [
+        "openexr",
+        "BSD-3-clause",
+        "GPL-2+"
+      ],
+      "name": "libopenexr24",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 592252,
+        "changes_url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/21340426/+files/openexr_2.3.0-6ubuntu0.5_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/156820859",
+        "sha256": "b502e043cbd9fbce0b8d7db0a021040b57d70e3a95934b86fdf5b6660624a8ca",
+        "url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/21340426/+files/libopenexr24_2.3.0-6ubuntu0.5_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:openexr@2.3.0-6ubuntu0.5"
+      ],
+      "version": "2.3.0-6ubuntu0.5"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libwebp6",
+      "license_evidence": [
+        {
+          "bytes": 2027,
+          "path": "licenses/native/ubuntu/libwebp6.copyright",
+          "sha256": "01eb328708a9454061dd13931b19135e1c2c6251a7e6a6d0efc4b9bc436109c7"
+        }
+      ],
+      "license_fields": [
+        "Redistribution and use in source and binary forms, with or without"
+      ],
+      "name": "libwebp6",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 185248,
+        "changes_url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/26706346/+files/libwebp_0.6.1-2ubuntu0.20.04.3_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/197047971",
+        "sha256": "78bd6a8a1a6cd990024cad5f8ccfc0b7988b0b4bcfe2faa7c4f7ea3c6b44189e",
+        "url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/26706346/+files/libwebp6_0.6.1-2ubuntu0.20.04.3_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:libwebp@0.6.1-2ubuntu0.20.04.3"
+      ],
+      "version": "0.6.1-2ubuntu0.20.04.3"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libwebpmux3",
+      "license_evidence": [
+        {
+          "bytes": 2027,
+          "path": "licenses/native/ubuntu/libwebpmux3.copyright",
+          "sha256": "01eb328708a9454061dd13931b19135e1c2c6251a7e6a6d0efc4b9bc436109c7"
+        }
+      ],
+      "license_fields": [
+        "Redistribution and use in source and binary forms, with or without"
+      ],
+      "name": "libwebpmux3",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 19496,
+        "changes_url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/26706346/+files/libwebp_0.6.1-2ubuntu0.20.04.3_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/197047975",
+        "sha256": "4c6e9a4ea76a39c8d7b2f419f7af9771224f9143cc22c2484eaae2f767f9afdc",
+        "url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/26706346/+files/libwebpmux3_0.6.1-2ubuntu0.20.04.3_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:libwebp@0.6.1-2ubuntu0.20.04.3"
+      ],
+      "version": "0.6.1-2ubuntu0.20.04.3"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libraw19",
+      "license_evidence": [
+        {
+          "bytes": 43436,
+          "path": "licenses/native/ubuntu/libraw19.copyright",
+          "sha256": "7d6dd7f812a3e0645819dc7ab41b36ef6cb87b967071be4654314a96ab6b0a2a"
+        }
+      ],
+      "license_fields": [
+        "LGPL-2.1 or CDDL-1.0",
+        "CC-BY-SA-3.0",
+        "dcraw",
+        "BSD-3-clause",
+        "GPL-2+",
+        "LGPL-2.1",
+        "CDDL-1.0"
+      ],
+      "name": "libraw19",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 261380,
+        "changes_url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/30656973/+files/libraw_0.19.5-1ubuntu1.4_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/224911638",
+        "sha256": "3c7957f68d970f236d34c39a61256660b5b12dcad1d7aa9e45d4205d14fe0501",
+        "url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/30656973/+files/libraw19_0.19.5-1ubuntu1.4_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:libraw@0.19.5-1ubuntu1.4"
+      ],
+      "version": "0.19.5-1ubuntu1.4"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libilmbase24",
+      "license_evidence": [
+        {
+          "bytes": 2558,
+          "path": "licenses/native/ubuntu/libilmbase24.copyright",
+          "sha256": "c47caf8451d16399227ba9c986fa07450881b5cdf9fd036d12250e7ec16261ad"
+        }
+      ],
+      "license_fields": [
+        "ilmbase",
+        "boost"
+      ],
+      "name": "libilmbase24",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 75128,
+        "changes_url": "https://launchpad.net/ubuntu/+source/ilmbase/2.3.0-6build1/+build/18870907/+files/ilmbase_2.3.0-6build1_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/139511778",
+        "sha256": "e40669f8a3c4a88280ad11591c945c847b6549534bc512a7d05c28666b547d2c",
+        "url": "https://launchpad.net/ubuntu/+source/ilmbase/2.3.0-6build1/+build/18870907/+files/libilmbase24_2.3.0-6build1_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:ilmbase@2.3.0-6build1"
+      ],
+      "version": "2.3.0-6build1"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:liblcms2-2",
+      "license_evidence": [
+        {
+          "bytes": 2168,
+          "path": "licenses/native/ubuntu/liblcms2-2.copyright",
+          "sha256": "13d19c136af4fc6fb594f491884d37677a555e7e193540037cab1693704bfe5a"
+        }
+      ],
+      "license_fields": [
+        "MIT",
+        "GPL-2+"
+      ],
+      "name": "liblcms2-2",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 140296,
+        "changes_url": "https://launchpad.net/ubuntu/+source/lcms2/2.9-4/+build/17748064/+files/lcms2_2.9-4_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/131817229",
+        "sha256": "1df587b2223d21382fb1c91c05cc5092ae0175d335cc4188fb3c5354ec5e65e6",
+        "url": "https://launchpad.net/ubuntu/+source/lcms2/2.9-4/+build/17748064/+files/liblcms2-2_2.9-4_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:lcms2@2.9-4"
+      ],
+      "version": "2.9-4"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libopenjp2-7",
+      "license_evidence": [
+        {
+          "bytes": 44903,
+          "path": "licenses/native/ubuntu/libopenjp2-7.copyright",
+          "sha256": "428cdae664cba894a1a69b9cf22ac3812a84b6d4df9c19b5c8f9cc4c4530eb5e"
+        }
+      ],
+      "license_fields": [
+        "BSD-2",
+        "MIT",
+        "BSD-3",
+        "public-domain",
+        "LIBPNG",
+        "ZLIB",
+        "LIBTIFF",
+        "LIBTIFF-PIXAR",
+        "LIBTIFF-GLARSON"
+      ],
+      "name": "libopenjp2-7",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 141424,
+        "changes_url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/30076561/+files/openjpeg2_2.3.1-1ubuntu4.20.04.4_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/219941803",
+        "sha256": "07ac2be7b57763ca4df7df7c12b482e1895b963f5dd819b04d70962c52fadad0",
+        "url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/30076561/+files/libopenjp2-7_2.3.1-1ubuntu4.20.04.4_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:openjpeg2@2.3.1-1ubuntu4.20.04.4"
+      ],
+      "version": "2.3.1-1ubuntu4.20.04.4"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libtiff5",
+      "license_evidence": [
+        {
+          "bytes": 1837,
+          "path": "licenses/native/ubuntu/libtiff5.copyright",
+          "sha256": "76d76328df19f51ad6b48e925cc2fd8aeaea7d2f1ce905983753fc855466de8b"
+        }
+      ],
+      "license_fields": [
+        "Hylafax"
+      ],
+      "name": "libtiff5",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 163968,
+        "changes_url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/28916005/+files/tiff_4.1.0+git191117-2ubuntu0.20.04.14_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/214245737",
+        "sha256": "b2042727ad45469ba013ad3537b808c3b0ba1b6e9084edc5ac798c5f128d72c0",
+        "url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/28916005/+files/libtiff5_4.1.0+git191117-2ubuntu0.20.04.14_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:tiff@4.1.0+git191117-2ubuntu0.20.04.14"
+      ],
+      "version": "4.1.0+git191117-2ubuntu0.20.04.14"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libfreeimage3",
+      "license_evidence": [
+        {
+          "bytes": 18960,
+          "path": "licenses/native/ubuntu/libfreeimage3.copyright",
+          "sha256": "95c09f74f81fd0317d8d84aa630e2a75e4239e0dfc40c8aa91ab8d9525bc5678"
+        }
+      ],
+      "license_fields": [
+        "GPL-2.0 or GPL-3.0 or FIPL-1.0",
+        "GPL-2.0",
+        "FIPL-1.0",
+        "GPL-3.0"
+      ],
+      "name": "libfreeimage3",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 270100,
+        "changes_url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/27645239/+files/freeimage_3.18.0+ds2-1ubuntu3.1_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/203167676",
+        "sha256": "7aa59810fbd6fa001a91aaf0a3db8200e5dd918b7ed6dcb2e15ea57fbbf22aaa",
+        "url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/27645239/+files/libfreeimage3_3.18.0+ds2-1ubuntu3.1_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:freeimage@3.18.0+ds2-1ubuntu3.1"
+      ],
+      "version": "3.18.0+ds2-1ubuntu3.1"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libjpeg-turbo8",
+      "license_evidence": [
+        {
+          "bytes": 6101,
+          "path": "licenses/native/ubuntu/libjpeg-turbo8.copyright",
+          "sha256": "193468d9eb043a180f6f9e3386f7205104908dcb8525ad39c8236990dfd452ef"
+        }
+      ],
+      "license_fields": [
+        "JPEG",
+        "License to copy and use this software is granted provided that it",
+        "LGPL-2.1"
+      ],
+      "name": "libjpeg-turbo8",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 118048,
+        "changes_url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/24494773/+files/libjpeg-turbo_2.0.3-0ubuntu1.20.04.3_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/181518570",
+        "sha256": "aeec9c8d11d026533760b93b422077eb0df3818249a6ef4fd21be87770b06d2a",
+        "url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/24494773/+files/libjpeg-turbo8_2.0.3-0ubuntu1.20.04.3_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:libjpeg-turbo@2.0.3-0ubuntu1.20.04.3"
+      ],
+      "version": "2.0.3-0ubuntu1.20.04.3"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libpng16-16",
+      "license_evidence": [
+        {
+          "bytes": 13341,
+          "path": "licenses/native/ubuntu/libpng16-16.copyright",
+          "sha256": "b2d88c45221e2016a5a0bb98406b45faf911f1aff87242eec12af05abae1de0a"
+        }
+      ],
+      "license_fields": [
+        "libpng",
+        "expat",
+        "GPL-2+ or BSD-like-with-advertising-clause",
+        "libpng OR Apache-2.0 OR BSD-3-clause",
+        "Apache-2.0",
+        "GPL-2+",
+        "BSD-like-with-advertising-clause",
+        "BSD-3-clause"
+      ],
+      "name": "libpng16-16",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 179076,
+        "changes_url": "https://launchpad.net/ubuntu/+source/libpng1.6/1.6.37-2/+build/18675434/+files/libpng1.6_1.6.37-2_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/137793049",
+        "sha256": "6c512b7c67eafe0302026fa719f924bb77b39c57e1845a3d8b81cfd607c3b22c",
+        "url": "https://launchpad.net/ubuntu/+source/libpng1.6/1.6.37-2/+build/18675434/+files/libpng16-16_1.6.37-2_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:libpng1.6@1.6.37-2"
+      ],
+      "version": "1.6.37-2"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libjbig0",
+      "license_evidence": [
+        {
+          "bytes": 1849,
+          "path": "licenses/native/ubuntu/libjbig0.copyright",
+          "sha256": "89ab20c324a191652e94598f2144a65442faed4f14f77bbd10516130ee20f05a"
+        }
+      ],
+      "license_fields": [
+        "GPL-2+"
+      ],
+      "name": "libjbig0",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 27272,
+        "changes_url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/24863843/+files/jbigkit_2.1-3.1ubuntu0.20.04.1_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/184311954",
+        "sha256": "315e24e719f213222db49a6f4edd41f432c36fea333e399d3c4dede17f5f51a6",
+        "url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/24863843/+files/libjbig0_2.1-3.1ubuntu0.20.04.1_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:jbigkit@2.1-3.1ubuntu0.20.04.1"
+      ],
+      "version": "2.1-3.1ubuntu0.20.04.1"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libfreetype6",
+      "license_evidence": [
+        {
+          "bytes": 30436,
+          "path": "licenses/native/ubuntu/libfreetype6.copyright",
+          "sha256": "b8bee9163f1c46783b3e0a960f58783d059c449d4b4ecd1d9918cc09ef8690e2"
+        }
+      ],
+      "license_fields": [
+        "GPL-2+ or FTL",
+        "FTL and MIT",
+        "FTL",
+        "BSD-3-Clause",
+        "FSFULLR and GPL-2+",
+        "FSFUL and GPL-2+",
+        "Permissive and GPL-3+",
+        "MIT",
+        "GPL-2+ and GPL-3+",
+        "GPL-2+",
+        "Apache-2.0",
+        "OFL-1.1",
+        "MPL-1.1",
+        "Public-Domain",
+        "MIT or GPL-2+",
+        "Zlib",
+        "OpenGroup-BSD-like",
+        "FSFUL",
+        "FSFULLR",
+        "GPL-3+",
+        "Permissive"
+      ],
+      "name": "libfreetype6",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 340804,
+        "changes_url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/30421743/+files/freetype_2.10.1-2ubuntu0.4_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/222620034",
+        "sha256": "db8593630b432c9f69682f6040578a7db3a6ae2df6d172bc0e6df9982a714e27",
+        "url": "https://launchpad.net/~ubuntu-security-proposed/+archive/ubuntu/ppa/+build/30421743/+files/libfreetype6_2.10.1-2ubuntu0.4_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:freetype@2.10.1-2ubuntu0.4"
+      ],
+      "version": "2.10.1-2ubuntu0.4"
+    },
+    {
+      "declared_license": "SEE-EXACT-DEBIAN-COPYRIGHT",
+      "id": "ubuntu:libfontconfig1",
+      "license_evidence": [
+        {
+          "bytes": 1301,
+          "path": "licenses/native/ubuntu/libfontconfig1.copyright",
+          "sha256": "b215a61cdd3e62b5b17cc28b1852c78acb3dd38be0fb30706f7efc050dba91db"
+        }
+      ],
+      "license_fields": [],
+      "name": "libfontconfig1",
+      "origin": "ubuntu-focal-amd64-deb",
+      "package_artifact": {
+        "bytes": 114072,
+        "changes_url": "https://launchpad.net/ubuntu/+source/fontconfig/2.13.1-2ubuntu3/+build/19128212/+files/fontconfig_2.13.1-2ubuntu3_amd64.changes",
+        "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+binarypub/140373899",
+        "sha256": "7ca5523936a9b8e42f60c0f01c232145809387e5680b05c7bce0bea31844a522",
+        "url": "https://launchpad.net/ubuntu/+source/fontconfig/2.13.1-2ubuntu3/+build/19128212/+files/libfontconfig1_2.13.1-2ubuntu3_amd64.deb"
+      },
+      "source_sets": [
+        "ubuntu-source:fontconfig@2.13.1-2ubuntu3"
+      ],
+      "version": "2.13.1-2ubuntu3"
+    },
+    {
+      "build": "he0feb66_17",
+      "declared_license": "GPL-3.0-only WITH GCC-exception-3.1",
+      "feedstock": {
+        "commit": "57423ed378c67b3efd9a6ca0e9803d6ae3453207",
+        "flow_run_id": "azure_20260204.3.1",
+        "url": "https://github.com/conda-forge/ctng-compilers-feedstock"
+      },
+      "id": "conda:libgomp",
+      "license_evidence": [
+        {
+          "bytes": 3324,
+          "path": "licenses/native/conda/libgomp-RUNTIME.LIBRARY.EXCEPTION.gomp_copy",
+          "sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74"
+        }
+      ],
+      "name": "libgomp",
+      "origin": "conda-forge-linux-64",
+      "package_artifact": {
+        "bytes": 603334,
+        "sha256": "b961b5dd9761907a7179678b58a69bb4fc16b940eb477f635aea3aec0a3f17a6",
+        "url": "https://api.anaconda.org/download/conda-forge/libgomp/15.2.0/linux-64/libgomp-15.2.0-he0feb66_17.conda"
+      },
+      "package_metadata_evidence": [
+        {
+          "bytes": 665,
+          "path": "licenses/native/conda/metadata/libgomp--info__paths.json",
+          "sha256": "23ddb1027b424e74c8d70e50bdbb7db6ce9992af53e883992924ed66723fb803",
+          "upstream_path": "info/paths.json"
+        },
+        {
+          "bytes": 292,
+          "path": "licenses/native/conda/metadata/libgomp--info__index.json",
+          "sha256": "9a0bb7ef178ef92893d95c3a9d1b54433e86b2fc7f217b0d77d3249ddff7fc04",
+          "upstream_path": "info/index.json"
+        },
+        {
+          "bytes": 38181,
+          "path": "licenses/native/conda/metadata/libgomp--info__recipe__parent__meta.yaml",
+          "sha256": "ddf510444249be56391f831a768b201ef482230def66ee1bce405a6cc6fdea77",
+          "upstream_path": "info/recipe/parent/meta.yaml"
+        },
+        {
+          "bytes": 8572,
+          "path": "licenses/native/conda/metadata/libgomp--info__about.json",
+          "sha256": "2825c51ee3dc546ecd7fd7f2bcabe222ee1e1a9fe927b802328c3ea819e2df53",
+          "upstream_path": "info/about.json"
+        },
+        {
+          "bytes": 1747,
+          "path": "licenses/native/conda/metadata/libgomp--info__recipe__meta.yaml",
+          "sha256": "e0dc88480cad174776119c44b720df94b1dfae30866cabc780bd7b1b1ef7dcee",
+          "upstream_path": "info/recipe/meta.yaml"
+        }
+      ],
+      "source_sets": [
+        "conda-source:libgomp@15.2.0"
+      ],
+      "version": "15.2.0"
+    },
+    {
+      "build": "hb03c661_0",
+      "declared_license": "0BSD",
+      "feedstock": {
+        "commit": "552bba367d56872022f0ca368a3fa92472484a8c",
+        "flow_run_id": "azure_20260118.2.1",
+        "url": "https://github.com/conda-forge/xz-feedstock"
+      },
+      "id": "conda:liblzma",
+      "license_evidence": [
+        {
+          "bytes": 3119,
+          "path": "licenses/native/conda/liblzma-COPYING",
+          "sha256": "616a3ad264ce29b8f1cb97e53037b139d406899ca8d1f799651e17bfa09830b8"
+        },
+        {
+          "bytes": 607,
+          "path": "licenses/native/conda/liblzma-COPYING.0BSD",
+          "sha256": "0b01625d853911cd0e2e088dcfb743261034a091bb379246cb25a14cc4c74bf1"
+        }
+      ],
+      "name": "liblzma",
+      "origin": "conda-forge-linux-64",
+      "package_artifact": {
+        "bytes": 113207,
+        "sha256": "755c55ebab181d678c12e49cced893598f2bab22d582fbbf4d8b83c18be207eb",
+        "url": "https://api.anaconda.org/download/conda-forge/liblzma/5.8.2/linux-64/liblzma-5.8.2-hb03c661_0.conda"
+      },
+      "package_metadata_evidence": [
+        {
+          "bytes": 431,
+          "path": "licenses/native/conda/metadata/liblzma--info__paths.json",
+          "sha256": "e6728d656df9306afef9923510332bfb37e66a9f656b4c8cf564fa88f978f9be",
+          "upstream_path": "info/paths.json"
+        },
+        {
+          "bytes": 2050,
+          "path": "licenses/native/conda/metadata/liblzma--info__recipe__meta.yaml",
+          "sha256": "d6776f042d421394703aff3aea3b1909c25e49d33586f48d40da264bf7a78e7c",
+          "upstream_path": "info/recipe/meta.yaml"
+        },
+        {
+          "bytes": 317,
+          "path": "licenses/native/conda/metadata/liblzma--info__index.json",
+          "sha256": "44ef5f2e84a938d44ec424855d76b671cf5c82a8068d3e7a11acd241590bdcc1",
+          "upstream_path": "info/index.json"
+        },
+        {
+          "bytes": 10470,
+          "path": "licenses/native/conda/metadata/liblzma--info__recipe__parent__meta.yaml",
+          "sha256": "80c9b6bce6c2caa61a7556bcc705a2d0679ad29f6836bd461444c80ab452c460",
+          "upstream_path": "info/recipe/parent/meta.yaml"
+        },
+        {
+          "bytes": 7790,
+          "path": "licenses/native/conda/metadata/liblzma--info__about.json",
+          "sha256": "6c523a88bfec141905baba13c7477190847adb5f8b120c533711cb2118239cb3",
+          "upstream_path": "info/about.json"
+        }
+      ],
+      "source_sets": [
+        "conda-source:liblzma@5.8.2"
+      ],
+      "version": "5.8.2"
+    },
+    {
+      "build": "hb78ec9c_6",
+      "declared_license": "BSD-3-Clause",
+      "feedstock": {
+        "commit": "1b0cb8a51701b5e80754b865d53aec3e75f89e5a",
+        "flow_run_id": "azure_20251203.5.1",
+        "url": "https://github.com/conda-forge/zstd-feedstock"
+      },
+      "id": "conda:zstd",
+      "license_evidence": [
+        {
+          "bytes": 1549,
+          "path": "licenses/native/conda/zstd-LICENSE",
+          "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8"
+        }
+      ],
+      "name": "zstd",
+      "origin": "conda-forge-linux-64",
+      "package_artifact": {
+        "bytes": 601375,
+        "sha256": "68f0206ca6e98fea941e5717cec780ed2873ffabc0e1ed34428c061e2c6268c7",
+        "url": "https://api.anaconda.org/download/conda-forge/zstd/1.5.7/linux-64/zstd-1.5.7-hb78ec9c_6.conda"
+      },
+      "package_metadata_evidence": [
+        {
+          "bytes": 905,
+          "path": "licenses/native/conda/metadata/zstd--info__about.json",
+          "sha256": "a6467300eee7c7376006d536232fc37a16813da4f9e00151a2c23cc5d16bb2f4",
+          "upstream_path": "info/about.json"
+        },
+        {
+          "bytes": 293,
+          "path": "licenses/native/conda/metadata/zstd--info__index.json",
+          "sha256": "b5e191f85e011ba74cc717e9283034ecb9720c079de9a1b7e805dd0e09bd891e",
+          "upstream_path": "info/index.json"
+        },
+        {
+          "bytes": 3873,
+          "path": "licenses/native/conda/metadata/zstd--info__paths.json",
+          "sha256": "7789a8f110406d9290a2138a1881722ac60ed64b8deecce762c7725561969c22",
+          "upstream_path": "info/paths.json"
+        },
+        {
+          "bytes": 4233,
+          "path": "licenses/native/conda/metadata/zstd--info__recipe__recipe.yaml",
+          "sha256": "7192b580b1ad153bf4a9af1a6ba542f091dc3567edca4f3c5d22cacfc7d6a819",
+          "upstream_path": "info/recipe/recipe.yaml"
+        },
+        {
+          "bytes": 16711,
+          "path": "licenses/native/conda/metadata/zstd--info__recipe__rendered_recipe.yaml",
+          "sha256": "4f522da52820051afd8bacc9bac3fe98362ba9311185f7f597cef8f9d1c5271b",
+          "upstream_path": "info/recipe/rendered_recipe.yaml"
+        }
+      ],
+      "source_sets": [
+        "conda-source:zstd@1.5.7"
+      ],
+      "version": "1.5.7"
+    },
+    {
+      "build": "h5347b49_0",
+      "declared_license": "BSD-3-Clause",
+      "feedstock": {
+        "commit": "ed4fae6411c4e242ee7e1c836e94f719a5cc1b18",
+        "flow_run_id": "azure_20251215.2.2",
+        "url": "https://github.com/conda-forge/libuuid-feedstock"
+      },
+      "id": "conda:libuuid",
+      "license_evidence": [
+        {
+          "bytes": 18092,
+          "path": "licenses/native/conda/libuuid-COPYING",
+          "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+        }
+      ],
+      "name": "libuuid",
+      "origin": "conda-forge-linux-64",
+      "package_artifact": {
+        "bytes": 40311,
+        "sha256": "1a7539cfa7df00714e8943e18de0b06cceef6778e420a5ee3a2a145773758aee",
+        "url": "https://api.anaconda.org/download/conda-forge/libuuid/2.41.3/linux-64/libuuid-2.41.3-h5347b49_0.conda"
+      },
+      "package_metadata_evidence": [
+        {
+          "bytes": 376,
+          "path": "licenses/native/conda/metadata/libuuid--info__about.json",
+          "sha256": "c3b14713af527219599bed85a032cc7490fb457a87656fb80d393fa4d3ee380d",
+          "upstream_path": "info/about.json"
+        },
+        {
+          "bytes": 286,
+          "path": "licenses/native/conda/metadata/libuuid--info__index.json",
+          "sha256": "c81942b99a1657f5bc761ce2987a57b7d24d62be5cd7a16c32b06988c4ce19b6",
+          "upstream_path": "info/index.json"
+        },
+        {
+          "bytes": 2138,
+          "path": "licenses/native/conda/metadata/libuuid--info__paths.json",
+          "sha256": "de7603bcad2ab7d8f7f64ec1ae2215e8317b9fc91a436fcc7cc32771b83b53cc",
+          "upstream_path": "info/paths.json"
+        },
+        {
+          "bytes": 1090,
+          "path": "licenses/native/conda/metadata/libuuid--info__recipe__recipe.yaml",
+          "sha256": "6ba56fa6a28f52786be4f46a83fda078c7c17d7abf058de204b987f9ad26e16e",
+          "upstream_path": "info/recipe/recipe.yaml"
+        },
+        {
+          "bytes": 37896,
+          "path": "licenses/native/conda/metadata/libuuid--info__recipe__rendered_recipe.yaml",
+          "sha256": "5ce103e2a24c45f70e869bfcc2f9612bef949d73be5001ba04cf2b673ffb0ca1",
+          "upstream_path": "info/recipe/rendered_recipe.yaml"
+        }
+      ],
+      "source_sets": [
+        "conda-source:libuuid@2.41.3"
+      ],
+      "version": "2.41.3"
+    },
+    {
+      "declared_license": "MIT-TEXT-IN-WHEEL; PYPI-LICENSE-EXPRESSION-UNSET",
+      "id": "pypi:pydantic-core",
+      "license_evidence": [
+        {
+          "bytes": 1080,
+          "path": "licenses/native/pypi/pydantic-core-LICENSE",
+          "sha256": "2afdd30d54b4d62b6f488a6bcc1546e84ec5061f13f4209c03d012348783795a"
+        }
+      ],
+      "name": "pydantic-core",
+      "origin": "pypi-wheel",
+      "package_artifact": {
+        "bytes": 2002028,
+        "filename": "pydantic_core-2.33.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        "sha256": "8f57a69461af2a5fa6e6bbd7a5f60d3b7e6cebb687f55106933188e79ad155c1",
+        "url": "https://files.pythonhosted.org/packages/f9/41/4b043778cf9c4285d59742281a769eac371b9e47e35f98ad321349cc5d61/pydantic_core-2.33.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+      },
+      "source_sets": [
+        "pypi-source:pydantic-core@2.33.2"
+      ],
+      "version": "2.33.2"
+    }
+  ],
+  "expected_native_file_count": 70,
+  "generated_on": "2026-09-05",
+  "native_files": [
+    {
+      "bytes": 162377849,
+      "component_id": "ocp",
+      "mapping_evidence": {
+        "method": "wheel-owned extension path"
+      },
+      "path": "OCP/OCP.cpython-312-x86_64-linux-gnu.so",
+      "sha256": "be0e408a1f401acf441ba4048742e0accdfbd51c35ffbe113cdd27e8c5a90448"
+    },
+    {
+      "bytes": 283745,
+      "component_id": "ubuntu:libilmbase24",
+      "mapping_evidence": {
+        "hash_prefix": "614356b1",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 276776,
+        "path": "usr/lib/x86_64-linux-gnu/libHalf.so.24.0.0",
+        "sha256": "614356b1ab7910b7f44a894fd32772f4c676d20799fb1f56d5e444f81ad84da2"
+      },
+      "path": "cadquery_ocp_novtk.libs/libHalf-614356b1.so.24.0.0",
+      "sha256": "a54ef23385b6d7878d4611bcf3f19847eb1e3e8d96921ec6b3be24f660f4467a"
+    },
+    {
+      "bytes": 182457,
+      "component_id": "ubuntu:libilmbase24",
+      "mapping_evidence": {
+        "hash_prefix": "f9b27411",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 129608,
+        "path": "usr/lib/x86_64-linux-gnu/libIex-2_3.so.24.0.0",
+        "sha256": "f9b274118e0904dbfa2df5fec5e5e72c049f0668fb721032da708aa4d7aac7b7"
+      },
+      "path": "cadquery_ocp_novtk.libs/libIex-2_3-f9b27411.so.24.0.0",
+      "sha256": "338de1c859637fd274a3813c0fc9ba809c2e5ce5c5a3015dde4f3223e65997eb"
+    },
+    {
+      "bytes": 3415385,
+      "component_id": "ubuntu:libopenexr24",
+      "mapping_evidence": {
+        "hash_prefix": "72bfabbd",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 3000752,
+        "path": "usr/lib/x86_64-linux-gnu/libIlmImf-2_3.so.24.0.0",
+        "sha256": "72bfabbd5abf189017b536e28845a5f8824bf4fb83fd4b0f738bf2049bc6a5b4"
+      },
+      "path": "cadquery_ocp_novtk.libs/libIlmImf-2_3-72bfabbd.so.24.0.0",
+      "sha256": "70f3dfeb26c3b3ad212508e61476ca795082b09528bc667598e1dea824f5bbed"
+    },
+    {
+      "bytes": 58601,
+      "component_id": "ubuntu:libilmbase24",
+      "mapping_evidence": {
+        "hash_prefix": "b765c51d",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 35512,
+        "path": "usr/lib/x86_64-linux-gnu/libIlmThread-2_3.so.24.0.0",
+        "sha256": "b765c51dab7cbb5b8c5a8ea50cb0490adf56e718e45b07b8c5323f4214bf2e4f"
+      },
+      "path": "cadquery_ocp_novtk.libs/libIlmThread-2_3-b765c51d.so.24.0.0",
+      "sha256": "b92eefd9807d95de5dadbab851a2fa2f2e3f70aea2947f8361a536bfa5f667e6"
+    },
+    {
+      "bytes": 2489617,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKBO-3fb10f84.so.7.9.3",
+      "sha256": "eb6e65849bc2bdb6e8474c622b4bec95a01ad78a1fc7f5ceb1c5cbfec05e3a0c"
+    },
+    {
+      "bytes": 1312905,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKBRep-071e31b6.so.7.9.3",
+      "sha256": "70c86c8a0102d971993105d75aeb470533fc9e6dcb4a38732b98c916aa26a22b"
+    },
+    {
+      "bytes": 235377,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKBin-8c57aab5.so.7.9.3",
+      "sha256": "b3c719575e8c2e17f88aa9ae4d94c4abed5b342d937e8c795a734d7edafcd300"
+    },
+    {
+      "bytes": 490657,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKBinL-987998b2.so.7.9.3",
+      "sha256": "72f0098d46c8e65e4e11c7dd114e1d4e2f65d0bf181ee13501e67778edd29227"
+    },
+    {
+      "bytes": 116169,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKBinTObj-d451288f.so.7.9.3",
+      "sha256": "05d88f801eb017cced05057a86e6d3ebf2276cfab1c70a97ccbc9ce1b1b8055b"
+    },
+    {
+      "bytes": 242377,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKBinXCAF-c8cc2d82.so.7.9.3",
+      "sha256": "da0003dd6fe8e476e2ff352bfd168c6bac76d64f7d53ebbd8258da8889ae7cff"
+    },
+    {
+      "bytes": 4193569,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKBool-6e529311.so.7.9.3",
+      "sha256": "48a0ec0ac985289ef5f1fef5b51a1f5444d20c2433b784bd85fbbdb5582cfe45"
+    },
+    {
+      "bytes": 681777,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKCAF-4393aeb5.so.7.9.3",
+      "sha256": "b8fec417da37b473ddd1bbb53ea7ecf740f98a714974afbb522967dfd80e73ee"
+    },
+    {
+      "bytes": 491345,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKCDF-cb02241a.so.7.9.3",
+      "sha256": "e88974f33305becbc851046f97adfffca6e321b178edec03361267cd11fe0c8e"
+    },
+    {
+      "bytes": 190281,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKDE-5f7deea5.so.7.9.3",
+      "sha256": "5022eb98effb8a412aa6fe0befcbd21337594c386c863c66d8a99156a7a7e801"
+    },
+    {
+      "bytes": 583241,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKDEGLTF-41c343fd.so.7.9.3",
+      "sha256": "3f7826d841614b9366880eccc9c0243d2c56a7da1bb3786fef61243519997aef"
+    },
+    {
+      "bytes": 5173305,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKDEIGES-6b9c91f5.so.7.9.3",
+      "sha256": "4fde479bac8f266b8c3bd797171d65e3580de1ef7966f5070695063646356b22"
+    },
+    {
+      "bytes": 10027929,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKDESTEP-5ae9446f.so.7.9.3",
+      "sha256": "1d37f37a632644a10e34fb5e0e9a167edee24a67af146eb0c312df3f2e0254d5"
+    },
+    {
+      "bytes": 165561,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKDESTL-cb635b93.so.7.9.3",
+      "sha256": "0c0d461191a8a52be26c673b7d9ac90c92260fc22d50e9ef9b663b6d793e83b2"
+    },
+    {
+      "bytes": 775561,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKDEVRML-63a535d6.so.7.9.3",
+      "sha256": "b5c524a98b36fe6af8d41a2d430a12571bd75ae7693b6e991af10eacc66c079a"
+    },
+    {
+      "bytes": 825897,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKExpress-afd94280.so.7.9.3",
+      "sha256": "0a752c414129173a7cd512fd0cd1c6e2937ec10f6df086f6cb8941c267d7a558"
+    },
+    {
+      "bytes": 1066377,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKFeat-2bf0c3aa.so.7.9.3",
+      "sha256": "f21ac77aec179a487f822bf718a2a552f6582f2140495748709cdc8107325a2e"
+    },
+    {
+      "bytes": 3166681,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKFillet-a3fd0a6b.so.7.9.3",
+      "sha256": "8f32aa0cba8b20c64672c57b1ab0862e8c76a0d85b477b6a7e525791b36f1419"
+    },
+    {
+      "bytes": 551225,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKG2d-47ed7a1d.so.7.9.3",
+      "sha256": "f9fd1ae81e1dd3511f5883ccf1f5177017725e3941219d4973ff93824013eed1"
+    },
+    {
+      "bytes": 1586385,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKG3d-4eee3f00.so.7.9.3",
+      "sha256": "f1bc9b7729656f346ec1100a3ef8615951fec4d6871ec1c2a9b04fc0168d2242"
+    },
+    {
+      "bytes": 6324105,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKGeomAlgo-135532ed.so.7.9.3",
+      "sha256": "9841bbda5b08c837098e915bf35d8927d5ee35210c45bc500d94b59db68aa432"
+    },
+    {
+      "bytes": 6055249,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKGeomBase-194a33a8.so.7.9.3",
+      "sha256": "be2de32aa8341a53de460ee4ffd7ea25fd23ead435f6df910d50626122b366a1"
+    },
+    {
+      "bytes": 1444273,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKHLR-6f9d9d32.so.7.9.3",
+      "sha256": "f9ddb955a231a9facb911c1bb03eb64e6d7d5faa5cc4d71fcbc5a19b8bcd1541"
+    },
+    {
+      "bytes": 1162785,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKLCAF-74a08608.so.7.9.3",
+      "sha256": "6e5325bacaa0abc7e0607c1e06d237e989002a27bd7674291b91bbd2bc7704f1"
+    },
+    {
+      "bytes": 2767089,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKMath-05fa8e04.so.7.9.3",
+      "sha256": "ae66394917ff84febda35eded9b44f98863ba8d89250ff85150b62875999ff00"
+    },
+    {
+      "bytes": 1171225,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKMesh-6a3c0429.so.7.9.3",
+      "sha256": "18d5e308aa8d3b3388bdceb81d3b6a50d4e45cbbe0d34536c9c9b399e566df69"
+    },
+    {
+      "bytes": 505905,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKMeshVS-d172461a.so.7.9.3",
+      "sha256": "29a2965024228e85625d827100c5f407ffdd05ba8b9abf1667b5ff8c2bbe2782"
+    },
+    {
+      "bytes": 1892105,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKOffset-9709b5f0.so.7.9.3",
+      "sha256": "2bc06ccf2d771fd9529910617f4e6dc229548f7eec438e01f11d791e566eadca"
+    },
+    {
+      "bytes": 1839617,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKOpenGl-3c7e6502.so.7.9.3",
+      "sha256": "d9544b13b9fb51c63f3a619de83ddeae2d2d4efafb2dd06d0d92774b3a00de48"
+    },
+    {
+      "bytes": 504809,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKPrim-d4232d59.so.7.9.3",
+      "sha256": "6ce34af0aa3d7b3030765947d89444edd6856b8b4508a04e76a09aae62f983db"
+    },
+    {
+      "bytes": 217441,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKRWMesh-c5688aa8.so.7.9.3",
+      "sha256": "37ab700f95f5a5fa50cd9d7b6d37508d4e62334a0c3f0cd059d26f4344def184"
+    },
+    {
+      "bytes": 1644841,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKService-c643e023.so.7.9.3",
+      "sha256": "14d2ccdfffc116ee3ca361db08e287c5eb458e718a11154004db834d077ac93e"
+    },
+    {
+      "bytes": 2889297,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKShHealing-8af012e1.so.7.9.3",
+      "sha256": "50671e0f4ead599129eeebcc9719bdd1d566ac377229dc4846b6c6108868d506"
+    },
+    {
+      "bytes": 1419353,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKStd-fc13b403.so.7.9.3",
+      "sha256": "c1db6a71d24a1cf5bf6a9213351934a9be41e93b92cf1d6f22bcba93fb6fc64f"
+    },
+    {
+      "bytes": 579889,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKStdL-cf5694a4.so.7.9.3",
+      "sha256": "e91edad2f148435b0e8f59d8b03a9c0bac798fe67756da5923acf53b3406d4ae"
+    },
+    {
+      "bytes": 366033,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKTObj-39a7b727.so.7.9.3",
+      "sha256": "56cf1de6b0c406447100f79d50822eff87f43dece209dbe8f00d074bad5eca01"
+    },
+    {
+      "bytes": 3406977,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKTopAlgo-30ade7bd.so.7.9.3",
+      "sha256": "7c821b673482db56869b4f5bf8125cc21a1ff9be5a2323330cdaaa90a8071d1b"
+    },
+    {
+      "bytes": 3929073,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKV3d-0053da17.so.7.9.3",
+      "sha256": "fad72f6be9ca685319d7e5e0bffeb87f8d7ab1503882c55de91922b994abae81"
+    },
+    {
+      "bytes": 314369,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKVCAF-aa6ae3f0.so.7.9.3",
+      "sha256": "2de7766aa3db002cd9b0ff377638774eeb9c7545f63edf141e04015bb33483a7"
+    },
+    {
+      "bytes": 1177497,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKXCAF-8ada2ee3.so.7.9.3",
+      "sha256": "de5727cce0867cfdc6585597f79bf588282a405d63c5cf8f0d6136f2009915e3"
+    },
+    {
+      "bytes": 2632529,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKXSBase-8eebac3b.so.7.9.3",
+      "sha256": "073591d1db7e50d28192f21c668201715e668ab17a3e5a386b6017d53ce02bed"
+    },
+    {
+      "bytes": 276113,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKXml-ced99788.so.7.9.3",
+      "sha256": "a18b3eeffb47e06142a05e0ec16a7fd1335959d061aa82002edb2df4f4e4079e"
+    },
+    {
+      "bytes": 587929,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKXmlL-7045d578.so.7.9.3",
+      "sha256": "25f134f9354b77e1e30898ef2fd3d415a6fbb990efd6b28b078b5022ec92b8b8"
+    },
+    {
+      "bytes": 111073,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKXmlTObj-2b107013.so.7.9.3",
+      "sha256": "abe048c67e7733c26faac5b075d242fc62caa4be14bf336b495f323e0be6b8d8"
+    },
+    {
+      "bytes": 265537,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKXmlXCAF-0433c399.so.7.9.3",
+      "sha256": "64d1847d4392bb9e6143d4f431ba10888b839894b49af69bc575187f9e437544"
+    },
+    {
+      "bytes": 2148625,
+      "component_id": "occt",
+      "mapping_evidence": {
+        "method": "OCCT TK library family from pinned OCCT build"
+      },
+      "path": "cadquery_ocp_novtk.libs/libTKernel-f2a592c7.so.7.9.3",
+      "sha256": "022c01d88954d0620ed254bd36c079a58e267e67d4d54bedd55fe44ecbb19ce2"
+    },
+    {
+      "bytes": 309529,
+      "component_id": "ubuntu:libfontconfig1",
+      "mapping_evidence": {
+        "hash_prefix": "ebabad56",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 285840,
+        "path": "usr/lib/x86_64-linux-gnu/libfontconfig.so.1.12.0",
+        "sha256": "ebabad569f1a4dad2ed486dbcf924375bf0b5b5b26ecd89ccc2049ce07c3b721"
+      },
+      "path": "cadquery_ocp_novtk.libs/libfontconfig-ebabad56.so.1.12.0",
+      "sha256": "f522edb8558979941f5a358659b800fad18599171fe254160a9f63175da5722f"
+    },
+    {
+      "bytes": 831753,
+      "component_id": "ubuntu:libfreeimage3",
+      "mapping_evidence": {
+        "hash_prefix": "bcaddc28",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 765336,
+        "path": "usr/lib/x86_64-linux-gnu/libfreeimage-3.18.0.so",
+        "sha256": "bcaddc2854cdc92068642f7c5c5f62c612dc20c5c2437287e9bf58a2c76dc67a"
+      },
+      "path": "cadquery_ocp_novtk.libs/libfreeimage-3-bcaddc28.18.0.so",
+      "sha256": "9493541df72b67f61fa88f55370f7de3818450fce0b056661e7f34d741090794"
+    },
+    {
+      "bytes": 800193,
+      "component_id": "ubuntu:libfreetype6",
+      "mapping_evidence": {
+        "hash_prefix": "b2547240",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 776264,
+        "path": "usr/lib/x86_64-linux-gnu/libfreetype.so.6.17.1",
+        "sha256": "b2547240b7b34218248106b1c9c94e18b63038f87aa51d4bae3dc8b1fd05f3c9"
+      },
+      "path": "cadquery_ocp_novtk.libs/libfreetype-b2547240.so.6.17.1",
+      "sha256": "07bc74e073c9c2ed076c6fe9817a09fe52641c8519e9e8af227f1ef0984c2cea"
+    },
+    {
+      "bytes": 1638561,
+      "component_id": "conda:libgomp",
+      "mapping_evidence": {
+        "hash_prefix": "6b94b0fd",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 1586592,
+        "path": "lib/libgomp.so.1.0.0",
+        "sha256": "6b94b0fda4dd59828b2c8d74286c68f7cd00eb4b6e3aa47eb0c654d845c86b41"
+      },
+      "path": "cadquery_ocp_novtk.libs/libgomp-6b94b0fd.so.1.0.0",
+      "sha256": "f212662606795310c63b3d13a0176ba49181ebba8ea4550ee6354eea9bc5a108"
+    },
+    {
+      "bytes": 75081,
+      "component_id": "ubuntu:libjbig0",
+      "mapping_evidence": {
+        "hash_prefix": "0f1087b4",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 66568,
+        "path": "usr/lib/x86_64-linux-gnu/libjbig.so.0",
+        "sha256": "0f1087b4b881a5cfdf4d4e544756e1f7de2af3ca220de962d67e69e2f1ca4850"
+      },
+      "path": "cadquery_ocp_novtk.libs/libjbig-0f1087b4.so.0",
+      "sha256": "199866b6ab9a7c86ede266102cf1c0a78232dc378b42768be574353816e56321"
+    },
+    {
+      "bytes": 548225,
+      "component_id": "ubuntu:libjpeg-turbo8",
+      "mapping_evidence": {
+        "hash_prefix": "55cb507f",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 539352,
+        "path": "usr/lib/x86_64-linux-gnu/libjpeg.so.8.2.2",
+        "sha256": "55cb507f51d746b6ec808690771122349c4e664ba83cad4daa171f633485149a"
+      },
+      "path": "cadquery_ocp_novtk.libs/libjpeg-55cb507f.so.8.2.2",
+      "sha256": "a8d94999849726a232eb4d12110ee210ab11ce81143e98a883413bf70be8dc09"
+    },
+    {
+      "bytes": 225697,
+      "component_id": "ubuntu:libjxr0",
+      "mapping_evidence": {
+        "hash_prefix": "2d5c0d18",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 211264,
+        "path": "usr/lib/x86_64-linux-gnu/libjpegxr.so.1.1",
+        "sha256": "2d5c0d18430236a0c0becce422311bb319e3d8f8c513ffda27d3c6a928caeeae"
+      },
+      "path": "cadquery_ocp_novtk.libs/libjpegxr-2d5c0d18.so.1.1",
+      "sha256": "feff4fd2ba2dda8c9782ef364a50df90b294c3e962c0892026637ca96dfa86c2"
+    },
+    {
+      "bytes": 170081,
+      "component_id": "ubuntu:libjxr0",
+      "mapping_evidence": {
+        "hash_prefix": "4a31577b",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 127448,
+        "path": "usr/lib/x86_64-linux-gnu/libjxrglue.so.1.1",
+        "sha256": "4a31577b9f0c6f6ebc5172b3df3c647117128ba430fc73db94c6e22f0933cdcc"
+      },
+      "path": "cadquery_ocp_novtk.libs/libjxrglue-4a31577b.so.1.1",
+      "sha256": "75540d5a652f9e900467b8a7001edbb53907e2750d643456c4101e25a8097a42"
+    },
+    {
+      "bytes": 389497,
+      "component_id": "ubuntu:liblcms2-2",
+      "mapping_evidence": {
+        "hash_prefix": "caa5d83f",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 365568,
+        "path": "usr/lib/x86_64-linux-gnu/liblcms2.so.2.0.8",
+        "sha256": "caa5d83feabd749bb04393b7447c18334dfa16a5110674b86f6b7e62a7b9f6ed"
+      },
+      "path": "cadquery_ocp_novtk.libs/liblcms2-caa5d83f.so.2.0.8",
+      "sha256": "861665c23fa9ad17e747a18fc3e727a47cd2279ba9f586f167cc700929ada0a7"
+    },
+    {
+      "bytes": 241121,
+      "component_id": "conda:liblzma",
+      "mapping_evidence": {
+        "hash_prefix": "01783e82",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 222712,
+        "path": "lib/liblzma.so.5",
+        "sha256": "01783e82ad99579760a8f6196c5843529b890abd8e2c294cb0d464260536911b"
+      },
+      "path": "cadquery_ocp_novtk.libs/liblzma-01783e82.so.5",
+      "sha256": "d357030d06ceafc87b656577841c27005bcbf1ff7776649bf348ba88c6366958"
+    },
+    {
+      "bytes": 354593,
+      "component_id": "ubuntu:libopenjp2-7",
+      "mapping_evidence": {
+        "hash_prefix": "711390ff",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 346592,
+        "path": "usr/lib/x86_64-linux-gnu/libopenjp2.so.2.3.1",
+        "sha256": "711390ff2ce77e9cc6ea5dfa0eb5f941d130bd96a177e9770547525158409a44"
+      },
+      "path": "cadquery_ocp_novtk.libs/libopenjp2-711390ff.so.2.3.1",
+      "sha256": "21557cfb1d3a75faabbb5c2ea679b42a153682956f11658df8a85e93696e69da"
+    },
+    {
+      "bytes": 244177,
+      "component_id": "ubuntu:libpng16-16",
+      "mapping_evidence": {
+        "hash_prefix": "4a697b98",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 223304,
+        "path": "usr/lib/x86_64-linux-gnu/libpng16.so.16.37.0",
+        "sha256": "4a697b98b4ff6426cf533e038e798ed3e674e24b1797876fbd1471341f3702cc"
+      },
+      "path": "cadquery_ocp_novtk.libs/libpng16-4a697b98.so.16.37.0",
+      "sha256": "c5bc035128977cdefcab89e608f069cf804bd591e79824822cfaea427b38a49a"
+    },
+    {
+      "bytes": 977857,
+      "component_id": "ubuntu:libraw19",
+      "mapping_evidence": {
+        "hash_prefix": "5375f4a1",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 911496,
+        "path": "usr/lib/x86_64-linux-gnu/libraw.so.19.0.2",
+        "sha256": "5375f4a142906d188e80e499dab7378b0609bcadde38b65977f0251d5adfb718"
+      },
+      "path": "cadquery_ocp_novtk.libs/libraw-5375f4a1.so.19.0.2",
+      "sha256": "e62b8f7ddb417fd0967122032adc33cc7ec17c9f017d739e45a47d49592c5b38"
+    },
+    {
+      "bytes": 556257,
+      "component_id": "ubuntu:libtiff5",
+      "mapping_evidence": {
+        "hash_prefix": "688daa34",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 527032,
+        "path": "usr/lib/x86_64-linux-gnu/libtiff.so.5.5.0",
+        "sha256": "688daa34cf8f85f8d2f2ca59e0b64c0b8ec610f829e36cc92018fb1579ada6a9"
+      },
+      "path": "cadquery_ocp_novtk.libs/libtiff-688daa34.so.5.5.0",
+      "sha256": "f814438d800e148705c02a22838b7de06c2ab467529286f932a953d19267b4d9"
+    },
+    {
+      "bytes": 50529,
+      "component_id": "conda:libuuid",
+      "mapping_evidence": {
+        "archive_object_sha256": "dae8d2cce15a2b993632c647e7f07b9e83ca2a50458ab4082556d331e57d3f90",
+        "method": "conda package paths.json plus ELF relocation-insensitive section equivalence",
+        "package_path_mode": "binary prefix relocation",
+        "relocation_note": "auditwheel filename hashes the installed/relocated object; package archive records the pre-install object",
+        "wheel_hash_prefix": "e535ae40"
+      },
+      "original_object": {
+        "bytes": 40720,
+        "path": "lib/libuuid.so.1.3.0",
+        "sha256": "dae8d2cce15a2b993632c647e7f07b9e83ca2a50458ab4082556d331e57d3f90"
+      },
+      "path": "cadquery_ocp_novtk.libs/libuuid-e535ae40.so.1.3.0",
+      "sha256": "35a3e7f982a5dd26d50df589f61d3f4b23dcc7565d7ed7f5800c870823a15386"
+    },
+    {
+      "bytes": 428577,
+      "component_id": "ubuntu:libwebp6",
+      "mapping_evidence": {
+        "hash_prefix": "702eed9c",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 420376,
+        "path": "usr/lib/x86_64-linux-gnu/libwebp.so.6.0.2",
+        "sha256": "702eed9cf7b00bf48d1b68902f66e4e2a6ddbadfc55b04617bcfcb82805c6d37"
+      },
+      "path": "cadquery_ocp_novtk.libs/libwebp-702eed9c.so.6.0.2",
+      "sha256": "684d9f8e355912440ce1e8203e9f34e9cc32338c6d314b601c1cb1b45ae99729"
+    },
+    {
+      "bytes": 55025,
+      "component_id": "ubuntu:libwebpmux3",
+      "mapping_evidence": {
+        "hash_prefix": "ac6651ba",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 43336,
+        "path": "usr/lib/x86_64-linux-gnu/libwebpmux.so.3.0.1",
+        "sha256": "ac6651bac05facfb5670aa9a66e69a21db023a018b9f0f2ce94c11cdbea69529"
+      },
+      "path": "cadquery_ocp_novtk.libs/libwebpmux-ac6651ba.so.3.0.1",
+      "sha256": "e45552f3dc15bb290953b989711228cb3767550f47824c395e18c9cb1ee8219b"
+    },
+    {
+      "bytes": 1256297,
+      "component_id": "conda:zstd",
+      "mapping_evidence": {
+        "hash_prefix": "e32f1e98",
+        "method": "auditwheel filename hash prefix equals original packaged object SHA-256 prefix"
+      },
+      "original_object": {
+        "bytes": 1198840,
+        "path": "lib/libzstd.so.1.5.7",
+        "sha256": "e32f1e98942e91193d137ae9d460adf8e8cfbf504c8a8aedfb5825576d53a801"
+      },
+      "path": "cadquery_ocp_novtk.libs/libzstd-e32f1e98.so.1.5.7",
+      "sha256": "ec91331f39a3acfdc8af10a79f5d78e5cbf4cfbf294da30b60b1caeea4f95529"
+    },
+    {
+      "bytes": 4776920,
+      "component_id": "pypi:pydantic-core",
+      "mapping_evidence": {
+        "method": "exact PyPI wheel path and extracted-file hash"
+      },
+      "path": "pydantic_core/_pydantic_core.cpython-312-x86_64-linux-gnu.so",
+      "sha256": "2711a346eff384909098ae5a1d1db8a8f741f2300c59c1fc651f39c370b8d0b4"
+    }
+  ],
+  "schema": "caddydaddy.native-runtime/v1",
+  "scope": "Every ELF object in the exact installed runtime closure. Component and license mapping is objective evidence, not a legal determination.",
+  "target": "CPython 3.12 / x86_64-manylinux_2_31"
+}

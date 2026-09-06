@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
   BASELINE_PARTS, CATALOG, CMP_KEYS, DECLARED0, DEFAULT_POS, DIMS0, EXTRUDE_MAX, EXTRUDE_MIN, FIELDS, RULES_EVALUATED, SCENARIO, SEED_EVENTS, SEED_FEATURES,
-  CORE_SLOTS, GENERIC_NAME, SLOTS, SLOT_LABEL, SPAN_BASELINE, SPAN_MAX, SPAN_MIN,
+  CORE_SLOTS, GENERIC_NAME, SLOTS, SLOT_LABEL, SPAN_BASELINE, SPAN_MAX, SPAN_MIN, PLATE_W,
   type CmpKey, type Declared, type Dims, type Feature, type FieldSpec, type Lane, type Node, type PartAttrs, type PartId, type Slot, type TimelineEvent,
 } from './lib/catalog';
 import { GEO0, type Geo, type Pos, type Positions, type Snapshot } from './lib/design';
@@ -261,6 +261,7 @@ export interface WorkbenchState extends Snapshot {
   confirm: (name?: string) => void;
   leaveUnconfirmed: () => void;
   setSpan: (text: string) => void;
+  commitSketch: () => string;
   applyExtrude: (target: Node, value: number) => string;
   applyGeo: (patch: Partial<Geo>, kind: Feature['kind'], label: string) => void;
   toggleConstraint: (id: string) => void;
@@ -833,6 +834,18 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       set({ span: v, spanText: v.toFixed(1), spanErr: false, pos, spanMsg: msg || ('applied · cruise_W ' + after.cruiseW.toFixed(0) + ' W · range ' + (after.range ?? 0).toFixed(0) + ' km'), lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: 'span ' + old.toFixed(1) + ' → ' + v.toFixed(1) + ' m', keysOpen: false });
       const crossed = after.range != null && before.range != null && after.range >= 300 && before.range < 300;
       append({ kind: 'attr_changed', text: 'airframe · span ' + old.toFixed(1) + ' m → ' + v.toFixed(1) + ' m', entry: crossed ? '9A012 MT · range ' + (after.range ?? 0).toFixed(0) + ' km ≥ 300 km' : 're-evaluated ' + RULES_EVALUATED + ' · ' + changed + ' changed', intent: '' });
+    },
+
+    commitSketch: () => {
+      if (!editable()) return 'viewing history · restore to edit';
+      const s = get();
+      const solved = solveSketch(s.sketch);
+      if (solved.overall === 'CONTRADICTORY') return 'contradictory sketch · remove the conflicting constraint';
+      const n = nextFeature(s);
+      const label = 'plate profile · ' + s.span.toFixed(3) + ' × ' + PLATE_W.toFixed(3) + ' m · ' + solved.overall + ' · ' + solved.dof + ' DOF';
+      set({ features: s.features.concat([{ n, text: label, kind: 'sketch' }]) });
+      append({ kind: 'feature_added', text: n + ' · sketch · ' + label, entry: 'profile committed · ready for extrusion · re-evaluated ' + RULES_EVALUATED + ' · 0 changed', intent: '' });
+      return solved.overall + ' · ' + solved.dof + ' DOF';
     },
 
     applyExtrude: (target, value) => {

@@ -1,0 +1,183 @@
+{
+  "$defs": {
+    "AssemblyInstance": {
+      "additionalProperties": false,
+      "properties": {
+        "body_id": {
+          "minLength": 1,
+          "title": "Body Id",
+          "type": "string"
+        },
+        "brep_base64": {
+          "minLength": 1,
+          "title": "Brep Base64",
+          "type": "string"
+        },
+        "instance_id": {
+          "minLength": 1,
+          "title": "Instance Id",
+          "type": "string"
+        },
+        "source_revision_id": {
+          "minLength": 1,
+          "title": "Source Revision Id",
+          "type": "string"
+        },
+        "transform": {
+          "$ref": "#/$defs/TransformSpec"
+        }
+      },
+      "required": [
+        "instance_id",
+        "body_id",
+        "source_revision_id",
+        "brep_base64"
+      ],
+      "title": "AssemblyInstance",
+      "type": "object"
+    },
+    "AssemblyMate": {
+      "additionalProperties": false,
+      "properties": {
+        "distance_mm": {
+          "default": 0.0,
+          "title": "Distance Mm",
+          "type": "number"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "mate_id": {
+          "minLength": 1,
+          "title": "Mate Id",
+          "type": "string"
+        },
+        "moving_axis": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "moving_instance_id": {
+          "title": "Moving Instance Id",
+          "type": "string"
+        },
+        "moving_point": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "target_axis": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "target_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Instance Id"
+        },
+        "target_point": {
+          "$ref": "#/$defs/Vector3"
+        }
+      },
+      "required": [
+        "mate_id",
+        "kind",
+        "moving_instance_id"
+      ],
+      "title": "AssemblyMate",
+      "type": "object"
+    },
+    "TransformSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "rotation_axis": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "rotation_degrees": {
+          "default": 0.0,
+          "title": "Rotation Degrees",
+          "type": "number"
+        },
+        "translation": {
+          "$ref": "#/$defs/Vector3"
+        }
+      },
+      "title": "TransformSpec",
+      "type": "object"
+    },
+    "Vector3": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "default": 0.0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "default": 0.0,
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "default": 0.0,
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "title": "Vector3",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "angular_deflection_deg": {
+      "default": 15.0,
+      "exclusiveMinimum": 0,
+      "maximum": 90,
+      "title": "Angular Deflection Deg",
+      "type": "number"
+    },
+    "assembly_id": {
+      "minLength": 1,
+      "title": "Assembly Id",
+      "type": "string"
+    },
+    "instances": {
+      "items": {
+        "$ref": "#/$defs/AssemblyInstance"
+      },
+      "minItems": 1,
+      "title": "Instances",
+      "type": "array"
+    },
+    "linear_deflection_mm": {
+      "default": 0.25,
+      "exclusiveMinimum": 0,
+      "title": "Linear Deflection Mm",
+      "type": "number"
+    },
+    "mates": {
+      "items": {
+        "$ref": "#/$defs/AssemblyMate"
+      },
+      "title": "Mates",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "caddydaddy.assembly-request/1",
+      "default": "caddydaddy.assembly-request/1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "assembly_id",
+    "instances"
+  ],
+  "title": "AssemblyRequest",
+  "type": "object"
+}

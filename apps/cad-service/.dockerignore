@@ -1,0 +1,9 @@
+.git
+.venv
+.pytest_cache
+**/__pycache__
+**/*.pyc
+tests
+uv.lock
+README.md
+THIRD_PARTY_NOTICES.md

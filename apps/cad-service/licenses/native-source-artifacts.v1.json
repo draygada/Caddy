@@ -1,0 +1,653 @@
+{
+  "generated_on": "2026-09-05",
+  "schema": "caddydaddy.native-source-artifacts/v1",
+  "scope": "Exact corresponding-source and build-recipe coordinates for native files in the pinned Linux CPython 3.12 runtime. Hash verification is factual evidence, not a legal determination.",
+  "source_sets": [
+    {
+      "artifacts": [
+        {
+          "bytes": 3728128,
+          "sha256": "a5153cef9f4a3a3dbbb1d498a971206a6c35dc4d829e7e011f96e0539c22e616",
+          "url": "https://github.com/CadQuery/OCP/archive/d69b064a3a604ebf245b1f3b14fb54c835a3a571.tar.gz",
+          "verified_on": "2026-09-05"
+        }
+      ],
+      "component": "OCP",
+      "id": "github:CadQuery/OCP@d69b064a3a604ebf245b1f3b14fb54c835a3a571",
+      "relationship": "corresponding_source",
+      "version": "7.9.3.1"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 48610707,
+          "sha256": "c533f2667b59921bd6bd40ce82e7b9900b0289ccc731af5fdeeba097de80ef0f",
+          "url": "https://github.com/Open-Cascade-SAS/OCCT/archive/a016080bf6738d6aeae020badee4e888ad1540a5.tar.gz",
+          "verified_on": "2026-09-05"
+        }
+      ],
+      "component": "OCCT",
+      "id": "github:Open-Cascade-SAS/OCCT@a016080bf6738d6aeae020badee4e888ad1540a5",
+      "relationship": "corresponding_source",
+      "version": "7.9.3"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 1380634,
+          "sha256": "103558026783449a3d9cd442dc2b741992520a1c436f5cf017a1f3a98fa0107e",
+          "url": "https://github.com/CadQuery/ocp-build-system/archive/648499040b66a769293edfa844ff170ff8046619.tar.gz",
+          "verified_on": "2026-09-05"
+        }
+      ],
+      "component": "ocp-build-system",
+      "id": "github:CadQuery/ocp-build-system@648499040b66a769293edfa844ff170ff8046619",
+      "relationship": "build_recipe",
+      "version": "648499040b66a769293edfa844ff170ff8046619"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 287517,
+          "sha256": "c7287b86780befa0914f2eeb8be2ac83e672ebd4bd16dc5574a36a59d9708303",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/jxrlib/1.1-6build1/jxrlib_1.1.orig.tar.gz",
+          "verified_bytes": 287517,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "c7287b86780befa0914f2eeb8be2ac83e672ebd4bd16dc5574a36a59d9708303"
+        },
+        {
+          "bytes": 24336,
+          "sha256": "f30956b7b5f3c119067f56a0a4a740221f511a486e2692849ef217501d1e98d0",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/jxrlib/1.1-6build1/jxrlib_1.1-6build1.debian.tar.xz",
+          "verified_bytes": 24336,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "f30956b7b5f3c119067f56a0a4a740221f511a486e2692849ef217501d1e98d0"
+        },
+        {
+          "bytes": 2159,
+          "sha256": "b13540b10be54d8c5e0b1e6061cb688f96906d9ccb72601705c3e5ed50350da0",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/jxrlib/1.1-6build1/jxrlib_1.1-6build1.dsc",
+          "verified_bytes": 2159,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "b13540b10be54d8c5e0b1e6061cb688f96906d9ccb72601705c3e5ed50350da0"
+        }
+      ],
+      "component": "jxrlib",
+      "id": "ubuntu-source:jxrlib@1.1-6build1",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/10636356",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "1.1-6build1"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 18416222,
+          "sha256": "1dea3145eb3962025e27edb99c97e8cfc67d6310403bbd643e97c364ebf8ff09",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/openexr/2.3.0-6ubuntu0.5/openexr_2.3.0.orig.tar.gz",
+          "verified_bytes": 18416222,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "1dea3145eb3962025e27edb99c97e8cfc67d6310403bbd643e97c364ebf8ff09"
+        },
+        {
+          "bytes": 566,
+          "sha256": "809172c26aacae76d2caf92d13015ec829853f1ea9b25512c0307c66005e4dcc",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/openexr/2.3.0-6ubuntu0.5/openexr_2.3.0.orig.tar.gz.asc",
+          "verified_bytes": 566,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "809172c26aacae76d2caf92d13015ec829853f1ea9b25512c0307c66005e4dcc"
+        },
+        {
+          "bytes": 40348,
+          "sha256": "c9fdbfa07402ff13676d891ce9d96f52c1a94c4e7d48960ad04295a780e666d8",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/openexr/2.3.0-6ubuntu0.5/openexr_2.3.0-6ubuntu0.5.debian.tar.xz",
+          "verified_bytes": 40348,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "c9fdbfa07402ff13676d891ce9d96f52c1a94c4e7d48960ad04295a780e666d8"
+        },
+        {
+          "bytes": 2638,
+          "sha256": "7bfa485fadf5109cbefc7545b4b8ddcb4ce9e9f0e33001c731531f54c281c218",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/openexr/2.3.0-6ubuntu0.5/openexr_2.3.0-6ubuntu0.5.dsc",
+          "verified_bytes": 2638,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "7bfa485fadf5109cbefc7545b4b8ddcb4ce9e9f0e33001c731531f54c281c218"
+        }
+      ],
+      "component": "openexr",
+      "id": "ubuntu-source:openexr@2.3.0-6ubuntu0.5",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/12268193",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "2.3.0-6ubuntu0.5"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 2185,
+          "sha256": "4788b7b016a67349a2faaa719e7e22f0d32df39e03d59e8ed09152a2fd36db33",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libwebp/0.6.1-2ubuntu0.20.04.3/libwebp_0.6.1-2ubuntu0.20.04.3.dsc",
+          "verified_bytes": 2185,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "4788b7b016a67349a2faaa719e7e22f0d32df39e03d59e8ed09152a2fd36db33"
+        },
+        {
+          "bytes": 21132,
+          "sha256": "66d72fcf9b3a8e77bd9ebaa5ed1f24fd9542216a28cd7dfed7c1b2f227569588",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libwebp/0.6.1-2ubuntu0.20.04.3/libwebp_0.6.1-2ubuntu0.20.04.3.debian.tar.xz",
+          "verified_bytes": 21132,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "66d72fcf9b3a8e77bd9ebaa5ed1f24fd9542216a28cd7dfed7c1b2f227569588"
+        },
+        {
+          "bytes": 3554290,
+          "sha256": "a86045e3ec24704bddbaa369ca30980d6bf4f2625f4cdca03715e91f9c08bbb4",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libwebp/0.6.1-2ubuntu0.20.04.3/libwebp_0.6.1.orig.tar.gz",
+          "verified_bytes": 3554290,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "a86045e3ec24704bddbaa369ca30980d6bf4f2625f4cdca03715e91f9c08bbb4"
+        }
+      ],
+      "component": "libwebp",
+      "id": "ubuntu-source:libwebp@0.6.1-2ubuntu0.20.04.3",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/15156442",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "0.6.1-2ubuntu0.20.04.3"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 2125,
+          "sha256": "bf3c8e2bd4a999ec56d45fa2b6e8d39d1b3da7598e44fb49052163c9c0917c95",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libraw/0.19.5-1ubuntu1.4/libraw_0.19.5-1ubuntu1.4.dsc",
+          "verified_bytes": 2125,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "bf3c8e2bd4a999ec56d45fa2b6e8d39d1b3da7598e44fb49052163c9c0917c95"
+        },
+        {
+          "bytes": 26540,
+          "sha256": "cea751c4bed1836b6164ab3a17c62bbfe972be1a97d205c4878c0e59143ea971",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libraw/0.19.5-1ubuntu1.4/libraw_0.19.5-1ubuntu1.4.debian.tar.xz",
+          "verified_bytes": 26540,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "cea751c4bed1836b6164ab3a17c62bbfe972be1a97d205c4878c0e59143ea971"
+        },
+        {
+          "bytes": 557094,
+          "sha256": "44693f0c92707b0803a1f6c4cf7209452aa18b310f2d75892e0bc1fb2c194c3f",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libraw/0.19.5-1ubuntu1.4/libraw_0.19.5.orig.tar.gz",
+          "verified_bytes": 557094,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "44693f0c92707b0803a1f6c4cf7209452aa18b310f2d75892e0bc1fb2c194c3f"
+        }
+      ],
+      "component": "libraw",
+      "id": "ubuntu-source:libraw@0.19.5-1ubuntu1.4",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/17232937",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "0.19.5-1ubuntu1.4"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 596749,
+          "sha256": "0ea21166799bbdd920e7a38a7026236566aafdd6e8638f54c9da1af2219fae82",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/ilmbase/2.3.0-6build1/ilmbase_2.3.0.orig.tar.gz",
+          "verified_bytes": 596749,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "0ea21166799bbdd920e7a38a7026236566aafdd6e8638f54c9da1af2219fae82"
+        },
+        {
+          "bytes": 566,
+          "sha256": "c7ee3f4432322d4f7c63dd1b0ca2188a8d1c4a018821c3c12a3d9db746b54bee",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/ilmbase/2.3.0-6build1/ilmbase_2.3.0.orig.tar.gz.asc",
+          "verified_bytes": 566,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "c7ee3f4432322d4f7c63dd1b0ca2188a8d1c4a018821c3c12a3d9db746b54bee"
+        },
+        {
+          "bytes": 14252,
+          "sha256": "1039258f50fda2e94e4dac23e1e8aa702d8e3e83d0e1f12f13a652eadf2ebbf3",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/ilmbase/2.3.0-6build1/ilmbase_2.3.0-6build1.debian.tar.xz",
+          "verified_bytes": 14252,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "1039258f50fda2e94e4dac23e1e8aa702d8e3e83d0e1f12f13a652eadf2ebbf3"
+        },
+        {
+          "bytes": 2367,
+          "sha256": "2164e2cff01f17f030b456c2d0920d09461ae76229507459a73cf7c618d4f7f6",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/ilmbase/2.3.0-6build1/ilmbase_2.3.0-6build1.dsc",
+          "verified_bytes": 2367,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "2164e2cff01f17f030b456c2d0920d09461ae76229507459a73cf7c618d4f7f6"
+        }
+      ],
+      "component": "ilmbase",
+      "id": "ubuntu-source:ilmbase@2.3.0-6build1",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/11076636",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "2.3.0-6build1"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 1956,
+          "sha256": "6db871353515693e8813911a8f81668b92e8c09fa9e6752e701fa8b14247775d",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/lcms2/2.9-4/lcms2_2.9-4.dsc",
+          "verified_bytes": 1956,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "6db871353515693e8813911a8f81668b92e8c09fa9e6752e701fa8b14247775d"
+        },
+        {
+          "bytes": 10974649,
+          "sha256": "48c6fdf98396fa245ed86e622028caf49b96fa22f3e5734f853f806fbc8e7d20",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/lcms2/2.9-4/lcms2_2.9.orig.tar.gz",
+          "verified_bytes": 10974649,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "48c6fdf98396fa245ed86e622028caf49b96fa22f3e5734f853f806fbc8e7d20"
+        },
+        {
+          "bytes": 10748,
+          "sha256": "3dd811c431bed101269937299d28708dfe91f32070cf9786680bec26f408b65b",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/lcms2/2.9-4/lcms2_2.9-4.debian.tar.xz",
+          "verified_bytes": 10748,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "3dd811c431bed101269937299d28708dfe91f32070cf9786680bec26f408b65b"
+        }
+      ],
+      "component": "lcms2",
+      "id": "ubuntu-source:lcms2@2.9-4",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/10620810",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "2.9-4"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 2919,
+          "sha256": "4a122aa2b33f2cde93b1199f20f301036d86472fc7d078f56113444cfc7b924f",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/openjpeg2/2.3.1-1ubuntu4.20.04.4/openjpeg2_2.3.1-1ubuntu4.20.04.4.dsc",
+          "verified_bytes": 2919,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "4a122aa2b33f2cde93b1199f20f301036d86472fc7d078f56113444cfc7b924f"
+        },
+        {
+          "bytes": 28516,
+          "sha256": "fbf59911e5dcd59132e690b5a8718290cc8df7e54f69d3c002a63d3d82591153",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/openjpeg2/2.3.1-1ubuntu4.20.04.4/openjpeg2_2.3.1-1ubuntu4.20.04.4.debian.tar.xz",
+          "verified_bytes": 28516,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "fbf59911e5dcd59132e690b5a8718290cc8df7e54f69d3c002a63d3d82591153"
+        },
+        {
+          "bytes": 1381768,
+          "sha256": "69d39843a25f1a482e1b568fd042eb34837ffc0d708ab7717edeb52e592ecbeb",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/openjpeg2/2.3.1-1ubuntu4.20.04.4/openjpeg2_2.3.1.orig.tar.xz",
+          "verified_bytes": 1381768,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "69d39843a25f1a482e1b568fd042eb34837ffc0d708ab7717edeb52e592ecbeb"
+        }
+      ],
+      "component": "openjpeg2",
+      "id": "ubuntu-source:openjpeg2@2.3.1-1ubuntu4.20.04.4",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/16932514",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "2.3.1-1ubuntu4.20.04.4"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 2251,
+          "sha256": "a081f31502fa969015561f024659cfe7f9e9d51ca0fb8887ab2db1f5ec26792c",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/tiff/4.1.0+git191117-2ubuntu0.20.04.14/tiff_4.1.0+git191117-2ubuntu0.20.04.14.dsc",
+          "verified_bytes": 2251,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "a081f31502fa969015561f024659cfe7f9e9d51ca0fb8887ab2db1f5ec26792c"
+        },
+        {
+          "bytes": 53440,
+          "sha256": "3c89b7298f5ac1521f5524ce0b6948514a11065a20bd9d6c92ff71b3d56bec13",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/tiff/4.1.0+git191117-2ubuntu0.20.04.14/tiff_4.1.0+git191117-2ubuntu0.20.04.14.debian.tar.xz",
+          "verified_bytes": 53440,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "3c89b7298f5ac1521f5524ce0b6948514a11065a20bd9d6c92ff71b3d56bec13"
+        },
+        {
+          "bytes": 1533524,
+          "sha256": "67e1d045e994adb7144b0cca228d70dd6d520aaf8c75c342064bc0fd601e6e42",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/tiff/4.1.0+git191117-2ubuntu0.20.04.14/tiff_4.1.0+git191117.orig.tar.xz",
+          "verified_bytes": 1533524,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "67e1d045e994adb7144b0cca228d70dd6d520aaf8c75c342064bc0fd601e6e42"
+        }
+      ],
+      "component": "tiff",
+      "id": "ubuntu-source:tiff@4.1.0+git191117-2ubuntu0.20.04.14",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/16434208",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "4.1.0+git191117-2ubuntu0.20.04.14"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 2691,
+          "sha256": "28df017f734023dec892deddf7b903015eca713a06dc3760c55399ef0b53147e",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/freeimage/3.18.0+ds2-1ubuntu3.1/freeimage_3.18.0+ds2-1ubuntu3.1.dsc",
+          "verified_bytes": 2691,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "28df017f734023dec892deddf7b903015eca713a06dc3760c55399ef0b53147e"
+        },
+        {
+          "bytes": 28612,
+          "sha256": "c70c43be9f52a3be1a888fec38d11766ec49d0ca9920462d5b81a773f8310991",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/freeimage/3.18.0+ds2-1ubuntu3.1/freeimage_3.18.0+ds2-1ubuntu3.1.debian.tar.xz",
+          "verified_bytes": 28612,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "c70c43be9f52a3be1a888fec38d11766ec49d0ca9920462d5b81a773f8310991"
+        },
+        {
+          "bytes": 1281524,
+          "sha256": "4425d04d4691084260848d67eb79949ea7c129d85c73a72066ba609fd3f3aa39",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/freeimage/3.18.0+ds2-1ubuntu3.1/freeimage_3.18.0+ds2.orig.tar.xz",
+          "verified_bytes": 1281524,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "4425d04d4691084260848d67eb79949ea7c129d85c73a72066ba609fd3f3aa39"
+        }
+      ],
+      "component": "freeimage",
+      "id": "ubuntu-source:freeimage@3.18.0+ds2-1ubuntu3.1",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/15698481",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "3.18.0+ds2-1ubuntu3.1"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 2337,
+          "sha256": "ec264b25c5242eab9f6bfaccec9516f1694f8eaa672383e0dc33d4e7e9a427d2",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libjpeg-turbo/2.0.3-0ubuntu1.20.04.3/libjpeg-turbo_2.0.3-0ubuntu1.20.04.3.dsc",
+          "verified_bytes": 2337,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "ec264b25c5242eab9f6bfaccec9516f1694f8eaa672383e0dc33d4e7e9a427d2"
+        },
+        {
+          "bytes": 26328,
+          "sha256": "a2f60c2ca1c5bdf927f574e329f2dc69deda913f762642438ae0df604726bd1d",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libjpeg-turbo/2.0.3-0ubuntu1.20.04.3/libjpeg-turbo_2.0.3-0ubuntu1.20.04.3.debian.tar.xz",
+          "verified_bytes": 26328,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "a2f60c2ca1c5bdf927f574e329f2dc69deda913f762642438ae0df604726bd1d"
+        },
+        {
+          "bytes": 2161279,
+          "sha256": "a69598bf079463b34d45ca7268462a18b6507fdaa62bb1dfd212f02041499b5d",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libjpeg-turbo/2.0.3-0ubuntu1.20.04.3/libjpeg-turbo_2.0.3.orig.tar.gz",
+          "verified_bytes": 2161279,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "a69598bf079463b34d45ca7268462a18b6507fdaa62bb1dfd212f02041499b5d"
+        }
+      ],
+      "component": "libjpeg-turbo",
+      "id": "ubuntu-source:libjpeg-turbo@2.0.3-0ubuntu1.20.04.3",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/13966923",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "2.0.3-0ubuntu1.20.04.3"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 2225,
+          "sha256": "4567a54b5804e068e61477e9cd78346557b85b72add10ef10f130a5be169662e",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libpng1.6/1.6.37-2/libpng1.6_1.6.37-2.dsc",
+          "verified_bytes": 2225,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "4567a54b5804e068e61477e9cd78346557b85b72add10ef10f130a5be169662e"
+        },
+        {
+          "bytes": 1508805,
+          "sha256": "ca74a0dace179a8422187671aee97dd3892b53e168627145271cad5b5ac81307",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libpng1.6/1.6.37-2/libpng1.6_1.6.37.orig.tar.gz",
+          "verified_bytes": 1508805,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "ca74a0dace179a8422187671aee97dd3892b53e168627145271cad5b5ac81307"
+        },
+        {
+          "bytes": 31844,
+          "sha256": "097cee0f0da4013d0231d37e090204ab3fa592b4fecdaaed3fca8d13affcaae8",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/libpng1.6/1.6.37-2/libpng1.6_1.6.37-2.debian.tar.xz",
+          "verified_bytes": 31844,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "097cee0f0da4013d0231d37e090204ab3fa592b4fecdaaed3fca8d13affcaae8"
+        }
+      ],
+      "component": "libpng1.6",
+      "id": "ubuntu-source:libpng1.6@1.6.37-2",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/10994332",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "1.6.37-2"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 1796,
+          "sha256": "474419dda13c2c65752e8c373920d518190ced250360c361830654044e3eb239",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/jbigkit/2.1-3.1ubuntu0.20.04.1/jbigkit_2.1-3.1ubuntu0.20.04.1.dsc",
+          "verified_bytes": 1796,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "474419dda13c2c65752e8c373920d518190ced250360c361830654044e3eb239"
+        },
+        {
+          "bytes": 9804,
+          "sha256": "eca6a335d3bddd57e7f915ad34f2f6a33e84cc699d01c217c5f906c2e9db5670",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/jbigkit/2.1-3.1ubuntu0.20.04.1/jbigkit_2.1-3.1ubuntu0.20.04.1.debian.tar.xz",
+          "verified_bytes": 9804,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "eca6a335d3bddd57e7f915ad34f2f6a33e84cc699d01c217c5f906c2e9db5670"
+        },
+        {
+          "bytes": 438710,
+          "sha256": "de7106b6bfaf495d6865c7dd7ac6ca1381bd12e0d81405ea81e7f2167263d932",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/jbigkit/2.1-3.1ubuntu0.20.04.1/jbigkit_2.1.orig.tar.gz",
+          "verified_bytes": 438710,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "de7106b6bfaf495d6865c7dd7ac6ca1381bd12e0d81405ea81e7f2167263d932"
+        }
+      ],
+      "component": "jbigkit",
+      "id": "ubuntu-source:jbigkit@2.1-3.1ubuntu0.20.04.1",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/14166730",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "2.1-3.1ubuntu0.20.04.1"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 3864,
+          "sha256": "9fe7da8527749907988f03742ba03f45b32ebbc35f8595938a5bc729bbb7e017",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/freetype/2.10.1-2ubuntu0.4/freetype_2.10.1-2ubuntu0.4.dsc",
+          "verified_bytes": 3864,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "9fe7da8527749907988f03742ba03f45b32ebbc35f8595938a5bc729bbb7e017"
+        },
+        {
+          "bytes": 118612,
+          "sha256": "d0e3abf8d6dca97ac54f6e51bc78dff069f07d8b9351d80504437c8e5020fe02",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/freetype/2.10.1-2ubuntu0.4/freetype_2.10.1-2ubuntu0.4.debian.tar.xz",
+          "verified_bytes": 118612,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "d0e3abf8d6dca97ac54f6e51bc78dff069f07d8b9351d80504437c8e5020fe02"
+        },
+        {
+          "bytes": 195,
+          "sha256": "3952cc2651536ef5157601143d1efc453a7fe5ca64eaf765d034c417aabd4210",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/freetype/2.10.1-2ubuntu0.4/freetype_2.10.1.orig.tar.gz.asc",
+          "verified_bytes": 195,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "3952cc2651536ef5157601143d1efc453a7fe5ca64eaf765d034c417aabd4210"
+        },
+        {
+          "bytes": 3478158,
+          "sha256": "3a60d391fd579440561bf0e7f31af2222bc610ad6ce4d9d7bd2165bca8669110",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/freetype/2.10.1-2ubuntu0.4/freetype_2.10.1.orig.tar.gz",
+          "verified_bytes": 3478158,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "3a60d391fd579440561bf0e7f31af2222bc610ad6ce4d9d7bd2165bca8669110"
+        },
+        {
+          "bytes": 195,
+          "sha256": "aaedd84036d9e615fbb5acf71081dd05c9d7333686593432e445ee89655a79c9",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/freetype/2.10.1-2ubuntu0.4/freetype_2.10.1.orig-ft2docs.tar.gz.asc",
+          "verified_bytes": 195,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "aaedd84036d9e615fbb5acf71081dd05c9d7333686593432e445ee89655a79c9"
+        },
+        {
+          "bytes": 2123885,
+          "sha256": "a4e4a8e69c7bf833eba7c158254a572fd43131d5e9b8791bd2ecbb03546ce155",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/freetype/2.10.1-2ubuntu0.4/freetype_2.10.1.orig-ft2docs.tar.gz",
+          "verified_bytes": 2123885,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "a4e4a8e69c7bf833eba7c158254a572fd43131d5e9b8791bd2ecbb03546ce155"
+        },
+        {
+          "bytes": 195,
+          "sha256": "ccee51c4b4101b89a66ba5f2bdd54d127e93e120086982db57fa33761f310e9e",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/freetype/2.10.1-2ubuntu0.4/freetype_2.10.1.orig-ft2demos.tar.gz.asc",
+          "verified_bytes": 195,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "ccee51c4b4101b89a66ba5f2bdd54d127e93e120086982db57fa33761f310e9e"
+        },
+        {
+          "bytes": 305328,
+          "sha256": "5e9e94a2db9d1a945293a1644a502f6664a2173a454d4a55b19695e2e2f4a0bc",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/freetype/2.10.1-2ubuntu0.4/freetype_2.10.1.orig-ft2demos.tar.gz",
+          "verified_bytes": 305328,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "5e9e94a2db9d1a945293a1644a502f6664a2173a454d4a55b19695e2e2f4a0bc"
+        }
+      ],
+      "component": "freetype",
+      "id": "ubuntu-source:freetype@2.10.1-2ubuntu0.4",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/17064585",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "2.10.1-2ubuntu0.4"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 1723639,
+          "sha256": "f655dd2a986d7aa97e052261b36aa67b0a64989496361eca8d604e6414006741",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/fontconfig/2.13.1-2ubuntu3/fontconfig_2.13.1.orig.tar.bz2",
+          "verified_bytes": 1723639,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "f655dd2a986d7aa97e052261b36aa67b0a64989496361eca8d604e6414006741"
+        },
+        {
+          "bytes": 26344,
+          "sha256": "342671f6a1e6d392958a6eec27541c6bdffc6498b469dcc46eca66c9d23a863a",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/fontconfig/2.13.1-2ubuntu3/fontconfig_2.13.1-2ubuntu3.debian.tar.xz",
+          "verified_bytes": 26344,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "342671f6a1e6d392958a6eec27541c6bdffc6498b469dcc46eca66c9d23a863a"
+        },
+        {
+          "bytes": 1959,
+          "sha256": "a9eebf6e6e88aa64d33fb3852c97718c212579f9714afd67cb6a9b8b116dd7aa",
+          "url": "https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/fontconfig/2.13.1-2ubuntu3/fontconfig_2.13.1-2ubuntu3.dsc",
+          "verified_bytes": 1959,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "a9eebf6e6e88aa64d33fb3852c97718c212579f9714afd67cb6a9b8b116dd7aa"
+        }
+      ],
+      "component": "fontconfig",
+      "id": "ubuntu-source:fontconfig@2.13.1-2ubuntu3",
+      "publication": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/11171512",
+      "publication_status": "Published",
+      "relationship": "corresponding_source",
+      "version": "2.13.1-2ubuntu3"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 178138393,
+          "sha256": "7294d65cc1a0558cb815af0ca8c7763d86f7a31199794ede3f630c0d1b0a5723",
+          "url": "https://ftp.gnu.org/gnu/gcc/gcc-15.2.0/gcc-15.2.0.tar.gz",
+          "verified_on": "2026-09-05"
+        }
+      ],
+      "component": "libgomp",
+      "id": "conda-source:libgomp@15.2.0",
+      "relationship": "corresponding_source",
+      "version": "15.2.0"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 2693526,
+          "sha256": "ce09c50a5962786b83e5da389c90dd2c15ecd0980a258dd01f70f9e7ce58a8f1",
+          "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.2/xz-5.8.2.tar.gz",
+          "verified_on": "2026-09-05"
+        }
+      ],
+      "component": "liblzma",
+      "id": "conda-source:liblzma@5.8.2",
+      "relationship": "corresponding_source",
+      "version": "5.8.2"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 2451884,
+          "sha256": "37d7284556b20954e56e1ca85b80226768902e2edabd3b649e9e72c0c9012ee3",
+          "url": "https://github.com/facebook/zstd/archive/v1.5.7.tar.gz",
+          "verified_on": "2026-09-05"
+        }
+      ],
+      "component": "zstd",
+      "id": "conda-source:zstd@1.5.7",
+      "relationship": "corresponding_source",
+      "version": "1.5.7"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 15977211,
+          "sha256": "25dc2fd70c6b6bec1c0c97cb11636edd2d5b2645df2324eef4820db3677bd412",
+          "url": "https://github.com/util-linux/util-linux/archive/refs/tags/v2.41.3.tar.gz",
+          "verified_on": "2026-09-05"
+        }
+      ],
+      "component": "libuuid",
+      "id": "conda-source:libuuid@2.41.3",
+      "relationship": "corresponding_source",
+      "version": "2.41.3"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 435195,
+          "sha256": "7cb8bc3605c29176e1b105350d2e6474142d7c1bd1d9327c4a9bdb46bf827acc",
+          "url": "https://files.pythonhosted.org/packages/ad/88/5f2260bdfae97aabf98f1778d43f69574390ad787afb646292a638c923d4/pydantic_core-2.33.2.tar.gz",
+          "verified_bytes": 435195,
+          "verified_on": "2026-09-05",
+          "verified_sha256": "7cb8bc3605c29176e1b105350d2e6474142d7c1bd1d9327c4a9bdb46bf827acc"
+        }
+      ],
+      "component": "pydantic-core",
+      "id": "pypi-source:pydantic-core@2.33.2",
+      "relationship": "corresponding_source",
+      "version": "2.33.2"
+    }
+  ]
+}

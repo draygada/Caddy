@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://caddydaddy.local/contracts/native-document.v1.schema.json",
+  "title": "CADdyDaddy native document and assembly",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "document_id",
+    "revision_id",
+    "parent_revision_id",
+    "document_hash",
+    "units",
+    "parts",
+    "assembly",
+    "metadata"
+  ],
+  "properties": {
+    "schema_version": {"const": "caddydaddy.native-document/1"},
+    "document_id": {"type": "string", "minLength": 1},
+    "revision_id": {"type": "string", "pattern": "^native-rev:[0-9a-f]{64}$"},
+    "parent_revision_id": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "document_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "units": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["length", "angle"],
+      "properties": {
+        "length": {"const": "mm"},
+        "angle": {"const": "deg"}
+      }
+    },
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/part"}
+    },
+    "assembly": {"$ref": "#/$defs/assembly"},
+    "metadata": {"$ref": "#/$defs/stringMap"}
+  },
+  "$defs": {
+    "stringMap": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    },
+    "part": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "part_id",
+        "part_number",
+        "name",
+        "revision_id",
+        "geometry_hash",
+        "material",
+        "unit",
+        "authored_document"
+      ],
+      "properties": {
+        "part_id": {"type": "string", "minLength": 1},
+        "part_number": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "revision_id": {"type": "string", "minLength": 1},
+        "geometry_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "material": {"oneOf": [{"type": "null"}, {"type": "string"}]},
+        "unit": {"const": "EA"},
+        "authored_document": {"type": "object"}
+      }
+    },
+    "instance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instance_id",
+        "part_id",
+        "part_revision_id",
+        "quantity",
+        "transform_row_major",
+        "metadata"
+      ],
+      "properties": {
+        "instance_id": {"type": "string", "minLength": 1},
+        "part_id": {"type": "string", "minLength": 1},
+        "part_revision_id": {"type": "string", "minLength": 1},
+        "quantity": {"type": "integer", "minimum": 1},
+        "transform_row_major": {
+          "type": "array",
+          "minItems": 16,
+          "maxItems": 16,
+          "items": {"type": "number"}
+        },
+        "metadata": {"$ref": "#/$defs/stringMap"}
+      }
+    },
+    "mate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mate_id", "kind", "instance_ids", "parameters"],
+      "properties": {
+        "mate_id": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "instance_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "parameters": {"type": "object"}
+      }
+    },
+    "assembly": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assembly_id", "assembly_revision_id", "instances", "mates"],
+      "properties": {
+        "assembly_id": {"type": "string", "minLength": 1},
+        "assembly_revision_id": {"type": "string", "minLength": 1},
+        "instances": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/instance"}
+        },
+        "mates": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/mate"}
+        }
+      }
+    }
+  }
+}

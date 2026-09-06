@@ -91,3 +91,44 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   .cube-arrow:hover { fill: var(--focus); stroke: var(--focus); }
   .status-word { font-family: var(--font-mono); font-weight: 700; padding: 0 4px; border-radius: 6px; white-space: nowrap; }
 }
+
+@media (max-width: 639px) {
+  .cad-authoring-workspace {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden !important;
+    overflow-wrap: anywhere;
+  }
+
+  .cad-authoring-layout {
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 8px !important;
+    padding: 8px !important;
+  }
+
+  .cad-authoring-column {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .cad-authoring-workspace button,
+  .cad-authoring-workspace input,
+  .cad-authoring-workspace select,
+  .cad-authoring-workspace label {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .cad-authoring-workspace button {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .cad-output-download > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}

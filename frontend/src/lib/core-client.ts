@@ -150,9 +150,19 @@ export interface CoreEntityBinding extends CoreEntityRange {
 
 export interface CoreCandidateLoad {
   candidate: CoreCandidateContract;
+  evidenceRole: 'IMMUTABLE_CANDIDATE_0_1_SOURCE_EVIDENCE_ONLY' | 'PACKAGED_RECOVERY_FIXTURE';
   loadedAt: string;
+  releaseIdentity: CoreReleaseIdentity | null;
   source: CoreCandidateSource;
   warning: string | null;
+}
+
+export interface CoreReleaseIdentity {
+  candidateId: 'candidate:0.2';
+  candidateVersion: '0.2';
+  revisionId: 'revision:caddydaddy-candidate-0.2';
+  schemaVersion: string;
+  snapshotSha256: string;
 }
 
 export class CoreCandidateError extends Error {
@@ -351,15 +361,68 @@ export async function loadCoreCandidate(fetchImpl: typeof fetch = fetch): Promis
   } catch {
     throw new CoreCandidateError('CORE_CANDIDATE_INVALID', 'The core Candidate API returned unreadable JSON. No assembly snapshot was accepted.');
   }
-  return { candidate: parseCoreCandidate(value), loadedAt: new Date().toISOString(), source: 'api', warning: null };
+  const parsed = parseCoreCandidateResponse(value);
+  return { ...parsed, loadedAt: new Date().toISOString(), source: 'api', warning: null };
 }
 
 export function loadCachedCoreCandidate(): CoreCandidateLoad {
   return {
     candidate: parseCoreCandidate(structuredClone(PACKAGED_FIXTURE)),
+    evidenceRole: 'PACKAGED_RECOVERY_FIXTURE',
     loadedAt: new Date().toISOString(),
+    releaseIdentity: null,
     source: 'packaged-fixture',
     warning: 'Recovery fixture in use. These values mirror the pinned Candidate 0.1 contract but do not prove that /api/candidate is currently reachable.',
+  };
+}
+
+export function parseCoreCandidateResponse(value: unknown): Pick<CoreCandidateLoad, 'candidate' | 'evidenceRole' | 'releaseIdentity'> {
+  if (!isRecord(value) || !isRecord(value.candidate) || !isRecord(value.releaseIdentity)) {
+    throw invalid('Candidate 0.2 release identity is missing or malformed.');
+  }
+  const rootCandidate = value.candidate;
+  const releaseIdentity = value.releaseIdentity;
+  if (
+    rootCandidate.id !== 'candidate:0.2'
+    || rootCandidate.version !== '0.2'
+    || rootCandidate.revisionId !== 'revision:caddydaddy-candidate-0.2'
+    || rootCandidate.status !== 'CANDIDATE_0_2_RUNTIME'
+  ) {
+    throw invalid('Candidate 0.2 root identity is inconsistent.');
+  }
+  if (
+    releaseIdentity.candidateId !== rootCandidate.id
+    || releaseIdentity.candidateVersion !== rootCandidate.version
+    || releaseIdentity.revisionId !== rootCandidate.revisionId
+    || typeof releaseIdentity.schemaVersion !== 'string'
+    || releaseIdentity.schemaVersion.length === 0
+    || !isSha256(releaseIdentity.snapshotSha256)
+  ) {
+    throw invalid('Candidate 0.2 releaseIdentity does not bind the authoritative root identity and snapshot hash.');
+  }
+  if (!isRecord(value.legacySnapshotEvidence)) {
+    throw invalid('Candidate 0.2 omitted legacySnapshotEvidence.');
+  }
+  const legacy = value.legacySnapshotEvidence;
+  if (
+    legacy.role !== 'IMMUTABLE_CANDIDATE_0_1_SOURCE_EVIDENCE_ONLY'
+    || legacy.candidateVersion !== '0.1'
+    || legacy.revisionId !== FIXTURE_REVISION
+    || legacy.immutable !== true
+    || legacy.currentCapabilityAuthority !== false
+    || legacy.snapshotSha256 !== releaseIdentity.snapshotSha256
+    || !isRecord(legacy.publicSnapshot)
+  ) {
+    throw invalid('Candidate 0.1 legacy snapshot evidence is missing, mutable, authoritative, or detached from the Candidate 0.2 release identity.');
+  }
+  const candidate = parseCoreCandidate(legacy.publicSnapshot);
+  if (candidate.candidate.version !== legacy.candidateVersion || candidate.document.revisionId !== legacy.revisionId) {
+    throw invalid('Candidate 0.1 legacy snapshot identity does not match its nested evidence descriptor.');
+  }
+  return {
+    candidate,
+    evidenceRole: 'IMMUTABLE_CANDIDATE_0_1_SOURCE_EVIDENCE_ONLY',
+    releaseIdentity: structuredClone(releaseIdentity) as unknown as CoreReleaseIdentity,
   };
 }
 
@@ -439,6 +502,10 @@ function hasExactKeys(value: object, keys: readonly string[]): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isSha256(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 }
 
 function invalid(detail: string): CoreCandidateError {

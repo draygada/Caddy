@@ -5,9 +5,233 @@ import { GENERIC_NAME, type Slot } from '../lib/catalog';
 import { THUMBS, AF_THUMB } from '../lib/geometry';
 import { IntakeForm } from './IntakeForm';
 import { CHECKLIST, CLAIM_COST, CLAIM_OFFER, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
+import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type LiveSourcingOffer, type OperationsEnvelope, type ServiceOffer, type SourcingDispatchEnvelope, type SourcingPackageEnvelope, type SourcingRoundEnvelope } from '../lib/operations-client';
+import { OrderClient, OrderServiceError, type OrderEnvelope, type RecordingOutcome } from '../lib/order-client';
 
 const usd = (v: number | null | undefined) => (v == null ? 'rate not verified' : v.toLocaleString(undefined, { style: 'currency', currency: 'USD' }));
 const FEDERAL_BUYER_CLASSES = ['radio', 'motor', 'thermal_imager', 'ic', 'board', 'cell', 'pack', 'gnss', 'esc'];
+
+function serviceError(error: unknown): string {
+  return error instanceof OperationsServiceError || error instanceof OrderServiceError ? `${error.code} · ${error.message}` : error instanceof Error ? error.message : 'Unknown service error';
+}
+
+function ownerNames(offer: ServiceOffer): string {
+  const names: string[] = [];
+  const visit = (node: ServiceOffer['ownership_walk']['seller']) => {
+    names.push(node.name + (node.pct ? ` (${node.pct}%)` : ''));
+    node.owners.forEach(visit);
+  };
+  visit(offer.ownership_walk.seller);
+  if (offer.ownership_walk.manufacturer) visit(offer.ownership_walk.manufacturer);
+  return names.join(' → ');
+}
+
+function ServiceSourcing() {
+  const [quantity, setQuantity] = useState(2);
+  const [mode, setMode] = useState<'air' | 'ocean'>('air');
+  const [inputMode, setInputMode] = useState<'live-bounded' | 'offline-demo'>('live-bounded');
+  const [seller, setSeller] = useState('Operator-provided supplier');
+  const [manufacturer, setManufacturer] = useState('Operator-provided manufacturer');
+  const [origin, setOrigin] = useState('US');
+  const [unitPrice, setUnitPrice] = useState('100.00');
+  const [leadDays, setLeadDays] = useState(7);
+  const [screeningStatus, setScreeningStatus] = useState<'NO_CANDIDATE_MATCH' | 'POTENTIAL_MATCH' | 'UNKNOWN'>('UNKNOWN');
+  const [screeningSource, setScreeningSource] = useState('Operator-provided screening record');
+  const [screeningText, setScreeningText] = useState('Screening scope and result not yet supplied.');
+  const [screeningComplete, setScreeningComplete] = useState(false);
+  const [ownershipComplete, setOwnershipComplete] = useState(false);
+  const [screeningAttestor, setScreeningAttestor] = useState('operator:browser-demo');
+  const [client, setClient] = useState<OperationsClient | null>(null);
+  const [round, setRound] = useState<SourcingRoundEnvelope | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
+  const [pkg, setPkg] = useState<SourcingPackageEnvelope | null>(null);
+  const [dispatch, setDispatch] = useState<SourcingDispatchEnvelope | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [orderClient, setOrderClient] = useState<OrderClient | null>(null);
+  const [orderEvidence, setOrderEvidence] = useState<OrderEnvelope | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [orderBusy, setOrderBusy] = useState<string | null>(null);
+  const [orderRetry, setOrderRetry] = useState<{ label: string; action: (api: OrderClient) => Promise<OrderEnvelope> } | null>(null);
+  const [validatedManifest, setValidatedManifest] = useState<string | null>(null);
+  const [recordingOutcome, setRecordingOutcome] = useState<RecordingOutcome>('DISPATCHED');
+  const [orderKey, setOrderKey] = useState('');
+  const [acknowledgementRef, setAcknowledgementRef] = useState('evidence:operator-observed-recording');
+  const [resolutionRef, setResolutionRef] = useState('');
+  const [reconciledEffect, setReconciledEffect] = useState<'NOT_SENT' | 'SENT'>('NOT_SENT');
+
+  const currentClient = async () => {
+    if (client) return client;
+    const identity = await loadOperationsCandidateIdentity();
+    const next = new OperationsClient(identity);
+    setClient(next);
+    return next;
+  };
+  const run = async (label: string, action: (value: OperationsClient) => Promise<void>) => {
+    setBusy(label);
+    setError(null);
+    try { await action(await currentClient()); } catch (caught) { setError(serviceError(caught)); } finally { setBusy(null); }
+  };
+  const currentOrderClient = async () => {
+    if (orderClient) return orderClient;
+    const operations = await currentClient();
+    const next = new OrderClient(operations.candidate);
+    setOrderClient(next);
+    return next;
+  };
+  const runOrder = async (label: string, action: (value: OrderClient) => Promise<OrderEnvelope>) => {
+    setOrderBusy(label);
+    setOrderError(null);
+    try {
+      const value = await action(await currentOrderClient());
+      setOrderEvidence(value);
+      setOrderRetry(null);
+    } catch (caught) {
+      setOrderError(serviceError(caught));
+      setOrderRetry({ label, action });
+    } finally {
+      setOrderBusy(null);
+    }
+  };
+  const evidence: OperationsEnvelope | null = dispatch ?? pkg ?? round ?? client?.getLastValid('sourcing') ?? null;
+  const visibleOrderEvidence = orderEvidence ?? orderClient?.getLastValid() ?? null;
+  const receipt = visibleOrderEvidence?.receipt;
+  const now = () => new Date().toISOString();
+  const actor = 'operator:browser-demo';
+  const createRound = (api: OperationsClient) => {
+    if (inputMode === 'offline-demo') return api.createSourcingRound({ part_key: 'flight-controller', quantity, mode, input_mode: 'offline-demo' });
+    const evidence = {
+      status: screeningStatus,
+      source_name: screeningSource,
+      source_text: screeningText,
+      checked_at: now(),
+      attestor: screeningAttestor,
+      complete: screeningComplete,
+    } as const;
+    const offer: LiveSourcingOffer = {
+      offer_id: `offer:user:${seller.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'supplier'}`,
+      part_key: 'flight-controller',
+      seller,
+      manufacturer,
+      origin: origin.toUpperCase(),
+      ship_from: origin.toUpperCase(),
+      unit_price_usd: unitPrice,
+      lead_days: leadDays,
+      declared_hts: '8542.31',
+      declared_eccn: 'not-independently-verified',
+      screening_evidence: { seller: evidence, manufacturer: evidence, ownership_complete: ownershipComplete },
+    };
+    return api.createSourcingRound({ part_key: 'flight-controller', quantity, mode, input_mode: 'live-bounded', offers: [offer] });
+  };
+
+  return (
+    <section className="panel min-w-0 lg:col-span-2" aria-label="Service-backed sourcing">
+      <div className="panel-head flex-wrap gap-2">
+        <div className="panel-title">Service-backed sourcing <span className="sub">· client-carried continuity</span></div>
+        <span className="chip">{evidence ? evidence.status : 'not run'}</span>
+      </div>
+      <div className="p-3 grid gap-3 text-[13px]">
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="grid gap-1 text-muted">input lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setRound(null); setSelectedOffer(null); setPkg(null); setDispatch(null); }} className="field text-ink"><option value="live-bounded">Connected Candidate 0.2 input</option><option value="offline-demo">Offline demo · 2-key fixture</option></select></label>
+          <label className="grid gap-1 text-muted">quantity<input type="number" min={1} max={10000} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(10000, Number(event.target.value) || 1)))} className="field w-28 font-mono text-ink" /></label>
+          <label className="grid gap-1 text-muted">mode<select value={mode} onChange={(event) => setMode(event.target.value as 'air' | 'ocean')} className="field text-ink"><option value="air">air</option><option value="ocean">ocean</option></select></label>
+          <button className="btn btn-primary" disabled={busy !== null} onClick={() => run('round', async (api) => { const value = await createRound(api); setRound(value); setSelectedOffer(value.round.selected_offer_id); setPkg(null); setDispatch(null); })}>{busy === 'round' ? 'Creating…' : inputMode === 'offline-demo' ? 'Run Offline demo' : 'Create connected bounded round'}</button>
+        </div>
+        {inputMode === 'live-bounded' && (
+          <div className="border border-line2 rounded-r p-3 grid gap-2" aria-label="Connected Candidate 0.2 sourcing input">
+            <div className="flex flex-wrap justify-between gap-2"><b>User-provided offer + screening evidence</b><span className="text-[12px] text-muted">connected Candidate 0.2 service · hashed · revalidated each request · never full-list clearance</span></div>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2">
+              <label className="grid gap-1 text-muted">seller<input value={seller} onChange={(event) => setSeller(event.target.value)} className="field text-ink" /></label>
+              <label className="grid gap-1 text-muted">manufacturer<input value={manufacturer} onChange={(event) => setManufacturer(event.target.value)} className="field text-ink" /></label>
+              <label className="grid gap-1 text-muted">origin / ship-from<input value={origin} maxLength={2} onChange={(event) => setOrigin(event.target.value)} className="field font-mono text-ink uppercase" /></label>
+              <label className="grid gap-1 text-muted">unit price USD<input value={unitPrice} inputMode="decimal" onChange={(event) => setUnitPrice(event.target.value)} className="field font-mono text-ink" /></label>
+              <label className="grid gap-1 text-muted">lead days<input type="number" min={0} max={3650} value={leadDays} onChange={(event) => setLeadDays(Math.max(0, Math.min(3650, Number(event.target.value) || 0)))} className="field font-mono text-ink" /></label>
+              <label className="grid gap-1 text-muted">screening result<select value={screeningStatus} onChange={(event) => setScreeningStatus(event.target.value as typeof screeningStatus)} className="field text-ink"><option value="UNKNOWN">UNKNOWN · HOLD</option><option value="POTENTIAL_MATCH">POTENTIAL MATCH · BLOCK</option><option value="NO_CANDIDATE_MATCH">NO CANDIDATE MATCH · bounded attestation</option></select></label>
+            </div>
+            <label className="grid gap-1 text-muted">screening source / list version<input value={screeningSource} onChange={(event) => setScreeningSource(event.target.value)} className="field text-ink" /></label>
+            <label className="grid gap-1 text-muted">screening evidence text<textarea value={screeningText} onChange={(event) => setScreeningText(event.target.value)} rows={3} className="field text-ink resize-y" /></label>
+            <label className="grid gap-1 text-muted">attestor<input value={screeningAttestor} onChange={(event) => setScreeningAttestor(event.target.value)} className="field font-mono text-ink" /></label>
+            <div className="flex flex-wrap gap-4 text-[12px]"><label className="flex items-center gap-2"><input type="checkbox" checked={screeningComplete} onChange={(event) => setScreeningComplete(event.target.checked)} /> screening evidence complete for the declared scope</label><label className="flex items-center gap-2"><input type="checkbox" checked={ownershipComplete} onChange={(event) => setOwnershipComplete(event.target.checked)} /> ownership inputs complete</label></div>
+            {(!screeningComplete || !ownershipComplete || screeningStatus === 'UNKNOWN') && <div className="text-amber text-[12px]">HOLD is mandatory until screening and ownership evidence are explicitly complete. Completeness still does not imply full-list coverage or clearance.</div>}
+          </div>
+        )}
+        {inputMode === 'offline-demo' && <div className="border border-amber rounded-r p-2 text-[12px] text-amber"><b>Offline demo.</b> Synthetic two-key screening corpus, three fixture offers, one active match. Never substitute this lane for a current list or transaction review.</div>}
+        {client && <div className="font-mono text-[12px] break-all text-muted">candidate {client.candidate.candidate_id} · {client.candidate.revision_id} · snapshot {client.candidate.snapshot_sha256}</div>}
+        {error && <div role="alert" className="border border-red rounded-r p-2 text-red"><b>Service evidence not replaced.</b> {error}{evidence ? ' · Last valid result remains below.' : ''}</div>}
+        {round && (
+          <div className="grid gap-2">
+            <div className="font-mono text-[12px] break-all">{round.round.round_id}</div>
+            {round.round.offers.map((offer) => (
+              <article key={offer.offer_id} className="border border-line rounded-r p-3 grid gap-2">
+                <div className="flex flex-wrap justify-between gap-2"><b>{offer.seller}</b><span className="chip">{offer.screening_disposition}</span></div>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(145px,1fr))] gap-2 text-[12px]"><span>origin <b>{offer.origin}</b></span><span>lead <b>{offer.lead_days} days</b></span><span>modeled landed estimate <b>${offer.landed_cost.total_usd}</b></span><span>modeled per unit <b>${offer.landed_cost.per_unit_usd}</b></span></div>
+                <div className="text-[12px] text-muted">ownership walk · {ownerNames(offer)}</div>
+                <div className="text-[12px] text-muted">{offer.landed_cost.rows.map((row) => `${row.layer} $${row.amount_usd}`).join(' · ')} · modeled estimate from declared/fixture inputs; not a supplier quote or tariff determination</div>
+                <div className="flex flex-wrap gap-2">
+                  <button className="btn btn-primary disabled:opacity-40" disabled={!['eligible-fixture', 'eligible-bounded'].includes(offer.screening_disposition) || busy !== null} onClick={() => run('select', async (api) => { const value = await api.selectSourcingOffer(round.round.round_id, offer.offer_id); setSelectedOffer(value.selected_offer.offer_id); })}>{selectedOffer === offer.offer_id ? 'Selected' : 'Select eligible offer'}</button>
+                  <button className="btn" disabled={busy !== null} onClick={() => run('hold', async (api) => { await api.adjudicateSourcingOffer({ round_id: round.round.round_id, offer_id: offer.offer_id, decision: 'HOLD', attestor: 'reviewer:browser-session', rationale: 'Retain the offer and original screening state for bounded comparison.' }); })}>Record HOLD</button>
+                </div>
+              </article>
+            ))}
+            <div className="flex flex-wrap gap-2">
+              <button className="btn btn-primary disabled:opacity-40" disabled={!selectedOffer || busy !== null} onClick={() => run('package', async (api) => { const value = await api.buildSourcingPackage(round.round.round_id); setPkg(value); setDispatch(null); setValidatedManifest(null); setOrderEvidence(null); setOrderError(null); setOrderKey(`recording-${value.package.manifest_sha256.slice(0, 16)}-${Date.now().toString(36)}`); })}>{busy === 'package' ? 'Sealing…' : 'Build + reread sealed package'}</button>
+              <button className="btn disabled:opacity-40" disabled={!pkg || busy !== null} onClick={() => run('dispatch', async (api) => setDispatch(await api.stageSourcingDispatch(round.round.round_id, pkg!.package.manifest_sha256, `browser-${pkg!.package.manifest_sha256}`)))}>{dispatch ? 'Retry same idempotency key' : 'Stage dispatch · zero send'}</button>
+            </div>
+          </div>
+        )}
+        {pkg && <div className="border border-line rounded-r p-2 font-mono text-[12px] break-all">SEALED · reread {String(pkg.package.byte_reread_verified)} · payload {pkg.package.payload_sha256} · manifest {pkg.package.manifest_sha256} · {pkg.package.dispatch_ceiling}</div>}
+        {dispatch && <div className="border border-line rounded-r p-2 text-[12px]"><b>{dispatch.status}</b> · external_send {String(dispatch.dispatch.external_send)} · network_calls {dispatch.dispatch.network_calls} · retry returns the same staged receipt</div>}
+        {pkg && (
+          <div className="border border-line rounded-r p-3 grid gap-3" aria-label="Operator order lifecycle rehearsal">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <b>Operator order lifecycle rehearsal</b>
+              <div className="flex flex-wrap gap-1"><span className="chip">PROCESS_LOCAL_DEMO_ONLY</span><span className="chip">RECORDING_ONLY</span><span className="chip">external effect NONE</span></div>
+            </div>
+            <div className="text-[12px] text-muted">This rehearses hash-linked, client-carried demo records against the sealed fixture package. They are not durable, externally authenticated, or globally replay-protected. No supplier receives a message, request, acknowledgement, or order.</div>
+            <div className="flex flex-wrap items-end gap-2">
+              <button className="btn btn-primary disabled:opacity-40" disabled={orderBusy !== null} onClick={() => void runOrder('validate-order-package', async (api) => { const value = await api.validateSourcingPackage(pkg.package); setValidatedManifest(value.package?.manifest_sha256 ?? null); return value; })}>{orderBusy === 'validate-order-package' ? 'Validating…' : validatedManifest ? 'Package validated' : '1 · Validate package bytes'}</button>
+              <label className="grid gap-1 text-muted">simulated recording outcome<select value={recordingOutcome} onChange={(event) => setRecordingOutcome(event.target.value as RecordingOutcome)} className="field text-ink" disabled={orderBusy !== null}><option value="DISPATCHED">DISPATCHED</option><option value="ACKNOWLEDGED">ACKNOWLEDGED</option><option value="EXCEPTION">EXCEPTION · known not sent</option><option value="UNKNOWN">UNKNOWN · reconciliation required</option></select></label>
+              <label className="grid gap-1 text-muted min-w-[240px] flex-1">idempotency key<input value={orderKey} onChange={(event) => setOrderKey(event.target.value)} className="field font-mono text-ink" disabled={orderBusy !== null} /></label>
+              <button className="btn btn-primary disabled:opacity-40" disabled={!validatedManifest || !orderKey.trim() || orderBusy !== null} onClick={() => void runOrder('record-dispatch', (api) => api.dispatchRecording({ manifest_sha256: validatedManifest!, recording_outcome: recordingOutcome, idempotency_key: orderKey.trim(), route_ref: 'supplier:recording-demo-only', actor_id: actor, occurred_at: now() }))}>{orderBusy === 'record-dispatch' ? 'Recording…' : '2 · Record simulated dispatch'}</button>
+            </div>
+            {orderError && <div role="alert" className="border border-red rounded-r p-2 text-red flex flex-wrap items-center justify-between gap-2"><span><b>Order evidence not replaced.</b> {orderError}{visibleOrderEvidence ? ' · Last valid record remains visible.' : ''}</span>{orderRetry && <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder(orderRetry.label, orderRetry.action)}>Retry failed operation</button>}</div>}
+            {receipt && (
+              <div className="grid gap-3">
+                <div className="border border-line2 rounded-r p-2 grid gap-1 text-[12px]">
+                  <div className="flex flex-wrap justify-between gap-2"><b>{receipt.state} · simulated</b><span className="font-mono break-all">{receipt.receipt_id}</span></div>
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2"><span>execution <b>{receipt.execution_mode}</b></span><span>external effect <b>{receipt.external_effect}</b></span><span>simulated outcome record (no external send) <b>{receipt.send_effect}</b></span><span>retry <b>{receipt.retry_disposition}</b></span></div>
+                  <div className="font-mono break-all text-muted">receipt sha256 {receipt.receipt_sha256} · detail {receipt.detail_code}</div>
+                </div>
+                <div className="flex flex-wrap items-end gap-2">
+                  <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder('read-receipt', (api) => api.readReceipt(receipt.receipt_id))}>{orderBusy === 'read-receipt' ? 'Reading…' : '3 · Read latest receipt'}</button>
+                  {receipt.state === 'DISPATCHED' && <><label className="grid gap-1 text-muted min-w-[260px] flex-1">recorded acknowledgement evidence<input value={acknowledgementRef} onChange={(event) => setAcknowledgementRef(event.target.value)} className="field font-mono text-ink" /></label><button className="btn disabled:opacity-40" disabled={!acknowledgementRef.trim() || orderBusy !== null} onClick={() => void runOrder('acknowledge', (api) => api.acknowledge(receipt.receipt_id, acknowledgementRef.trim(), actor, now()))}>4 · Record acknowledgement</button></>}
+                  {receipt.state === 'UNKNOWN' && <><label className="grid gap-1 text-muted min-w-[280px] flex-1">mandatory reconciliation evidence<input value={resolutionRef} onChange={(event) => setResolutionRef(event.target.value)} placeholder="evidence:confirmed-not-received" className="field font-mono text-ink" /></label><label className="grid gap-1 text-muted">definitive effect<select value={reconciledEffect} onChange={(event) => setReconciledEffect(event.target.value as 'NOT_SENT' | 'SENT')} className="field text-ink"><option value="NOT_SENT">NOT_SENT</option><option value="SENT">SENT</option></select></label><button className="btn btn-primary disabled:opacity-40" disabled={!resolutionRef.trim() || orderBusy !== null} onClick={() => void runOrder('reconcile', (api) => api.reconcileUnknown(receipt.receipt_id, resolutionRef.trim(), reconciledEffect, actor, now()))}>4 · Reconcile UNKNOWN + close</button></>}
+                  {(receipt.state === 'ACKNOWLEDGED' || receipt.state === 'EXCEPTION') && <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder('close', (api) => api.close(receipt.receipt_id, actor, now(), resolutionRef.trim() || undefined))}>5 · Close process-local order</button>}
+                  <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder('verify-audit', (api) => api.verifyAudit())}>{orderBusy === 'verify-audit' ? 'Verifying…' : 'Verify audit hash chain'}</button>
+                </div>
+              </div>
+            )}
+            {visibleOrderEvidence && (
+              <div className="border-t border-line2 pt-2 grid gap-1 text-[12px] text-muted">
+                <div><b className="text-ink">{visibleOrderEvidence.status}</b> · {visibleOrderEvidence.claim_ceiling}</div>
+                {visibleOrderEvidence.event_count != null && <div className="font-mono break-all">hash-linked events {visibleOrderEvidence.event_count} · audit head {visibleOrderEvidence.audit_head_sha256}</div>}
+                {(visibleOrderEvidence.audit_events ?? visibleOrderEvidence.events ?? []).map((item) => <div key={item.event_id} className="font-mono break-all">#{item.sequence} {item.event_type} · {item.state} · {item.event_sha256}</div>)}
+              </div>
+            )}
+          </div>
+        )}
+        {evidence && (
+          <div className="border-t border-line2 pt-2 grid gap-1 text-[12px] text-muted">
+            <div><b className="text-ink">Claim ceiling:</b> {evidence.claim_ceiling}</div>
+            <div className="font-mono break-all">corpus {evidence.corpus.corpus_sha256} · source hashes {Object.keys(evidence.source_hashes).length}</div>
+            {evidence.limitations.map((item) => <div key={item}>· {item}</div>)}
+          </div>
+        )}
+        {!evidence && <div className="text-[12px] text-muted">Requires the mounted local service adapters. No offline data is substituted when an endpoint is absent, stale, or malformed.</div>}
+      </div>
+    </section>
+  );
+}
 
 function Party({ n, depth = 0 }: { n: PartyNode; depth?: number }) {
   const color = n.screening === 'exact' || n.screening === 'normalized' ? 'var(--red)' : n.unknown ? 'var(--amber)' : 'var(--muted)';
@@ -34,7 +258,7 @@ function consequences(ro: ResolvedOffer, line: Line, round: Round, o: Outcome): 
   const fired = ro.ladder.rows.filter((r) => r.amount != null && r.amount > 0 && r.layer !== 'MPF' && r.layer !== 'HMF' && !r.layer.startsWith('base'));
   if (ro.ladder.domestic) out.push({ tone: 'var(--muted)', text: 'ships from the US · no entry, no duty layers' });
   else {
-    out.push({ tone: 'var(--amber)', text: '$ enters the US from ' + ro.offer.shipFrom + ' · landed ' + usd(ro.ladder.perUnit) + ' per unit' + (fired.length ? ' · ' + fired.map((r) => r.layer + ' ' + r.rate).join(' · ') : ' · no Chapter 99 add-on for origin ' + ro.offer.declaredOrigin) + ' · estimate' });
+    out.push({ tone: 'var(--amber)', text: '$ enters the US from ' + ro.offer.shipFrom + ' · modeled landed estimate ' + usd(ro.ladder.perUnit) + ' per unit' + (fired.length ? ' · ' + fired.map((r) => r.layer + ' ' + r.rate).join(' · ') : ' · no Chapter 99 add-on for origin ' + ro.offer.declaredOrigin) + ' · from declared/fixture inputs; not a supplier quote or tariff determination' });
     const mpf = ro.ladder.rows.find((r) => r.layer === 'MPF');
     if (mpf?.note.includes('minimum')) out.push({ tone: 'var(--amber)', text: '$ MPF minimum applied (' + usd(mpf.amount) + ') · on a small order the fee outweighs the duty' });
   }
@@ -81,7 +305,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
   const header = (
     <div className="flex items-center justify-between gap-3 px-4 py-[10px] border-b border-line2 bg-surface flex-wrap">
       <div className="flex items-baseline gap-3 min-w-0 flex-wrap">
-        <span className="text-[13px] font-semibold">Sourcing <span className="text-muted font-normal">· part by part</span></span>
+        <span className="text-[13px] font-semibold">Sourcing <span className="text-muted font-normal">· {r ? 'offline lab · part by part' : 'service + offline lab'}</span></span>
         {r && <span className="font-mono text-[13px]">{r.id} · design state #{r.designSeq}</span>}
         {r && <span className="chip">ship-to {r.shipTo}</span>}{r && <span className="chip">qty {r.qty}</span>}{r && <span className="chip">{r.mode}</span>}
         {rail}
@@ -117,7 +341,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
       { label: 'resolve offers', detail: 'committed catalog · ' + FIXTURES.offers },
       { label: 'walk owners', detail: 'seller and manufacturer · full walk where controlled, foreign or flagged · ' + FIXTURES.ownership },
       { label: 'screen fixture names', detail: 'exact and suffix-normalised · ' + FIXTURES.csl },
-      { label: 'estimate landed cost', detail: 'declared code × origin × dated tariff table · ' + FIXTURES.tariff },
+      { label: 'estimate modeled landed cost', detail: 'declared/fixture inputs · not a supplier quote or tariff determination · ' + FIXTURES.tariff },
     ];
     const running = stage >= 0 && stage < 4;
     const start = () => { s.openRound(shipTo, qty, mode, intake); setStage(4); };
@@ -126,6 +350,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
       <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
         {header}
         <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start justify-center" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))' }}>
+          <ServiceSourcing />
           <div className="panel">
             <div className="panel-head"><div className="panel-title">{incomplete ? 'This application requires more information' : 'Ready to source'}</div><span className="text-[12px] text-muted">use case · declared on the project</span></div>
             <div className="p-3 grid gap-3 text-[13px]">
@@ -295,7 +520,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                 <div className="panel">
                   <div className="panel-head"><div className="panel-title">Price against regulation</div></div>
                   <div className="p-3 grid gap-1 text-[13px]">
-                    <div className="grid grid-cols-[1fr_auto] gap-2"><span>cheapest landed · <b>{cheapest.offer.seller}</b> <span style={{ color: STATUS_COLOR[cheapest.status] }}>· {STATUS_WORD[cheapest.status]}</span></span><span className="font-mono">{usd(cheapest.ladder.perUnit)}</span></div>
+                    <div className="grid grid-cols-[1fr_auto] gap-2"><span>lowest modeled landed estimate · <b>{cheapest.offer.seller}</b> <span style={{ color: STATUS_COLOR[cheapest.status] }}>· {STATUS_WORD[cheapest.status]}</span></span><span className="font-mono">{usd(cheapest.ladder.perUnit)}</span></div>
                     {clean && clean !== cheapest && <div className="grid grid-cols-[1fr_auto] gap-2"><span>cheapest with no candidate match · <b>{clean.offer.seller}</b></span><span className="font-mono">{usd(clean.ladder.perUnit)}</span></div>}
                     {delta != null && delta > 0 && <div className="text-muted">the cleaner seller costs <span className="font-mono text-ink">{usd(delta)}</span> more per unit · the cheaper one is {STATUS_WORD[cheapest.status]}{cheapest.offer.declaredOrigin === 'CN' ? ' and PRC-origin (Section 301 in the ladder, federal-buyer flag)' : ''}</div>}
                     {!clean && <div className="text-amber">no offer on this line is free of a review flag · pick with the flag on the record, or escalate</div>}
@@ -317,7 +542,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
 
           <div className="grid gap-3 content-start">
             <div className="panel">
-              <div className="panel-head"><div className="panel-title">Where you can get it <span className="sub">· {list.length} offer{list.length === 1 ? '' : 's'} · status first, then landed cost · blocked last</span></div></div>
+              <div className="panel-head"><div className="panel-title">Where you can get it <span className="sub">· {list.length} offer{list.length === 1 ? '' : 's'} · status first, then modeled landed-cost estimate · blocked last</span></div></div>
               <div className="p-3 grid gap-2">
                 {list.length === 0 && <div className="text-[13px] text-amber">no offer match · escalation lane: the agent may propose a seller; a human resolves.</div>}
                 {list.map((ro) => {
@@ -332,13 +557,13 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                       <div className="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-x-3 gap-y-1 text-[12px]">
                         <div><span className="text-muted">ship-from · origin</span><br /><span className="font-mono">{ro.offer.shipFrom} · {ro.offer.declaredOrigin} <span className="chip chip-sm">declared</span></span></div>
                         <div><span className="text-muted">price</span><br /><span className="font-mono">{usd(ro.offer.unitPrice)}</span></div>
-                        <div><span className="text-muted">landed / unit</span><br /><span className="font-mono font-semibold" style={{ color: ro.ladder.unverified ? 'var(--grey)' : 'var(--ink)' }}>{usd(ro.ladder.perUnit)}</span></div>
+                        <div><span className="text-muted">modeled landed estimate / unit</span><br /><span className="font-mono font-semibold" style={{ color: ro.ladder.unverified ? 'var(--grey)' : 'var(--ink)' }}>{usd(ro.ladder.perUnit)}</span></div>
                         <div><span className="text-muted">stock · lead · MOQ</span><br /><span className="font-mono">{ro.offer.stock} · {ro.offer.leadDays} d · {ro.offer.moq}</span></div>
                         <div><span className="text-muted">seller ECCN · HTS</span><br /><span className="font-mono">{ro.offer.declaredEccn} · {ro.offer.declaredHts}</span></div>
                       </div>
                       <div className="flex gap-1 flex-wrap items-center">
                         <button onClick={() => { setPick(ro.offer.id); setTab(tab === 'owners' && on ? 'none' : 'owners'); }} className="btn">Owners · {ro.tier}</button>
-                        <button onClick={() => { setPick(ro.offer.id); setTab(tab === 'estimate' && on ? 'none' : 'estimate'); }} className="btn">Landed cost</button>
+                        <button onClick={() => { setPick(ro.offer.id); setTab(tab === 'estimate' && on ? 'none' : 'estimate'); }} className="btn">Modeled landed estimate</button>
                         {ro.status === 'review_blocked' && <button onClick={() => setAdj({ offerId: ro.offer.id, role: 'analyst', reason: 'name match on a different entity', rationale: '', action: 'false_positive' })} className="btn">Adjudicate…</button>}
                         <span className="flex-1" />
                         {sel?.offerId === ro.offer.id ? <span className="text-[13px] font-semibold text-green">picked</span> : declined ? <span className="text-[12px] text-muted">declined · {declined.reason}</span> : <button onClick={() => { setPick(ro.offer.id); setErr(null); }} className={'btn ' + (on ? 'btn-primary' : '')} disabled={ro.status === 'review_blocked'} title={ro.status === 'review_blocked' ? 'review blocked stops a pick · adjudicate first' : ''}>{on ? 'picked below' : 'Pick this'}</button>}
@@ -348,7 +573,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                       )}
                       {on && tab === 'estimate' && (
                         <div className="border-t border-line2 pt-2">
-                          <div className="text-[13px] font-semibold mb-1">What it costs to land · {ro.ladder.domestic ? 'domestic · no entry' : 'entering the US'}</div>
+                          <div className="text-[13px] font-semibold mb-1">Modeled landed-cost estimate · declared/fixture inputs · not a supplier quote or tariff determination · {ro.ladder.domestic ? 'domestic · no entry' : 'entering the US'}</div>
                           <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-[2px] text-[12px]">
                             {ro.ladder.rows.map((rw, i) => <div key={i} className="contents"><div className={rw.verified ? '' : 'text-grey'}><b>{rw.layer}</b> <span className="text-muted">· {rw.citation}</span><br /><span className="text-muted">{rw.note}</span></div><div className="font-mono text-right text-amber">{rw.rate}</div><div className="font-mono text-right text-amber">{rw.amount == null ? '' : '$ ' + rw.amount.toFixed(2)}</div></div>)}
                           </div>

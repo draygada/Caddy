@@ -1,7 +1,7 @@
 // Builds the bodies the viewport, dialogs and measure tool all read from one
 // design state, so a preview (dialog live-edit) and the committed design use
 // the same construction.
-import { CATALOG, PLATE_T, PLATE_W, SLOTS, type Dims, type Slot } from './catalog';
+import { CATALOG, PLATE_W, SLOTS, type Dims, type Slot } from './catalog';
 import type { Geo, Positions } from './design';
 import { boxFaces, discX, discZ, discZd, emptySolid, indexFaces, partSolid, plateOutline, prismFaces, type Solid } from './geometry';
 import type { Attrs, Parts } from './rules';
@@ -11,7 +11,7 @@ export type BodyKey = Slot | 'plate' | 'flange';
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export function buildBodies(d: SceneInput): Record<BodyKey, Solid> {
-  const L = d.span, W = PLATE_W, T = PLATE_T;
+  const L = d.span, W = PLATE_W, T = d.geo.plateT;
   const r = d.geo.holeD / 2;
   const plate: Solid = indexFaces({
     slot: 'airframe',

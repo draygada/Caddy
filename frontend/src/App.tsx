@@ -100,9 +100,9 @@ export default function App() {
       <div className="flex flex-col gap-2 min-h-0 min-w-0">
         <Viewport o={o} />
       </div>
-      <div className="flex flex-col gap-2 min-h-0">
-        <StatusPanel o={o} />
-        <SpecPanel o={o} />
+      <div className="grid min-h-0 grid-rows-[minmax(220px,0.85fr)_minmax(240px,1.15fr)] gap-2">
+        <div className="min-h-0 overflow-hidden [&>*]:h-full"><StatusPanel o={o} /></div>
+        <div className="min-h-0 overflow-hidden [&>*]:h-full"><SpecPanel o={o} /></div>
       </div>
     </div>
   ) : (

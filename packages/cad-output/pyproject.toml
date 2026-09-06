@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "caddydaddy-cad-output"
+version = "0.1.0"
+description = "Deterministic native CAD, drawing, BOM, and manufacturing-package outputs"
+requires-python = ">=3.11,<3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "hatchling==1.27.0",
+  "pytest==8.4.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/caddydaddy_cad_output"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["../../tests/cad-output"]

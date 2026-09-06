@@ -1,6 +1,6 @@
 {
-  "schema_version": "caddydaddy.sanitized-bundle/3",
-  "candidate": "0.1",
+  "schema_version": "caddydaddy.sanitized-bundle/4",
+  "candidate": "0.2",
   "target": "vercel-file-based-python-function",
   "python": "3.12",
   "build_command": "packages/core-kernel/.venv/bin/python apps/product-service/scripts/build_bundle.py --output <outside-repo-output>",
@@ -30,7 +30,32 @@
     {
       "source": "packages/compliance-bridge/compliance_bridge",
       "target": "packages/compliance-bridge/compliance_bridge"
+    },
+    {
+      "source": "packages/classification/forge_classification",
+      "target": "packages/classification/forge_classification"
+    },
+    {
+      "source": "packages/classification/contracts",
+      "target": "packages/classification/contracts"
+    },
+    {
+      "source": "packages/classification/data",
+      "target": "packages/classification/data"
+    },
+    {
+      "source": "packages/cad-output/src/caddydaddy_cad_output",
+      "target": "packages/cad-output/caddydaddy_cad_output"
+    },
+    {
+      "source": "packages/order-execution/src/order_execution",
+      "target": "packages/order-execution/order_execution"
     }
+  ],
+  "runtime_imports": [
+    "forge_classification",
+    "caddydaddy_cad_output",
+    "order_execution"
   ],
   "required_files": [
     {

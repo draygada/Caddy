@@ -12,7 +12,7 @@ import { FeatureDialog } from './FeatureDialog';
 import { MarkingMenu } from './MarkingMenu';
 
 const VB_W = 760, VB_H = 490;
-const W = PLATE_W, T = PLATE_T;
+const W = PLATE_W;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** ViewCube cells: each face split 3×3; centre = face view, edge strips = edge views, corners = corner views (26 directions). */
@@ -82,11 +82,11 @@ function cubeCells(pr: Projector): { cells: CubeCell[]; faces: CubeFace[]; triad
 interface Deco { stroke: string; sw: number; dash: string; hoverMix: boolean; selFace: boolean; tint?: string }
 interface Extent { dx0: number; dx1: number; dy0: number; dy1: number }
 
-function toPlate(pr: Projector, sx: number, sy: number, ca: number, sa: number): Pos | null {
+function toPlate(pr: Projector, sx: number, sy: number, ca: number, sa: number, thickness: number): Pos | null {
   if (Math.abs(pr.se) < 0.08) return null;
   const UK = pr.U * K;
   const a = (sx - pr.ox) / UK;
-  const b = ((sy - pr.oy) / UK + T * pr.ce) / pr.se;
+  const b = ((sy - pr.oy) / UK + thickness * pr.ce) / pr.se;
   return { x: a * ca + b * sa, y: -a * sa + b * ca };
 }
 
@@ -137,6 +137,8 @@ export function Viewport({ o: _o }: { o: Outcome }) {
   // a component body shows when it is placed, or when its type is in the project (dashed footprint); library types not in the project draw nothing
   const inProject = (sl: Slot) => !!s.parts[sl] || (s.project?.components ?? CORE_SLOTS).includes(sl);
   const visible = (b: BodyId) => !s.hidden[b] && (!s.isolated || s.isolated === b) && (b === 'plate' || b === 'flange' || inProject(b));
+  // plate depth comes from the committed sketch geometry (main), falling back to the catalog constant
+  const plateT = geo.plateT ?? PLATE_T;
 
   const scene = useMemo(() => {
     const U = 100 * s.zoom;
@@ -202,7 +204,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     const dim = { x1: d1[0].toFixed(1), y1: d1[1].toFixed(1), x2: d2[0].toFixed(1), y2: d2[1].toFixed(1), tx: ((d1[0] + d2[0]) / 2).toFixed(1), ty: (Math.max(d1[1], d2[1]) + 18).toFixed(1) };
     let plane: string | null = null;
     if (s.section.on) {
-      const zTop = T + Math.max(dims.airframe, 1.2), a = s.section.at;
+      const zTop = plateT + Math.max(dims.airframe, 1.2), a = s.section.at;
       const corners: Vec3[] = s.section.axis === 0 ? [[a, -0.2, -0.05], [a, W + 0.2, -0.05], [a, W + 0.2, zTop], [a, -0.2, zTop]] : s.section.axis === 1 ? [[-0.2, a, -0.05], [L + 0.2, a, -0.05], [L + 0.2, a, zTop], [-0.2, a, zTop]] : [[-0.2, -0.2, a], [L + 0.2, -0.2, a], [L + 0.2, W + 0.2, a], [-0.2, W + 0.2, a]];
       plane = corners.map((p) => pr.pt(p[0], p[1], p[2]).map((v) => v.toFixed(1)).join(',')).join(' ');
     }
@@ -213,7 +215,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
 
   const svgPt = (e: { clientX: number; clientY: number; currentTarget: Element }): [number, number] => { const r = e.currentTarget.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * VB_W, ((e.clientY - r.top) / r.height) * VB_H]; };
   const onPlate = (slot: Slot, p: Pos): Pos => { const ex = prRef.current?.extents[slot]; if (!ex) return p; return { x: clamp(p.x, 0.12 - ex.dx0, L - 0.05 - ex.dx1), y: clamp(p.y, 0.05 - ex.dy0, W - 0.05 - ex.dy1) }; };
-  const platePt = (sx: number, sy: number): Pos | null => { const c = prRef.current; return c ? toPlate(c.pr, sx, sy, c.ca, c.sa) : null; };
+  const platePt = (sx: number, sy: number): Pos | null => { const c = prRef.current; return c ? toPlate(c.pr, sx, sy, c.ca, c.sa, plateT) : null; };
 
   const vpDown = (e: RMouseEvent<SVGSVGElement>) => {
     if (e.button !== 0 && e.button !== 1) return;
@@ -288,7 +290,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
   );
 
   return (
-    <div data-panel="viewport" className="panel flex-1 flex flex-col min-h-0 relative">
+    <div data-panel="viewport" data-cad-workspace="design" className="panel flex-1 flex flex-col min-h-0 relative">
       <div className="flex items-center gap-2 px-3 py-[6px] border-b border-line2 flex-wrap">
         <div role="radiogroup" aria-label="View mode" className="flex border border-line rounded-r overflow-hidden">
           {modeBtn('model', 'Model')}{modeBtn('sketch', 'Sketch', 'border-l border-line')}{modeBtn('board', 'Board', 'border-l border-line')}{modeBtn('sheet', 'Drawing sheet', 'border-l border-line')}

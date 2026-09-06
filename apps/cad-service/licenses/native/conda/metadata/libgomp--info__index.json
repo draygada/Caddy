@@ -1,0 +1,14 @@
+{
+  "arch": "x86_64",
+  "build": "he0feb66_17",
+  "build_number": 17,
+  "depends": [
+    "__glibc >=2.17,<3.0.a0"
+  ],
+  "license": "GPL-3.0-only WITH GCC-exception-3.1",
+  "name": "libgomp",
+  "platform": "linux",
+  "subdir": "linux-64",
+  "timestamp": 1770252441199,
+  "version": "15.2.0"
+}

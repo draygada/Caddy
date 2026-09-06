@@ -1,0 +1,236 @@
+{
+  "$defs": {
+    "BodyResult": {
+      "additionalProperties": false,
+      "properties": {
+        "area_mm2": {
+          "title": "Area Mm2",
+          "type": "number"
+        },
+        "body_id": {
+          "title": "Body Id",
+          "type": "string"
+        },
+        "bounds_mm": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Bounds Mm",
+          "type": "array"
+        },
+        "brep_base64": {
+          "title": "Brep Base64",
+          "type": "string"
+        },
+        "brep_sha256": {
+          "title": "Brep Sha256",
+          "type": "string"
+        },
+        "mesh": {
+          "$ref": "#/$defs/Mesh"
+        },
+        "producing_feature_id": {
+          "title": "Producing Feature Id",
+          "type": "string"
+        },
+        "topology": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Topology",
+          "type": "object"
+        },
+        "valid": {
+          "title": "Valid",
+          "type": "boolean"
+        },
+        "volume_mm3": {
+          "title": "Volume Mm3",
+          "type": "number"
+        }
+      },
+      "required": [
+        "body_id",
+        "producing_feature_id",
+        "brep_base64",
+        "brep_sha256",
+        "valid",
+        "bounds_mm",
+        "topology",
+        "area_mm2",
+        "volume_mm3",
+        "mesh"
+      ],
+      "title": "BodyResult",
+      "type": "object"
+    },
+    "Diagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "feature_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Feature Id"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "INFO",
+            "WARNING",
+            "ERROR"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "message"
+      ],
+      "title": "Diagnostic",
+      "type": "object"
+    },
+    "InstanceResult": {
+      "additionalProperties": false,
+      "properties": {
+        "body_id": {
+          "title": "Body Id",
+          "type": "string"
+        },
+        "bounds_mm": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Bounds Mm",
+          "type": "array"
+        },
+        "instance_id": {
+          "title": "Instance Id",
+          "type": "string"
+        },
+        "world_matrix4x4_row_major": {
+          "items": {
+            "type": "number"
+          },
+          "title": "World Matrix4X4 Row Major",
+          "type": "array"
+        }
+      },
+      "required": [
+        "instance_id",
+        "body_id",
+        "world_matrix4x4_row_major",
+        "bounds_mm"
+      ],
+      "title": "InstanceResult",
+      "type": "object"
+    },
+    "Mesh": {
+      "additionalProperties": false,
+      "properties": {
+        "indices": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Indices",
+          "type": "array"
+        },
+        "normals": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Normals",
+          "type": "array"
+        },
+        "positions": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Positions",
+          "type": "array"
+        },
+        "triangle_count": {
+          "title": "Triangle Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "positions",
+        "normals",
+        "indices",
+        "triangle_count"
+      ],
+      "title": "Mesh",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "assembly_body": {
+      "$ref": "#/$defs/BodyResult"
+    },
+    "assembly_id": {
+      "title": "Assembly Id",
+      "type": "string"
+    },
+    "assembly_revision_id": {
+      "title": "Assembly Revision Id",
+      "type": "string"
+    },
+    "diagnostics": {
+      "items": {
+        "$ref": "#/$defs/Diagnostic"
+      },
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "geometry_hash": {
+      "title": "Geometry Hash",
+      "type": "string"
+    },
+    "instances": {
+      "items": {
+        "$ref": "#/$defs/InstanceResult"
+      },
+      "title": "Instances",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "caddydaddy.assembly-result/1",
+      "default": "caddydaddy.assembly-result/1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "const": "SUCCEEDED",
+      "default": "SUCCEEDED",
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "assembly_id",
+    "assembly_revision_id",
+    "geometry_hash",
+    "instances",
+    "assembly_body",
+    "diagnostics"
+  ],
+  "title": "AssemblyResponse",
+  "type": "object"
+}

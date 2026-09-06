@@ -90,7 +90,11 @@ try:
 
     status, _, payload = request("GET", "/api/candidate")
     candidate = json.loads(payload)
-    assert status == 200 and candidate["candidate"]["version"] == "0.1"
+    assert status == 200 and candidate["candidate"]["version"] == "0.2"
+    assert candidate["candidate"]["id"] == "candidate:0.2"
+    assert candidate["candidate"]["revisionId"] == "revision:caddydaddy-candidate-0.2"
+    assert candidate["legacySnapshotEvidence"]["candidateVersion"] == "0.1"
+    assert candidate["legacySnapshotEvidence"]["currentCapabilityAuthority"] is False
     assert len(payload) < 4_500_000
     provenance = candidate["kernelProvenance"]
     assert candidate["snapshotProvenance"]["coreExecutedAtRuntime"] is False

@@ -3,10 +3,9 @@ import { useTripwireStore } from '../tripwire-store';
 
 interface TopBarProps {
   onHome?: () => void;
-  onOpenTripwire?: () => void;
 }
 
-export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
+export function TopBar({ onHome }: TopBarProps = {}) {
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
   const toggleHelp = useStore((s) => s.toggleHelp);
@@ -40,7 +39,6 @@ export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
             <kbd className="chip chip-sm">⌘ K</kbd>
           </button>
         )}
-        {onOpenTripwire && <button onClick={onOpenTripwire} className="btn hidden">Tripwire</button>}
         <button onClick={toggleTheme} className="btn">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</button>
         <button onClick={toggleHelp} aria-label="Keyboard and mouse help" className="btn btn-icon">?</button>
       </div>
