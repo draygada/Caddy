@@ -39,12 +39,14 @@ Git state is included.
 
 ## Explicit live-classification lane
 
-Classification remains deterministic `ScriptedModel` unless `REAL_LLM_AUTHORIZED=true` exactly.
-Live mode additionally requires `ANTHROPIC_API_KEY`, an `ANTHROPIC_MODEL` of
+Classification remains deterministic `ScriptedModel` whenever the request omits the
+`X-CADdyDaddy-Live-Token` header, including on a live-configured deployment. Presenting that header
+explicitly selects live mode, which additionally requires `REAL_LLM_AUTHORIZED=true`,
+`ANTHROPIC_API_KEY`, an `ANTHROPIC_MODEL` of
 `claude-sonnet-5` or `claude-opus-5`, `CADDYDADDY_LIVE_LLM_ACCESS_TOKEN`, and positive bounded
 `CADDYDADDY_LIVE_LLM_CALLS_CAP`, `CADDYDADDY_LIVE_LLM_COST_CAP_MICROUSD`, and
 `CADDYDADDY_LIVE_LLM_ESTIMATED_CALL_COST_MICROUSD` values. Each live request must present the
 configured token as `X-CADdyDaddy-Live-Token`. Client call and total-cost ceilings can only lower
-the server caps; the per-call budget reservation is server-owned. Missing or invalid configuration
+the server caps; the per-call budget reservation is server-owned. Missing or invalid live configuration
 fails closed, and the sanitized build probe removes every live flag and secret before importing the
 bundle. Configuration authorizes neither deployment nor spend by itself.

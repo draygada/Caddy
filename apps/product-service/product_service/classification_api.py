@@ -247,7 +247,10 @@ class ClassificationAdapter:
     def classify(self, payload: Any, *, presented_token: str | None = None) -> tuple[int, dict[str, Any]]:
         """Return ``(http_status, body)`` without ever returning a partial determination."""
         live_config: LiveClassificationConfig | None = None
-        if self._model_factory is None:
+        # Absence of the live header is an explicit request for the local,
+        # deterministic lane. Merely configuring live credentials on a server
+        # must never turn every classification request into a provider call.
+        if self._model_factory is None and presented_token is not None:
             try:
                 live_config = _live_configuration(self._environment)
             except LiveConfigurationRejected:
@@ -255,7 +258,12 @@ class ClassificationAdapter:
                     "CLASSIFICATION_LIVE_CONFIGURATION_INVALID",
                     "live classification is not safely configured",
                 )
-            if live_config is not None and not _access_token_matches(live_config.access_token, presented_token):
+            if live_config is None:
+                return 503, _blocked(
+                    "CLASSIFICATION_LIVE_CONFIGURATION_INVALID",
+                    "live classification is not safely configured",
+                )
+            if not _access_token_matches(live_config.access_token, presented_token):
                 return 401, _blocked("CLASSIFICATION_LIVE_ACCESS_DENIED", "live classification access denied")
 
         try:
@@ -270,6 +278,7 @@ class ClassificationAdapter:
         estimated_cost_microusd = request.estimated_cost_microusd
         if live_config is None and model_factory is None:
             model_factory = _default_scripted_model
+            estimated_cost_microusd = 0
         elif live_config is not None:
             model_factory = lambda: self._live_model_factory(live_config.model, live_config.api_key)
             external_model_allowed = True

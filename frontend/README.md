@@ -62,7 +62,7 @@ Smoke the returned frontend URL before promotion. Confirm `/api/candidate` repor
 - **Isolate / section**: isolate any body from the marking menu or browser; the section dialog clips the model at an X/Y/Z plane you slide, cut faces outlined amber.
 - **Selection filter** (components / bodies / faces) in the toolbar, pale-blue hover pre-highlight, stronger blue selection; a picked face shows in Properties (index within body, not a durable id).
 - **Appearance**: per-component tint swatches in the browser.
-- **Versions and comments**: Save version pins a seq with a comment (v1, v2…); comments attach to a state; both are folders in the browser and open the timeline at their seq.
+- **Versions and comments**: Save version pins a seq with a comment (v1, v2…); comments attach to a state; both are folders in the browser and open the timeline at their seq. Workbench and sourcing state survive reloads in the current browser tab through `sessionStorage`; a fresh tab starts from the fixture and repeats the data-boundary gate. This is not server persistence or collaboration storage.
 - **Named views**: Home, Top, Front, Right plus saved cameras; "set" makes the current camera the home view.
 - **Units**: Document settings › Units switches m / mm / in across the span input, dimension label, dialogs, sheet and measure readouts (storage stays in metres).
 

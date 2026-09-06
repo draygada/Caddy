@@ -361,6 +361,57 @@ const baseline = () => {
 const changedKeysOf = (a: string[], b: string[]) => { const A = new Set(a), B = new Set(b); return [...new Set([...a.filter((k) => !B.has(k)), ...b.filter((k) => !A.has(k))])]; };
 const fmt = (v: number | null | undefined, dp: number) => (v == null ? 'not published' : v.toFixed(dp));
 
+const WORKBENCH_SESSION_KEY = 'caddy.workbench-session.v1';
+const readWorkbenchSession = (): Partial<WorkbenchState> => {
+  try {
+    const storage = typeof globalThis.sessionStorage === 'undefined' ? null : globalThis.sessionStorage;
+    const raw = storage?.getItem(WORKBENCH_SESSION_KEY);
+    if (!raw) return {};
+    const envelope = JSON.parse(raw) as { schemaVersion?: unknown; state?: unknown };
+    if (envelope.schemaVersion !== 1 || !envelope.state || typeof envelope.state !== 'object' || Array.isArray(envelope.state)) return {};
+    return {
+      ...(envelope.state as Partial<WorkbenchState>),
+      cmdOpen: false,
+      dialog: null,
+      dragging: false,
+      dragPart: null,
+      helpOpen: false,
+      intakeOpen: false,
+      liveStash: null,
+      marking: null,
+      preview: null,
+      timelineOpen: false,
+      viewSeq: null,
+    };
+  } catch {
+    return {};
+  }
+};
+
+const writeWorkbenchSession = (state: WorkbenchState) => {
+  try {
+    const storage = typeof globalThis.sessionStorage === 'undefined' ? null : globalThis.sessionStorage;
+    if (!storage) return;
+    const safeState = {
+      ...state,
+      copied: null,
+      dialog: null,
+      dragging: false,
+      dragPart: null,
+      liveStash: null,
+      marking: null,
+      preview: null,
+      viewSeq: null,
+    };
+    storage.setItem(WORKBENCH_SESSION_KEY, JSON.stringify(
+      { schemaVersion: 1, state: safeState },
+      (_key, value) => typeof value === 'function' ? undefined : value,
+    ));
+  } catch {
+    // Storage may be unavailable or full. The fixture remains usable in memory.
+  }
+};
+
 export const useStore = create<WorkbenchState>()((set, get) => {
   const snapshot = (): Snapshot => pickSnapshot(get());
   const append = (ev: Partial<TimelineEvent> & { kind: string; text: string; entry: string }) => {
@@ -393,6 +444,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     projects: SAMPLE_PROJECTS.map((p) => ({ ...p })),
     project: null,
     intakeOpen: false,
+    ...readWorkbenchSession(),
     openProject: (id) => {
       const s = get();
       const p = s.projects.find((x) => x.id === id);
@@ -936,7 +988,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const v = s.versions.length + 1;
       const seq = s.events.length + 1;
       set({ versions: s.versions.concat([{ v, seq, comment, at: now() }]) });
-      append({ kind: 'version_saved', text: 'v' + v + ' · ' + (comment || '(no comment)'), entry: 'design hash pinned at #' + seq + ' · every earlier event remains', intent: comment });
+      append({ kind: 'version_saved', text: 'v' + v + ' · ' + (comment || '(no comment)'), entry: 'design state pinned at #' + seq + ' in this tab session · every earlier event remains', intent: comment });
     },
     addComment: (author, text) => {
       const s = get();
@@ -1000,6 +1052,15 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     reset: () => set({ ...baseline(), round: null, sourcingOpen: false, pack: 'v2', determination: null, tamperedSeq: null, extracted: {}, escalations: {}, memos: [], slotList: null, target: null }),
   };
 });
+
+let workbenchSessionWrite: ReturnType<typeof setTimeout> | null = null;
+useStore.subscribe((state) => {
+  if (workbenchSessionWrite) clearTimeout(workbenchSessionWrite);
+  workbenchSessionWrite = setTimeout(() => writeWorkbenchSession(state), 60);
+});
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => writeWorkbenchSession(useStore.getState()));
+}
 
 /** Preview snapshot for a project card that has not stored one yet (the sample project shows the baseline design). */
 export const baselineSnapshotFor = (_projectId: string): Snapshot => baselineSnapshot();

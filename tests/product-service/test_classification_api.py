@@ -128,6 +128,22 @@ def test_default_adapter_is_scripted_local_and_conservatively_undetermined() -> 
     assert len(body["snapshot_sha256"]) == 64 and len(body["pack_sha256"]) == 64
 
 
+def test_live_configured_adapter_without_header_stays_scripted_and_spend_free() -> None:
+    constructed = False
+
+    def factory(*_args):
+        nonlocal constructed
+        constructed = True
+        raise AssertionError("live model must not be constructed")
+
+    status, body = ClassificationAdapter(environment=LIVE_ENV, live_model_factory=factory).classify(REQUEST)
+
+    assert status == 200 and constructed is False
+    assert body["determination"]["jurisdiction"] == "UNDETERMINED"
+    assert body["provenance"]["model"] == "ScriptedModel"
+    assert body["provenance"]["budget"]["cost_used_microusd"] == 0
+
+
 def test_live_lane_requires_every_server_gate_and_valid_caps() -> None:
     cases = []
     for missing in LIVE_ENV:
@@ -163,8 +179,8 @@ def test_live_lane_requires_every_server_gate_and_valid_caps() -> None:
         _assert_no_partial_determination(body)
 
 
-def test_missing_or_wrong_live_token_is_401_before_model_construction() -> None:
-    for presented in (None, "", "wrong-token"):
+def test_empty_or_wrong_live_token_is_401_before_model_construction() -> None:
+    for presented in ("", "wrong-token"):
         constructed = False
 
         def factory(*_args):

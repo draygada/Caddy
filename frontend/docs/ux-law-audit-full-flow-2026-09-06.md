@@ -86,12 +86,12 @@ The desktop flow is in good shape: one primary action per sourcing screen, an ho
 **Measured**: index of difficulty 5.63 at 116x32 in the bottom right corner
 **Fix**: the button is the 44px large variant; the corner position stays because the draft is a read-only screen and the footer is its natural home.
 
-### 12. Zeigarnik, Nielsen H3: a round does not survive a reload :: high (open)
+### 12. Zeigarnik, Nielsen H3: a round does not survive a reload :: high (fixed)
 
 **Screen**: observed between the desktop and phone passes
 **Measured**: the round opened on the desktop pass was gone after a reload; projects, picks and the attestor name reset
 **Why it matters**: sixteen picks with typed attestations is real work; losing it on a refresh is the classic multi-step form failure
-**Fix, proposed**: session-scoped persistence of the round (sessionStorage keyed by project, cleared on a new tab) if the memory-only rule under the hackathon data boundary allows it. Not changed here because that rule is Benji's, not a UI call.
+**Fix**: the complete workbench and sourcing projection now use tab-scoped `sessionStorage`, flush on page hide, and discard transient dialogs, previews, drags and history-replay state when restoring. Reload preserves the active synthetic/public session; a fresh tab still fails closed at the data-boundary gate. This adds no server persistence or cross-user data claim.
 
 ## Measured and not findings
 

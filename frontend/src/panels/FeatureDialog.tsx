@@ -27,8 +27,8 @@ function LenField({ id, label, metres, units, min, max, onChange, hint }: { id: 
 function Frame({ title, sub, children, onOk, onCancel, okLabel = 'OK', okDisabled, placement = 'right-3 top-[176px]', docked = false }: { title: string; sub?: string; children: React.ReactNode; onOk?: () => void; onCancel: () => void; okLabel?: string; okDisabled?: boolean; placement?: string; docked?: boolean }) {
   // docked: a side column that takes its own width, so the canvas beside it is never covered
   const cls = docked
-    ? 'flex-none w-[340px] max-w-[45%] h-full flex flex-col bg-surface border-l border-line2'
-    : 'absolute ' + placement + ' w-[min(300px,calc(100%-24px))] max-h-[calc(100%-180px)] flex flex-col bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] z-[12]';
+    ? 'relative z-[30] flex-none w-[340px] max-w-[45%] h-full flex flex-col bg-surface border-l border-line2'
+    : 'absolute ' + placement + ' w-[min(300px,calc(100%-24px))] max-h-[calc(100%-180px)] flex flex-col bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] z-[30]';
   return (
     <div role="dialog" aria-label={title} className={cls} onMouseDown={(e) => e.stopPropagation()}>
       <div className="px-3 py-2 border-b border-line2 flex items-baseline justify-between gap-2">
@@ -220,7 +220,7 @@ export function FeatureDialog({ docked = false }: { docked?: boolean } = {}) {
       return (
         <Frame title="Save version" sub={'v' + (s.versions.length + 1) + ' at #' + (s.events.length + 1)} onCancel={cancel} onOk={() => { s.saveVersion(text.trim()); s.closeDialog(); }} okLabel="Save version">
           <input aria-label="version comment" value={text} onChange={(e) => setText(e.target.value)} placeholder="what changed · one line" className="field" autoFocus />
-          <div className="text-[12px] text-muted">pins the current design hash in the log; earlier versions stay openable from the browser</div>
+          <div className="text-[12px] text-muted">pins the current design state in this tab's session log; earlier versions stay openable from the browser</div>
         </Frame>
       );
     case 'add_comment':
