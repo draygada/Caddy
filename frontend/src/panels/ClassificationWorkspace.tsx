@@ -50,7 +50,7 @@ export function ClassificationWorkspace() {
             <div style={{ ...mono, color: '#176b45', fontSize: 11, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase' }}>Jurisdiction lab · deterministic fixture</div>
             <h2 id="classification-workspace-title" style={{ margin: '5px 0 4px', fontSize: 24, lineHeight: 1.1 }}>Classification workspace</h2>
             <p style={{ margin: 0, color: 'var(--muted, #5c6670)', fontSize: 13, lineHeight: 1.45 }}>
-              Inspect the ordered advocate → judge → reconciliation route. Code owns every disposition; missing facts never silently clear the USML step.
+              Inspect the ordered advocate → judge → reconciliation route. Missing USML facts block the CCL; after a recorded USML negative, an empty or invalid specific CCL proposal intentionally falls through to EAR99.
             </p>
           </div>
           <label style={{ display: 'grid', gap: 5, minWidth: 260, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em' }}>

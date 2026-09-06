@@ -18,7 +18,7 @@ describe('classification workspace', () => {
     expect(result.candidates.filter((candidate) => candidate.stage === 'other_ccl').every((candidate) => candidate.disposition === 'not_reached')).toBe(true);
   });
 
-  it('elects EAR99 only after every specific candidate closes negative', () => {
+  it('elects EAR99 after every surfaced specific candidate closes negative', () => {
     const result = runClassificationWorkspace(getWorkspaceScenario('commercial-record'));
     expect(result.route).toBe('EAR99');
     expect(result.classification).toEqual(['EAR99']);
@@ -27,6 +27,18 @@ describe('classification workspace', () => {
     expect(result.readiness).toBe('READY_FOR_COUNSEL_REVIEW');
     expect(result.claimCeiling).toBe('DRAFT_REVIEW_ONLY');
     expect(result.candidates.filter((candidate) => candidate.stage !== 'residual').every((candidate) => candidate.disposition === 'knocked_out')).toBe(true);
+  });
+
+  it('intentionally falls through to EAR99 when no valid specific CCL candidate surfaces', () => {
+    const result = runClassificationWorkspace(getWorkspaceScenario('no-valid-ccl'));
+    expect(result.route).toBe('EAR99');
+    expect(result.classification).toEqual(['EAR99']);
+    expect(result.routeDisposition).toBe('residual');
+    expect(result.candidates.some((candidate) => ['six_hundred_series', 'specially_designed_ear', 'other_ccl'].includes(candidate.stage))).toBe(false);
+    expect(result.routeBasis.filter((basis) => basis.endsWith('ordered review continues to the next stage.'))).toHaveLength(3);
+    expect(result.routeBasis.at(-1)).toContain('including when no valid specific candidate surfaced');
+    expect(result.readiness).toBe('READY_FOR_COUNSEL_REVIEW');
+    expect(result.claimCeiling).toBe('DRAFT_REVIEW_ONLY');
   });
 
   it('stops at a supported USML candidate and never evaluates the CCL', () => {

@@ -69,6 +69,7 @@ export interface WorkspaceScenario {
   description: string;
   facts: Record<string, FactValue>;
   candidates: CandidateInput[];
+  specificCclMode?: 'default' | 'no_valid_candidates';
 }
 
 export interface WorkspaceResult {
@@ -191,7 +192,7 @@ function buildCandidates(facts: Record<string, FactValue>): CandidateInput[] {
       candidateId: 'cand:5:9A991-d',
       provision: '9A991.d',
       stage: 'other_ccl',
-      whyConsidered: 'A deliberately broad civil-aircraft near miss demonstrates that residual EAR99 is not elected by silence.',
+      whyConsidered: 'A deliberately broad civil-aircraft near miss demonstrates one possible specific CCL walk before residual handling.',
       advocate: [observation('propulsion', 'Item is an aircraft propulsion engine or related component', aircraftPropulsion === false ? 'indeterminate' : aircraftPropulsion === true ? 'met' : 'indeterminate', 'item.aircraft_propulsion', 'Advocate raises the closest civil-aircraft candidate.', otherCclCitation)],
       judge: [observation('propulsion', 'Item is an aircraft propulsion engine or related component', propulsionJudge, 'item.aircraft_propulsion', propulsionJudge === 'not_met' ? 'The fixture expressly identifies a non-propulsion electronics carrier.' : 'Propulsion identity is open or affirmative.', propulsionJudge === 'indeterminate' ? null : otherCclCitation)],
       challenge: null,
@@ -200,7 +201,7 @@ function buildCandidates(facts: Record<string, FactValue>): CandidateInput[] {
       candidateId: 'cand:6:EAR99',
       provision: 'EAR99',
       stage: 'residual',
-      whyConsidered: 'Residual floor seated by code and elected only after every specific candidate is knocked out.',
+      whyConsidered: 'Residual floor seated by code after USML closes negative and no valid specific CCL candidate remains supported or open.',
       advocate: [],
       judge: [],
       challenge: null,
@@ -234,6 +235,20 @@ export const WORKSPACE_SCENARIOS: readonly WorkspaceScenario[] = [
       'design.catalog_equivalent': true,
     },
     candidates: [],
+  },
+  {
+    id: 'no-valid-ccl',
+    name: 'No valid specific CCL candidates',
+    description: 'Synthetic records close USML negative; the specific CCL proposal is empty or invalid, so the ordered route intentionally falls through to EAR99.',
+    facts: {
+      'item.description': 'Synthetic commercial electronics carrier with no valid specific CCL proposal',
+      'item.aircraft_propulsion': false,
+      'design.military_integration': false,
+      'design.predominantly_military': false,
+      'design.catalog_equivalent': true,
+    },
+    candidates: [],
+    specificCclMode: 'no_valid_candidates',
   },
   {
     id: 'military-record',
@@ -338,7 +353,10 @@ function questionForFact(path: string): string {
 }
 
 export function runClassificationWorkspace(scenario: WorkspaceScenario): WorkspaceResult {
-  const inputs = scenario.candidates.length ? scenario.candidates : buildCandidates(scenario.facts);
+  const proposedInputs = scenario.candidates.length ? scenario.candidates : buildCandidates(scenario.facts);
+  const inputs = scenario.specificCclMode === 'no_valid_candidates'
+    ? proposedInputs.filter((candidate) => candidate.stage === 'usml_enumerated' || candidate.stage === 'specially_designed_itar' || candidate.stage === 'residual')
+    : proposedInputs;
   const reconciled = inputs.map(reconcileCandidate);
   const reached = new Set<Stage>();
   const routeBasis: string[] = [];
@@ -378,6 +396,10 @@ export function runClassificationWorkspace(scenario: WorkspaceScenario): Workspa
         routeBasis.push(`${stage}: EAR jurisdiction is reached, but the specific entry remains open.`);
         break;
       }
+      if (stageDecision.state === 'empty') {
+        routeBasis.push(`${stage}: no valid specific candidate surfaced; ordered review continues to the next stage.`);
+        continue;
+      }
       routeBasis.push(`${stage}: every surfaced candidate is knocked out on a cited failed element.`);
     }
     if (!classification.length && !openCandidates.length) {
@@ -385,7 +407,7 @@ export function runClassificationWorkspace(scenario: WorkspaceScenario): Workspa
       route = 'EAR99';
       classification = ['EAR99'];
       routeDisposition = 'residual';
-      routeBasis.push('EAR99 is elected only after every surfaced specific candidate closes negative.');
+      routeBasis.push('EAR99 is the intentional residual after USML closes negative and the ordered CCL stages end with no supported or open valid candidate, including when no valid specific candidate surfaced.');
     }
   }
 
