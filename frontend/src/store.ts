@@ -31,6 +31,9 @@ export type ViewMode = 'model' | 'sketch' | 'board';
 export type NavMode = 'orbit' | 'pan' | 'zoom';
 export type VisualStyle = 'shaded' | 'edges' | 'wireframe';
 export type SelFilter = 'component' | 'body' | 'face';
+export const DESIGN_PROJECT_ID = 'product:caddydaddy:kestrel' as const;
+export const DESIGN_PROJECT_NAME = 'Kestrel' as const;
+export const DESIGN_PRODUCT_THREAD_RELATIONSHIP = 'SEPARATE_LEGACY_DESIGN_CONTEXT_NOT_QX_0_PRODUCT_THREAD' as const;
 /** body ids: a slot, or one of the airframe's two bodies */
 export type BodyId = Slot | 'plate' | 'flange';
 export const BODY_LABEL: Record<BodyId, string> = { plate: 'Base plate', flange: 'Flange', ...GENERIC_NAME };
@@ -108,6 +111,12 @@ export function designHashOf(s: Snapshot): string {
 }
 
 export interface WorkbenchState extends Snapshot {
+  workflowIdentity: {
+    projectId: typeof DESIGN_PROJECT_ID;
+    projectName: typeof DESIGN_PROJECT_NAME;
+    revisionId: string;
+    productThreadRelationship: typeof DESIGN_PRODUCT_THREAD_RELATIONSHIP;
+  };
   theme: Theme;
   serviceState: ServiceState;
   demoBar: boolean;
@@ -336,6 +345,7 @@ const baseline = () => {
     spanText: SPAN_BASELINE.toFixed(1), spanMsg: '', spanErr: false,
     events: SEED_EVENTS.map((e) => ({ ...e, snap })).reverse(),
     viewSeq: null as number | null, liveStash: null as Snapshot | null,
+    workflowIdentity: { projectId: DESIGN_PROJECT_ID, projectName: DESIGN_PROJECT_NAME, revisionId: 'legacy-design-state:3', productThreadRelationship: DESIGN_PRODUCT_THREAD_RELATIONSHIP },
     versions: [{ v: 1, seq: 3, comment: 'baseline · Kestrel, twelve parts', at: '2026-09-05 09:12' }] as Version[],
     comments: [] as Comment[],
     pending: null as Pending | null, attestor: '', intent: '', confirmErr: '',
@@ -357,7 +367,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     set((s) => {
       const seq = s.events.length + 1;
       const full: TimelineEvent = { seq, lane: 'design', intent: '', word: '', color: 'var(--ink)', ...ev, hash: hashOf(seq), snap: pickSnapshot(s) };
-      return { events: [full, ...s.events] };
+      return { events: [full, ...s.events], workflowIdentity: { ...s.workflowIdentity, revisionId: `legacy-design-state:${seq}` } };
     });
   };
   const changedRows = (from: PartId, to: PartId): CmpKey[] => CMP_KEYS.filter((k) => CATALOG[from].cmp[k] !== CATALOG[to].cmp[k]);

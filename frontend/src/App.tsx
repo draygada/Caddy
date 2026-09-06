@@ -18,6 +18,7 @@ import { IntakeDialog, NeedsInfoBanner } from './panels/IntakeDialog';
 import { runCommand } from './commands';
 import { overallOf } from './lib/viewmodel';
 import { useTripwireStore } from './tripwire-store';
+import { DataBoundaryNotice } from './panels/DataBoundaryNotice';
 
 type MobilePanel = 'browser' | 'model' | 'status' | 'spec';
 
@@ -65,7 +66,7 @@ function useKeyboard() {
   }, []);
 }
 
-export default function App() {
+function StrafeApplication() {
   const theme = useStore((s) => s.theme);
   const parts = useStore((s) => s.parts);
   const attrs = useStore((s) => s.attrs);
@@ -165,5 +166,14 @@ export default function App() {
       <TripwirePanel />
       {demoBar && <DemoBar />}
     </div>
+  );
+}
+
+// Benji's hackathon data boundary: the shell only opens once the operator declares PUBLIC or SYNTHETIC data.
+export default function App() {
+  return (
+    <DataBoundaryNotice>
+      <StrafeApplication />
+    </DataBoundaryNotice>
   );
 }

@@ -11,7 +11,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cad_service.app import create_app
-from cad_service.settings import DeploymentSettings
+from cad_service.settings import (
+    NATIVE_RUNTIME_OWNER_APPROVAL_ENV,
+    NATIVE_RUNTIME_OWNER_APPROVAL_VALUE,
+    DeploymentSettings,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,7 +83,14 @@ def test_bundle_is_deterministic_sanitized_and_content_addressed(tmp_path: Path)
     assert "cad_service/kernel.py" in paths
     assert "licenses/OCCT-LGPL-2.1.txt" in paths
     assert "THIRD_PARTY_NOTICES.md" in paths
-    assert not any("__pycache__" in path or path.startswith("tests/") or path.startswith("scripts/") for path in paths)
+    assert "REDISTRIBUTION_EVIDENCE.md" in paths
+    assert "scripts/verify_redistribution_evidence.py" in paths
+    assert not any(
+        "__pycache__" in path
+        or path.startswith("tests/")
+        or (path.startswith("scripts/") and path != "scripts/verify_redistribution_evidence.py")
+        for path in paths
+    )
     assert not any(Path(path).name == ".env" or Path(path).name.startswith(".env.") for path in paths)
 
 
@@ -92,7 +103,12 @@ def test_clean_bundle_import_and_actual_native_cad_smoke(tmp_path: Path) -> None
         capture_output=True,
         text=True,
         cwd=bundle,
-        env={**os.environ, "PYTHONPATH": str(bundle), "CAD_ALLOWED_HOSTS": "testserver"},
+        env={
+            **os.environ,
+            "PYTHONPATH": str(bundle),
+            "CAD_ALLOWED_HOSTS": "testserver",
+            NATIVE_RUNTIME_OWNER_APPROVAL_ENV: NATIVE_RUNTIME_OWNER_APPROVAL_VALUE,
+        },
     )
     report = json.loads(completed.stdout)
     assert report["status"] == "PASS"

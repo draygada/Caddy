@@ -108,6 +108,7 @@ export interface SourcingPackageEnvelope extends OperationsEnvelope {
 }
 
 export interface SourcingDispatchEnvelope extends OperationsEnvelope {
+  status: 'STAGED';
   dispatch: {
     dispatch_id: string;
     idempotency_key: string;
@@ -328,7 +329,7 @@ function validatePackage(value: OperationsEnvelope): asserts value is SourcingPa
 
 function validateDispatch(value: OperationsEnvelope): asserts value is SourcingDispatchEnvelope {
   const candidate = value as Partial<SourcingDispatchEnvelope>;
-  if (!isRecord(candidate.dispatch) || candidate.dispatch.external_send !== false || candidate.dispatch.network_calls !== 0) {
+  if (candidate.status !== 'STAGED' || !isRecord(candidate.dispatch) || candidate.dispatch.external_send !== false || candidate.dispatch.network_calls !== 0) {
     throw new OperationsServiceError('SOURCING_DISPATCH_INVALID', 'Dispatch evidence does not prove a zero-network STAGED action.');
   }
   requireHash(candidate.dispatch.manifest_sha256, 'SOURCING_DISPATCH_INVALID');

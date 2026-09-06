@@ -82,7 +82,11 @@ describe('candidate machine contract endpoint', () => {
       runtimeGeometry: {
         authoritativeForThisBrowserSession: 'BROWSER_JSCAD_BOUNDED',
         browser: { availability: 'AVAILABLE', kernel: 'JSCAD' },
-        native: { connection: 'DISCONNECTED', evidence: 'NO_CAPABILITY_PROBE' },
+        native: {
+          connection: 'DISCONNECTED',
+          evidence: 'NO_PRODUCT_SERVICE_BINDING',
+          reason: { code: 'PRODUCT_SERVICE_BINDING_REQUIRED' },
+        },
       },
       diagnostic: { code: 'PRODUCT_SERVICE_BINDING_UNKNOWN' },
       mutationAuthority: 'NONE',
@@ -121,7 +125,7 @@ describe('candidate machine contract endpoint', () => {
   });
 
   it('replaces upstream OCCT overclaims with disconnected runtime truth', async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(UPSTREAM));
+    const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse(UPSTREAM));
     const handler = createCandidateHandler({
       fetchImpl,
       env: { CADDYDADDY_PRODUCT_SERVICE_URL: PREVIEW_PRODUCT_SERVICE },
@@ -135,7 +139,7 @@ describe('candidate machine contract endpoint', () => {
       candidate: { snapshotProvenance: { mode: 'PRECOMPUTED_IMMUTABLE', coreExecutedAtRuntime: false } },
       runtimeGeometry: {
         authoritativeForThisBrowserSession: 'BROWSER_JSCAD_BOUNDED',
-        native: { connection: 'DISCONNECTED', kernel: null, evidence: 'NO_CAPABILITY_PROBE' },
+        native: { connection: 'DISCONNECTED', kernel: null, evidence: 'PRODUCT_CORE_CAPABILITY_INVALID' },
         coreExecutedAtRuntime: false,
       },
       capabilities: { nativeOcctConnected: false, coreExecutedAtRuntime: false },
@@ -155,10 +159,14 @@ describe('candidate machine contract endpoint', () => {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     });
+    expect(fetchImpl).toHaveBeenCalledWith(`${PREVIEW_PRODUCT_SERVICE}/api/cad/capabilities`, expect.objectContaining({
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    }));
   });
 
   it('uses the production service only when it is explicitly bound', async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(UPSTREAM));
+    const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse(UPSTREAM));
     const handler = createCandidateHandler({
       fetchImpl,
       env: { CADDYDADDY_PRODUCT_SERVICE_URL: PRODUCTION_PRODUCT_SERVICE },
@@ -168,7 +176,7 @@ describe('candidate machine contract endpoint', () => {
     await handler({ method: 'GET' }, response);
 
     expect(capture.statusCode).toBe(200);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(fetchImpl).toHaveBeenCalledWith(`${PRODUCTION_PRODUCT_SERVICE}/api/candidate`, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
@@ -178,8 +186,22 @@ describe('candidate machine contract endpoint', () => {
   it('reports connected OCCT only after a valid capability probe and keeps execution false', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async (input) => {
       const url = String(input);
-      if (url === 'https://native.example/api/capabilities') {
-        return jsonResponse({ kernel: { name: 'OpenCascade', version: '7.9.3' } });
+      if (url === `${PREVIEW_PRODUCT_SERVICE}/api/cad/capabilities`) {
+        return jsonResponse({
+          schema_version: 'caddydaddy.cad-capabilities/1',
+          status: 'AVAILABLE',
+          kernel: { name: 'OpenCascade', version: '7.9.3', binding: 'cadquery-ocp-novtk/7.9.3.1' },
+          features: ['SKETCH', 'EXTRUDE', 'FILLET', 'CHAMFER'],
+          exchange: { exact: ['STEP_AP242', 'IGES_5_3'], mesh_only: ['STL'] },
+          runtime_gate: {
+            status: 'APPROVED',
+            owner_approval: 'ASSERTED_BY_DEPLOYMENT_CONFIGURATION',
+            approval_binding: 'caddydaddy.native-runtime/v1',
+            factual_evidence: 'PASS',
+            legal_determination: 'NOT_PERFORMED',
+            artifact_sha256: '8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b',
+          },
+        });
       }
       return jsonResponse(UPSTREAM);
     });
@@ -187,7 +209,6 @@ describe('candidate machine contract endpoint', () => {
       fetchImpl,
       env: {
         CADDYDADDY_PRODUCT_SERVICE_URL: PREVIEW_PRODUCT_SERVICE,
-        CADDYDADDY_CAD_CAPABILITIES_URL: 'https://native.example/api/capabilities',
         CADDYDADDY_FRONTEND_COMMIT_SHA: 'a'.repeat(40),
         CADDYDADDY_BACKEND_COMMIT_SHA: 'b'.repeat(40),
       },
@@ -202,7 +223,14 @@ describe('candidate machine contract endpoint', () => {
         backend: { status: 'INJECTED_IMMUTABLE', sha: 'b'.repeat(40) },
       },
       runtimeGeometry: {
-        native: { connection: 'CONNECTED', kernel: 'OpenCascade', version: '7.9.3', executedForThisResponse: false },
+        native: {
+          connection: 'CONNECTED',
+          kernel: 'OpenCascade',
+          version: '7.9.3',
+          executedForThisResponse: false,
+          evidence: 'PRODUCT_CORE_CAPABILITY',
+          reason: null,
+        },
       },
       capabilityContracts: {
         liveKernelRecompute: { status: 'AVAILABLE_NATIVE_CONNECTED', coreExecutedAtRuntime: false },
@@ -214,6 +242,46 @@ describe('candidate machine contract endpoint', () => {
         },
       },
     });
+  });
+
+  it('preserves the exact product/core owner-approval block without probing native directly', async () => {
+    const reason = {
+      code: 'CAD_RUNTIME_OWNER_APPROVAL_REQUIRED',
+      message: 'Repository-owner acceptance is unrecorded; set the manifest-bound approval only after acceptance.',
+    };
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      if (String(input) === `${PREVIEW_PRODUCT_SERVICE}/api/cad/capabilities`) {
+        return jsonResponse({
+          schema_version: 'caddydaddy.cad-capabilities/1',
+          status: 'BLOCKED',
+          diagnostic: reason,
+        }, 503);
+      }
+      return jsonResponse(UPSTREAM);
+    });
+    const handler = createCandidateHandler({
+      fetchImpl,
+      env: { CADDYDADDY_PRODUCT_SERVICE_URL: PREVIEW_PRODUCT_SERVICE },
+    });
+    const { capture, response } = responseCapture();
+
+    await handler({ method: 'GET' }, response);
+
+    expect(capture.statusCode).toBe(200);
+    expect(capture.body).toMatchObject({
+      runtimeGeometry: {
+        native: {
+          connection: 'DISCONNECTED',
+          evidence: 'PRODUCT_CORE_CAPABILITY_BLOCKED',
+          reason,
+        },
+      },
+      capabilities: { nativeOcctConnected: false },
+      capabilityContracts: {
+        liveKernelRecompute: { status: 'UNAVAILABLE_NATIVE_DISCONNECTED' },
+      },
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it('fails the whole contract closed when the immutable upstream is unavailable', async () => {

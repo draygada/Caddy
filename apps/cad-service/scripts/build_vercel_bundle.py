@@ -45,6 +45,10 @@ def selected_files() -> list[tuple[Path, Path]]:
         (SERVICE_ROOT / "api" / "index.py", Path("api/index.py")),
         (SERVICE_ROOT / "THIRD_PARTY_NOTICES.md", Path("THIRD_PARTY_NOTICES.md")),
         (SERVICE_ROOT / "REDISTRIBUTION_EVIDENCE.md", Path("REDISTRIBUTION_EVIDENCE.md")),
+        (
+            SERVICE_ROOT / "scripts" / "verify_redistribution_evidence.py",
+            Path("scripts/verify_redistribution_evidence.py"),
+        ),
         (TEMPLATE_ROOT / ".python-version", Path(".python-version")),
         (TEMPLATE_ROOT / "requirements.txt", Path("requirements.txt")),
         (TEMPLATE_ROOT / "vercel.json", Path("vercel.json")),
@@ -87,7 +91,10 @@ def build(output: Path, *, require_clean: bool = False) -> dict[str, object]:
     for source, relative in selected_files():
         if source.is_symlink() or not source.is_file():
             raise RuntimeError(f"bundle source must be a regular file: {source}")
-        if any(part in {"__pycache__", ".pytest_cache", ".venv", "tests", "scripts"} for part in relative.parts):
+        is_evidence_verifier = relative == Path("scripts/verify_redistribution_evidence.py")
+        if any(part in {"__pycache__", ".pytest_cache", ".venv", "tests"} for part in relative.parts) or (
+            "scripts" in relative.parts and not is_evidence_verifier
+        ):
             raise RuntimeError(f"forbidden deployment path: {relative}")
         destination = output / relative
         destination.parent.mkdir(parents=True, exist_ok=True, mode=0o755)

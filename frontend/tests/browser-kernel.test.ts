@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { applyCadIntent, createCadDocument, createFeatureOperation, createInstanceOperation, createSketchOperation, exportCad, recomputeCad, type CadDocument, type CadSketch } from '../src/cad';
+import { applyCadIntent, createCadDocument, createFeatureOperation, createInstanceOperation, createMateOperation, createSketchOperation, exportCad, recomputeCad, type CadDocument, type CadSketch } from '../src/cad';
 import { BrowserCadError, exportCadInBrowser, importCadInBrowser, recomputeCadInBrowser } from '../src/cad/browser-kernel';
 
 function profile(id = 'sketch:plate', constrained = false): CadSketch {
@@ -64,6 +64,14 @@ describe('BROWSER_JSCAD_BOUNDED', () => {
     expect(moved?.bounds.min[0]).toBe(30);
     expect(moved?.volume).toBeLessThan(1000);
     expect(result.mesh.groups.some((group) => group.bodyId === 'instance:plate')).toBe(true);
+    const secondInstance = createInstanceOperation({ id: 'instance:plate-copy', name: 'Plate copy', bodyId: resultBody, grounded: false, transform: { translation: [60, 0, 0], rotationDegrees: [0, 0, 0] } }, 'operation:second-instance');
+    document = applyCadIntent(result.document, secondInstance);
+    result = await recomputeCadInBrowser({ document, operation: secondInstance, expectedRevisionId: result.revisionId });
+    const fixedMate = createMateOperation({ id: 'mate:fixed', name: 'Fixed record', kind: 'fixed', instanceAId: 'instance:plate', instanceBId: 'instance:plate-copy', referenceA: 'origin', referenceB: 'origin', offset: 0, unit: 'mm' }, 'operation:fixed-mate');
+    document = applyCadIntent(result.document, fixedMate);
+    result = await recomputeCadInBrowser({ document, operation: fixedMate, expectedRevisionId: result.revisionId });
+    expect(result.diagnostics.map((item) => item.code)).toContain('MATE_RECORDED_NOT_SOLVED');
+    expect(result.dependencyGraph.nodes.find((node) => node.id === 'mate:fixed')?.state).toBe('dirty');
   });
 
   it('rejects stale bases and unsupported fillet while retaining honest constraint diagnostics', async () => {
@@ -73,6 +81,7 @@ describe('BROWSER_JSCAD_BOUNDED', () => {
     await expect(recomputeCadInBrowser({ document, operation: sketchOperation, expectedRevisionId: 'revision:stale' })).rejects.toMatchObject({ code: 'BROWSER_CAD_STALE' });
     const sketchResult = await recomputeCadInBrowser({ document, operation: sketchOperation, expectedRevisionId: base.revisionId });
     expect(sketchResult.diagnostics.map((item) => item.code)).toEqual(expect.arrayContaining(['CONSTRAINTS_RECORDED_NOT_SOLVED', 'DIMENSIONS_RECORDED_NOT_DRIVING']));
+    expect(sketchResult.dependencyGraph.nodes.find((node) => node.id === 'sketch:bounded')?.state).toBe('dirty');
     const fillet = createFeatureOperation({ id: 'operation:fillet', kind: 'feature.fillet', name: 'Fillet', inputIds: ['body:any'], targetBodyIds: ['body:any'], parameters: { radius: 2 } });
     await expect(recomputeCadInBrowser({ document: applyCadIntent(sketchResult.document, fillet), operation: fillet, expectedRevisionId: sketchResult.revisionId })).rejects.toMatchObject<Partial<BrowserCadError>>({ code: 'BROWSER_CAD_UNSUPPORTED' });
   });

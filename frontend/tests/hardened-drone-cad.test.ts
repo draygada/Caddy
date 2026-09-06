@@ -148,6 +148,6 @@ describe('QX-0 hardened drone CAD benchmark', () => {
     expect(authoringSource).toContain('Load QX-0 · 260 mm');
     expect(authoringSource).toContain('Run span ablation · 300 mm');
     expect(authoringSource).toContain("'BROWSER_JSCAD_BOUNDED'");
-    expect(authoringSource).toContain('Generic dimensions and non-fixed mates remain non-solving in browser mode.');
+    expect(authoringSource).toContain('Generic dimensions and all mates remain recorded, non-solving intent in browser mode.');
   });
 });

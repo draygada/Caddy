@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 import sys
 
@@ -37,13 +38,32 @@ class StubProvenance:
     accept_verified_change = staticmethod(lambda payload: (200, {"route": "accept", "payload": payload}))
 
 
-def routes(*, cad_transport=None, cad_service_url="") -> Candidate02Routes:
+def approved_cad_capabilities() -> tuple[int, dict]:
+    return 200, {
+        "schema_version": "caddydaddy.cad-capabilities/1",
+        "status": "AVAILABLE",
+        "kernel": {"name": "OpenCascade", "version": "7.9.3", "binding": "cadquery-ocp-novtk/7.9.3.1"},
+        "features": ["SKETCH", "EXTRUDE", "FILLET", "CHAMFER"],
+        "exchange": {"exact": ["STEP_AP242", "IGES_5_3"], "mesh_only": ["STL"]},
+        "runtime_gate": {
+            "status": "APPROVED",
+            "owner_approval": "ASSERTED_BY_DEPLOYMENT_CONFIGURATION",
+            "approval_binding": "caddydaddy.native-runtime/v1",
+            "factual_evidence": "PASS",
+            "legal_determination": "NOT_PERFORMED",
+            "artifact_sha256": "8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b",
+        },
+    }
+
+
+def routes(*, cad_transport=None, cad_capability_transport=None, cad_service_url="") -> Candidate02Routes:
     return Candidate02Routes(
         IDENTITY,
         classification_action=lambda payload: (200, {"route": "classification", "payload": payload}),
         sourcing_runtime=StubSourcing(),
         provenance_runtime=StubProvenance(),
         cad_transport=cad_transport,
+        cad_capability_transport=cad_capability_transport,
         cad_service_url=cad_service_url,
     )
 
@@ -110,6 +130,33 @@ def test_unconfigured_cad_service_fails_honestly_without_network() -> None:
     assert body["status"] == "BLOCKED"
     assert body["diagnostic"]["code"] == "CAD_SERVICE_NOT_CONFIGURED"
 
+    capability_status, capability_body = routes().dispatch_get("/api/cad/capabilities")
+    assert capability_status == 503
+    assert capability_body["diagnostic"]["code"] == "CAD_SERVICE_NOT_CONFIGURED"
+
+
+def test_owner_approval_block_from_native_capability_gate_is_preserved() -> None:
+    reason = {
+        "schema_version": "caddydaddy.cad-capabilities/1",
+        "status": "BLOCKED",
+        "diagnostic": {
+            "code": "CAD_RUNTIME_OWNER_APPROVAL_REQUIRED",
+            "message": "Set the exact manifest-bound owner approval only after acceptance is recorded.",
+        },
+    }
+    mounted = routes(
+        cad_transport=lambda _path, _payload: (_ for _ in ()).throw(AssertionError("native operation must not run")),
+        cad_capability_transport=lambda: (503, reason),
+    )
+    document = browser_document()
+    status, body = mounted.dispatch("/api/cad/recompute", {
+        "document": document,
+        "operation": document["operations"][-1],
+        "expectedRevisionId": "revision:new",
+    })
+    assert status == 503
+    assert body == reason
+
 
 def test_browser_sketch_and_extrude_are_adapted_to_live_occt_contract() -> None:
     observed = {}
@@ -131,7 +178,7 @@ def test_browser_sketch_and_extrude_are_adapted_to_live_occt_contract() -> None:
                 "body_id": "body:plate",
                 "producing_feature_id": "operation:extrude",
                 "brep_base64": "YnJlcA==",
-                "brep_sha256": "e" * 64,
+                "brep_sha256": hashlib.sha256(b"brep").hexdigest(),
                 "valid": True,
                 "bounds_mm": [0, 0, 0, 20, 10, 8],
                 "topology": {"solids": 1},
@@ -143,7 +190,7 @@ def test_browser_sketch_and_extrude_are_adapted_to_live_occt_contract() -> None:
         }
 
     document = browser_document()
-    status, body = routes(cad_transport=transport).dispatch("/api/cad/recompute", {
+    status, body = routes(cad_transport=transport, cad_capability_transport=approved_cad_capabilities).dispatch("/api/cad/recompute", {
         "document": document,
         "operation": document["operations"][-1],
         "expectedRevisionId": "revision:new",

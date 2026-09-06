@@ -7,7 +7,7 @@ import { IntakeForm } from './IntakeForm';
 import { filingDraftOf } from '../lib/customs';
 import { CHECKLIST, CLAIM_COST, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
 import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type LiveSourcingOffer, type OperationsEnvelope, type ServiceOffer, type SourcingDispatchEnvelope, type SourcingPackageEnvelope, type SourcingRoundEnvelope } from '../lib/operations-client';
-import { OrderClient, OrderServiceError, type OrderEnvelope, type RecordingOutcome } from '../lib/order-client';
+import { OrderClient, OrderServiceError, orderDisplayLabel, type OrderEnvelope, type RecordingOutcome } from '../lib/order-client';
 import { appendProductEvent, productArtifactGate, useProductThread, type ProductArtifactBinding, type ProductArtifactRef } from '../lib/product-thread';
 
 const usd = (v: number | null | undefined) => (v == null ? 'rate not verified' : v.toLocaleString(undefined, { style: 'currency', currency: 'USD' }));
@@ -57,11 +57,11 @@ export function ServiceSourcing({ quantity, mode, partKey, partLabel }: { quanti
   const [orderBusy, setOrderBusy] = useState<string | null>(null);
   const [orderRetry, setOrderRetry] = useState<{ label: string; action: (api: OrderClient) => Promise<OrderEnvelope> } | null>(null);
   const [validatedManifest, setValidatedManifest] = useState<string | null>(null);
-  const [recordingOutcome, setRecordingOutcome] = useState<RecordingOutcome>('DISPATCHED');
+  const [recordingOutcome, setRecordingOutcome] = useState<RecordingOutcome>('SIMULATED');
   const [orderKey, setOrderKey] = useState('');
   const [acknowledgementRef, setAcknowledgementRef] = useState('evidence:operator-observed-recording');
   const [resolutionRef, setResolutionRef] = useState('');
-  const [reconciledEffect, setReconciledEffect] = useState<'NOT_SENT' | 'SENT'>('NOT_SENT');
+  const [reconciledEffect, setReconciledEffect] = useState<'NOT_SENT' | 'SIMULATED'>('NOT_SENT');
   const [packageBinding, setPackageBinding] = useState<ProductArtifactBinding | null>(null);
   const now = () => new Date().toISOString();
   const actor = 'operator:browser-demo';
@@ -104,7 +104,7 @@ export function ServiceSourcing({ quantity, mode, partKey, partLabel }: { quanti
       await appendProductEvent({
         sourceLane: value.receipt ? 'receipt' : 'order',
         eventType: `order.${label}`,
-        summary: value.receipt ? `${value.receipt.state} · external effect ${value.receipt.external_effect} · ${value.receipt.detail_code}.` : `${value.status} · ${value.claim_ceiling}.`,
+        summary: value.receipt ? `${orderDisplayLabel(value.receipt.state)} · external effect ${value.receipt.external_effect} · ${value.receipt.detail_code}.` : `${orderDisplayLabel(value.status)} · ${value.claim_ceiling}.`,
         actorId: value.request?.actor_id ?? actor,
         actorAttestation: 'SERVICE_REPORTED',
         revisionId: packageBinding?.revisionId ?? value.candidate.revision,
@@ -215,22 +215,22 @@ export function ServiceSourcing({ quantity, mode, partKey, partLabel }: { quanti
             <div className="text-[12px] text-muted">This rehearses hash-linked, client-carried demo records against the sealed fixture package. They are not durable, externally authenticated, or globally replay-protected. No supplier receives a message, request, acknowledgement, or order.</div>
             <div className="flex flex-wrap items-end gap-2">
               <button className="btn btn-primary disabled:opacity-40" disabled={orderBusy !== null || !packageBinding} onClick={() => void runOrder('validate-order-package', async (api) => { const value = await api.validateSourcingPackage(pkg.package); setValidatedManifest(value.package?.manifest_sha256 ?? null); return value; })}>{orderBusy === 'validate-order-package' ? 'Validating…' : validatedManifest ? 'Package validated' : '1 · Validate package bytes'}</button>
-              <label className="grid gap-1 text-muted">simulated recording outcome<select value={recordingOutcome} onChange={(event) => setRecordingOutcome(event.target.value as RecordingOutcome)} className="field text-ink" disabled={orderBusy !== null}><option value="DISPATCHED">DISPATCHED</option><option value="ACKNOWLEDGED">ACKNOWLEDGED</option><option value="EXCEPTION">EXCEPTION · known not sent</option><option value="UNKNOWN">UNKNOWN · reconciliation required</option></select></label>
+              <label className="grid gap-1 text-muted">recording-only outcome<select value={recordingOutcome} onChange={(event) => setRecordingOutcome(event.target.value as RecordingOutcome)} className="field text-ink" disabled={orderBusy !== null}><option value="SIMULATED">SIMULATED</option><option value="ACKNOWLEDGED">ACKNOWLEDGED</option><option value="EXCEPTION">EXCEPTION · known not sent</option><option value="UNKNOWN">UNKNOWN · reconciliation required</option></select></label>
               <label className="grid gap-1 text-muted min-w-[240px] flex-1">idempotency key<input value={orderKey} onChange={(event) => setOrderKey(event.target.value)} className="field font-mono text-ink" disabled={orderBusy !== null} /></label>
-              <button className="btn btn-primary disabled:opacity-40" disabled={!validatedManifest || !orderKey.trim() || orderBusy !== null} onClick={() => void runOrder('record-dispatch', (api) => api.dispatchRecording({ manifest_sha256: validatedManifest!, recording_outcome: recordingOutcome, idempotency_key: orderKey.trim(), route_ref: 'supplier:recording-demo-only', actor_id: actor, occurred_at: now() }))}>{orderBusy === 'record-dispatch' ? 'Recording…' : '2 · Record simulated dispatch'}</button>
+              <button className="btn btn-primary disabled:opacity-40" disabled={!validatedManifest || !orderKey.trim() || orderBusy !== null} onClick={() => void runOrder('record-staged-simulation', (api) => api.dispatchRecording({ manifest_sha256: validatedManifest!, recording_outcome: recordingOutcome, idempotency_key: orderKey.trim(), route_ref: 'supplier:recording-demo-only', actor_id: actor, occurred_at: now() }))}>{orderBusy === 'record-staged-simulation' ? 'Recording…' : '2 · Record staged simulation'}</button>
             </div>
             {orderError && <div role="alert" className="border border-red rounded-r p-2 text-red flex flex-wrap items-center justify-between gap-2"><span><b>Order evidence not replaced.</b> {orderError}{visibleOrderEvidence ? ' · Last valid record remains visible.' : ''}</span>{orderRetry && <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder(orderRetry.label, orderRetry.action)}>Retry failed operation</button>}</div>}
             {receipt && (
               <div className="grid gap-3">
                 <div className="border border-line2 rounded-r p-2 grid gap-1 text-[12px]">
-                  <div className="flex flex-wrap justify-between gap-2"><b>{receipt.state} · simulated</b><span className="font-mono break-all">{receipt.receipt_id}</span></div>
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2"><span>execution <b>{receipt.execution_mode}</b></span><span>external effect <b>{receipt.external_effect}</b></span><span>simulated outcome record (no external send) <b>{receipt.send_effect}</b></span><span>retry <b>{receipt.retry_disposition}</b></span></div>
+                  <div className="flex flex-wrap justify-between gap-2"><b>{orderDisplayLabel(receipt.state)} · simulated</b><span className="font-mono break-all">{receipt.receipt_id}</span></div>
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2"><span>execution <b>{receipt.execution_mode}</b></span><span>external effect <b>{receipt.external_effect}</b></span><span>recording-only outcome <b>{orderDisplayLabel(receipt.send_effect)}</b></span><span>retry <b>{receipt.retry_disposition}</b></span></div>
                   <div className="font-mono break-all text-muted">receipt sha256 {receipt.receipt_sha256} · detail {receipt.detail_code}</div>
                 </div>
                 <div className="flex flex-wrap items-end gap-2">
                   <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder('read-receipt', (api) => api.readReceipt(receipt.receipt_id))}>{orderBusy === 'read-receipt' ? 'Reading…' : '3 · Read latest receipt'}</button>
                   {receipt.state === 'DISPATCHED' && <><label className="grid gap-1 text-muted min-w-[260px] flex-1">recorded acknowledgement evidence<input value={acknowledgementRef} onChange={(event) => setAcknowledgementRef(event.target.value)} className="field font-mono text-ink" /></label><button className="btn disabled:opacity-40" disabled={!acknowledgementRef.trim() || orderBusy !== null} onClick={() => void runOrder('acknowledge', (api) => api.acknowledge(receipt.receipt_id, acknowledgementRef.trim(), actor, now()))}>4 · Record acknowledgement</button></>}
-                  {receipt.state === 'UNKNOWN' && <><label className="grid gap-1 text-muted min-w-[280px] flex-1">mandatory reconciliation evidence<input value={resolutionRef} onChange={(event) => setResolutionRef(event.target.value)} placeholder="evidence:confirmed-not-received" className="field font-mono text-ink" /></label><label className="grid gap-1 text-muted">definitive effect<select value={reconciledEffect} onChange={(event) => setReconciledEffect(event.target.value as 'NOT_SENT' | 'SENT')} className="field text-ink"><option value="NOT_SENT">NOT_SENT</option><option value="SENT">SENT</option></select></label><button className="btn btn-primary disabled:opacity-40" disabled={!resolutionRef.trim() || orderBusy !== null} onClick={() => void runOrder('reconcile', (api) => api.reconcileUnknown(receipt.receipt_id, resolutionRef.trim(), reconciledEffect, actor, now()))}>4 · Reconcile UNKNOWN + close</button></>}
+                  {receipt.state === 'UNKNOWN' && <><label className="grid gap-1 text-muted min-w-[280px] flex-1">mandatory reconciliation evidence<input value={resolutionRef} onChange={(event) => setResolutionRef(event.target.value)} placeholder="evidence:confirmed-not-received" className="field font-mono text-ink" /></label><label className="grid gap-1 text-muted">simulated effect<select value={reconciledEffect} onChange={(event) => setReconciledEffect(event.target.value as 'NOT_SENT' | 'SIMULATED')} className="field text-ink"><option value="NOT_SENT">NOT_SENT</option><option value="SIMULATED">SIMULATED</option></select></label><button className="btn btn-primary disabled:opacity-40" disabled={!resolutionRef.trim() || orderBusy !== null} onClick={() => void runOrder('reconcile', (api) => api.reconcileUnknown(receipt.receipt_id, resolutionRef.trim(), reconciledEffect === 'SIMULATED' ? 'SENT' : reconciledEffect, actor, now()))}>4 · Reconcile UNKNOWN + close</button></>}
                   {(receipt.state === 'ACKNOWLEDGED' || receipt.state === 'EXCEPTION') && <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder('close', (api) => api.close(receipt.receipt_id, actor, now(), resolutionRef.trim() || undefined))}>5 · Close process-local order</button>}
                   <button className="btn" disabled={orderBusy !== null} onClick={() => void runOrder('verify-audit', (api) => api.verifyAudit())}>{orderBusy === 'verify-audit' ? 'Verifying…' : 'Verify audit hash chain'}</button>
                 </div>
@@ -238,9 +238,9 @@ export function ServiceSourcing({ quantity, mode, partKey, partLabel }: { quanti
             )}
             {visibleOrderEvidence && (
               <div className="border-t border-line2 pt-2 grid gap-1 text-[12px] text-muted">
-                <div><b className="text-ink">{visibleOrderEvidence.status}</b> · {visibleOrderEvidence.claim_ceiling}</div>
+                <div><b className="text-ink">{orderDisplayLabel(visibleOrderEvidence.status)}</b> · {visibleOrderEvidence.claim_ceiling}</div>
                 {visibleOrderEvidence.event_count != null && <div className="font-mono break-all">hash-linked events {visibleOrderEvidence.event_count} · audit head {visibleOrderEvidence.audit_head_sha256}</div>}
-                {(visibleOrderEvidence.audit_events ?? visibleOrderEvidence.events ?? []).map((item) => <div key={item.event_id} className="font-mono break-all">#{item.sequence} {item.event_type} · {item.state} · {item.event_sha256}</div>)}
+                {(visibleOrderEvidence.audit_events ?? visibleOrderEvidence.events ?? []).map((item) => <div key={item.event_id} className="font-mono break-all">#{item.sequence} {orderDisplayLabel(item.event_type)} · {orderDisplayLabel(item.state)} · {item.event_sha256}</div>)}
               </div>
             )}
           </div>
@@ -510,16 +510,16 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
               </div>
             </div>
             <div className="panel">
-              <div className="panel-head"><div className="panel-title">Order <span className="sub">· synthetic, exactly once</span></div>{r.order && <span className="chip" style={{ color: r.order.state === 'EXCEPTION' ? 'var(--red)' : undefined }}>{r.order.state}</span>}</div>
+              <div className="panel-head"><div className="panel-title">Stage the order <span className="sub">· simulated, exactly once</span></div>{r.order && <span className="chip" style={{ color: r.order.state === 'EXCEPTION' ? 'var(--red)' : undefined }}>{orderDisplayLabel(r.order.state)}</span>}</div>
               <div className="p-3 grid gap-2 text-[13px]">
                 <div className="flex gap-2 flex-wrap">
-                  <button onClick={s.sendOrder} disabled={!r.pkg || !!r.order} className="btn btn-primary disabled:opacity-40">Send order</button>
-                  <button onClick={s.retrySend} disabled={!r.order || r.order.state === 'CLOSED'} className="btn disabled:opacity-40">Retry with the same key</button>
+                  <button onClick={s.sendOrder} disabled={!r.pkg || !!r.order} className="btn btn-primary disabled:opacity-40">Stage order (simulated)</button>
+                  <button onClick={s.retrySend} disabled={!r.order || r.order.state === 'CLOSED'} className="btn disabled:opacity-40">Retry staged action with the same key</button>
                   <button onClick={s.closeOrder} disabled={!r.order || r.order.state !== 'ACKNOWLEDGED'} className="btn disabled:opacity-40">Receive · inspect · close</button>
                 </div>
-                <label className="flex items-center gap-2 text-muted text-[12px]"><input type="checkbox" checked={s.injectException} onChange={(e) => s.patch({ injectException: e.target.checked })} disabled={!!r.order} /> inject a lost response after dispatch</label>
-                {r.order && <div className="grid gap-1 border-t border-line2 pt-2 font-mono text-[12px]"><div>PURCHASE_ORDER · design state #{r.designSeq} · qty {r.qty} · recipient: [placeholder] · SYNTHETIC</div><div>packet {r.order.packetHash} · key {r.order.key} · attempts {r.order.attempts}</div>{r.order.trail.map((tl, i) => <div key={i} className="text-muted">· {tl}</div>)}</div>}
-                <div className="text-[12px] text-muted">a retry with the same key returns the first receipt · nothing leaves the machine</div>
+                <label className="flex items-center gap-2 text-muted text-[12px]"><input type="checkbox" checked={s.injectException} onChange={(e) => s.patch({ injectException: e.target.checked })} disabled={!!r.order} /> inject a lost response after the staged action</label>
+                {r.order && <div className="grid gap-1 border-t border-line2 pt-2 font-mono text-[12px]"><div>PURCHASE_ORDER · design state #{r.designSeq} · qty {r.qty} · recipient: [placeholder] · SIMULATED</div><div>packet {r.order.packetHash} · key {r.order.key} · attempts {r.order.attempts}</div>{r.order.trail.map((tl, i) => <div key={i} className="text-muted">· {orderDisplayLabel(tl)}</div>)}</div>}
+                <div className="text-[12px] text-muted">a retry with the same key returns the first receipt · nothing leaves the machine · any real external send is a separately authorized communication</div>
               </div>
             </div>
           </div>

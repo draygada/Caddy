@@ -137,8 +137,45 @@ input[type="checkbox"] { width: 24px; height: 24px; margin: 0; accent-color: var
   }
 
   .cad-authoring-workspace button {
+    min-height: 44px;
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  .cad-authoring-workspace input:not([type="file"]),
+  .cad-authoring-workspace select,
+  .cad-file-target,
+  .cad-mission-target,
+  .cad-viewport-target {
+    min-height: 44px;
+  }
+
+  .cad-file-target {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cad-mobile-stack {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .cad-entity-row {
+    grid-template-columns: minmax(0, 1fr) 44px !important;
+  }
+
+  .cad-entity-row > span:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .cad-mission-target,
+  .cad-viewport-target.nav-btn {
+    min-width: 44px;
+  }
+
+  .cad-feature-summary,
+  .cad-viewport-context-hint {
+    display: none;
   }
 
   .cad-output-download > span {

@@ -10,6 +10,7 @@ import provenanceInspectRoute from '../api/provenance/inspect';
 import provenanceVerifyRoute from '../api/provenance/verify';
 import provenanceAcceptRoute from '../api/provenance/accept';
 import cadRecomputeRoute from '../api/cad/recompute';
+import cadCapabilitiesRoute from '../api/cad/capabilities';
 import cadImportRoute from '../api/cad/import';
 import cadExportRoute from '../api/cad/export';
 import cadNativeSealRoute from '../api/cad/outputs/native/seal';
@@ -93,6 +94,30 @@ describe('Vite/Vercel product-service route filesystem', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(ROUTES.length);
     expect(fetchImpl.mock.calls.map(([url, init]) => [url, init?.method])).toEqual(
       ROUTES.map(([path]) => [`https://product-preview-runtime-team.vercel.app${path}`, 'POST']),
+    );
+  });
+
+  it('materializes the read-only CAD capability route at its public URL', async () => {
+    vi.stubEnv('CADDYDADDY_PRODUCT_SERVICE_URL', 'https://product-preview-runtime-team.vercel.app');
+    const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => new Response(JSON.stringify({ status: 'BLOCKED' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchImpl);
+    const { capture, response } = responseCapture();
+
+    await cadCapabilitiesRoute({
+      method: 'GET',
+      url: '/api/cad/capabilities',
+      query: {},
+      headers: { accept: 'application/json' },
+    } as never, response as never);
+
+    expect(capture.statusCode).toBe(503);
+    expect(capture.body).toEqual({ status: 'BLOCKED' });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://product-preview-runtime-team.vercel.app/api/cad/capabilities',
+      expect.objectContaining({ method: 'GET', body: undefined }),
     );
   });
 });

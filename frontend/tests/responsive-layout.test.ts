@@ -8,7 +8,6 @@ import authoringSource from '../src/panels/AuthoringWorkspace.tsx?raw';
 const cssSource = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
 
 describe('Candidate 0.2 compact responsive layout', () => {
-
   it('stacks all three CAD authoring columns without changing the desktop grid', () => {
     expect(authoringSource).toContain('data-cad-authoring-workspace');
     expect(authoringSource).toContain('className="cad-authoring-layout"');
@@ -25,5 +24,12 @@ describe('Candidate 0.2 compact responsive layout', () => {
     expect(cssSource).toMatch(/\.cad-authoring-workspace button[\s\S]*?max-width: 100%;/);
     expect(cssSource).toMatch(/\.cad-output-download > span\s*\{[\s\S]*?overflow-wrap: anywhere;/);
     expect(appSource).toContain('<CommandBox />');
+  });
+
+  it('uses narrow-only 44px interaction targets and stacks the paired CAD controls', () => {
+    expect(authoringSource).toContain('className="cad-mobile-stack"');
+    expect(authoringSource).toContain('className="cad-entity-row"');
+    expect(cssSource).toMatch(/\.cad-authoring-workspace button\s*\{[\s\S]*?min-height: 44px;/);
+    expect(cssSource).toMatch(/\.cad-mobile-stack\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) !important;/);
   });
 });

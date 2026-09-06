@@ -266,7 +266,12 @@ class LiveAnthropicModel:
                 max_tokens=self.max_tokens,
                 system=_live_system_instruction(kind),
                 messages=[{"role": "user", "content": _untrusted_case_envelope(kind, prompt)}],
-                tools=[{"name": kind, "description": f"Record the {kind} output.", "input_schema": schema}],
+                tools=[{
+                    "name": kind,
+                    "description": f"Record the {kind} output.",
+                    "strict": True,
+                    "input_schema": schema,
+                }],
                 tool_choice={"type": "tool", "name": kind},
             )
         except Exception as error:  # noqa: BLE001 - every provider failure is an abstain, never a guess

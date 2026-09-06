@@ -97,6 +97,28 @@ PROMPT_SCHEMAS: dict[str, dict] = {
 }
 
 
+def _proposal_schema(schema: dict, provision_ids: tuple[str, ...]) -> dict:
+    """Bind a proposal tool to exact, wave-appropriate IDs from the active pack."""
+    candidates = schema["properties"]["candidates"]
+    item = candidates["items"]
+    return {
+        **schema,
+        "properties": {
+            **schema["properties"],
+            "candidates": {
+                **candidates,
+                "items": {
+                    **item,
+                    "properties": {
+                        **item["properties"],
+                        "provision": {"type": "string", "enum": list(provision_ids)},
+                    },
+                },
+            },
+        },
+    }
+
+
 # --- Prompts -----------------------------------------------------------------------------------
 
 def _facts_block(snapshot: FactSnapshot) -> str:
@@ -131,6 +153,8 @@ def _usml_propose_prompt(snapshot: FactSnapshot, pack: ReferencePack, retry: boo
            "Wave 1: propose every USML paragraph (category and subparagraph, e.g. 'USML XI(c)(2)') whose text this item could "
            "plausibly trip, including a 22 CFR 120.41 specially-designed read. Recall over precision — the analysis knocks out. "
            "Never propose a provision absent from the list below. If nothing plausibly applies, still propose the nearest-miss paragraphs.")
+    ask += (" Set each candidate's provision field to one exact ID from the tool enum, verbatim. "
+            "Do not emit a category title, descriptive label, citation prefix, range, or prose in that field.")
     return "\n".join([_facts_block(snapshot), "", "USML CATEGORIES IN THIS REFERENCE PACK:", cats, "", ask])
 
 
@@ -139,7 +163,8 @@ def _ccl_propose_prompt(snapshot: FactSnapshot, usml_summary: str) -> str:
         _facts_block(snapshot), "", "USML STEP (recorded, immutable):", usml_summary, "",
         "Wave 3: the USML step closed negative. Propose every CCL entry paragraph (e.g. '9A012.a.2', '3A611.g', '9A610.x') "
         "the item could plausibly meet, across 600-series and 9x515 entries, their specially-designed paragraphs, and other ECCNs. "
-        "Recall over precision. Never propose a code absent from the CCL. EAR99 is seated by code; do not propose it.",
+        "Recall over precision. Set each candidate's provision field to one exact ID from the tool enum, verbatim; do not emit "
+        "an ECCN prefix, entry title, descriptive label, range, or prose in that field. EAR99 is seated by code; do not propose it.",
         "If any candidate uses via=specially_designed, set specially_designed_read to exactly one leading state: "
         "'caught: ...', 'released: ...', or 'undetermined: ...'. Do not turn that read into a legal conclusion.",
     ])
@@ -183,12 +208,21 @@ class _Run:
         self.dropped: list[dict] = []
         self.reference_notes: list[str] = []
         self.candidate_seq = 0
+        self.candidate_ids = {
+            list_name: tuple(sorted(key for key, unit in pack.units.items() if unit.list_name == list_name))
+            for list_name in ("USML", "CCL")
+        }
+        self.tool_schemas = {
+            **PROMPT_SCHEMAS,
+            "usml_propose": _proposal_schema(PROMPT_SCHEMAS["usml_propose"], self.candidate_ids["USML"]),
+            "ccl_propose": _proposal_schema(PROMPT_SCHEMAS["ccl_propose"], self.candidate_ids["CCL"]),
+        }
 
     def call(self, kind: str, prompt: str, *, provision: str | None = None) -> dict | Abstain:
         if self.progress:
             self.progress(kind)
         before = self.budget.cost_used_microusd
-        response = self.model.propose(kind, prompt, PROMPT_SCHEMAS[kind])
+        response = self.model.propose(kind, prompt, self.tool_schemas[kind])
         self.calls.append({
             "stage": kind, "provision": provision, "prompt_sha256": prompt_sha256(kind, prompt),
             "response_sha256": _response_hash(response), "cost_microusd": self.budget.cost_used_microusd - before,
@@ -248,20 +282,18 @@ class _Run:
 
         seen: set[str] = set()
         out: list[dict] = []
+        allowed_ids = set(self.candidate_ids[list_name])
         for raw in raw_candidates:
             provision_raw = str(raw.get("provision") or "")
-            key = canonical_provision(provision_raw)
-            unit = self.pack.units.get(key) if key else None
-            if unit is None:
-                self.dropped.append({"provision": provision_raw, "reason": "does not resolve in the reference pack"})
+            if provision_raw not in allowed_ids:
+                normalised = canonical_provision(provision_raw)
+                exact_hint = f"; exact ID is {normalised}" if normalised in allowed_ids else ""
+                self.dropped.append({
+                    "provision": provision_raw,
+                    "reason": f"not an exact canonical {list_name} reference-pack ID{exact_hint}",
+                })
                 continue
-            is_usml = key.startswith("USML") or key.startswith("22 CFR 120.41")
-            if list_name == "USML" and not is_usml:
-                self.dropped.append({"provision": key, "reason": "not a USML provision in the USML wave"})
-                continue
-            if list_name == "CCL" and (is_usml or key in ("EAR99", "NOT_SUBJECT")):
-                self.dropped.append({"provision": key, "reason": "not a CCL entry in the CCL wave"})
-                continue
+            key = provision_raw
             if key in seen:
                 continue
             seen.add(key)
@@ -369,6 +401,108 @@ class _Run:
         return "\n".join(f"  {c['provision']}: {c['ruling']} — {c['why_rejected'] or ''}" for c in usml) or "  (no candidates)"
 
 
+def _question_queue(snapshot: FactSnapshot, determination: dict, candidates: list[dict]) -> list[str]:
+    """Render a deterministic, schema-compatible recovery queue for an unclosed review."""
+    if determination["jurisdiction"] != "UNDETERMINED" and determination["ccl_step"] != "undetermined":
+        return []
+
+    scope = "USML" if determination["usml_step"] != "negative" else "CCL"
+    open_provisions = set(determination["open_candidates"])
+    open_rows = [
+        candidate for candidate in candidates
+        if candidate["status"] == "undetermined" or candidate["provision"] in open_provisions
+    ]
+    records: list[dict] = []
+    for candidate in sorted(
+        open_rows,
+        key=lambda row: (route_module.STAGE_ORDER.index(row["stage"]), row["provision"]),
+    ):
+        provision = candidate["provision"]
+        elements = sorted(
+            (element for element in candidate["elements"] if element["disposition"] == "indeterminate"),
+            key=lambda element: element["element_id"],
+        )
+        if not elements:
+            records.append({
+                "action": "provide_applicability_evidence",
+                "deadline": "before_classification_rerun",
+                "owner": "classification_requester",
+                "provision": provision,
+                "question": f"What verified technical and design-history facts resolve whether {provision} applies?",
+                "scope": scope,
+            })
+            continue
+        for element in elements:
+            element_id = element["element_id"]
+            fact_paths = sorted(set(element["facts_relied_on"]))
+            if not fact_paths:
+                records.append({
+                    "action": "provide_element_evidence",
+                    "deadline": "before_classification_rerun",
+                    "element_id": element_id,
+                    "owner": "classification_requester",
+                    "provision": provision,
+                    "question": f"What verified fact resolves {provision} element {element_id}?",
+                    "scope": scope,
+                })
+                continue
+            for fact_path in fact_paths:
+                fact = snapshot.facts.get(fact_path)
+                fact_state = ("missing" if fact is None else
+                              "recorded_unknown" if fact.recorded_unknown else
+                              "present_but_insufficient")
+                action = ("provide_verified_fact" if fact_state != "present_but_insufficient"
+                          else "clarify_and_substantiate_fact")
+                records.append({
+                    "action": action,
+                    "deadline": "before_classification_rerun",
+                    "element_id": element_id,
+                    "fact_path": fact_path,
+                    "fact_state": fact_state,
+                    "owner": "classification_requester",
+                    "provision": provision,
+                    "question": (f"What is the verified value and source for {fact_path} as it bears on "
+                                 f"{provision} element {element_id}?"),
+                    "scope": scope,
+                })
+
+    if not records:
+        unknown_paths = sorted(path for path, fact in snapshot.facts.items() if fact.recorded_unknown)
+        for fact_path in unknown_paths:
+            records.append({
+                "action": "provide_verified_fact",
+                "deadline": "before_classification_rerun",
+                "fact_path": fact_path,
+                "fact_state": "recorded_unknown",
+                "owner": "classification_requester",
+                "question": f"What is the verified value and source for {fact_path}?",
+                "scope": scope,
+            })
+    if not records:
+        topics = (["function", "performance", "design_origin_and_modifications", "intended_end_item", "civil_or_military_application"]
+                  if scope == "USML" else
+                  ["function", "performance_parameters", "component_or_end_item_role", "specially_designed_development_and_release_history"])
+        records.append({
+            "action": "provide_screening_facts",
+            "deadline": "before_classification_rerun",
+            "missing_fact_topics": topics,
+            "owner": "classification_requester",
+            "question": f"What verified item facts are available for the unresolved {scope} review?",
+            "scope": scope,
+        })
+
+    unique = {json.dumps(record, sort_keys=True, separators=(",", ":")): record for record in records}
+    ordered = [unique[key] for key in sorted(unique)]
+    return [
+        "QUESTION " + json.dumps(
+            {"question_id": f"Q-{index:03d}", **record},
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        for index, record in enumerate(ordered, start=1)
+    ]
+
+
 def determine(snapshot: FactSnapshot, pack: ReferencePack, model: ModelClient, budget: Budget, *,
               progress: Callable[[str], None] | None = None) -> dict:
     run = _Run(snapshot, pack, model, budget, progress)
@@ -427,6 +561,7 @@ def determine(snapshot: FactSnapshot, pack: ReferencePack, model: ModelClient, b
         usml, ccl_by_stage, residual_reached,
         usml_special=usml_special, ccl_special=ccl_special, ccl_review=ccl_review,
     )
+    determination["basis"].extend(_question_queue(snapshot, determination, [*usml, *ccl]))
     candidates = sorted([*usml, *ccl, residual], key=lambda c: (route_module.STAGE_ORDER.index(c["stage"]), c["candidate_id"]))
     return {
         "schema_version": SCHEMA_VERSION,

@@ -6,6 +6,7 @@ import {
   loadCoreCandidate,
   parseCoreCandidateResponse,
 } from '../src/lib/core-client';
+import { getTripwireRevisionGate, runTripwire, type CandidatePayload } from '../src/lib/tripwire';
 
 function envelope() {
   const publicSnapshot = loadCachedCoreCandidate().candidate;
@@ -32,6 +33,32 @@ function envelope() {
       immutable: true,
       currentCapabilityAuthority: false,
       publicSnapshot,
+    },
+    runtimeGeometry: {
+      authoritativeForThisBrowserSession: 'BROWSER_JSCAD_BOUNDED',
+      browser: {
+        availability: 'AVAILABLE',
+        kernel: 'JSCAD',
+        executionLocation: 'BROWSER',
+        scope: 'BOUNDED_MESH_CSG_NOT_PRODUCTION_BREP',
+      },
+      native: {
+        connection: 'DISCONNECTED',
+        kernel: null,
+        version: null,
+        executedForThisResponse: false,
+        evidence: 'PRODUCT_CORE_CAPABILITY_BLOCKED',
+        reason: {
+          code: 'CAD_RUNTIME_OWNER_APPROVAL_REQUIRED',
+          message: 'Repository-owner approval is not recorded for the exact native runtime packet.',
+        },
+      },
+      coreExecutedAtRuntime: false,
+    },
+    capabilities: { nativeOcctConnected: false },
+    capabilityContracts: {
+      cadAuthoring: { productionBrepKernel: false },
+      liveKernelRecompute: { status: 'UNAVAILABLE_NATIVE_DISCONNECTED' },
     },
   };
 }
@@ -71,5 +98,18 @@ describe('Tripwire Candidate 0.2 legacy-evidence compatibility', () => {
     const staleNestedRevision = envelope();
     staleNestedRevision.legacySnapshotEvidence.publicSnapshot.document.scene.revisionId = 'revision:stale';
     expect(() => parseCoreCandidateResponse(staleNestedRevision)).toThrow(/revision chain/);
+  });
+
+  it('never runs legacy Tripwire evidence against a different or unavailable active revision', async () => {
+    const loaded = await loadCoreCandidate(vi.fn(async () => new Response(JSON.stringify(envelope()), { status: 200 })) as unknown as typeof fetch);
+    const candidate = loaded.candidate as unknown as CandidatePayload;
+    const target = listCoreEntities(loaded.candidate)[0];
+    const activeRevision = loaded.releaseIdentity?.revisionId;
+    const fetchImpl = vi.fn() as unknown as typeof fetch;
+
+    expect(getTripwireRevisionGate(candidate, activeRevision)).toMatchObject({ status: 'STALE', canCheck: false });
+    expect(getTripwireRevisionGate(candidate, null)).toMatchObject({ status: 'UNAVAILABLE', canCheck: false });
+    await expect(runTripwire(candidate, target.entityId, activeRevision, fetchImpl)).rejects.toMatchObject({ code: 'CURRENT_REVISION_STALE' });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

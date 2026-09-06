@@ -36,7 +36,8 @@ The browser does not consume the native service directly:
 
 1. Frontend `CADDYDADDY_PRODUCT_SERVICE_URL` points to the matching product-service origin.
 2. Product-service `CADDYDADDY_CAD_SERVICE_URL` points to this native service origin, without a trailing path.
-3. Frontend `CADDYDADDY_CAD_CAPABILITIES_URL` points to `<native-origin>/v1/capabilities`; this is only the runtime-truth capability probe.
+3. Product-service `GET /api/cad/capabilities` performs the runtime-truth probe. The frontend never probes the native origin directly.
+4. Native-service `CAD_NATIVE_RUNTIME_OWNER_APPROVAL` remains unset until the repository owner records acceptance for the exact runtime packet and then supplies the manifest-bound value returned by the blocked readiness response.
 
 After deploying the native service URL as `CAD_URL`, deploy or redeploy the product service with:
 
@@ -49,8 +50,7 @@ Then deploy the frontend with the exact matching product-service and capability 
 
 ```bash
 vercel deploy frontend --yes \
-  --env CADDYDADDY_PRODUCT_SERVICE_URL="$PRODUCT_SERVICE_URL" \
-  --env CADDYDADDY_CAD_CAPABILITIES_URL="$CAD_URL/v1/capabilities"
+  --env CADDYDADDY_PRODUCT_SERVICE_URL="$PRODUCT_SERVICE_URL"
 ```
 
 ## Boundaries

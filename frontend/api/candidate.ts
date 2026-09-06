@@ -22,16 +22,27 @@ type NativeRuntime = {
   kernel: 'OpenCascade' | null;
   version: string | null;
   executedForThisResponse: false;
-  evidence: 'CAPABILITY_PROBE' | 'NO_CAPABILITY_PROBE' | 'PROBE_FAILED';
+  evidence:
+    | 'PRODUCT_CORE_CAPABILITY'
+    | 'PRODUCT_CORE_CAPABILITY_BLOCKED'
+    | 'PRODUCT_CORE_CAPABILITY_INVALID'
+    | 'PRODUCT_CORE_CAPABILITY_UNREACHABLE'
+    | 'NO_PRODUCT_SERVICE_BINDING';
+  reason: { code: string; message: string } | null;
 };
 
-function disconnected(evidence: NativeRuntime['evidence']): NativeRuntime {
+function disconnected(
+  evidence: NativeRuntime['evidence'],
+  code: string,
+  message: string,
+): NativeRuntime {
   return {
     connection: 'DISCONNECTED',
     kernel: null,
     version: null,
     executedForThisResponse: false,
     evidence,
+    reason: { code, message },
   };
 }
 
@@ -58,43 +69,91 @@ function productServiceBinding(value: string | undefined): ProductServiceBinding
   }
 }
 
-function kernelIdentity(value: unknown): { name: string; version: string | null } | null {
-  if (!isRecord(value)) return null;
-  const kernel = isRecord(value.kernel)
-    ? value.kernel
-    : isRecord(value.capabilities) && isRecord(value.capabilities.kernel)
-      ? value.capabilities.kernel
-      : null;
-  if (!kernel) return null;
-  const name = typeof kernel.name === 'string' ? kernel.name : '';
-  if (!/^(OpenCascade|OCCT)$/i.test(name)) return null;
-  return { name: 'OpenCascade', version: typeof kernel.version === 'string' ? kernel.version : null };
+function kernelIdentity(value: unknown): { name: 'OpenCascade'; version: string } | null {
+  if (
+    !isRecord(value)
+    || value.schema_version !== 'caddydaddy.cad-capabilities/1'
+    || value.status !== 'AVAILABLE'
+    || !isRecord(value.kernel)
+    || value.kernel.name !== 'OpenCascade'
+    || value.kernel.version !== '7.9.3'
+    || value.kernel.binding !== 'cadquery-ocp-novtk/7.9.3.1'
+    || !isRecord(value.runtime_gate)
+    || value.runtime_gate.status !== 'APPROVED'
+    || value.runtime_gate.owner_approval !== 'ASSERTED_BY_DEPLOYMENT_CONFIGURATION'
+    || value.runtime_gate.approval_binding !== 'caddydaddy.native-runtime/v1'
+    || value.runtime_gate.factual_evidence !== 'PASS'
+    || value.runtime_gate.legal_determination !== 'NOT_PERFORMED'
+    || value.runtime_gate.artifact_sha256 !== '8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b'
+    || !Array.isArray(value.features)
+    || !value.features.includes('FILLET')
+    || !value.features.includes('CHAMFER')
+    || !isRecord(value.exchange)
+    || !Array.isArray(value.exchange.exact)
+    || !value.exchange.exact.includes('STEP_AP242')
+    || !value.exchange.exact.includes('IGES_5_3')
+  ) return null;
+  return { name: 'OpenCascade', version: '7.9.3' };
 }
 
-async function observeNativeRuntime(dependencies: RuntimeDependencies): Promise<NativeRuntime> {
-  const probeUrl = dependencies.env.CADDYDADDY_CAD_CAPABILITIES_URL?.trim();
-  if (!probeUrl) return disconnected('NO_CAPABILITY_PROBE');
+function blockedReason(value: unknown): { code: string; message: string } | null {
+  if (!isRecord(value)) return null;
+  const direct = isRecord(value.diagnostic) ? value.diagnostic : null;
+  const first = Array.isArray(value.diagnostics) && isRecord(value.diagnostics[0]) ? value.diagnostics[0] : null;
+  const diagnostic = direct ?? first;
+  return diagnostic && typeof diagnostic.code === 'string' && typeof diagnostic.message === 'string'
+    ? { code: diagnostic.code, message: diagnostic.message }
+    : null;
+}
 
+async function observeNativeRuntime(dependencies: RuntimeDependencies, productOrigin: string): Promise<NativeRuntime> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), NATIVE_PROBE_TIMEOUT_MS);
   try {
-    const response = await dependencies.fetchImpl(probeUrl, {
+    const response = await dependencies.fetchImpl(serviceUrl(productOrigin, '/api/cad/capabilities'), {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
       signal: controller.signal,
     });
-    if (!response.ok) return disconnected('PROBE_FAILED');
-    const identity = kernelIdentity(await response.json());
-    if (!identity) return disconnected('PROBE_FAILED');
+    let value: unknown;
+    try {
+      value = await response.json();
+    } catch {
+      return disconnected(
+        'PRODUCT_CORE_CAPABILITY_INVALID',
+        'CAD_CAPABILITY_CONTRACT_INVALID',
+        'The product/core CAD capability endpoint returned unreadable JSON; native CAD remains blocked.',
+      );
+    }
+    if (!response.ok) {
+      const reason = blockedReason(value) ?? {
+        code: 'CAD_RUNTIME_BLOCKED',
+        message: `The product/core CAD capability endpoint returned HTTP ${response.status}; native CAD remains blocked.`,
+      };
+      return disconnected('PRODUCT_CORE_CAPABILITY_BLOCKED', reason.code, reason.message);
+    }
+    const identity = kernelIdentity(value);
+    if (!identity) {
+      return disconnected(
+        'PRODUCT_CORE_CAPABILITY_INVALID',
+        'CAD_CAPABILITY_CONTRACT_INVALID',
+        'The product/core API did not prove the approved caddydaddy.cad-capabilities/1 OCCT runtime contract.',
+      );
+    }
     return {
       connection: 'CONNECTED',
       kernel: 'OpenCascade',
       version: identity.version,
       executedForThisResponse: false,
-      evidence: 'CAPABILITY_PROBE',
+      evidence: 'PRODUCT_CORE_CAPABILITY',
+      reason: null,
     };
   } catch {
-    return disconnected('PROBE_FAILED');
+    return disconnected(
+      'PRODUCT_CORE_CAPABILITY_UNREACHABLE',
+      'CAD_CAPABILITY_ENDPOINT_UNREACHABLE',
+      'The product/core CAD capability endpoint could not be reached; native CAD remains blocked.',
+    );
   } finally {
     clearTimeout(timeout);
   }
@@ -225,7 +284,11 @@ export function createCandidateHandler(overrides: Partial<RuntimeDependencies> =
     const binding = productServiceBinding(dependencies.env.CADDYDADDY_PRODUCT_SERVICE_URL);
 
     if (binding.status !== 'BOUND') {
-      const native = await observeNativeRuntime(dependencies);
+      const native = disconnected(
+        'NO_PRODUCT_SERVICE_BINDING',
+        'PRODUCT_SERVICE_BINDING_REQUIRED',
+        'Bind CADDYDADDY_PRODUCT_SERVICE_URL before probing or invoking the isolated OCCT service through product/core.',
+      );
       response.status(503).json({
         status: 'BLOCKED',
         serviceAvailability: {
@@ -253,7 +316,7 @@ export function createCandidateHandler(overrides: Partial<RuntimeDependencies> =
           headers: { Accept: 'application/json' },
           cache: 'no-store',
         }),
-        observeNativeRuntime(dependencies),
+        observeNativeRuntime(dependencies, binding.origin),
       ]);
       if (!upstreamResponse.ok) throw new Error('UPSTREAM_CANDIDATE_UNAVAILABLE');
       const contract = runtimeTruthfulCandidate(await upstreamResponse.json(), native, dependencies.env);
