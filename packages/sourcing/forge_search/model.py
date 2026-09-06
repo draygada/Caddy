@@ -159,3 +159,24 @@ class LiveAnthropicModel:
         usage = {"input_tokens": int(getattr(u, "input_tokens", 0) or 0), "output_tokens": int(getattr(u, "output_tokens", 0) or 0), "model": model}
         self.calls.append(Call(kind, prompt, response, usage))
         return response
+
+
+class RecordingModel:
+    """Live once, replay forever: every non-abstain response is stored in the cache under its prompt hash."""
+
+    def __init__(self, inner: ModelClient, cache: CacheModel):
+        self.inner, self.cache = inner, cache
+
+    @property
+    def mode(self) -> str:
+        return self.inner.mode
+
+    @property
+    def calls(self) -> list[Call]:
+        return self.inner.calls
+
+    def propose(self, kind: str, prompt: str, schema: dict) -> dict | Abstain:
+        response = self.inner.propose(kind, prompt, schema)
+        if not isinstance(response, Abstain):
+            self.cache.store(kind, prompt, response, usage=self.inner.calls[-1].usage if self.inner.calls else None)
+        return response

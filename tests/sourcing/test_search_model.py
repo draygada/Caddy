@@ -41,3 +41,13 @@ def test_live_model_abstains_without_a_key_and_never_touches_the_network(monkeyp
     m = LiveAnthropicModel()
     out = m.propose("extract", "p", {})
     assert isinstance(out, Abstain) and out.reason in ("anthropic sdk not installed", "no api key in environment") and m.mode == "LIVE"
+
+
+def test_recording_model_fills_the_cache_and_replays(tmp_path: Path):
+    from forge_search.model import Abstain, CacheModel, RecordingModel, ScriptedModel
+    inner = ScriptedModel({"search": [{"candidates": []}]})
+    cache = CacheModel(tmp_path / "cache")
+    rec = RecordingModel(inner, cache)
+    assert rec.mode == "SCRIPTED" and rec.propose("search", "p", {}) == {"candidates": []}
+    assert cache.propose("search", "p", {}) == {"candidates": []}
+    assert rec.propose("search", "p", {}) == Abstain("script exhausted") and len(list((tmp_path / "cache").iterdir())) == 1
