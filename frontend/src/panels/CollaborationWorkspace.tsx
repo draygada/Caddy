@@ -33,7 +33,9 @@ export function CollaborationWorkspace() {
   const review = projection.reviews[selectedReviewId] ?? reviews[0];
   const authorizationId = review ? `authorization:${review.reviewId.replace(/^review:/, '')}` : '';
   const authorization = projection.authorizations[authorizationId];
-  const eligibility = review ? workspace.mergeEligibility(review.reviewId, authorizationId) : { eligible: false, reasons: ['REVIEW_NOT_SELECTED'] };
+  const eligibility = review
+    ? workspace.mergeEligibility(review.reviewId, authorizationId)
+    : { state: 'BLOCKED' as const, eligible: false, reasons: ['REVIEW_NOT_SELECTED'], mergedRevisionId: null };
 
   const run = (action: () => void, success: string) => {
     try {
@@ -227,12 +229,18 @@ export function CollaborationWorkspace() {
               <button type="button" className="btn" disabled={review.bindingDecision !== null} onClick={() => recordDecision('REQUEST_CHANGES')}>Request changes</button>
               <button type="button" className="btn" disabled={review.bindingDecision !== null} onClick={() => recordDecision('REJECT')}>Reject</button>
             </div>
-            <div className="rounded border border-line2 bg-surface2 p-3">
+            <div data-merge-state={eligibility.state} className="rounded border border-line2 bg-surface2 p-3">
               <div className="text-[12px] font-semibold">Atomic merge gate</div>
-              <div className="mt-1 text-[11px] text-muted">{eligibility.eligible ? 'Eligible: exact reviewed heads, human approval, replay, conflicts, and subject-bound authorization all pass.' : `Blocked: ${eligibility.reasons.join(' · ')}`}</div>
+              <div className="mt-1 text-[11px] text-muted">
+                {eligibility.state === 'MERGED'
+                  ? <><b className="text-emerald-600">{authorization?.status ?? 'UNKNOWN'} / MERGED</b> · revision {eligibility.mergedRevisionId} is recorded in the append-only ledger.</>
+                  : eligibility.eligible
+                    ? 'Eligible: exact reviewed heads, human approval, replay, conflicts, and subject-bound authorization all pass.'
+                    : `Blocked: ${eligibility.reasons.join(' · ')}`}
+              </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button type="button" className="btn" disabled={!authorization || authorization.status !== 'REQUESTED'} onClick={authorize}>Authorize this merge</button>
-                <button type="button" className="btn btn-primary" disabled={!eligibility.eligible} onClick={merge}>Merge atomically</button>
+                <button type="button" className="btn btn-primary" disabled={!eligibility.eligible} onClick={merge}>{eligibility.state === 'MERGED' ? 'Merged' : 'Merge atomically'}</button>
               </div>
             </div>
           </div>}

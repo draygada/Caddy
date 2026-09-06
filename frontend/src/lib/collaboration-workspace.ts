@@ -121,6 +121,11 @@ export interface MergeState {
   evidenceRefs: string[];
 }
 
+export type MergeEligibility =
+  | { state: 'ELIGIBLE'; eligible: true; reasons: []; mergedRevisionId: null }
+  | { state: 'BLOCKED'; eligible: false; reasons: string[]; mergedRevisionId: null }
+  | { state: 'MERGED'; eligible: false; reasons: []; mergedRevisionId: string };
+
 export interface CollaborationProjection {
   branches: Record<string, BranchState>;
   revisions: Record<string, RevisionState>;
@@ -754,20 +759,24 @@ export class CollaborationWorkspaceModel {
     return this.appendMany([this.authorizationSpec(authorizationId, status, subject, actor, evidenceRefs, occurredAt)])[0];
   }
 
-  mergeEligibility(reviewId: string, authorizationId: string): { eligible: boolean; reasons: string[] } {
+  mergeEligibility(reviewId: string, authorizationId: string): MergeEligibility {
     const projection = this.project();
     const review = projection.reviews[reviewId];
+    if (!review) return { state: 'BLOCKED', eligible: false, reasons: ['REVIEW_NOT_FOUND'], mergedRevisionId: null };
+    if (review.mergedRevisionId) {
+      return { state: 'MERGED', eligible: false, reasons: [], mergedRevisionId: review.mergedRevisionId };
+    }
+
     const authorization = projection.authorizations[authorizationId];
     const reasons: string[] = [];
-    if (!review) return { eligible: false, reasons: ['REVIEW_NOT_FOUND'] };
     if (review.bindingDecision !== 'APPROVE') reasons.push('REVIEW_NOT_APPROVED');
     if (!review.assessment.allowed) reasons.push(...review.assessment.conflicts.map((conflict) => conflict.code));
     if (projection.branches[review.sourceBranch]?.headRevisionId !== review.reviewedRevisionId) reasons.push('STALE_SOURCE');
     if (projection.branches[review.targetBranch]?.headRevisionId !== review.expectedTargetRevisionId) reasons.push('STALE_TARGET');
     if (authorization?.status !== 'AUTHORIZED') reasons.push('AUTHORIZATION_NOT_GRANTED');
     if (authorization && (authorization.subject.kind !== 'MERGE' || authorization.subject.id !== reviewId)) reasons.push('AUTHORIZATION_SUBJECT_MISMATCH');
-    if (review.mergedRevisionId) reasons.push('REVIEW_ALREADY_MERGED');
-    return { eligible: reasons.length === 0, reasons: sortedUnique(reasons) };
+    if (reasons.length > 0) return { state: 'BLOCKED', eligible: false, reasons: sortedUnique(reasons), mergedRevisionId: null };
+    return { state: 'ELIGIBLE', eligible: true, reasons: [], mergedRevisionId: null };
   }
 
   merge(input: {
@@ -782,7 +791,12 @@ export class CollaborationWorkspaceModel {
     const review = projection.reviews[input.reviewId];
     const authorization = projection.authorizations[input.authorizationId];
     const eligibility = this.mergeEligibility(input.reviewId, input.authorizationId);
-    invariant(eligibility.eligible && review && authorization, 'MERGE_INELIGIBLE', 'merge eligibility failed', { reasons: eligibility.reasons });
+    invariant(eligibility.state !== 'MERGED', 'MERGE_ALREADY_APPLIED', 'review already has a terminal merge record', {
+      mergedRevisionId: eligibility.mergedRevisionId,
+    });
+    invariant(eligibility.state === 'ELIGIBLE' && review && authorization, 'MERGE_INELIGIBLE', 'merge eligibility failed', {
+      reasons: eligibility.reasons,
+    });
     invariant(input.evidenceRefs.length > 0, 'MERGE_EVIDENCE_MISSING', 'merge requires visible evidence references');
     const replayFingerprint = projection.revisions[review.reviewedRevisionId]?.replayFingerprint ?? `replay:${review.reviewedRevisionId}`;
     const revisionId = `rev:merge:${sha256(canonicalJson({

@@ -82,7 +82,12 @@ describe('collaboration workspace event graph', () => {
     expect(() => workspace.transitionAuthorization({ authorizationId: 'auth:a', status: 'AUTHORIZED', actor: BROWSER_AGENT }))
       .toThrowError(/HUMAN_AUTHORIZATION_REQUIRED/);
     workspace.transitionAuthorization({ authorizationId: 'auth:a', status: 'AUTHORIZED', actor: HUMAN_OPERATOR });
-    expect(workspace.mergeEligibility('review:a', 'auth:a')).toEqual({ eligible: true, reasons: [] });
+    expect(workspace.mergeEligibility('review:a', 'auth:a')).toEqual({
+      state: 'ELIGIBLE',
+      eligible: true,
+      reasons: [],
+      mergedRevisionId: null,
+    });
     const before = workspace.events.length;
     const merge = workspace.merge({
       mergeId: 'merge:a',
@@ -97,6 +102,59 @@ describe('collaboration workspace event graph', () => {
     expect(projection.authorizations['auth:a'].status).toBe('APPLIED');
     expect(projection.reviews['review:a'].mergedRevisionId).toBe(merge.payload.revisionId);
     expect(workspace.auditEvidence().at(-1)?.summary).toContain('APPLIED');
+
+    const terminal = workspace.mergeEligibility('review:a', 'auth:a');
+    expect(terminal).toEqual({
+      state: 'MERGED',
+      eligible: false,
+      reasons: [],
+      mergedRevisionId: merge.payload.revisionId,
+    });
+    expect(terminal.reasons).not.toContain('AUTHORIZATION_NOT_GRANTED');
+    expect(terminal.reasons).not.toContain('STALE_TARGET');
+    expect(new CollaborationWorkspaceModel(workspace.events).mergeEligibility('review:a', 'auth:a')).toEqual(terminal);
+
+    const countAtMerge = workspace.events.length;
+    expect(() => workspace.merge({
+      mergeId: 'merge:a-again',
+      reviewId: 'review:a',
+      authorizationId: 'auth:a',
+      actor: MERGE_SERVICE,
+      evidenceRefs: ['test:duplicate-merge'],
+    })).toThrowError(/MERGE_ALREADY_APPLIED/);
+    expect(workspace.events).toHaveLength(countAtMerge);
+  });
+
+  it('rejects a genuinely stale target before merge without consuming authorization', () => {
+    const workspace = fixture();
+    workspace.recordReview({ reviewId: 'review:a', decision: 'APPROVE', actor: HUMAN_OPERATOR });
+    workspace.transitionAuthorization({ authorizationId: 'auth:a', status: 'AUTHORIZED', actor: HUMAN_OPERATOR });
+    workspace.commitRevision({
+      branch: 'main',
+      expectedHeadRevisionId: 'rev:main',
+      revisionId: 'rev:main-concurrent',
+      summary: 'Concurrent target update',
+      footprint: { reads: [], writes: ['component:airframe'], impacts: [] },
+      replayFingerprint: 'fp:main-concurrent',
+      actor: BROWSER_AGENT,
+    });
+
+    expect(workspace.mergeEligibility('review:a', 'auth:a')).toEqual({
+      state: 'BLOCKED',
+      eligible: false,
+      reasons: ['STALE_TARGET'],
+      mergedRevisionId: null,
+    });
+    const before = workspace.events.length;
+    expect(() => workspace.merge({
+      mergeId: 'merge:stale',
+      reviewId: 'review:a',
+      authorizationId: 'auth:a',
+      actor: MERGE_SERVICE,
+      evidenceRefs: ['test:stale-target'],
+    })).toThrowError(/MERGE_INELIGIBLE/);
+    expect(workspace.events).toHaveLength(before);
+    expect(workspace.project().authorizations['auth:a'].status).toBe('AUTHORIZED');
   });
 
   it('rejects conflicts and leaves both the event log and target head untouched', () => {
