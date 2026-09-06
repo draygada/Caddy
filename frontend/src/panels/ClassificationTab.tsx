@@ -50,9 +50,10 @@ function RiskBar({ level }: { level: Level }) {
   );
 }
 
+/** the part as drawn in the viewport, 128x100 so the shape reads at a glance */
 function Thumb({ faces }: { faces: ThumbFace[] | null }) {
-  if (!faces) return <div className="w-14 h-11 border border-dashed border-line rounded-r" />;
-  return <svg viewBox="0 0 56 44" className="w-14 h-11 block">{faces.map((f, i) => <polygon key={i} points={f.pts} fill={f.fill} stroke={f.stroke} strokeWidth="0.8" strokeDasharray={f.dash || undefined} strokeLinejoin="round" />)}</svg>;
+  if (!faces) return <div className="w-32 h-[100px] border border-dashed border-line rounded-r" />;
+  return <svg viewBox="0 0 56 44" className="w-32 h-[100px] block">{faces.map((f, i) => <polygon key={i} points={f.pts} fill={f.fill} stroke={f.stroke} strokeWidth="0.5" strokeDasharray={f.dash || undefined} strokeLinejoin="round" />)}</svg>;
 }
 
 /** Classification: the part visually, why it trips, and the regulation behind an expand. Only parts of concern up front. */
@@ -93,7 +94,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
     const cells = destCellsOf(o, r.node);
     return (
       <div className="border-t border-line2">
-        <div className="w-full text-left grid grid-cols-[56px_minmax(0,1fr)_auto] gap-4 items-center px-4 py-3 text-ink">
+        <div className="w-full text-left grid grid-cols-[128px_minmax(0,1fr)_auto] gap-4 items-center px-4 py-3 text-ink">
           <Thumb faces={r.thumb} />
           <span className="min-w-0">
             <span className="block text-[15px] font-semibold">{r.name} <span className="text-muted font-normal text-[13px]">· {r.model}</span></span>
@@ -102,7 +103,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
           <span className="grid justify-items-end gap-1"><RiskBar level={r.level} /><span className="text-[12px] font-semibold whitespace-nowrap" style={{ color: st.color }}>{st.word}</span></span>
         </div>
         {(
-          <div className="px-4 pb-4 pl-[88px] grid gap-3 text-[13px]">
+          <div className="px-4 pb-4 pl-[160px] grid gap-3 text-[13px]">
             {r.rules.map((rule) => (
               <div key={rule.id} className="border border-line rounded-r p-3 grid gap-2 bg-surface">
                 <div className="flex justify-between gap-2 flex-wrap"><span className="font-mono font-semibold">{rule.entry}</span><span className="flex gap-1"><span className="chip chip-sm">eCFR {rule.ecfr}</span><span className="chip chip-sm">effective {rule.eff}</span></span></div>
