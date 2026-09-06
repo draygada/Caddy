@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,21 @@ PKG = REPO / "packages" / "sourcing"
 sys.path.insert(0, str(PKG))
 
 DATA = PKG / "data"
+
+_RESULTS: dict[str, list[str]] = {"passed": [], "skipped": [], "failed": []}
+
+
+def pytest_runtest_logreport(report):
+    if report.when == "call" or (report.when == "setup" and report.skipped):
+        key = "passed" if report.passed else "skipped" if report.skipped else "failed"
+        _RESULTS[key].append(report.nodeid)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    out = PKG / ".cache" / "last_pytest.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({"as_of": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+                               "counts": {k: len(v) for k, v in _RESULTS.items()}, "passed": sorted(_RESULTS["passed"]), "skipped": sorted(_RESULTS["skipped"])}, indent=1), encoding="utf-8")
 
 
 @pytest.fixture
