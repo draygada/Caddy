@@ -304,14 +304,14 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
 
   const stepper = (
     <div className="flex items-center gap-3 px-4 py-2 border-b border-line2 bg-surface flex-wrap">
-      <ol className="m-0 p-0 list-none flex items-center gap-2 flex-1 min-w-[320px]">
+      <ol aria-label={'Sourcing steps · step ' + step + ' of 3'} className="m-0 p-0 list-none flex items-center gap-2 flex-1 min-w-[320px]">
         {STEPS.map((st, i) => {
-          const done = st.n < step || (st.n === 1 && !incomplete) || (st.n === 2 && r != null && selectedCount === n && n > 0);
+          const done = st.n === 1 ? !incomplete : st.n === 2 ? r != null && n > 0 && selectedCount === n : false;
           const on = st.n === step;
           const reachable = st.n === 1 || (r != null && !incomplete);
           return (
             <li key={st.n} className="flex items-center gap-2 flex-1 min-w-0">
-              <button onClick={() => reachable && setStepWanted(st.n)} disabled={!reachable} aria-current={on ? 'step' : undefined} className="flex items-center gap-2 bg-transparent border-0 p-0 text-[13px] cursor-pointer disabled:cursor-default" style={{ color: on ? 'var(--ink)' : 'var(--muted)', fontWeight: on ? 600 : 400 }}>
+              <button onClick={() => reachable && setStepWanted(st.n)} disabled={!reachable} aria-current={on ? 'step' : undefined} className="flex items-center gap-2 bg-transparent border-0 px-1 min-h-8 max-sm:min-h-11 rounded-r text-[13px] cursor-pointer disabled:cursor-default" style={{ color: on ? 'var(--ink)' : 'var(--muted)', fontWeight: on ? 600 : 400 }}>
                 <span className="w-6 h-6 rounded-full grid place-items-center font-mono text-[12px] flex-none" style={{ background: on || done ? 'var(--accent)' : 'var(--m1)', color: on || done ? 'var(--accentfg)' : 'var(--ink)' }}>{done && !on ? '✓' : st.n}</span>
                 <span className="whitespace-nowrap">{st.label}{st.n === 2 && r && <span className="text-muted font-normal"> · {selectedCount} of {n}</span>}</span>
               </button>
@@ -433,7 +433,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                     <div className="grid grid-cols-[1fr_auto] gap-2"><span>pre-entry lines for broker validation</span><span className="font-mono">{r.pkg.preEntry}</span></div>
                     <div className="grid grid-cols-[1fr_auto] gap-2"><span>diligence record</span><span className="font-mono">{r.pkg.diligence}</span></div>
                     <div className="grid grid-cols-[1fr_auto] gap-2"><span>export references</span><span className="font-mono">{r.pkg.exportRefs}</span></div>
-                    <details className="text-[12px] text-muted"><summary className="cursor-pointer">what this package is, checklist and warnings</summary><div className="mt-1">{CLAIM_PACKAGE} Draft prepared for review by a licensed customs broker. Not a customs entry, not a broker engagement or power of attorney, not legal, customs or tax advice. The importer of record remains responsible under 19 CFR 141.1.</div><div className="mt-1"><b>first-run checklist</b> · {CHECKLIST.join(' · ')}</div><div><b>warnings</b> · {WARNINGS.join(' · ')}</div></details>
+                    <details className="text-[12px] text-muted"><summary className="cursor-pointer flex items-center min-h-8 max-sm:min-h-11">what this package is, checklist and warnings</summary><div className="mt-1">{CLAIM_PACKAGE} Draft prepared for review by a licensed customs broker. Not a customs entry, not a broker engagement or power of attorney, not legal, customs or tax advice. The importer of record remains responsible under 19 CFR 141.1.</div><div className="mt-1"><b>first-run checklist</b> · {CHECKLIST.join(' · ')}</div><div><b>warnings</b> · {WARNINGS.join(' · ')}</div></details>
                   </div>
                 )}
               </div>
@@ -485,14 +485,19 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
       {stepper}
       {staleBar}
       <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[320px_minmax(0,1fr)]">
-        <nav aria-label="Parts in this round" className="border-b md:border-b-0 md:border-r border-line2 bg-surface overflow-auto max-h-[38vh] md:max-h-none">
-          {r.lines.map((l, i) => { const sl = r.selections[l.id]; const ro = sl ? (r.offers[l.id] || []).find((x) => x.offer.id === sl.offerId) : null; const g = gateFor(l, o, r.shipTo); const offers = (r.offers[l.id] || []).length; return (
+        <nav aria-label="Parts in this round" className="border-b md:border-b-0 md:border-r border-line2 bg-surface overflow-auto max-h-[30vh] md:max-h-none">
+          {([['Components', r.lines.filter((l) => l.slot)], ['Fixed lines', r.lines.filter((l) => !l.slot)]] as const).filter(([, ls]) => ls.length > 0).map(([group, ls]) => (
+          <div key={group} role="group" aria-label={group}>
+          <div className="px-4 pt-2 pb-1 text-[11px] font-mono uppercase tracking-[.06em] text-muted">{group} · {ls.length}</div>
+          {ls.map((l) => { const i = r.lines.indexOf(l); const sl = r.selections[l.id]; const ro = sl ? (r.offers[l.id] || []).find((x) => x.offer.id === sl.offerId) : null; const g = gateFor(l, o, r.shipTo); const offers = (r.offers[l.id] || []).length; return (
             <button key={l.id} onClick={() => setK(i)} aria-current={i === k ? 'true' : undefined} className="row-hover w-full grid grid-cols-[10px_minmax(0,1fr)_auto] gap-3 items-center px-4 min-h-12 border-b border-line2 text-left bg-transparent text-ink cursor-pointer" style={i === k ? { background: 'var(--hover)', boxShadow: 'inset 3px 0 0 var(--accent)' } : undefined}>
               <span className="w-[8px] h-[8px] rounded-full" style={{ background: dotFor(l) }} />
               <span className="min-w-0"><span className="block text-[13px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis">{l.description.split(' · ')[0]}</span><span className="block text-[12px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">{ro ? ro.offer.seller + (g.blocks ? ' · ' + g.word + (r.references[l.id] ? ' · ref typed' : '') : ro.status !== 'no_candidate_match' ? ' · ' + STATUS_WORD[ro.status] : '') : offers + ' offer' + (offers === 1 ? '' : 's') + ' · pick one'}</span></span>
               <span className="font-mono text-[12px]">{ro ? usd(ro.ladder.perUnit) : ''}</span>
             </button>
           ); })}
+          </div>
+          ))}
         </nav>
         {line && gate && (
           <div className="min-h-0 overflow-auto p-4 grid gap-3 content-start">
@@ -509,7 +514,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
             </div>
 
             {r.shipTo !== 'US' && gate.blocks && (
-              <div className="border rounded-r p-3 grid gap-2 text-[13px] bg-surface" style={{ borderColor: 'var(--red)' }}>
+              <div className="panel p-3 grid gap-2 text-[13px]" style={{ borderColor: 'var(--red)' }}>
                 <div><b className="text-red">{gate.word === 'REVIEW' ? 'Human review required.' : 'Authorization needed.'}</b> Sending this part to {r.shipTo} reads <b>{gate.word}</b> ({gate.para}). {gate.word === 'REVIEW' ? 'The package stays blocked until a human review is documented.' : 'The package stays blocked until an authorization reference is typed and attested.'}</div>
                 {gate.word === 'DENIAL' ? <div className="text-muted">DENIAL has no reference field. Change the design or the destination.</div> : r.references[line.id] ? (
                   <div>reference <span className="font-mono">{r.references[line.id].ref}</span> · attestor {r.references[line.id].attestor} · <span className="text-amber font-semibold">typed, not validated</span></div>
@@ -531,9 +536,9 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                 const blocked = ro.status === 'review_blocked';
                 const open = openOffer === ro.offer.id;
                 return (
-                  <div key={ro.offer.id} className="border rounded-r bg-surface grid gap-2 p-3" style={{ borderColor: on ? 'var(--focus)' : 'var(--line)', boxShadow: on ? 'inset 0 0 0 1px var(--focus)' : 'none', opacity: declined ? 0.7 : 1 }}>
-                    <div className="grid grid-cols-[16px_minmax(0,1fr)_auto] gap-3 items-center">
-                      <button role="radio" aria-checked={on} aria-label={'pick ' + ro.offer.seller} disabled={blocked || !!sel} onClick={() => { setPick(ro.offer.id); setErr(null); }} className="w-4 h-4 rounded-full border p-0 cursor-pointer disabled:cursor-default" style={{ borderColor: on ? 'var(--accent)' : 'var(--line)', background: on ? 'var(--accent)' : 'transparent', boxShadow: on ? 'inset 0 0 0 3px var(--surface)' : 'none' }} />
+                  <div key={ro.offer.id} className="panel grid gap-2 p-3" style={{ borderColor: on ? 'var(--focus)' : undefined, boxShadow: on ? 'inset 0 0 0 1px var(--focus)' : 'none', opacity: declined ? 0.7 : 1 }}>
+                    <div className="grid grid-cols-[24px_minmax(0,1fr)_auto] gap-3 items-center">
+                      <button role="radio" aria-checked={on} aria-label={'pick ' + ro.offer.seller} disabled={blocked || !!sel} onClick={() => { setPick(ro.offer.id); setErr(null); }} className="w-6 h-6 rounded-full border-2 p-0 cursor-pointer disabled:cursor-default disabled:opacity-40" style={{ color: on ? 'var(--accentfg)' : 'var(--muted)', borderColor: on ? 'var(--accent)' : 'var(--muted)', background: on ? 'var(--accent)' : 'transparent', boxShadow: on ? 'inset 0 0 0 4px var(--surface)' : 'none' }} />
                       <button onClick={() => { if (!blocked && !sel) { setPick(ro.offer.id); setErr(null); } }} className="min-w-0 text-left bg-transparent border-0 p-0 cursor-pointer text-ink">
                         <span className="block text-[14px] font-semibold">{ro.offer.seller} <span className="text-muted font-normal text-[12px]">· ships {ro.offer.shipFrom} · origin {ro.offer.declaredOrigin} · {ro.offer.stock} in stock · {ro.offer.leadDays} d · MOQ {ro.offer.moq}</span></span>
                         <span className="flex gap-2 flex-wrap items-center text-[12px]">
@@ -546,8 +551,8 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                       <span className="text-right"><span className="block font-mono text-[16px] font-bold" style={{ color: ro.ladder.unverified ? 'var(--grey)' : 'var(--ink)' }}>{usd(ro.ladder.perUnit)}</span><span className="block text-[11px] text-muted">landed / unit · list {usd(ro.offer.unitPrice)}</span></span>
                     </div>
                     <div className="flex gap-1 flex-wrap items-center">
-                      <button onClick={() => setOpenOffer(open ? null : ro.offer.id)} aria-expanded={open} className="btn btn-xs">{open ? 'Hide details' : 'Details · owners, estimate'}</button>
-                      {blocked && <button onClick={() => setAdj({ offerId: ro.offer.id, role: 'analyst', reason: 'name match on a different entity', rationale: '', action: 'false_positive' })} className="btn btn-xs">Adjudicate…</button>}
+                      <button onClick={() => setOpenOffer(open ? null : ro.offer.id)} aria-expanded={open} className="btn">{open ? 'Hide details' : 'Details · owners, estimate'}</button>
+                      {blocked && <button onClick={() => setAdj({ offerId: ro.offer.id, role: 'analyst', reason: 'name match on a different entity', rationale: '', action: 'false_positive' })} className="btn">Adjudicate</button>}
                     </div>
                     {open && (
                       <div className="border-t border-line2 pt-2 grid gap-3 text-[12px]">
@@ -583,11 +588,11 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
             )}
 
             {picked && !sel && (
-              <div className="border rounded-r p-3 grid gap-2 text-[13px] bg-surface" style={{ borderColor: 'var(--focus)' }}>
+              <div className="panel p-3 grid gap-2 text-[13px]" style={{ borderColor: 'var(--focus)' }}>
                 <div className="font-semibold text-[14px]">Pick {picked.offer.seller}</div>
                 {consequences(picked, line, r, o).slice(0, 4).map((c, i) => <div key={i} className="grid grid-cols-[8px_1fr] gap-2 items-start text-[12px]"><span className="mt-[5px] w-2 h-2 rounded-full" style={{ background: c.tone }} /><span>{c.text}</span></div>)}
                 {list.filter((x) => x.offer.id !== picked.offer.id).length > 0 && (
-                  <details className="text-[12px] text-muted"><summary className="cursor-pointer">the other {list.length - 1} offer{list.length === 2 ? ' is' : 's are'} recorded as declined · reasons from their status · change</summary>
+                  <details className="text-[12px] text-muted"><summary className="cursor-pointer flex items-center min-h-8 max-sm:min-h-11">the other {list.length - 1} offer{list.length === 2 ? ' is' : 's are'} recorded as declined · reasons from their status · change</summary>
                     <div className="grid gap-1 mt-1">{list.filter((x) => x.offer.id !== picked.offer.id).map((x) => (
                       <div key={x.offer.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center"><span>{x.offer.seller} <span className="text-muted">· was {STATUS_WORD[x.status]}</span></span><select value={reasons[x.offer.id] ?? ''} onChange={(e) => setReasons({ ...reasons, [x.offer.id]: e.target.value as DeclineReason })} className="btn text-ink"><option value="">reason from status</option>{DECLINE_REASONS.map((d) => <option key={d} value={d}>{d}</option>)}</select></div>
                     ))}</div>
@@ -602,8 +607,8 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
             )}
 
             {(reason || esc) && (
-              <details className="border rounded-r p-3 bg-surface text-[13px]" style={{ borderColor: 'var(--amber)' }} open={!!esc}>
-                <summary className="cursor-pointer font-semibold">Escalation <span className="text-muted font-normal">· {reason ?? esc?.reason}</span>{esc && <span className="chip chip-sm ml-2">{esc.state}</span>}</summary>
+              <details className="panel p-3 text-[13px]" style={{ borderColor: 'var(--amber)' }} open={!!esc}>
+                <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Escalation <span className="text-muted font-normal">· {reason ?? esc?.reason}</span>{esc && <span className="chip chip-sm ml-2">{esc.state}</span>}</summary>
                 <div className="grid gap-2 mt-2">
                   {!esc && <><div className="text-muted">the agent may propose a seller, a part or a fact here; every deterministic check runs on a copy first; a human resolves.</div><button onClick={() => s.proposeEscalation(line.id, reason!)} className="btn justify-self-start">Ask the agent for a proposal</button></>}
                   {esc && (
@@ -620,8 +625,8 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
               </details>
             )}
 
-            <details className="border border-line2 rounded-r p-3 bg-surface text-[13px]">
-              <summary className="cursor-pointer font-semibold">Ask the supplier <span className="text-muted font-normal">· {supplierQuestions(line).length} questions from the rule fields</span></summary>
+            <details className="panel p-3 text-[13px]">
+              <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Ask the supplier <span className="text-muted font-normal">· {supplierQuestions(line).length} questions from the rule fields</span></summary>
               <div className="grid gap-2 mt-2" id="supplier-request">
                 <div className="text-muted">Please answer in the regulation’s words, with the source document and date for each value:</div>
                 <ol className="m-0 pl-5 grid gap-1">{supplierQuestions(line).map((q, i) => <li key={i}>{q}</li>)}</ol>
@@ -633,7 +638,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
       </div>
       <div className="flex items-center gap-2 px-4 py-2 border-t border-line2 bg-surface text-[13px]">
         <button onClick={() => setK(Math.max(0, k - 1))} disabled={k === 0} className="btn disabled:opacity-40">Back</button>
-        <span className="text-muted">part {k + 1} of {n}</span>
+        <span role="status" className="text-muted">part {k + 1} of {n}{sel ? ' · picked' : ''}</span>
         <span className="flex-1" />
         <span className="text-muted hidden sm:inline">modeled landed estimate</span><b className="font-mono">{usd(total)}</b>
         {k + 1 < n ? <button onClick={() => setK(k + 1)} className="btn">{sel ? 'Next' : 'Skip'}</button> : null}
