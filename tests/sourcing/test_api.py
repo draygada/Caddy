@@ -93,6 +93,7 @@ def test_rederive_and_tamper(client):
 def test_the_page_renders_from_the_response_and_says_nothing_forbidden(client):
     r = client.get("/")
     assert r.status_code == 200 and "Strafe Forge" in r.text and "round_view" in r.text
+    assert "claim_ceiling" in r.text                                       # every proposal card prints its ceiling sentence
     assert not [pat for pat in NEVER if re.search(pat, r.text, re.I)]
 
 
@@ -122,3 +123,59 @@ def test_a_lane_refusal_is_still_409_with_the_shipped_body(client):
                     json={"line_id": "line:motor", "offer_hash": chosen["offer_hash"], "declined": [], "attestor": ""})
     assert r.status_code == 409
     assert r.json()["detail"] == {"refused": "SelectionRefused", "code": None, "detail": "a selection needs a human attestor"}
+
+
+def test_a_null_attestor_is_refused_before_the_escalation_moves(client):
+    """C1 at the HTTP surface: the page's Cancel on the attestor prompt sends null."""
+    view = _open(client, key="api-7")["view"]
+    r = client.post(f"/api/sourcing/rounds/{view['round_id']}/resolve_escalation", json={"line_id": "line:io_mcu", "reason": "origin_depends_on_lot", "attestor": None})
+    assert r.status_code == 409 and r.json()["detail"] == {"refused": "RoundRefused", "code": None, "detail": "an escalation resolution needs a human attestor"}
+    after = client.get(f"/api/sourcing/rounds/{view['round_id']}").json()["result"]
+    io = next(l for l in after["lines"] if l["node_id"] == "io_mcu")
+    assert [e["state"] for e in io["escalations"] if e["reason"] == "origin_depends_on_lot"] == ["open"]
+    assert "escalation_resolved" not in [row["kind"] for row in client.get(f"/api/sourcing/rounds/{view['round_id']}/timeline?last=500").json()["result"]]
+
+
+def _packet(client, key):
+    """A packet on a packaged round: every line selected, the origin escalation resolved, the package built."""
+    view = _open(client, key=key)["view"]
+    rid = view["round_id"]
+    for line in view["lines"]:
+        chosen = next(c for c in line["offers"] if c["status"] != "review_blocked")
+        declined = [{"offer_hash": c["offer_hash"]} for c in line["offers"] if c is not chosen]
+        r = client.post(f"/api/sourcing/rounds/{rid}/select", json={"line_id": line["line_id"], "offer_hash": chosen["offer_hash"], "declined": declined, "attestor": "benji"})
+        assert r.status_code == 200, r.text
+    r = client.post(f"/api/sourcing/rounds/{rid}/resolve_escalation", json={"line_id": "line:io_mcu", "reason": "origin_depends_on_lot", "attestor": "charlie", "resolution": {"origin": "MY"}})
+    assert r.status_code == 200, r.text
+    assert client.post(f"/api/sourcing/rounds/{rid}/package", json={}).status_code == 200
+    r = client.post("/api/sourcing/packets", json={"round_id": rid, "recipient_placeholder": "[SYNTHETIC]", "approver": {"identity": "charlie", "authority_basis": "demo"}})
+    assert r.status_code == 200, r.text
+    return r.json()["result"]["packet_id"]
+
+
+def test_close_needs_a_known_dispatched_packet_and_dispatch_needs_an_attestor(client):
+    r = client.post("/api/sourcing/packets/nope/close", json={"attestor": "charlie"})
+    assert r.status_code == 409 and r.json()["detail"]["refused"] == "OrderRefused" and r.json()["detail"]["code"] == "UNKNOWN_PACKET"
+    pid = _packet(client, "api-8")
+    r = client.post(f"/api/sourcing/packets/{pid}/close", json={"attestor": "charlie"})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "NOT_DISPATCHED"
+    r = client.post(f"/api/sourcing/packets/{pid}/dispatch", json={"idempotency_key": "api-8", "attestor": ""})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "NO_ATTESTOR"
+    assert client.post(f"/api/sourcing/packets/{pid}/dispatch", json={"idempotency_key": "api-8", "attestor": "charlie"}).status_code == 200
+    assert client.post(f"/api/sourcing/packets/{pid}/close", json={"attestor": "charlie"}).status_code == 200
+
+
+def test_a_non_integer_quantity_an_unknown_kind_and_a_non_integer_seq_are_422(client):
+    r = client.post("/api/sourcing/rounds", json={"state": "baseline", "ship_to": "US-bench", "quantity": "abc", "transport_mode": "air", "request_key": "api-9"})
+    assert r.status_code == 422 and r.json()["detail"] == {"error": "quantity must be an integer"}
+    view = _open(client, key="api-10")["view"]
+    r = client.post(f"/api/sourcing/rounds/{view['round_id']}/propose", json={"line_id": "line:thermal_core", "kind": "nonsense"})
+    assert r.status_code == 422 and r.json()["detail"]["error"] == "unknown kind" and set(r.json()["detail"]["kinds"]) == {"alternative", "escalation"}
+    r = client.post("/api/sourcing/tamper", json={"seq": "x", "field": "kind", "value": "v"})
+    assert r.status_code == 422 and r.json()["detail"] == {"error": "seq must be an integer"}
+
+
+def test_the_suite_pins_cache_mode_and_a_live_mode_would_be_budgeted(client):
+    from forge_sourcing_api import app as appmod
+    assert appmod.MODE == "cache" and appmod.PORTS.model.mode == "CACHED"
+    assert "budget=Budget(calls_cap=40, cost_cap_microusd=5_000_000) if MODE == \"live\" else None" in (appmod.ROOT / "forge_sourcing_api" / "app.py").read_text(encoding="utf-8")

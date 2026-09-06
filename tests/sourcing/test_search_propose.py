@@ -128,6 +128,8 @@ def test_propose_alternative_thermal_after_boson_is_green_and_recorded(service, 
     assert p["candidates"][0]["document"]["extract"]["accepted"] == 3 and p["ranked"] == ["500-0771-01"]
     assert p["tripped"] == ["6A003.b.4.b"] and p["mode"] == "SCRIPTED" and len(p["pool_sha256"]) == 64
     assert service.thread.events[-1]["kind"] == "alternative_proposed" and service.thread.events[-1]["actor_kind"] == "agent"
+    assert service.thread.events[-1]["candidates"] == [{"mpn": "500-0771-01", "status": "green", "url": "fixture://lepton35_test_sheet.txt",
+                                                        "doc_sha256": p["candidates"][0]["document"]["doc_sha256"]}]   # the chain names the bytes the card was read from
     assert sha256({k: v for k, v in rnd.items() if k != "proposals"}) == before
     prompt = model.calls[0].prompt
     assert "20640A012-6PAAX" not in prompt.split("Candidate pool")[1] and "500-0771-01" in prompt     # current part excluded from the pool
@@ -232,3 +234,112 @@ def test_a_budget_breach_after_a_read_candidate_is_grey_not_green(service, f3_st
     assert p["status"] == "grey" and p["confident"] is False                             # a proposal that abstained is never green
     assert [c["mpn"] for c in p["candidates"]] == ["500-0771-01"] and p["ranked"] == ["500-0771-01"]     # the card already read stays in the record
     assert service.thread.events[-1]["status"] == "grey"
+
+
+def test_an_empty_attestor_refuses_the_escalation_before_anything_moves(service, baseline):
+    """C1: resolve_escalation used to mutate the escalation BEFORE the thread refused the empty attestor, so a package
+    could build over an escalation nobody attested. The page's Cancel sends exactly this."""
+    from forge_sourcing.package import PackageRefused
+    from forge_sourcing.round import RoundRefused
+    from test_sourcing_flips import _select_all
+    rid = run_s1(service, baseline)
+    _select_all(service, rid)
+    service.record_proposal(rid, _proposal("escalation", "line:io_mcu", "grey", "origin_depends_on_lot"))
+    for bad in ("", None):
+        with pytest.raises(RoundRefused, match="an escalation resolution needs a human attestor"):
+            service.accept_proposal(rid, "proposal:escalation-1", attestor=bad)
+    esc = next(e for e in service._line(service.rounds[rid], "line:io_mcu")["escalations"] if e["reason"] == "origin_depends_on_lot")
+    assert esc["state"] == "open" and esc["resolved_by"] is None and esc["resolution"] is None and "tag" not in esc
+    assert service.thread.of_kind("escalation_resolved", rid) == []
+    p = service.round_view(rid)["proposals"][0]
+    assert "accepted_by" not in p and "rejected_by" not in p                                  # still open: nothing was stamped
+    with pytest.raises(PackageRefused) as exc:
+        service.build_package(rid, built_at="2026-09-06T03:00:00Z")
+    assert exc.value.code == "ESCALATION_OPEN"
+    assert service.accept_proposal(rid, "proposal:escalation-1", attestor="charlie")["state"] == "resolved"     # a named human still can
+
+
+def test_a_rejection_needs_an_attestor_and_leaves_no_event(service, baseline):
+    from forge_sourcing.round import RoundRefused
+    rid = run_s1(service, baseline)
+    service.record_proposal(rid, _proposal())
+    with pytest.raises(RoundRefused, match="a rejection needs a human attestor"):
+        service.reject_proposal(rid, "proposal:alternative-1", attestor="", reason="wrong socket")
+    assert service.thread.of_kind("proposal_rejected", rid) == [] and "rejected_by" not in service.round_view(rid)["proposals"][0]
+    service.reject_proposal(rid, "proposal:alternative-1", attestor="charlie", reason="wrong socket")        # still open: nothing was stamped
+    assert service.round_view(rid)["proposals"][0]["rejected_by"] == "charlie"
+
+
+def test_record_proposal_refuses_a_duplicate_id_and_an_unknown_kind(service, baseline):
+    from forge_sourcing.round import RoundRefused
+    rid = run_s1(service, baseline)
+    service.record_proposal(rid, _proposal())
+    n = len(service.thread.events)
+    with pytest.raises(RoundRefused, match="already recorded"):
+        service.record_proposal(rid, _proposal())
+    with pytest.raises(RoundRefused, match="kind"):
+        service.record_proposal(rid, {**_proposal(), "proposal_id": "proposal:other", "kind": "selection"})
+    assert len(service.thread.events) == n and len(service.round_view(rid)["proposals"]) == 1
+
+
+def test_two_identical_abstained_proposals_get_distinct_ids(service, f3_state, tmp_path):
+    """I5: the id was a pure content hash, so two cache-miss proposals in the same second collided and the second was unaddressable."""
+    from conftest import make_ports
+    from forge_search.model import CacheModel
+    from forge_search.propose import propose_alternative
+    rid = _f3_round(service, f3_state)
+    ports = make_ports(CacheModel(tmp_path / "empty"))
+    a = propose_alternative(service, rid, "line:thermal_core", ports, proposed_at="2026-09-06T02:30:00Z")
+    b = propose_alternative(service, rid, "line:thermal_core", ports, proposed_at="2026-09-06T02:30:00Z")
+    assert a["abstained"] == b["abstained"] == "cache miss" and a["proposal_id"] != b["proposal_id"]
+    service.reject_proposal(rid, a["proposal_id"], attestor="charlie", reason="first")
+    service.reject_proposal(rid, b["proposal_id"], attestor="charlie", reason="second")
+    assert [e["proposal_id"] for e in service.thread.of_kind("proposal_rejected", rid)] == [a["proposal_id"], b["proposal_id"]]
+
+
+def test_a_malformed_vendor_byte_stream_greys_one_card_instead_of_crashing(service, f3_state, tmp_path):
+    """I4: an undecodable document used to raise out of candidate_pipeline (a 500 at the API); now that card is grey."""
+    import json
+    from forge_search.fetch import Fetcher
+    from forge_search.model import ScriptedModel
+    from forge_search.propose import Ports, propose_alternative
+    from forge_search.rules import load_rules
+    from forge_sourcing.hashing import sha256_bytes
+    fixtures = tmp_path / "fixtures"
+    fixtures.mkdir()
+    (fixtures / "bad.bin").write_bytes(b"\xff\xfe")
+    pool_raw = (DATA / "search" / "pool.json").read_bytes()
+    pool = json.loads(pool_raw.decode("utf-8"))
+    next(c for c in pool["slots"]["thermal_core"]["candidates"] if c["mpn"] == "500-0771-01")["documents"] = [{"url": "fixture://bad.bin", "kind": "datasheet"}]
+    model = ScriptedModel({"search": [{"candidates": [{"mpn": "500-0771-01", "url": "fixture://bad.bin"}]}], "extract": [{"specs": []}]})
+    ports = Ports(fetcher=Fetcher(tmp_path / "fetch", tmp_path / "documents.json", fixtures), model=model, rules=load_rules(DATA / "search" / "rules.DRAFT.json"),
+                  pool=pool, pool_sha256=sha256_bytes(pool_raw), documents_sha256=None)
+    rid = _f3_round(service, f3_state)
+    p = propose_alternative(service, rid, "line:thermal_core", ports, proposed_at="2026-09-06T02:30:00Z")
+    c = p["candidates"][0]
+    assert c["status"] == "grey" and c["reasons"][0].startswith("no document: ERROR") and c["document"]["status"].startswith("ERROR")
+    assert c["document"]["doc_sha256"] is None and c["document"]["extract"] is None and c["specs"] == []
+    assert p["abstained"] is None and [k.kind for k in model.calls] == ["search"]            # nothing was extracted from unreadable bytes
+    assert service.thread.events[-1]["candidates"] == [{"mpn": "500-0771-01", "status": "grey", "url": "fixture://bad.bin"}]
+
+
+def test_an_escalation_budget_breach_says_so_in_words(service, baseline):
+    """M4: the escalation path set `abstained` but printed no abstain word (the alternative path did)."""
+    from conftest import make_ports
+    from forge_search.model import Budget, BudgetedModel, ScriptedModel
+    from forge_search.propose import propose_escalation
+    inner = ScriptedModel({"escalation": [{"candidates": []}]})
+    rid = run_s1(service, baseline)
+    p = propose_escalation(service, rid, "line:io_mcu", "origin_depends_on_lot", make_ports(BudgetedModel(inner, Budget(calls_cap=0, cost_cap_microusd=0))),
+                           proposed_at="2026-09-06T02:30:00Z")
+    assert p["abstained"].startswith("budget:") and p["status"] == "grey" and p["confident"] is False
+    assert any(w.startswith("abstained: budget") for w in p["words"]) and inner.calls == []
+
+
+def test_default_ports_wraps_the_live_model_in_a_budget_without_a_key_or_a_call():
+    """I1: construction only — LiveAnthropicModel reads no key and imports nothing until a call is made."""
+    from forge_search.model import Budget, BudgetedModel, LiveAnthropicModel
+    from forge_search.propose import default_ports
+    ports = default_ports(DATA, mode="live", budget=Budget(calls_cap=1, cost_cap_microusd=1))
+    assert isinstance(ports.model, BudgetedModel) and isinstance(ports.model.inner, LiveAnthropicModel) and ports.model.mode == "LIVE"
+    assert ports.model.budget.calls_cap == 1 and ports.model.calls == [] and ports.fetcher.offline is True

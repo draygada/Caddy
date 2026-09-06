@@ -16,7 +16,7 @@ FLAG_ENTRY = "NO_EXPORT_CONTROL_CHANGE"
 FLAG_TEXT_848 = ("no export-control change; US Government buyer column: FY2020 NDAA §848 / DoD class deviation 2020-O0015 — flight controllers, "
                  "radios, cameras or gimbals manufactured in the PRC or by a PRC-domiciled entity; three questions: is packaging 'manufacture'? FASC list? "
                  "SMIC/YMTC/CXMT die (§5949 from 23 Dec 2027)")
-_HEX64 = re.compile(r"^[0-9a-f]{64}$")
+_HEX64 = re.compile(r"[0-9a-f]{64}")        # used with fullmatch: "$" would also match before a trailing newline
 
 
 def _no_floats(value):
@@ -57,10 +57,12 @@ def _evaluation(det: dict | None) -> dict:
     else:
         destinations = {cc: {"state": c["state"], "because": list(c.get("because") or [])} for cc, c in dest.items() if c and c.get("state")}
         note = None
-    unresolved = []                                            # cannot_evaluate is allowed on every list, not just unresolved_tripwires
+    unresolved, seen = [], set()                               # cannot_evaluate is allowed on every list, not just unresolved_tripwires
     for t in list(det.get("unresolved_tripwires") or []) + [t for t in plain_rows if t.get("state") == "cannot_evaluate"]:
-        if any(u["rule_id"] == t.get("rule_id") for u in unresolved):
-            continue                                           # same rule on two lists: the first occurrence's fields stand
+        key = (t.get("rule_id"), t.get("entry"), t.get("cause_node_id"))
+        if key in seen:
+            continue                                           # the same row on two lists: the first occurrence's fields stand; a second cause node is a second row
+        seen.add(key)
         unresolved.append({"rule_id": t.get("rule_id"), "entry": t.get("entry"), "problem": t.get("problem"),
                            "missing": [f["attribute"] for f in (t.get("facts") or []) if f.get("observed") is None]})
     return {"jurisdiction": det.get("jurisdiction"), "entries": list(det.get("entries") or []), "fired": fired, "contains_defense_article": [],
@@ -72,7 +74,7 @@ def _evaluation(det: dict | None) -> dict:
 def design_for_round(design_doc: dict, response: dict, *, design_seq: int, quantities: dict[str, int] | None = None) -> dict:
     revision = str(response.get("design_revision") or "")
     design_hash = revision[len("sha256:"):] if revision.startswith("sha256:") else revision
-    if not _HEX64.match(design_hash):
+    if not _HEX64.fullmatch(design_hash):
         raise ValueError(f"design_revision is not sha256:<64 hex>: {revision!r}")
     doc = _no_floats(design_doc)
     root = next(n for n in doc["nodes"] if n["id"] == doc["root"])

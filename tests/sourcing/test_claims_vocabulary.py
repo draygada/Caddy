@@ -24,19 +24,27 @@ def strings(value, out):
     return out
 
 
+def offenders(seen: list[str], patterns: list[str]) -> list[tuple[str, str]]:
+    return [(pat, s) for s in seen for pat in patterns if re.search(pat, s, re.I)]
+
+
+def entry_offenders(seen: list[str]) -> list[str]:
+    """Every string with a bare `entry` outside the allowed phrases (a 24/12-character window around the word)."""
+    out = []
+    for s in seen:
+        low = s.lower()
+        for m in re.finditer(r"\bentry\b", low):
+            window = low[max(0, m.start() - 24): m.end() + 12]
+            if not any(a in window for a in ENTRY_ALLOWED):
+                out.append(s)
+    return out
+
+
 def test_never_say_list(service, baseline):
     rid = run_s1(service, baseline)
     _select_all(service, rid)
     service.resolve_escalation(rid, "line:io_mcu", "origin_depends_on_lot", attestor="charlie", resolution={"origin": "MY"})
     service.build_package(rid, built_at="2026-09-06T03:00:00Z")
     seen = strings(service.round_view(rid), []) + strings(service.thread.events, []) + [service.rederive()["line"]]
-    offenders = [(pat, s) for s in seen for pat in NEVER if re.search(pat, s, re.I)]
-    assert not offenders, offenders[:5]
-    entry_offenders = []
-    for s in seen:
-        low = s.lower()
-        for m in re.finditer(r"\bentry\b", low):
-            window = low[max(0, m.start() - 24): m.end() + 12]
-            if not any(a in window for a in ENTRY_ALLOWED):
-                entry_offenders.append(s)
-    assert not entry_offenders, entry_offenders[:5]
+    assert not offenders(seen, NEVER), offenders(seen, NEVER)[:5]
+    assert not entry_offenders(seen), entry_offenders(seen)[:5]

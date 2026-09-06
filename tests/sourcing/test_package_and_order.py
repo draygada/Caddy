@@ -118,3 +118,25 @@ def test_packet_refused_from_an_unapproved_or_stale_round(service, baseline, f4_
     with pytest.raises(OrderRefused) as exc:
         service.create_packet(rid, recipient_placeholder="[x]", approver={"identity": "c", "authority_basis": "d"}, created_at="t")
     assert exc.value.code == "STALE_REVISION"
+
+
+def test_dispatch_needs_an_attestor_and_close_needs_a_known_dispatched_packet(service, baseline):
+    """C1 + I8: dispatch used to write the acknowledgement before the thread refused the empty attestor; close_order
+    subscripted the packet table bare (500 at the API) and closed a packet nobody dispatched."""
+    from forge_sourcing.order import OrderRefused
+    rid = _ready(service, baseline)
+    service.build_package(rid, built_at="2026-09-06T03:00:00Z")
+    packet = service.create_packet(rid, recipient_placeholder="[x]", approver={"identity": "c", "authority_basis": "d"}, created_at="t")
+    with pytest.raises(OrderRefused) as exc:
+        service.dispatch(packet["packet_id"], idempotency_key="k-empty", attestor="", dispatched_at="2026-09-06T03:11:00Z")
+    assert exc.value.code == "NO_ATTESTOR"
+    assert packet["acknowledgement_state"] == "not dispatched" and packet["dispatch_timestamp"] is None and packet["idempotency_key"] is None
+    assert service.dispatches == {} and service.thread.of_kind("order_dispatched", rid) == [] and packet["audit_evidence"] == [service.thread.head["seq"]]
+    with pytest.raises(OrderRefused) as exc:
+        service.close_order(packet["packet_id"], receiving=None, inspection=None, attestor="charlie", closed_at="t")
+    assert exc.value.code == "NOT_DISPATCHED" and packet["closeout_state"] == "open" and service.thread.of_kind("order_closed", rid) == []
+    with pytest.raises(OrderRefused) as exc:
+        service.close_order("packet:nope", receiving=None, inspection=None, attestor="charlie", closed_at="t")
+    assert exc.value.code == "UNKNOWN_PACKET"
+    service.dispatch(packet["packet_id"], idempotency_key="k-1", attestor="charlie", dispatched_at="2026-09-06T03:11:00Z")
+    assert service.close_order(packet["packet_id"], receiving=None, inspection=None, attestor="charlie", closed_at="t")["closeout_state"] == "closed"

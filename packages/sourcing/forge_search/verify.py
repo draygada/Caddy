@@ -34,13 +34,16 @@ _BY_LENGTH = sorted(UNIT_ALIASES, key=len, reverse=True)
 _WORDY = "|".join(re.escape(k) for k in _BY_LENGTH if k[0].isalnum())
 _SYMBOLIC = "|".join(re.escape(k) for k in _BY_LENGTH if not k[0].isalnum())
 # A wordy unit needs a non-alphanumeric before it, or "h" matches inside "Wh"; a symbolic one (°/h, ℃, µg)
-# may sit flush against its number, which is how vendors write it.
-UNIT = re.compile(rf"((?<![A-Za-z0-9])(?:{_WORDY})|(?:{_SYMBOLIC}))(?![A-Za-z])", re.IGNORECASE)
+# may sit flush against its number, which is how vendors write it. Nothing may follow a unit but a separator:
+# "mm/s" is a speed, not a length.
+UNIT = re.compile(rf"((?<![A-Za-z0-9])(?:{_WORDY})|(?:{_SYMBOLIC}))(?![A-Za-z/])", re.IGNORECASE)
 _NUMBER_SRC = r"[-+±]?\d+(?:\.\d+)?"
 NUMBER = re.compile(_NUMBER_SRC)
 # A dimension tuple — "160 x 120 pixels", "40 x 40 x 20 mm" — states several figures of ONE unit, written once
 # after the last component. Every component binds that unit, and the tuple counts as a single group.
 TUPLE = re.compile(rf"{_NUMBER_SRC}(?:\s*(?:[xX×]|by)\s*{_NUMBER_SRC})+")
+# A hex literal ("0x20") is neither a figure nor a tuple of two.
+_HEX_LITERAL = re.compile(r"(?<![A-Za-z0-9])0[xX][0-9A-Fa-f]+")
 # Used with fullmatch, never match: "$" also matches before a trailing newline, so "8.7\n" would pass.
 _HEX64 = re.compile(r"[0-9a-f]{64}")
 _DECIMAL = re.compile(r"[-+]?\d+(?:\.\d+)?")
@@ -114,8 +117,16 @@ def _bound_groups(quote: str) -> list[tuple[list[Decimal], str]] | None:
     # quote; cap the gap length if a caller ever quotes a whole page.
     units = [(m.span(), unit) for m in UNIT.finditer(quote) if (unit := canonical_unit(m.group(1)))]
     groups: list[tuple[int, list[Decimal], str]] = []
-    tuples: list[tuple[int, int]] = []
+    # Digits glued to a letter are a rating, a revision or a part number ("IP67", "Rev1.9", "P45B"), never a figure;
+    # a hex literal is neither. Both are skipped whole, so no component of them binds a unit.
+    skip: list[tuple[int, int]] = [m.span() for m in _HEX_LITERAL.finditer(quote)]
+
+    def _glued(m: re.Match) -> bool:
+        return (m.start() > 0 and quote[m.start() - 1].isalpha()) or any(lo <= m.start() < hi for lo, hi in skip)
+
     for tup in TUPLE.finditer(quote):
+        if _glued(tup):
+            continue
         # The unit of a tuple is written after its last component, never before it.
         unit = next((u for (start, _), u in units if start >= tup.end() and _clear(quote, tup.end(), start)), None)
         if unit is None:
@@ -124,9 +135,9 @@ def _bound_groups(quote: str) -> list[tuple[list[Decimal], str]] | None:
         if figures is None:
             return None
         groups.append((tup.start(), figures, unit))
-        tuples.append(tup.span())
+        skip.append(tup.span())
     for number in NUMBER.finditer(quote):
-        if any(lo <= number.start() < hi for lo, hi in tuples):
+        if _glued(number):
             continue
         unit = next((u for span, u in units if _binds(quote, number, span)), None)
         if unit is None:

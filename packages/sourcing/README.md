@@ -13,7 +13,7 @@ make serve                              # http://127.0.0.1:8000/  (one page over
 make seed                               # network: fetch the pool's real documents into .cache/fetch (allowlisted; bytes never committed)
 make eval                               # the six measurements over data/search/gold_swaps.json from the committed cache
 make refresh-csl / refresh-hts / refresh-cross / refresh-ownership   # live public data → dated fixtures or printed rows (human-run)
-TRIPWIRE_LLM=live ANTHROPIC_API_KEY=… make record-cache               # ONE live run, $5 cap, fills data/llm_cache; then make eval must show cache_misses 0
+TRIPWIRE_LLM=live ANTHROPIC_API_KEY=… make record-cache               # ONE live run, $5 per run under the $50 key cap, fills data/llm_cache; then make eval must show cache_misses 0
 ```
 
 Runtime for `forge_sourcing` is the Python standard library only. `forge_search` adds `pypdf==6.17.0` and `jsonschema==4.26.0`; the API adds `fastapi==0.121.2` and `uvicorn==0.41.0`; `anthropic==1.4.0` is opt-in for the live adapter. The suite passes with the network cable out.

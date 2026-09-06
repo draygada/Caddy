@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+
+os.environ["TRIPWIRE_LLM"] = "cache"                   # the suite never builds a live model, whatever the shell says; before any app import
 
 REPO = Path(__file__).resolve().parents[2]
 PKG = REPO / "packages" / "sourcing"
@@ -41,24 +44,19 @@ def kestrel() -> dict:
     return json.loads((DATA / "kestrel_round_input.json").read_text(encoding="utf-8"))
 
 
+def _state(kestrel: dict, name: str) -> dict:
+    from forge_sourcing.fixtures import design_state
+    return design_state(kestrel["states"], name)              # a copy: a round never aliases the fixture's nodes
+
+
 @pytest.fixture
 def baseline(kestrel) -> dict:
-    return kestrel["states"]["baseline"]
+    return _state(kestrel, "baseline")
 
 
 @pytest.fixture
 def f4_state(kestrel) -> dict:
-    base = kestrel["states"]["baseline"]
-    f4 = kestrel["states"]["f4_hg5700"]
-    nodes = [f4["replace_nodes"].get(n["node_id"], n) for n in base["nodes"]]
-    return {"design_hash": f4["design_hash"], "design_seq": f4["design_seq"], "product": f4["product"], "nodes": nodes}
-
-
-def _state(kestrel: dict, name: str) -> dict:
-    base = kestrel["states"]["baseline"]
-    st = kestrel["states"][name]
-    nodes = [st["replace_nodes"].get(n["node_id"], n) for n in base["nodes"]]
-    return {"design_hash": st["design_hash"], "design_seq": st["design_seq"], "product": st["product"], "nodes": nodes}
+    return _state(kestrel, "f4_hg5700")
 
 
 @pytest.fixture

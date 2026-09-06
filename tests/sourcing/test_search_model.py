@@ -41,6 +41,24 @@ def test_live_model_abstains_without_a_key_and_never_touches_the_network(monkeyp
     m = LiveAnthropicModel()
     out = m.propose("extract", "p", {})
     assert isinstance(out, Abstain) and out.reason in ("anthropic sdk not installed", "no api key in environment") and m.mode == "LIVE"
+    assert len(m.calls) == 1 and m.calls[-1].response == out and m.calls[-1].usage is None      # an abstain is a call too
+
+
+def test_live_model_records_every_abstain_so_usage_is_never_the_previous_calls(monkeypatch):
+    """I7: `calls[-1].usage` after an abstain used to be the PREVIOUS call's tokens, because only successes were appended."""
+    from forge_search.documents import text_sha256
+    from forge_search.extract import extract
+    from forge_search.model import Abstain, LiveAnthropicModel
+    m = LiveAnthropicModel()
+    spent = {"input_tokens": 9, "output_tokens": 1, "model": "claude-sonnet-5"}
+    answers = [({"specs": []}, spent), (Abstain("stubbed: stop_reason 'max_tokens'"), None), (Abstain("stubbed again"), None)]
+    monkeypatch.setattr(m, "_complete", lambda kind, prompt, schema: answers.pop(0))
+    assert m.propose("extract", "p", {}) == {"specs": []} and m.calls[-1].usage == spent
+    out = m.propose("extract", "p", {})
+    assert isinstance(out, Abstain) and m.calls[-1].response is out and m.calls[-1].usage is None and len(m.calls) == 2
+    text = "Frame rate: 8.7 Hz\n"
+    res = extract(text, text_sha256(text), "thermal_imager", {"frame_rate_hz": "Hz"}, {}, m)
+    assert res.abstained == "stubbed again" and res.usage is None and answers == []
 
 
 def test_recording_model_fills_the_cache_and_replays(tmp_path: Path):

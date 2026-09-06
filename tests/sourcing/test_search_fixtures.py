@@ -73,3 +73,18 @@ def test_fixture_documents_have_no_never_say_words():
     for path in (SEARCH / "fixtures").iterdir():
         text = path.read_text(encoding="utf-8").lower()
         assert not re.search(r"\bcompliant\b|\bcleared\b|\bcertif", text), path.name
+
+
+def test_design_state_is_a_copy_so_a_round_never_aliases_the_fixture(service, kestrel):
+    from forge_sourcing.fixtures import design_state
+    states = kestrel["states"]
+    d = design_state(states, "f3_boson")
+    assert d["design_hash"] == states["f3_boson"]["design_hash"] and [n["node_id"] for n in d["nodes"]] == [n["node_id"] for n in states["baseline"]["nodes"]]
+    swapped = states["f3_boson"]["replace_nodes"]["thermal_core"]
+    thermal = next(n for n in d["nodes"] if n["node_id"] == "thermal_core")
+    assert thermal == swapped and thermal is not swapped
+    r = service.open_round(d, ship_to="US-bench", quantity=1, transport_mode="air", request_key="copy", opened_at="2026-09-06T02:00:00Z")
+    line = next(l for l in r["lines"] if l["node_id"] == "thermal_core")
+    assert line["evaluation"] == swapped["evaluation"] and line["evaluation"] is not swapped["evaluation"]    # the round's line is not the fixture object
+    base = design_state(states, "baseline")
+    assert base == states["baseline"] and base is not states["baseline"] and base["nodes"][0] is not states["baseline"]["nodes"][0]

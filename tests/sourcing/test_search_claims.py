@@ -1,10 +1,8 @@
 """Nothing on a round with proposals says cleared, compliant, inherited, finds compliant, or entry-as-a-status."""
 from __future__ import annotations
 
-import re
-
 from conftest import DATA, make_ports, run_s1
-from test_claims_vocabulary import ENTRY_ALLOWED, NEVER, strings
+from test_claims_vocabulary import NEVER, entry_offenders, offenders, strings
 
 SEARCH_NEVER = NEVER + [r"\binherit(s|ed|ance)?\b", r"\bfinds compliant\b", r"\bcompliant (part|alternative|supplier)s?\b", r"\bnobody does ai part search\b"]
 
@@ -35,13 +33,5 @@ def test_never_say_list_over_proposals(service, f3_state, baseline):
     rid2 = run_s1(service, baseline, request_key="esc")
     propose_escalation(service, rid2, "line:io_mcu", "origin_depends_on_lot", ports, proposed_at="2026-09-06T02:31:00Z")
     seen = strings(service.round_view(rid), []) + strings(service.round_view(rid2), []) + strings(service.thread.events, []) + [service.rederive()["line"]]
-    offenders = [(pat, s) for s in seen for pat in SEARCH_NEVER if re.search(pat, s, re.I)]
-    assert not offenders, offenders[:5]
-    entry_offenders = []
-    for s in seen:
-        low = s.lower()
-        for m in re.finditer(r"\bentry\b", low):
-            window = low[max(0, m.start() - 24): m.end() + 12]
-            if not any(a in window for a in ENTRY_ALLOWED):
-                entry_offenders.append(s)
-    assert not entry_offenders, entry_offenders[:5]
+    assert not offenders(seen, SEARCH_NEVER), offenders(seen, SEARCH_NEVER)[:5]
+    assert not entry_offenders(seen), entry_offenders(seen)[:5]
