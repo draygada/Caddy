@@ -46,3 +46,46 @@ def test_accepting_an_alternative_is_refused_here_and_rejection_is_recorded(serv
     assert service.round_view(rid)["proposals"][0]["rejected_by"] == "charlie"
     with pytest.raises(RoundRefused):
         service.accept_proposal(rid, "proposal:nope", attestor="charlie")
+
+
+def test_an_accepted_proposal_refuses_a_later_rejection(service, baseline):
+    from forge_sourcing.round import RoundRefused
+    rid = run_s1(service, baseline)
+    service.record_proposal(rid, _proposal("escalation", "line:io_mcu", "grey", "origin_depends_on_lot"))
+    service.accept_proposal(rid, "proposal:escalation-1", attestor="charlie")
+    with pytest.raises(RoundRefused, match="already resolved"):
+        service.reject_proposal(rid, "proposal:escalation-1", attestor="charlie", reason="changed my mind")
+    p = service.round_view(rid)["proposals"][0]
+    assert p["accepted_by"] == "charlie" and "rejected_by" not in p
+    assert [e["kind"] for e in service.thread.events].count("proposal_rejected") == 0
+
+
+def test_a_rejected_proposal_refuses_a_second_verb(service, baseline):
+    from forge_sourcing.round import RoundRefused
+    rid = run_s1(service, baseline)
+    service.record_proposal(rid, _proposal())
+    service.reject_proposal(rid, "proposal:alternative-1", attestor="charlie", reason="wrong socket")
+    with pytest.raises(RoundRefused, match="already resolved"):
+        service.reject_proposal(rid, "proposal:alternative-1", attestor="charlie", reason="wrong socket again")
+    with pytest.raises(RoundRefused, match="already resolved"):
+        service.accept_proposal(rid, "proposal:alternative-1", attestor="charlie")
+    p = service.round_view(rid)["proposals"][0]
+    assert p["rejected_by"] == "charlie" and "accepted_by" not in p
+    assert [e["kind"] for e in service.thread.events].count("proposal_rejected") == 1
+
+
+def test_the_stored_proposal_is_a_copy_and_candidate_urls_are_in_the_chain(service, baseline):
+    rid = run_s1(service, baseline)
+    proposal = _proposal("escalation", "line:io_mcu", "grey", "origin_depends_on_lot")
+    proposal["candidates"] = [{"mpn": "500-0771-01", "status": "grey", "url": "https://example.test/lot-origin"}]
+    service.record_proposal(rid, proposal)
+    assert service.thread.events[-1]["candidates"] == [{"mpn": "500-0771-01", "status": "grey", "url": "https://example.test/lot-origin"}]
+
+    proposal["status"] = "red"                                          # the caller keeps its dict and edits it after the fact
+    proposal["candidates"][0]["url"] = "https://example.test/swapped"
+    proposal["candidates"].append({"mpn": "999-9999-99", "status": "green"})
+    stored = service.round_view(rid)["proposals"][0]
+    assert stored["status"] == "grey" and [c["url"] for c in stored["candidates"]] == ["https://example.test/lot-origin"]
+
+    esc = service.accept_proposal(rid, "proposal:escalation-1", attestor="charlie")
+    assert esc["resolution"]["sources"] == ["https://example.test/lot-origin"]   # a human attests what was hashed at proposal time

@@ -131,19 +131,23 @@ class Service:
     # ------------------------------------------------------------ proposals (an agent proposes; a human resolves)
     def _proposal(self, rnd: dict, proposal_id: str) -> dict:
         try:
-            return next(p for p in rnd["proposals"] if p["proposal_id"] == proposal_id)
+            p = next(p for p in rnd["proposals"] if p["proposal_id"] == proposal_id)
         except StopIteration:
             raise RoundRefused(f"unknown proposal {proposal_id}") from None
+        if p.get("accepted_by") or p.get("rejected_by"):                # a proposal is resolved once: no second verb, no second event
+            raise RoundRefused(f"proposal {proposal_id} is already resolved by {p.get('accepted_by') or p.get('rejected_by')}")
+        return p
 
     def record_proposal(self, round_id: str, proposal: dict) -> dict:
         rnd = self._round(round_id)
         receipt = self._append(rnd, f"{proposal['kind']}_proposed", "agent", line_id=proposal["line_id"], proposal_id=proposal["proposal_id"],
                                escalation_reason=proposal.get("escalation_reason"), status=proposal["status"], confident=proposal["confident"],
-                               candidates=[{"mpn": c["mpn"], "status": c["status"]} for c in proposal["candidates"]], mode=proposal["mode"],
+                               candidates=[{"mpn": c["mpn"], "status": c["status"], **({"url": c["url"]} if c.get("url") is not None else {})}
+                                           for c in proposal["candidates"]], mode=proposal["mode"],
                                prompt_sha256=proposal["prompt_sha256"], pool_sha256=proposal["pool_sha256"], rules_sha256=proposal["rules_sha256"],
                                abstained=proposal.get("abstained"), proposed_at=proposal["proposed_at"])
         proposal["seq"] = receipt["seq"]
-        rnd["proposals"].append(proposal)
+        rnd["proposals"].append(deepcopy(proposal))                     # a snapshot at proposal time: the caller's later edits cannot move the record
         return receipt
 
     def accept_proposal(self, round_id: str, proposal_id: str, *, attestor: str) -> dict:
