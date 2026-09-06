@@ -434,15 +434,34 @@ export async function validatedArtifactBytes(artifact: CadOutputArtifact): Promi
 
 export async function downloadCadOutputArtifact(
   artifact: CadOutputArtifact,
-  environment: { createObjectURL: (blob: Blob) => string; revokeObjectURL: (url: string) => void; click: (url: string, fileName: string) => void } = {
+  environment: {
+    createObjectURL: (blob: Blob) => string;
+    revokeObjectURL: (url: string) => void;
+    click: (url: string, fileName: string) => void;
+    scheduleCleanup?: (cleanup: () => void) => void;
+  } = {
     createObjectURL: (blob) => URL.createObjectURL(blob),
     revokeObjectURL: (url) => URL.revokeObjectURL(url),
-    click: (url, fileName) => { const anchor = document.createElement('a'); anchor.href = url; anchor.download = fileName.split('/').at(-1) ?? 'artifact'; anchor.click(); },
+    click: (url, fileName) => {
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = fileName.split('/').at(-1) ?? 'artifact';
+      anchor.hidden = true;
+      document.body.append(anchor);
+      try { anchor.click(); } finally { anchor.remove(); }
+    },
+    scheduleCleanup: (cleanup) => { window.setTimeout(cleanup, 1_000); },
   },
 ): Promise<void> {
   const bytes = await validatedArtifactBytes(artifact);
   const url = environment.createObjectURL(new Blob([bytes.slice().buffer as ArrayBuffer], { type: artifact.media_type }));
-  try { environment.click(url, artifact.path); } finally { environment.revokeObjectURL(url); }
+  try {
+    environment.click(url, artifact.path);
+  } catch (error) {
+    environment.revokeObjectURL(url);
+    throw error;
+  }
+  (environment.scheduleCleanup ?? ((cleanup) => setTimeout(cleanup, 1_000)))(() => environment.revokeObjectURL(url));
 }
 
 export function bytesToBase64(bytes: Uint8Array): string { return encodeBase64(bytes); }

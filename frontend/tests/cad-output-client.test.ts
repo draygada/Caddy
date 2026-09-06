@@ -86,6 +86,36 @@ describe('native CAD output client', () => {
     expect(await validatedArtifactBytes(valid)).toHaveLength(valid.size_bytes);
   });
 
+  it('starts an explicit download before deferring blob URL cleanup', async () => {
+    const valid = await artifact('drawings/bracket-front.svg', '<svg>front</svg>', 'ORTHOGRAPHIC_SVG');
+    const click = vi.fn();
+    const revokeObjectURL = vi.fn();
+    const cleanups: Array<() => void> = [];
+    await downloadCadOutputArtifact(valid, {
+      createObjectURL: vi.fn(() => 'blob:artifact'),
+      revokeObjectURL,
+      click,
+      scheduleCleanup: (cleanup) => cleanups.push(cleanup),
+    });
+
+    expect(click).toHaveBeenCalledWith('blob:artifact', 'drawings/bracket-front.svg');
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    expect(cleanups).toHaveLength(1);
+    cleanups[0]();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:artifact');
+  });
+
+  it('revokes the blob URL immediately when download activation fails', async () => {
+    const valid = await artifact('bom/bom.csv', 'item,part\n1,PLATE\n');
+    const revokeObjectURL = vi.fn();
+    await expect(downloadCadOutputArtifact(valid, {
+      createObjectURL: vi.fn(() => 'blob:artifact'),
+      revokeObjectURL,
+      click: () => { throw new Error('activation blocked'); },
+    })).rejects.toThrow('activation blocked');
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:artifact');
+  });
+
   it('validates every package artifact and detached manifest before returning a bundle', async () => {
     const native = await sealedDocument();
     const packageId = `mfgpkg:${'a'.repeat(64)}`;
