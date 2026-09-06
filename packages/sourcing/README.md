@@ -7,13 +7,16 @@ Direction of record: strafe-prototype `docs/dnhacks_engineering_direction_2026-0
 ## Run
 
 ```bash
-uv venv packages/sourcing/.venv -p 3.12
-uv pip install --python packages/sourcing/.venv/bin/python pytest==8.4.1
-packages/sourcing/.venv/bin/python -m pytest tests/sourcing -q
-packages/sourcing/.venv/bin/python packages/sourcing/scripts/build_manifest.py   # rewrite data/manifest.json
+cd packages/sourcing && make env        # venv + pins (pytest, pypdf, jsonschema, fastapi, uvicorn, httpx)
+make test                               # offline: no model, no network, no spend
+make serve                              # http://127.0.0.1:8000/  (one page over round_view; /api/sourcing/*; GET /api/sourcing/now)
+make seed                               # network: fetch the pool's real documents into .cache/fetch (allowlisted; bytes never committed)
+make eval                               # the six measurements over data/search/gold_swaps.json from the committed cache
+make refresh-csl / refresh-hts / refresh-cross / refresh-ownership   # live public data → dated fixtures or printed rows (human-run)
+TRIPWIRE_LLM=live ANTHROPIC_API_KEY=… make record-cache               # ONE live run, $5 cap, fills data/llm_cache; then make eval must show cache_misses 0
 ```
 
-Runtime is the Python standard library only. The suite passes with the network cable out: nothing on the request path is live.
+Runtime for `forge_sourcing` is the Python standard library only. `forge_search` adds `pypdf==6.17.0` and `jsonschema==4.26.0`; the API adds `fastapi==0.121.2` and `uvicorn==0.41.0`; `anthropic==1.4.0` is opt-in for the live adapter. The suite passes with the network cable out.
 
 ## The seam
 
@@ -35,6 +38,23 @@ One facade, `forge_sourcing.service.Service(data_dir)`. The browser posts these 
 | `create_packet` · `dispatch` · `close_order` | the order packet from the approved revision only; synthetic adapter; exactly once by idempotency key | `order_packet_created`, `order_dispatched` (human), `order_acknowledged` / `order_exception`, `order_closed` |
 | `rederive()` · `tamper(seq, field, value)` | walk the chain, recompute every estimate and screening from its bound inputs, print one line; tamper one field and watch it break | — |
 
+## The search lane (`forge_search/`)
+
+One bounded `search` call over the owned pool proposes `{mpn, url}` pairs; code does the rest: the allowlisted fetcher, text with pinned `pypdf`, Call A extraction into a closed schema, the byte-span verifier, the draft-rule dry-run on a copy, the walk and the screen on a copy of the round, the cost function, then green / grey / red and a ranking by screening status then landed cost. The result is an agent `alternative_proposed` event; a human resolves. The escalation agent proposes sources and is never confident.
+
+| Gold row (`data/search/gold_swaps.json`) | Real? | Expected | Why |
+|---|---|---|---|
+| Lepton 3.5 after Boson+ 640 | REAL | green | 8.7 Hz and 160 × 120 verified; 6A003.b.4.b no fire; Note 3.a release; Teledyne tree terminal; domestic, no entry |
+| ICM-42688-P after HG5700 | REAL | grey | the full datasheet publishes no bias stability and no random walk: cannot fire |
+| IMU-NG | SYNTHETIC | red | ARW 0.0008: USML XII(e)(12)(i) fires |
+| GX-220 (poisoned page) | SYNTHETIC | red | the truthful span fires 7A002.a.1.a; "five degrees per hour" ends in REJECT |
+| Molicel P45B after SiCore | REAL | grey | 242 Wh/kg verified; 3A001.e.1.b no fire; rate not verified until `make refresh-hts` |
+| STM32F100 origin escalation | REAL | grey, not confident | st.com resets non-browser connections; no source resolved; a human resolves |
+
+The claim a judge can hear: *"No part-search, BOM or component-intelligence tool we found computes or filters parts by export-control jurisdiction or classification at the part level. Digi-Key's API returns a manufacturer-declared ECCN as a static per-part data field, but nowhere is it a searchable or filterable parameter; the closest thing to a filter, Thomasnet's 'ITAR Registered' checkbox, is a self-declared company-level DDTC-registration flag, not a per-part determination."* Never "nobody does AI part search".
+
+What is said about the accept button (Step 10, rewritten per the S8 verifier): NIST's AI RMF *calls for* documented human oversight proportional to risk (it is voluntary); OWASP LLM06 asks for human approval of *high-impact* actions; proposals exist only in a pending state; the full basis is shown before any action; a stated reason is required to override; citations are exact spans. No sentence about FDA guidance dates, and no appeal to unnamed interface research.
+
 ## Real and synthetic, in one table
 
 | Thing | State |
@@ -46,6 +66,10 @@ One facade, `forge_sourcing.service.Service(data_dir)`. The browser posts these 
 | Tariff table | headings and overlays typed from the build spec and the two research passes; every base rate is `verified: false` until read from HTS Revision 17; MPF FY2026/FY2027 and the Taiwan 301 row are verified; Chapter 99 headings for the 2024 review rows and the Taiwan action are **not typed** |
 | Order dispatch | synthetic adapter only, labelled SYNTHETIC; no real send exists |
 | Signing | hash chain only; Ed25519 signing belongs to the platform log module and the line says so |
+| Candidate pool (`data/search/pool.json`) | REAL rows typed from THE BUILD, the tripwire catalog and manufacturer pages; **IMU-NG and GX-220 are SYNTHETIC** and badged; declared fields are unverified until a span is accepted |
+| Documents | fixture documents are team-authored and badged SYNTHETIC; real datasheets are fetched under the allowlist into `.cache/fetch` and never committed; `data/search/documents.json` commits their hashes |
+| Model answers (`data/llm_cache/`) | empty until Charlie's one live run records them; until then the page prints "abstained: cache miss" |
+| Draft rules (`data/search/rules.DRAFT.json`) | byte copy of the tripwire draft (sha `ac95bcdd…`), DRAFT pending Charlie (D-6); the dry-run is the first slice of the engine and goes when the engine lands |
 
 ## Determinism
 

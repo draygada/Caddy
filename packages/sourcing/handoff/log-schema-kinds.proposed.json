@@ -1,0 +1,23 @@
+{
+  "target": "features/tripwire/schemas/log.schema.json",
+  "source": "strafe-prototype docs/dnhacks_engineering_direction_2026-09-05.md §3.5 (event kinds; actor discipline); lane ADR-0003",
+  "kind_enum_additions": [
+    "round_opened", "offers_resolved", "escalation_opened", "escalation_resolved", "party_extracted", "screening_run", "screening_rolled_up",
+    "match_adjudicated", "cost_estimated", "round_refined", "offer_selected", "selection_confirmed", "export_gate_evaluated",
+    "technical_data_declared", "package_blocked", "package_built",
+    "order_packet_created", "order_dispatched", "order_acknowledged", "order_exception", "order_closed",
+    "alternative_proposed", "escalation_proposed", "proposal_rejected",
+    "extraction_proposed", "rule_patch_proposed", "slot_list_proposed", "swap_confirmed", "rule_pack_committed", "intent_memo_signed"
+  ],
+  "property_additions": {
+    "actor_kind": {"enum": ["human", "agent", "system"]},
+    "attestor": {"type": ["string", "null"]},
+    "prev_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "rules": [
+    "kinds ending _proposed are the only kinds an agent may write",
+    "offer_selected, match_adjudicated, technical_data_declared, escalation_resolved, rule_pack_committed, intent_memo_signed, order_dispatched, swap_confirmed require actor_kind = human and a non-null attestor",
+    "sourcing and order events bind design_hash, design_seq and fixture_shas; proposal events also bind pool_sha256, rules_sha256 and prompt_sha256"
+  ],
+  "note": "The lane's Thread is a stand-in for the platform log (ADR-0003); events carry over unchanged when the log lands."
+}

@@ -58,3 +58,20 @@ One line per term. Implementation lives in `forge_sourcing/`; decisions in `docs
 - **Event**: one appended fact in the hash-chained thread. Sourcing events bind the design hash, the design sequence and the fixture hashes they read. Terminal kinds (`offer_selected`, `match_adjudicated`, `technical_data_declared`, `escalation_resolved`, `order_dispatched`) require a human attestor.
 - **Re-derive**: walk the chain, verify every hash, recompute every estimate and screening from its bound inputs, and print one line. **Tamper** edits one stored field so Re-derive prints the break.
 - **Claim ceiling**: the sentence printed on every output that says what it is not. Offers, roll-ups, estimates, gates and packages each have one and never lose it.
+
+## The search
+
+- **Candidate pool**: the parts the team owns data for, per node: a comparator and candidates with declared fields, documents and an offer block. The proposer chooses from it and nowhere else. It is the ceiling of the search until a distributor's terms are read by a human.
+- **Approved-manufacturer match / opportunistic find**: whether a candidate's manufacturer is on the approved-manufacturer list. Printed on every card; "available" is not "approved".
+- **Document**: bytes fetched under the allowlist (or a committed fixture), content-addressed by sha256, never committed; its text is what the verifier binds.
+- **Span**: a quote plus its character offsets `[start:end]` into a document's text, and the text's sha256. The verifier checks the characters, not the meaning.
+- **Verified spec**: a field, a decimal value and a unit that the verifier constructed from a span. The only kind of number the dry-run reads.
+- **Extraction (Call A)**: one model call that reports spans for the fields the rule rows read. Its schema has no classification, jurisdiction, origin, ownership or screening key. A schema-invalid response is an abstain.
+- **Dry-run**: the draft rule rows evaluated against the verified specs of one candidate, on a copy. A row with an unpublished field cannot fire; a row that needs the tree is not evaluated here. Replaced by the engine seam when it lands.
+- **Flip gone**: the rows that fired on the current part do not fire on the candidate, no new control row fires, and every field those rows read was verified.
+- **Fit comparator**: the slot's stored function, performance, form (including material) and fit. Each dimension resolves, fails or stays unresolved; unresolved is never a pass.
+- **Green / grey / red**: green when every check concluded; red when a fit dimension fails, the tripped row still fires or a new one fires, or a party matches the list; grey when a check could not conclude. Grey sits in a separate needs-input queue, never in the ranked list.
+- **Proposal**: an agent's record of a search or of sources for an escalation: pending, never terminal. `alternative_proposed` and `escalation_proposed` are the only kinds an agent writes. A human accepts an escalation proposal (an `escalation_resolved` event) or rejects any proposal; an alternative is accepted in the design lane as a `part_swapped`.
+- **Confident**: a binary flag on a proposal: at least one green candidate and no abstain. A proposal for sources is never confident.
+- **Hidden line**: text in a document that a reader would not see. It stays in the document text (a PDF's white text would too), is printed on the card, and has no schema slot to land in.
+- **Cache / live**: where a model answer came from. Cached answers are keyed by the prompt hash and committed; live answers are opt-in, budgeted in micro-dollars, and recorded once.
