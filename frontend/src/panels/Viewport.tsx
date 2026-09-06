@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type DragEvent, type MouseEvent as RMouseEvent, type WheelEvent } from 'react';
 import { useStore, isBodyId, nodeOfBody, BODY_LABEL, type BodyId, type Pos } from '../store';
-import { CATALOG, PLATE_T, PLATE_W, SLOTS, SLOT_LABEL, type PartId, type Slot } from '../lib/catalog';
+import { CATALOG, CORE_SLOTS, PLATE_T, PLATE_W, SLOTS, SLOT_LABEL, type PartId, type Slot } from '../lib/catalog';
 import { boxFaces, clipFaces, K, proj, renderSolid, solidBounds, type Face, type Projector, type Solid, type Vec3 } from '../lib/geometry';
 import { buildBodies } from '../lib/scene';
 import { fmtLen } from '../lib/units';
@@ -8,18 +8,20 @@ import type { Outcome } from '../lib/rules';
 import { Check, Display, Fit, Grid as GridIcon, Home, Orbit, Pan, Zoom } from './Icons';
 import { SketchView } from './SketchView';
 import { BoardView } from './BoardView';
+import { AuthoringWorkspace } from './AuthoringWorkspace';
 import { FeatureDialog } from './FeatureDialog';
 import { MarkingMenu } from './MarkingMenu';
-import { TimelineStrip } from './TimelineStrip';
-import { runCommand } from '../commands';
-import { solveSketch } from '../lib/sketch';
 
 const VB_W = 760, VB_H = 490;
 const W = PLATE_W;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** ViewCube cells: each face split 3×3; centre = face view, edge strips = edge views, corners = corner views (26 directions). */
-interface CubeCell { pts: string; fill: string; dir: Vec3; label?: string; m?: string; d: number; kind: 'face' | 'edge' | 'corner' }
+interface CubeCell { pts: string; fill: string; dir: Vec3; key: string; label?: string; m?: string; d: number; kind: 'face' | 'edge' | 'corner'; cx: number; cy: number }
+/** One visible face: its outline and the grooves that split it 3×3 (drawn in the groove colour so the pads read as rounded tiles). */
+interface CubeFace { pts: string; fill: string; d: number; grooves: string[]; n: Vec3 }
+/** The little XYZ triad at the cube's front-bottom-left corner. */
+interface CubeTriad { o: number[]; x: number[]; y: number[]; z: number[]; yBehind: boolean }
 const FACE_DEFS: { n: Vec3; u: Vec3; v: Vec3; label: string }[] = [
   { n: [0, 0, 1], u: [1, 0, 0], v: [0, -1, 0], label: 'Top' },
   { n: [0, 0, -1], u: [1, 0, 0], v: [0, 1, 0], label: 'Bottom' },
@@ -29,16 +31,28 @@ const FACE_DEFS: { n: Vec3; u: Vec3; v: Vec3; label: string }[] = [
   { n: [-1, 0, 0], u: [0, 1, 0], v: [0, 0, 1], label: 'Left' },
 ];
 const CUTS = [-0.5, -0.28, 0.28, 0.5];
-function cubeCells(pr: Projector): CubeCell[] {
+function cubeCells(pr: Projector): { cells: CubeCell[]; faces: CubeFace[]; triad: CubeTriad } {
   const out: CubeCell[] = [];
+  const faces: CubeFace[] = [];
   const add = (a: Vec3, b: Vec3, s: number): Vec3 => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
+  const P = (p: Vec3) => pr.pt(p[0], p[1], p[2]).map((v) => v.toFixed(1)).join(',');
   for (const f of FACE_DEFS) {
     const dot = f.n[0] * pr.view[0] + f.n[1] * pr.view[1] + f.n[2] * pr.view[2];
     if (dot <= 0.02) continue;
-    const nx = f.n[0] * pr.ca - f.n[1] * pr.sa;
-    const fill = f.n[2] > 0.5 ? 'var(--m1)' : f.n[2] < -0.5 ? 'var(--m3)' : nx < 0 ? 'var(--m2)' : 'var(--m3)';
+    // one pale tone for every face, a touch lighter on top, like the Fusion cube
+    const fill = f.n[2] > 0.5 ? 'var(--cube-top)' : 'var(--cube)';
+    const at = (a: number, b: number): Vec3 => add(add(add([0, 0, 0], f.n, 0.5), f.u, a), f.v, b);
+    const outline = [at(-0.5, -0.5), at(0.5, -0.5), at(0.5, 0.5), at(-0.5, 0.5)].map(P).join(' ');
+    // grooves at the 3×3 cuts, drawn edge to edge in the groove colour
+    const c1 = CUTS[1], c2 = CUTS[2];
+    const grooves = [
+      P(at(-0.5, c1)) + ' ' + P(at(0.5, c1)), P(at(-0.5, c2)) + ' ' + P(at(0.5, c2)), P(at(c1, -0.5)) + ' ' + P(at(c1, 0.5)), P(at(c2, -0.5)) + ' ' + P(at(c2, 0.5)),
+    ];
+    faces.push({ pts: outline, fill, d: dot, grooves, n: f.n });
     for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
       const corners: Vec3[] = [[CUTS[i], CUTS[j]], [CUTS[i + 1], CUTS[j]], [CUTS[i + 1], CUTS[j + 1]], [CUTS[i], CUTS[j + 1]]].map(([a, b]) => add(add(add([0, 0, 0], f.n, 0.5), f.u, a), f.v, b));
+      const mid = at((CUTS[i] + CUTS[i + 1]) / 2, (CUTS[j] + CUTS[j + 1]) / 2);
+      const [cx, cy] = pr.pt(mid[0], mid[1], mid[2]);
       const du = i === 0 ? -1 : i === 2 ? 1 : 0, dv = j === 0 ? -1 : j === 2 ? 1 : 0;
       const dir: Vec3 = add(add([...f.n] as Vec3, f.u, du), f.v, dv);
       const kind = du === 0 && dv === 0 ? 'face' : du !== 0 && dv !== 0 ? 'corner' : 'edge';
@@ -47,12 +61,23 @@ function cubeCells(pr: Projector): CubeCell[] {
         const c = add([0, 0, 0], f.n, 0.5);
         const pc = pr.pt(c[0], c[1], c[2]);
         const pu = pr.pt(c[0] + f.u[0], c[1] + f.u[1], c[2] + f.u[2]), pv = pr.pt(c[0] + f.v[0], c[1] + f.v[1], c[2] + f.v[2]);
-        m = 'matrix(' + [pu[0] - pc[0], pu[1] - pc[1], -(pv[0] - pc[0]), -(pv[1] - pc[1]), pc[0], pc[1]].map((v) => v.toFixed(3)).join(' ') + ')';
+        let a = pu[0] - pc[0], b = pu[1] - pc[1], cc = -(pv[0] - pc[0]), dd = -(pv[1] - pc[1]);
+        // never mirror the text: a negative determinant flips the up axis; if it then reads right-to-left, turn it 180°
+        if (a * dd - b * cc < 0) { cc = -cc; dd = -dd; }
+        if (a < 0) { a = -a; b = -b; cc = -cc; dd = -dd; }
+        m = 'matrix(' + [a, b, cc, dd, pc[0], pc[1]].map((v) => v.toFixed(3)).join(' ') + ')';
       }
-      out.push({ pts: corners.map((p) => pr.pt(p[0], p[1], p[2]).map((v) => v.toFixed(1)).join(',')).join(' '), fill, dir, label: kind === 'face' ? f.label : undefined, m, d: dot, kind });
+      // cells that share a direction (the three cells meeting at a corner, the two along an edge) share a key and highlight together
+      out.push({ pts: corners.map(P).join(' '), fill, dir, key: dir.map((v) => Math.sign(v)).join(','), label: kind === 'face' ? f.label : undefined, m, d: dot, kind, cx, cy });
     }
   }
-  return out.sort((a, b) => a.d - b.d);
+  // the triad is its own small gizmo at the bottom-left of the widget, oriented by the same camera
+  const o0 = pr.pt(0, 0, 0);
+  const dir = (x: number, y: number, z: number): [number, number] => { const p = pr.pt(x, y, z); return [p[0] - o0[0], p[1] - o0[1]]; };
+  const og: [number, number] = [40, 158];
+  const ax = (v: [number, number]) => [og[0] + v[0], og[1] + v[1]];
+  const triad: CubeTriad = { o: og, x: ax(dir(0.85, 0, 0)), y: ax(dir(0, 0.85, 0)), z: ax(dir(0, 0, 0.85)), yBehind: pr.view[1] > 0 };
+  return { cells: out.sort((a, b) => a.d - b.d), faces: faces.sort((a, b) => a.d - b.d), triad };
 }
 
 interface Deco { stroke: string; sw: number; dash: string; hoverMix: boolean; selFace: boolean; tint?: string }
@@ -105,11 +130,16 @@ export function Viewport({ o: _o }: { o: Outcome }) {
   const prRef = useRef<{ pr: Projector; ca: number; sa: number; extents: Record<Slot, Extent> } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [dispOpen, setDispOpen] = useState(false);
+  const [cubeHover, setCubeHover] = useState<string | null>(null);
+  const [cubeMenu, setCubeMenu] = useState(false);
 
   const L = s.span;
   const dims = s.preview?.dims ?? s.dims, geo = s.preview?.geo ?? s.geo, pos = s.preview?.pos ?? s.pos;
+  // a component body shows when it is placed, or when its type is in the project (dashed footprint); library types not in the project draw nothing
+  const inProject = (sl: Slot) => !!s.parts[sl] || (s.project?.components ?? CORE_SLOTS).includes(sl);
+  const visible = (b: BodyId) => !s.hidden[b] && (!s.isolated || s.isolated === b) && (b === 'plate' || b === 'flange' || inProject(b));
+  // plate depth comes from the committed sketch geometry (main), falling back to the catalog constant
   const plateT = geo.plateT ?? PLATE_T;
-  const visible = (b: BodyId) => !s.hidden[b] && (!s.isolated || s.isolated === b);
 
   const scene = useMemo(() => {
     const U = 100 * s.zoom;
@@ -170,7 +200,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
       const t = pr.pt(-0.6 + v[0] * 1.25, -0.6 + v[1] * 1.25, v[2] * 1.25);
       return { label, x1: o0[0].toFixed(1), y1: o0[1].toFixed(1), x2: p[0].toFixed(1), y2: p[1].toFixed(1), tx: t[0].toFixed(1), ty: (t[1] + 4).toFixed(1) };
     });
-    const cubeFaces = cubeCells(proj(s.az, s.el, 40, 60, 60));
+    const cube = cubeCells(proj(s.az, s.el, 33, 108, 102));
     const d1 = pr.pt(0, W + 0.3, 0), d2 = pr.pt(L, W + 0.3, 0);
     const dim = { x1: d1[0].toFixed(1), y1: d1[1].toFixed(1), x2: d2[0].toFixed(1), y2: d2[1].toFixed(1), tx: ((d1[0] + d2[0]) / 2).toFixed(1), ty: (Math.max(d1[1], d2[1]) + 18).toFixed(1) };
     let plane: string | null = null;
@@ -180,7 +210,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
       plane = corners.map((p) => pr.pt(p[0], p[1], p[2]).map((v) => v.toFixed(1)).join(',')).join(' ');
     }
     prRef.current = { pr, ca: Math.cos(s.az), sa: Math.sin(s.az), extents };
-    return { faces, gridLines, axes, cubeFaces, dim, plane, faceCount: boxFaces.length };
+    return { faces, gridLines, axes, cube, dim, plane, faceCount: boxFaces.length };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.az, s.el, s.zoom, s.pan, L, dims, geo, pos, s.parts, s.attrs, s.sel, s.selBody, s.selFace, s.selFilter, s.hover, s.dragPart, s.grid, s.hidden, s.isolated, s.visualStyle, s.section, s.tint]);
 
@@ -259,25 +289,12 @@ export function Viewport({ o: _o }: { o: Outcome }) {
   const modeBtn = (m: typeof mode, label: string, extra = '') => (
     <button role="radio" aria-checked={mode === m} onClick={() => { if (m === 'sketch') s.openDialog('sketch', 'plate'); else { if (s.dialog?.kind === 'sketch') s.closeDialog(); s.patch({ viewMode: m }); } }} className={'min-h-8 px-[10px] border-0 cursor-pointer text-[13px] font-semibold ' + extra} style={{ background: mode === m ? 'var(--accent)' : 'transparent', color: mode === m ? 'var(--accentfg)' : 'var(--ink)' }}>{label}</button>
   );
-  const cadTarget: BodyId = s.selBody ?? 'plate';
-  const sketchResult = solveSketch(s.sketch);
-  const latestFeature = s.features.at(-1);
-  const cadTools: { id: string; label: string; target: BodyId | null; disabled?: boolean }[] = [
-    { id: 'create.sketch', label: 'Sketch', target: 'plate' },
-    { id: 'create.extrude', label: 'Extrude', target: cadTarget },
-    { id: 'create.hole', label: 'Hole', target: 'plate' },
-    { id: 'modify.fillet', label: 'Fillet', target: 'plate' },
-    { id: 'modify.chamfer', label: 'Chamfer', target: 'plate' },
-    { id: 'modify.move', label: 'Move', target: cadTarget, disabled: cadTarget === 'plate' || cadTarget === 'flange' },
-    { id: 'inspect.measure', label: 'Measure', target: null },
-    { id: 'inspect.section', label: 'Section', target: null },
-  ];
 
   return (
     <div data-panel="viewport" data-cad-workspace="design" className="panel flex-1 flex flex-col min-h-0 relative">
       <div className="flex items-center gap-2 px-3 py-[6px] border-b border-line2 flex-wrap">
         <div role="radiogroup" aria-label="View mode" className="flex border border-line rounded-r overflow-hidden">
-          {modeBtn('model', 'Model')}{modeBtn('sketch', 'Sketch', 'border-l border-line')}{modeBtn('board', 'Board', 'border-l border-line')}{modeBtn('sheet', 'Drawing sheet', 'border-l border-line')}
+          {modeBtn('model', 'Model')}{modeBtn('sketch', 'Sketch', 'border-l border-line')}{modeBtn('board', 'Board', 'border-l border-line')}{modeBtn('authoring', 'CAD authoring', 'border-l border-line')}{modeBtn('sheet', 'Drawing sheet', 'border-l border-line')}
         </div>
         <label className="text-[13px] text-muted flex items-center gap-1">select
           <select aria-label="Selection filter" value={s.selFilter} onChange={(e) => s.patch({ selFilter: e.target.value as typeof s.selFilter, selFace: null })} className="btn text-ink">
@@ -289,30 +306,18 @@ export function Viewport({ o: _o }: { o: Outcome }) {
         {s.viewSeq != null ? (
           <span className="text-[13px] font-semibold text-amber">replaying #{s.viewSeq} · read-only · <button onClick={() => s.viewAt(null)} className="underline">back to live</button></span>
         ) : (
-          <span className="text-[13px] text-muted">right-click for marking menu · drag a body to move it</span>
+          <span role="status" className="sr-only">{mode} view</span>
         )}
       </div>
-      <div data-cad-feature-rail role="toolbar" aria-label="CAD feature tools" className="px-3 py-2 border-b border-line2 bg-surface2 flex items-center gap-2 overflow-x-auto">
-        <div className="shrink-0 pr-2 border-r border-line">
-          <div className="text-[10px] uppercase tracking-[.12em] text-muted">Feature chain</div>
-          <div className="text-[12px] font-semibold whitespace-nowrap">Sketch → solid → detail</div>
-        </div>
-        {cadTools.map((tool) => (
-          <button key={tool.id} type="button" disabled={s.viewSeq != null || tool.disabled} onClick={() => runCommand(tool.id, tool.target)}
-            className="btn shrink-0 disabled:opacity-40" title={tool.id === 'create.extrude' ? 'Extrude ' + BODY_LABEL[cadTarget] : tool.label}>
-            {tool.label}
-          </button>
-        ))}
-        <div className="ml-auto shrink-0 pl-2 border-l border-line text-right">
-          <div className="font-mono text-[11px] text-muted">target · {BODY_LABEL[cadTarget]} · plate depth {fmtLen(plateT, s.units, true)}</div>
-          <div className="font-mono text-[11px]" style={{ color: sketchResult.overall === 'CONTRADICTORY' ? 'var(--red)' : sketchResult.overall === 'REDUNDANT' ? 'var(--amber)' : 'var(--ink)' }}>
-            sketch {sketchResult.overall} · latest {latestFeature?.n ?? '—'} {latestFeature?.kind ?? 'feature'}
-          </div>
-        </div>
-      </div>
       {mode === 'sheet' && <SheetView span={s.span} />}
-      {mode === 'sketch' && <SketchView />}
+      {mode === 'sketch' && (
+        <div className="flex-1 min-h-0 flex">
+          <SketchView />
+          {s.dialog?.kind === 'sketch' && <FeatureDialog docked />}
+        </div>
+      )}
       {mode === 'board' && <BoardView />}
+      {mode === 'authoring' && <div className="flex-1 min-h-0 overflow-auto bg-surface2"><AuthoringWorkspace /></div>}
       <div ref={canvasRef} onContextMenu={onContext} className="flex-1 min-h-0 items-center justify-center p-2 relative" style={{ display: mode === 'model' ? 'flex' : 'none', background: s.dragging ? 'var(--surface2)' : 'transparent' }}>
         <svg viewBox={`0 0 ${VB_W} ${VB_H}`} role="img" aria-label="Orbitable bracket with movable slot bodies"
           onMouseDown={vpDown} onMouseMove={vpMove} onMouseUp={vpUp} onMouseLeave={vpUp} onWheel={vpWheel} onDragOver={vpDragOver} onDrop={vpDrop}
@@ -330,15 +335,66 @@ export function Viewport({ o: _o }: { o: Outcome }) {
           <text x={scene.dim.tx} y={scene.dim.ty} fill="var(--muted)" fontSize="13" fontFamily="Geist Mono, monospace" textAnchor="middle">span {fmtLen(L, s.units)}</text>
           {s.dragging && <text x="380" y="476" fill="var(--ink)" fontSize="14" fontWeight="600" textAnchor="middle">{dropHint}</text>}
         </svg>
-        <div className="absolute right-3 top-3 grid gap-1 justify-items-center p-[6px]" onMouseDown={(e) => e.stopPropagation()}>
-          <div className="relative w-[136px] h-[136px]">
-            <button onClick={() => s.setView('iso')} aria-label="Home view" title="Home" className="tree-btn absolute left-0 top-0 w-6 h-6 text-ink"><Home /></button>
-            <button onClick={() => s.patch({ az: s.az - Math.PI / 12 })} aria-label="Rotate view 15° left" title="Rotate left" className="tree-btn absolute left-0 bottom-0 w-6 h-6 text-ink text-[14px]">⟲</button>
-            <button onClick={() => s.patch({ az: s.az + Math.PI / 12 })} aria-label="Rotate view 15° right" title="Rotate right" className="tree-btn absolute right-0 bottom-0 w-6 h-6 text-ink text-[14px]">⟳</button>
-            <svg viewBox="0 0 120 120" role="group" aria-label="View cube: drag to orbit; click a face, edge or corner to snap" onMouseDown={cubeDown} className="absolute left-2 top-2 w-[120px] h-[120px] block select-none cursor-grab">
-              {scene.cubeFaces.map((cf, i) => <polygon key={i} points={cf.pts} fill={cf.fill} stroke="var(--ink)" strokeWidth={cf.kind === 'face' ? 0.8 : 0.35} strokeOpacity={cf.kind === 'face' ? 1 : 0.5} strokeLinejoin="round" onClick={() => snap(cf.dir)} className="cube-cell cursor-pointer"><title>{cf.label || (cf.kind === 'edge' ? 'edge view' : 'corner view')}</title></polygon>)}
-              {scene.cubeFaces.filter((cf) => cf.label).map((cf) => <text key={'t' + cf.label} transform={cf.m} x="0" y="0.02" fill="var(--ink)" fontSize="0.2" fontWeight="600" fontFamily="Work Sans, system-ui, sans-serif" textAnchor="middle" dominantBaseline="middle" onClick={() => snap(cf.dir)} className="cursor-pointer" style={{ pointerEvents: 'all', letterSpacing: '0.01em' }}>{(cf.label || '').toUpperCase()}</text>)}
+        <div className="absolute right-1 top-1 group" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="relative w-[200px] h-[200px]">
+            <button onClick={() => s.setView('iso')} aria-label="Home view" title="Home" className="tree-btn absolute left-2 top-2 w-6 h-6 text-ink opacity-0 group-hover:opacity-100 transition-opacity"><Home /></button>
+            <svg viewBox="0 0 200 200" role="group" aria-label="View cube: drag to orbit; click a face, edge or corner to snap" onMouseDown={cubeDown} className="absolute inset-0 w-[200px] h-[200px] block select-none cursor-grab">
+              {/* rotate arrows: 90° to the neighbouring face, and the two roll arcs above */}
+              {([
+                { k: 'up', pts: '93,24 107,24 100,13', title: 'Rotate up', go: () => s.patch({ el: clamp(s.el + Math.PI / 2, -1.55, 1.55) }) },
+                { k: 'down', pts: '93,176 107,176 100,187', title: 'Rotate down', go: () => s.patch({ el: clamp(s.el - Math.PI / 2, -1.55, 1.55) }) },
+                { k: 'left', pts: '24,93 24,107 13,100', title: 'Rotate left', go: () => s.patch({ az: s.az - Math.PI / 2 }) },
+                { k: 'right', pts: '176,93 176,107 187,100', title: 'Rotate right', go: () => s.patch({ az: s.az + Math.PI / 2 }) },
+              ] as { k: string; pts: string; title: string; go: () => void }[]).map((a) => (
+                <polygon key={a.k} points={a.pts} className="cube-arrow" onMouseDown={(e) => e.stopPropagation()} onClick={a.go}><title>{a.title}</title></polygon>
+              ))}
+              <g className="cube-arrow" onMouseDown={(e) => e.stopPropagation()} onClick={() => s.patch({ az: s.az - Math.PI / 4 })}>
+                <title>Roll left 45°</title>
+                <path d="M 78 30 A 66 66 0 0 0 46 54" fill="none" strokeWidth={4} strokeLinecap="round" />
+                <polygon points="40.1,59.9 49.5,57.5 42.5,50.5" />
+              </g>
+              <g className="cube-arrow" onMouseDown={(e) => e.stopPropagation()} onClick={() => s.patch({ az: s.az + Math.PI / 4 })}>
+                <title>Roll right 45°</title>
+                <path d="M 122 30 A 66 66 0 0 1 154 54" fill="none" strokeWidth={4} strokeLinecap="round" />
+                <polygon points="159.9,59.9 150.5,57.5 157.5,50.5" />
+              </g>
+              {/* cube tiles: pale faces with grey borders, white grooves edged in grey, white corner discs with a grey ring */}
+              {/* the triad is a small gizmo bottom-left, oriented by the camera, never over the cube */}
+              {(() => {
+                const t = scene.cube.triad;
+                const lab = (e: number[]) => { const dx = e[0] - t.o[0], dy = e[1] - t.o[1]; const n = Math.hypot(dx, dy) || 1; return [e[0] + (dx / n) * 8, e[1] + (dy / n) * 8]; };
+                const ax = (e: number[], color: string, name: string, op: number) => { const [lx, ly] = lab(e); return (
+                  <g key={name} opacity={op} style={{ pointerEvents: 'none' }}>
+                    <line x1={t.o[0]} y1={t.o[1]} x2={e[0]} y2={e[1]} stroke={color} strokeWidth={1.6} strokeLinecap="round" />
+                    <text x={lx} y={ly} fill={color} fontSize="12" fontWeight="700" fontFamily="Work Sans, system-ui, sans-serif" textAnchor="middle" dominantBaseline="middle">{name}</text>
+                  </g>); };
+                return <>{ax(t.y, '#40c057', 'Y', t.yBehind ? 0.5 : 0.8)}{ax(t.x, '#e03131', 'X', 0.95)}{ax(t.z, '#1c3fe0', 'Z', 0.95)}</>;
+              })()}
+              {/* cube tiles: pale faces, a thin grey edge, light grooves between the 3×3 zones, one disc per visible vertex */}
+              {scene.cube.faces.map((cf, i) => <polygon key={'f' + i} points={cf.pts} fill={cf.fill} stroke="none" />)}
+              {scene.cube.faces.flatMap((cf, i) => cf.grooves.map((ln, j) => <polyline key={'g' + i + '-' + j} points={ln} fill="none" stroke="var(--cube-line)" strokeWidth={1.6} strokeLinecap="butt" />))}
+              {scene.cube.faces.map((cf, i) => <polygon key={'fo' + i} points={cf.pts} fill="none" stroke="var(--cube-edge)" strokeWidth={1} strokeLinejoin="round" />)}
+              {/* hover highlight: every cell sharing the direction (three at a corner, two along an edge) */}
+              {scene.cube.cells.filter((c) => cubeHover === c.key).map((c, i) => <polygon key={'h' + i} points={c.pts} fill="var(--focus)" fillOpacity={0.45} stroke="none" />)}
+              {scene.cube.cells.filter((cf) => cf.label).map((cf) => <text key={'t' + cf.label} transform={cf.m} x="0" y="0.02" fill="var(--cube-ink)" fontSize="0.27" fontWeight="600" fontFamily="Work Sans, system-ui, sans-serif" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: 'none' }}>{cf.label}</text>)}
+              {/* invisible hit areas on top */}
+              {scene.cube.cells.map((c, i) => <polygon key={'c' + i} points={c.pts} fill="transparent" stroke="none" onMouseEnter={() => setCubeHover(c.key)} onMouseLeave={() => setCubeHover(null)} onClick={() => snap(c.dir)} className="cursor-pointer"><title>{c.label ? c.label + ' view' : c.kind === 'edge' ? 'edge view' : 'corner view'}</title></polygon>)}
             </svg>
+            <button onClick={() => setCubeMenu((v) => !v)} aria-haspopup="menu" aria-expanded={cubeMenu} aria-label="View options" className="tree-btn absolute right-3 bottom-3 w-[46px] h-6 max-sm:h-11 max-sm:w-14 max-sm:bottom-1 text-ink flex items-center gap-1 justify-center">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 21,7.5 12,12 3,7.5" fill="var(--cube-top)" stroke="var(--cube-ink)" strokeWidth="1" strokeLinejoin="round" /><polygon points="3,7.5 12,12 12,21 3,16.5" fill="var(--cube)" stroke="var(--cube-ink)" strokeWidth="1" strokeLinejoin="round" /><polygon points="21,7.5 12,12 12,21 21,16.5" fill="var(--cube)" stroke="var(--cube-ink)" strokeWidth="1" strokeLinejoin="round" /></svg>
+              <svg viewBox="0 0 10 6" width="10" height="6" aria-hidden="true"><polygon points="0,0 10,0 5,6" fill="currentColor" /></svg>
+            </button>
+            {cubeMenu && <div className="fixed inset-0 z-[19]" onMouseDown={(e) => { e.stopPropagation(); setCubeMenu(false); }} />}
+            {cubeMenu && (
+              <div role="menu" className="absolute right-3 top-[176px] panel py-1 min-w-[160px] shadow-[0_8px_24px_rgba(0,0,0,.14)] z-20 text-[13px]">
+                {[
+                  { label: 'Go home', go: () => s.setView('iso') },
+                  { label: 'Fit to view', go: () => s.fit() },
+                ].map((it) => <button key={it.label} role="menuitem" className="tree-row px-2" style={{ gridTemplateColumns: 'minmax(0,1fr)' }} onClick={() => { it.go(); setCubeMenu(false); }}>{it.label}</button>)}
+                <div className="border-t border-line2 my-1" />
+                {FACE_DEFS.map((f) => <button key={f.label} role="menuitem" className="tree-row px-2" style={{ gridTemplateColumns: 'minmax(0,1fr)' }} onClick={() => { s.setViewDir(f.n); setCubeMenu(false); }}>{f.label}</button>)}
+              </div>
+            )}
           </div>
         </div>
         <div className="absolute left-1/2 bottom-3 -translate-x-1/2 flex items-center gap-[2px] px-1 py-[3px] bg-surface border border-line rounded-r shadow-[0_2px_8px_rgba(0,0,0,.08)]" onMouseDown={(e) => e.stopPropagation()}>
@@ -369,8 +425,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
         </div>
         <MarkingMenu />
       </div>
-      <FeatureDialog />
-      <TimelineStrip />
+      {!(mode === 'sketch' && s.dialog?.kind === 'sketch') && <FeatureDialog />}
     </div>
   );
 }

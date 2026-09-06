@@ -13,7 +13,7 @@ export function BoardView() {
   return (
     <div className="flex-1 min-h-0 flex items-center justify-center p-4 relative" style={{ background: 'var(--surface2)' }}>
       <div className="grid gap-3 w-full max-w-[720px]">
-        <svg viewBox="0 0 400 220" className="w-full block rounded-r border border-line" style={{ background: '#1f5a3f' }}>
+        <svg viewBox="0 0 400 220" className="w-full block rounded-r border border-line" style={{ background: '#205840' }}>
           {fp.map((f) => <g key={f.name}><rect x={f.x} y={f.y} width={f.w} height={f.h} fill="#c9a227" stroke="#e8ecf1" strokeWidth="0.8" /><text x={f.x} y={f.y - 4} fontSize="7" fill="#e8ecf1" fontFamily="Geist Mono, monospace">{f.name}</text></g>)}
           {Array.from({ length: 12 }, (_, i) => <line key={i} x1={20 + i * 30} y1={200} x2={20 + i * 30} y2={190} stroke="#c9a227" strokeWidth="1" />)}
           <text x="10" y="212" fontSize="7" fill="#e8ecf1" fontFamily="Geist Mono, monospace">fc_bay · board.glb from kicad-cli pcb export glb · 0.17 s (fixture) · copper is decorative</text>

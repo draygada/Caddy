@@ -24,9 +24,13 @@ function LenField({ id, label, metres, units, min, max, onChange, hint }: { id: 
   );
 }
 
-function Frame({ title, sub, children, onOk, onCancel, okLabel = 'OK', okDisabled, placement = 'right-3 top-[176px]' }: { title: string; sub?: string; children: React.ReactNode; onOk?: () => void; onCancel: () => void; okLabel?: string; okDisabled?: boolean; placement?: string }) {
+function Frame({ title, sub, children, onOk, onCancel, okLabel = 'OK', okDisabled, placement = 'right-3 top-[176px]', docked = false }: { title: string; sub?: string; children: React.ReactNode; onOk?: () => void; onCancel: () => void; okLabel?: string; okDisabled?: boolean; placement?: string; docked?: boolean }) {
+  // docked: a side column that takes its own width, so the canvas beside it is never covered
+  const cls = docked
+    ? 'flex-none w-[340px] max-w-[45%] h-full flex flex-col bg-surface border-l border-line2'
+    : 'absolute ' + placement + ' w-[min(300px,calc(100%-24px))] max-h-[calc(100%-180px)] flex flex-col bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] z-[12]';
   return (
-    <div role="dialog" aria-label={title} className={'absolute ' + placement + ' w-[min(300px,calc(100%-24px))] max-h-[calc(100%-180px)] flex flex-col bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] z-[12]'} onMouseDown={(e) => e.stopPropagation()}>
+    <div role="dialog" aria-label={title} className={cls} onMouseDown={(e) => e.stopPropagation()}>
       <div className="px-3 py-2 border-b border-line2 flex items-baseline justify-between gap-2">
         <span className="text-[13px] font-semibold">{title}</span>
         {sub && <span className="text-[12px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">{sub}</span>}
@@ -41,7 +45,7 @@ function Frame({ title, sub, children, onOk, onCancel, okLabel = 'OK', okDisable
 }
 
 /** Docked feature dialog: live preview via store.preview, OK commits an event, Cancel discards. */
-export function FeatureDialog() {
+export function FeatureDialog({ docked = false }: { docked?: boolean } = {}) {
   const s = useStore();
   const d = s.dialog;
   const [text, setText] = useState('');
@@ -155,34 +159,39 @@ export function FeatureDialog() {
     }
     case 'sketch': {
       const r = solveSketch(s.sketch);
-      const group = (role: 'required' | 'redundant' | 'contradictory', title: string) => (
-        <div className="grid gap-1">
-          <div className="text-[12px] text-muted">{title}</div>
-          {CONSTRAINTS.filter((c) => c.role === role).map((c) => (
-            <label key={c.id} className="flex items-start gap-2 text-[13px] cursor-pointer">
-              <input type="checkbox" checked={!!s.sketch[c.id]} disabled={readOnly} onChange={() => s.toggleConstraint(c.id)} className="mt-[3px]" />
-              <span className="font-mono text-muted w-4 text-center">{c.glyph}</span>
-              <span>{c.label} <span className="text-muted">· {c.entity} · {c.kind}</span></span>
-            </label>
-          ))}
-        </div>
+      // plain words for each state; the codes and DOF counts stay in the solver
+      const word = (e: 'rect' | 'holes') => {
+        const st = r.entities[e];
+        return st.state === 'SOLVED' ? 'fully defined' : st.state === 'UNDER_CONSTRAINED' ? st.dof + ' degree' + (st.dof === 1 ? '' : 's') + ' of freedom left' : st.state === 'REDUNDANT' ? 'over-defined' : 'contradictory';
+      };
+      const short = (label: string) => label.replace(' · ⌀', '');
+      const row = (c: (typeof CONSTRAINTS)[number]) => (
+        <label key={c.id} className="flex items-center gap-2 text-[13px] cursor-pointer min-h-7">
+          <input type="checkbox" checked={!!s.sketch[c.id]} disabled={readOnly} onChange={() => s.toggleConstraint(c.id)} />
+          <span>{short(c.label)}</span>
+          <span className="text-muted text-[12px] ml-auto">{c.entity}</span>
+        </label>
       );
       return (
-        <Frame title="Sketch" sub="plate profile → extrusion input" onCancel={cancel} onOk={() => { s.commitSketch(); s.closeDialog(); }} okLabel="Commit sketch" okDisabled={readOnly || r.overall === 'CONTRADICTORY'}>
+        <Frame title="Sketch" sub="plate profile" onCancel={cancel} onOk={() => { s.commitSketch(); s.closeDialog(); }} okLabel="Finish sketch" okDisabled={readOnly || r.overall === 'CONTRADICTORY'} docked={docked}>
           {ro}
           <div className="grid gap-1">
             {(['rect', 'holes'] as const).map((e) => (
-              <div key={e} className="grid gap-[2px] border-l-2 pl-2" style={{ borderColor: SKETCH_COLOR[r.entities[e].state] }}>
-                <div className="flex justify-between gap-2 text-[13px]"><span className="font-semibold">{e}</span><span className="font-mono font-bold" style={{ color: SKETCH_COLOR[r.entities[e].state] }}>{r.entities[e].state}</span></div>
-                <div className="font-mono text-[12px] text-muted">{r.entities[e].code} · {r.entities[e].dof} DOF</div>
-                <div className="text-[12px]">{r.entities[e].guidance}</div>
+              <div key={e} className="flex items-center gap-2 text-[13px]">
+                <span className="w-[10px] h-[10px] rounded-[2px] flex-none" style={{ background: SKETCH_COLOR[r.entities[e].state] }} />
+                <span className="font-semibold w-12">{e === 'rect' ? 'plate' : 'holes'}</span>
+                <span style={{ color: SKETCH_COLOR[r.entities[e].state] }}>{word(e)}</span>
               </div>
             ))}
           </div>
-          {group('required', 'constraints')}
-          {group('redundant', 'add a redundant constraint')}
-          {group('contradictory', 'add a contradictory constraint')}
-          <div className="text-[12px] text-muted">A committed sketch becomes the explicit input to <b className="text-ink">Extrude</b>. Under-constrained sketches remain editable; contradictory sketches cannot be committed.</div>
+          <div className="grid">
+            <div className="text-[12px] text-muted pb-1">constraints</div>
+            {CONSTRAINTS.filter((c) => c.role === 'required').map(row)}
+          </div>
+          <details className="grid">
+            <summary className="text-[12px] text-muted cursor-pointer select-none">what if a constraint is redundant or contradictory</summary>
+            <div className="grid pt-1">{CONSTRAINTS.filter((c) => c.role !== 'required').map(row)}</div>
+          </details>
         </Frame>
       );
     }

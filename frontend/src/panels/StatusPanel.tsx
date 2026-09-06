@@ -1,52 +1,51 @@
-import { useStore } from '../store';
+import { useStore, intakeIncomplete } from '../store';
 import type { Outcome } from '../lib/rules';
-import { attentionOf, overallOf, slotStatus, STATUS_CLAIM_CEILING } from '../lib/viewmodel';
-import { GENERIC_NAME, SLOTS, type Node } from '../lib/catalog';
+import { overallOf, slotStatus } from '../lib/viewmodel';
+import { CORE_SLOTS, GENERIC_NAME, SLOTS, type Node } from '../lib/catalog';
 
+const CLEAN = 'no match · limited scan';
+
+/** Product status: the overall word, then only the parts that need a look. Clean parts roll up into one line. */
 export function StatusPanel({ o }: { o: Outcome }) {
   const unconfirmed = useStore((s) => s.unconfirmed);
   const parts = useStore((s) => s.parts);
   const sel = useStore((s) => s.sel);
   const select = useStore((s) => s.select);
-  const openReasoning = useStore((s) => s.openReasoning);
-  const nodes: Node[] = ['airframe', ...SLOTS];
+  const incomplete = useStore((s) => intakeIncomplete(s.project?.intake ?? null));
+  const components = useStore((s) => s.project?.components);
+  // the airframe, every component type in the project, and anything placed
+  const nodes: Node[] = ['airframe', ...SLOTS.filter((sl) => !!parts[sl] || (components ?? CORE_SLOTS).includes(sl))];
   const overall = overallOf(o);
-  const attentionCount = attentionOf(o, unconfirmed).length;
+  const statuses = nodes.map((n) => ({ n, st: slotStatus(o, unconfirmed, n) }));
+  const concern = statuses.filter((x) => x.st.word !== CLEAN);
+  const clean = statuses.filter((x) => x.st.word === CLEAN);
+  const name = (n: Node) => (n === 'airframe' ? 'Airframe' : GENERIC_NAME[n] + (parts[n] ? '' : ' · empty'));
   return (
     <div data-panel="status" aria-live="polite" className="panel flex-none">
-      <div className="panel-head">
-        <div className="panel-title">Modeled review status <span className="sub">· Kestrel, as designed</span></div>
-        <span className="flex gap-1">
-          <button onClick={openReasoning} className="btn">Reasoning · {attentionCount}</button>
-          <button onClick={() => useStore.getState().patch({ sourcingOpen: true })} className="btn btn-primary">Source this design</button>
-        </span>
+      <div className="panel-head py-[6px]">
+        <div className="panel-title">Product status</div>
       </div>
-      <div
-        role="note"
-        aria-label="Claim ceiling"
-        data-testid="status-claim-ceiling"
-        className="mx-3 mt-3 p-2 text-[12px] leading-snug"
-        style={{ border: '1px solid var(--amber)', borderLeftWidth: 4, background: 'var(--surface2)' }}
-      >
-        <div className="font-semibold" style={{ color: 'var(--amber)' }}>{STATUS_CLAIM_CEILING.title}</div>
-        <div>{STATUS_CLAIM_CEILING.body}</div>
-      </div>
-      <div className="p-3 grid gap-1 border-b border-line2">
-        <span className="status-word text-[20px] justify-self-start" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>
-        <div className="text-[14px]">{overall.entries}</div>
-      </div>
-      <div className="px-3 py-2 grid">
-        <div className="text-[13px] text-muted pb-1">by part · as designed</div>
-        {nodes.map((n) => {
-          const st = slotStatus(o, unconfirmed, n);
-          const name = n === 'airframe' ? 'Airframe' : GENERIC_NAME[n] + (parts[n] ? '' : ' · empty');
-          return (
-            <button key={n} onClick={() => select(n)} className="row-hover grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-baseline min-h-7 py-[3px] px-1 -mx-1 text-left bg-transparent border-0 text-ink cursor-pointer rounded-r" style={{ background: sel === n ? 'var(--surface2)' : 'transparent' }}>
-              <span className="min-w-0 whitespace-nowrap overflow-hidden text-ellipsis text-[14px]">{name}</span>
-              <span className="text-[13px] font-semibold whitespace-nowrap" style={{ color: st.color }}>{st.word}</span>
-            </button>
-          );
-        })}
+      {incomplete ? (
+        <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-line2">
+          <span className="status-word text-[14px]" style={{ color: 'var(--amber)' }}>? Requires more information</span>
+          <button onClick={() => useStore.getState().patch({ intakeOpen: true })} className="btn btn-xs" title="the use-case answers are missing or not sure yet; the status is not complete until they are answered">answer them</button>
+        </div>
+      ) : (
+        <div className="px-3 py-2 border-b border-line2">
+          <span className="status-word text-[14px]" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>
+        </div>
+      )}
+      <div className="px-3 py-1 grid">
+        {concern.map(({ n, st }) => (
+          <button key={n} onClick={() => select(n)} className="row-hover grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-baseline min-h-6 py-[1px] px-1 -mx-1 text-left bg-transparent border-0 text-ink cursor-pointer rounded-r" style={{ background: sel === n ? 'var(--surface2)' : 'transparent' }}>
+            <span className="min-w-0 whitespace-nowrap overflow-hidden text-ellipsis text-[13px]">{name(n)}</span>
+            <span className="text-[12px] font-semibold whitespace-nowrap" style={{ color: st.color }}>{st.word}</span>
+          </button>
+        ))}
+        {clean.length > 0 && (
+          <div className="text-[12px] text-muted py-[2px] px-1 whitespace-nowrap overflow-hidden text-ellipsis" title={clean.map(({ n }) => name(n)).join(', ')}><b className="text-ink">{clean.length} part{clean.length === 1 ? '' : 's'}</b> · no match · {clean.map(({ n }) => name(n)).join(', ')}</div>
+        )}
+        {concern.length === 0 && clean.length === 0 && <div className="text-[12px] text-muted py-[2px] px-1">no parts placed</div>}
       </div>
     </div>
   );

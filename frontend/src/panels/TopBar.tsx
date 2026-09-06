@@ -1,6 +1,5 @@
-import { useStore } from '../store';
+import { useStore, intakeIncomplete } from '../store';
 import { useTripwireStore } from '../tripwire-store';
-import { PACKS } from '../lib/catalog';
 
 interface TopBarProps {
   onHome?: () => void;
@@ -11,36 +10,38 @@ export function TopBar({ onHome }: TopBarProps = {}) {
   const toggleTheme = useStore((s) => s.toggleTheme);
   const toggleHelp = useStore((s) => s.toggleHelp);
   const patch = useStore((s) => s.patch);
-  const pack = useStore((s) => s.pack);
-  const openTripwire = useTripwireStore((s) => s.openPanel);
+  const project = useStore((s) => s.project);
+  const closeProject = useStore((s) => s.closeProject);
+  const projectName = project?.name ?? 'Kestrel';
   const closeTripwire = useTripwireStore((s) => s.closePanel);
+  // The logo goes back to the projects page.
   const goHome = () => {
-    if (onHome) {
-      onHome();
-      return;
-    }
-    patch({ sel: null, timelineOpen: false, helpOpen: false });
+    onHome?.();
     closeTripwire();
+    closeProject();
   };
   return (
-    <div className="h-12 flex-none flex items-center gap-2 px-2 sm:gap-4 sm:pl-4 sm:pr-3 border-b border-line2 bg-surface">
-      <button onClick={goHome} title="Return to Design" className="flex items-center gap-[10px] bg-transparent border-0 p-0 text-ink cursor-pointer min-h-6">
+    <header className="h-12 flex-none flex items-center gap-2 px-2 sm:gap-4 sm:pl-4 sm:pr-3 border-b border-line2 bg-surface">
+      <a href="/" onClick={(e) => { e.preventDefault(); goHome(); }} aria-label="Back to all projects" title="Back to all projects" className="flex shrink-0 items-center gap-[10px] bg-transparent border-0 p-0 text-ink no-underline cursor-pointer min-h-11">
         <img src="/logo.png" alt="" width={34} height={34} className="block w-[34px] h-[34px]" />
         <span className="font-bold tracking-[.01em]">Caddy</span>
-      </button>
-      <span className="hidden sm:inline text-muted text-[13px]">Kestrel</span>
+      </a>
+      <span className="hidden sm:inline shrink-0 text-muted text-[13px]">{projectName}</span>
+      {project && (intakeIncomplete(project.intake)
+        ? <button onClick={() => patch({ intakeOpen: true })} className="chip" style={{ color: 'var(--amber)', borderColor: 'var(--amber)', cursor: 'pointer' }}>requires more information</button>
+        : <button onClick={() => patch({ intakeOpen: true })} className="chip" style={{ cursor: 'pointer' }} title="edit the use case">use case declared</button>)}
       <div className="flex-1" />
-      <div className="hidden xl:flex gap-[6px] items-center">
-        <span className="chip">Rule · eCFR {PACKS[pack].ecfr_date}</span>
-        <span className="chip">pack {pack}</span>
-        <span className="chip">Cached</span>
-      </div>
-      <div className="hidden sm:block w-px h-5 bg-line2" />
       <div className="flex gap-[6px]">
-        <button onClick={openTripwire} className="btn btn-primary">Tripwire</button>
-        <button onClick={toggleTheme} className="btn">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</button>
+        {project && (
+          <button onClick={() => patch({ cmdOpen: true, marking: null })} className="btn hidden sm:inline-flex items-center gap-2 text-muted" title="search every command and operation" aria-label="Open command search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <span>Commands</span>
+            <kbd className="chip chip-sm">⌘ K</kbd>
+          </button>
+        )}
+        <button onClick={toggleTheme} className="btn min-w-11" aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}><span className="hidden sm:inline">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</span><span className="sm:hidden" aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span></button>
         <button onClick={toggleHelp} aria-label="Keyboard and mouse help" className="btn btn-icon">?</button>
       </div>
-    </div>
+    </header>
   );
 }

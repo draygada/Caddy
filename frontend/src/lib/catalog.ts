@@ -2,10 +2,14 @@
 // documents. Nothing here is live; every number is declared, dated, and cached.
 import type { Snapshot } from './design';
 
-export type Slot = 'battery' | 'thermal' | 'imu' | 'fc' | 'gnss' | 'datalink' | 'pod';
+/** The seven core slots the rules read, plus the preset components a project can add from the library. */
+export type CoreSlot = 'battery' | 'thermal' | 'imu' | 'fc' | 'gnss' | 'datalink' | 'pod';
+export type ExtraSlot = 'camera' | 'lidar' | 'esc' | 'motor' | 'servo' | 'airspeed' | 'transponder' | 'companion' | 'antenna' | 'parachute';
+export type Slot = CoreSlot | ExtraSlot;
 export type Node = Slot | 'airframe';
 export type PartId =
-  | 'p45b' | 'amprius' | 'lepton' | 'boson' | 'icm' | 'hg5700' | 'imung' | 'acc120' | 'h743' | 'h753' | 'h743m' | 'neom9n' | 'crpa' | 'mcode' | 'pmddl' | 'aescustom' | 'podeo';
+  | 'p45b' | 'amprius' | 'lepton' | 'boson' | 'icm' | 'hg5700' | 'imung' | 'acc120' | 'h743' | 'h753' | 'h743m' | 'neom9n' | 'crpa' | 'mcode' | 'pmddl' | 'aescustom' | 'podeo'
+  | 'imx477' | 'lw20' | 'alpha80' | 'at7215' | 'hv6120' | 'ms4525' | 'ping200' | 'orinnano' | 'hg2409p' | 'ifc60';
 export type CmpKey = 'function' | 'performance' | 'form' | 'fit';
 export const CMP_KEYS: CmpKey[] = ['function', 'performance', 'form', 'fit'];
 
@@ -58,13 +62,56 @@ export const SLOT_LABEL: Record<Node, string> = {
   gnss: 'GNSS',
   datalink: 'datalink',
   pod: 'sensor pod',
+  camera: 'EO camera',
+  lidar: 'LiDAR',
+  esc: 'motor controller',
+  motor: 'propulsion motor',
+  servo: 'servo',
+  airspeed: 'airspeed sensor',
+  transponder: 'transponder',
+  companion: 'companion computer',
+  antenna: 'antenna',
+  parachute: 'parachute',
 };
 
-export const SLOTS: Slot[] = ['battery', 'thermal', 'imu', 'fc', 'gnss', 'datalink', 'pod'];
+/** The slots every project starts with; the rules and the demo scenario read these. */
+export const CORE_SLOTS: CoreSlot[] = ['battery', 'thermal', 'imu', 'fc', 'gnss', 'datalink', 'pod'];
+export const EXTRA_SLOTS: ExtraSlot[] = ['camera', 'lidar', 'esc', 'motor', 'servo', 'airspeed', 'transponder', 'companion', 'antenna', 'parachute'];
+export const SLOTS: Slot[] = [...CORE_SLOTS, ...EXTRA_SLOTS];
 
 /** What the palette shows: the component type, no specification. The model is chosen in the Spec panel. */
-export const GENERIC_NAME: Record<Slot, string> = { battery: 'Battery pack', thermal: 'Thermal sensor', imu: 'IMU', fc: 'Flight controller', gnss: 'GNSS receiver', datalink: 'Datalink radio', pod: 'Sensor pod' };
-export const PART_CLASS: Record<Slot, string> = { battery: 'pack', thermal: 'thermal_imager', imu: 'sensor', fc: 'board', gnss: 'gnss', datalink: 'radio', pod: 'payload' };
+export const GENERIC_NAME: Record<Slot, string> = {
+  battery: 'Battery pack', thermal: 'Thermal sensor', imu: 'IMU', fc: 'Flight controller', gnss: 'GNSS receiver', datalink: 'Datalink radio', pod: 'Sensor pod',
+  camera: 'EO camera', lidar: 'LiDAR rangefinder', esc: 'Motor controller', motor: 'Propulsion motor', servo: 'Control-surface servo', airspeed: 'Airspeed sensor', transponder: 'ADS-B transponder', companion: 'Companion computer', antenna: 'Telemetry antenna', parachute: 'Recovery parachute',
+};
+export const PART_CLASS: Record<Slot, string> = {
+  battery: 'pack', thermal: 'thermal_imager', imu: 'sensor', fc: 'board', gnss: 'gnss', datalink: 'radio', pod: 'payload',
+  camera: 'camera', lidar: 'sensor', esc: 'board', motor: 'motor', servo: 'actuator', airspeed: 'sensor', transponder: 'radio', companion: 'board', antenna: 'antenna', parachute: 'recovery',
+};
+
+/** The component library: every type a project can hold, grouped for the picker. Core types are in every project; the rest are added per project. */
+export type ComponentCategory = 'Power and propulsion' | 'Sensing' | 'Navigation and control' | 'Communications' | 'Payload and recovery';
+export interface ComponentPreset { slot: Slot; category: ComponentCategory; blurb: string; regulated: boolean }
+export const COMPONENT_PRESETS: ComponentPreset[] = [
+  { slot: 'battery', category: 'Power and propulsion', blurb: 'main pack · energy and density are read by the endurance and cell rules', regulated: true },
+  { slot: 'motor', category: 'Power and propulsion', blurb: 'brushless outrunner for the propeller · no modeled rule reads it', regulated: false },
+  { slot: 'esc', category: 'Power and propulsion', blurb: 'electronic speed controller between pack and motor · no modeled rule reads it', regulated: false },
+  { slot: 'thermal', category: 'Sensing', blurb: 'LWIR core · frame rate and element count are read by 6A003', regulated: true },
+  { slot: 'camera', category: 'Sensing', blurb: 'daylight EO camera module · no modeled rule reads it', regulated: false },
+  { slot: 'lidar', category: 'Sensing', blurb: 'laser rangefinder for terrain following · no modeled rule reads it', regulated: false },
+  { slot: 'airspeed', category: 'Sensing', blurb: 'digital pitot for airspeed hold · no modeled rule reads it', regulated: false },
+  { slot: 'imu', category: 'Navigation and control', blurb: 'inertial unit · bias stability and ARW are read by 7A002 and USML XII', regulated: true },
+  { slot: 'gnss', category: 'Navigation and control', blurb: 'GNSS receiver · velocity limit and anti-jam features are read by 7A105', regulated: true },
+  { slot: 'fc', category: 'Navigation and control', blurb: 'flight-control MCU · temperature range and cryptography are read by 3A001 and 5A002', regulated: true },
+  { slot: 'servo', category: 'Navigation and control', blurb: 'control-surface actuator · no modeled rule reads it', regulated: false },
+  { slot: 'companion', category: 'Navigation and control', blurb: 'onboard computer for perception and mission logic · no modeled rule reads it', regulated: false },
+  { slot: 'datalink', category: 'Communications', blurb: 'IP radio · key length and mass-market status are read by 5A002', regulated: true },
+  { slot: 'antenna', category: 'Communications', blurb: 'directional telemetry antenna · no modeled rule reads it', regulated: false },
+  { slot: 'transponder', category: 'Communications', blurb: 'ADS-B out for airspace visibility · no modeled rule reads it', regulated: false },
+  { slot: 'pod', category: 'Payload and recovery', blurb: 'stabilised sensor carrier on the nose rail', regulated: false },
+  { slot: 'parachute', category: 'Payload and recovery', blurb: 'ballistic recovery system for BVLOS operations · no modeled rule reads it', regulated: false },
+];
+export const COMPONENT_CATEGORIES: ComponentCategory[] = ['Power and propulsion', 'Sensing', 'Navigation and control', 'Communications', 'Payload and recovery'];
 
 export const CATALOG: Record<PartId, Part> = {
   p45b: { slot: 'battery', name: 'Battery pack · 1,000 Wh', mpn: 'INR21700-P45B ×24', vendor: 'Molicel', origin: 'TW', real: true, stock: 'in stock · 2 wk', attrs: { pack_wh: 1000, wh_kg: 260 }, cmp: { function: 'energy storage · 6S pack', performance: '1,000 Wh · 260 Wh/kg', form: '21700 Li-ion · 3.8 kg', fit: 'XT90 · 6S balance lead' }, value_usd: 288 },
@@ -84,6 +131,17 @@ export const CATALOG: Record<PartId, Part> = {
   pmddl: { slot: 'datalink', name: 'Datalink radio · 2.4 GHz, AES-256 mass-market', mpn: 'pMDDL2450', vendor: 'Microhard', origin: 'CA', real: true, stock: 'in stock · 2 wk', attrs: { crypto_bits: 256 }, cmp: { function: 'IP datalink', performance: '2.4 GHz · 25 Mbps · AES-256', form: '33×49 mm module', fit: 'Ethernet + coax' }, value_usd: 420 },
   aescustom: { slot: 'datalink', name: 'Datalink radio · custom cryptography', mpn: 'AES-CUSTOM', vendor: 'synthetic vendor', origin: '·', real: false, stock: 'fixture', attrs: { crypto_bits: 256 }, cmp: { function: 'IP datalink', performance: 'proprietary key management · AES-256 · not mass-market', form: '40×60 mm module', fit: 'Ethernet + coax' }, value_usd: 1900 },
   podeo: { slot: 'pod', name: 'Sensor pod · EO gimbal', mpn: 'POD-EO-1', vendor: 'in-house', origin: 'US', real: true, stock: 'built to order · 3 wk', attrs: {}, cmp: { function: 'stabilised sensor carrier', performance: '2-axis · 0.3 kg payload', form: '120 mm sphere · 0.6 kg', fit: 'nose rail' }, value_usd: 1500 },
+  // library presets: one default model per added component type
+  imx477: { slot: 'camera', name: 'EO camera · 12 MP · 4K30', mpn: 'IMX477 module', vendor: 'Sony', origin: 'JP', real: true, stock: 'in stock · 1 wk', attrs: {}, cmp: { function: 'daylight imaging', performance: '12.3 MP · 4K at 30 fps', form: '38×38 mm board · 15 g', fit: 'MIPI CSI-2' }, value_usd: 60 },
+  lw20: { slot: 'lidar', name: 'LiDAR rangefinder · 100 m', mpn: 'LW20/C', vendor: 'LightWare', origin: 'ZA', real: true, stock: 'in stock · 2 wk', attrs: {}, cmp: { function: 'laser altimetry', performance: '100 m · 388 Hz', form: '30×20×43 mm · 20 g', fit: 'I2C or serial' }, value_usd: 300 },
+  alpha80: { slot: 'esc', name: 'Motor controller · 80 A · 12S', mpn: 'Alpha 80A HV', vendor: 'T-Motor', origin: 'CN', real: true, stock: 'in stock · 2 wk', attrs: {}, cmp: { function: 'brushless speed control', performance: '80 A continuous · 6S to 12S', form: '77×47×19 mm · 110 g', fit: 'PWM · XT90' }, value_usd: 130 },
+  at7215: { slot: 'motor', name: 'Propulsion motor · 3,600 W', mpn: 'AT7215 KV150', vendor: 'T-Motor', origin: 'CN', real: true, stock: 'in stock · 3 wk', attrs: {}, cmp: { function: 'fixed-wing propulsion', performance: '3,600 W · 150 KV', form: '72 mm outrunner · 400 g', fit: 'M4 cross mount' }, value_usd: 260 },
+  hv6120: { slot: 'servo', name: 'Control-surface servo · 5.4 kg·cm · slim wing', mpn: 'HV6120', vendor: 'MKS Servos', origin: 'TW', real: true, stock: 'in stock · 1 wk', attrs: {}, cmp: { function: 'control-surface actuation', performance: '5.4 kg·cm · 0.08 s/60° · HV brushless', form: '23 × 8 × 26.5 mm slim case · 11 g', fit: 'PWM · 3-pin' }, value_usd: 75 },
+  ms4525: { slot: 'airspeed', name: 'Airspeed sensor · digital pitot', mpn: 'MS4525DO', vendor: 'TE Connectivity', origin: 'US', real: true, stock: 'in stock · 1 wk', attrs: {}, cmp: { function: 'differential pressure', performance: '±1 psi · 14-bit', form: 'sensor + pitot tube · 12 g', fit: 'I2C' }, value_usd: 45 },
+  ping200: { slot: 'transponder', name: 'ADS-B transponder · 20 W · Mode S', mpn: 'ping200X', vendor: 'uAvionix', origin: 'US', real: true, stock: 'in stock · 3 wk', attrs: {}, cmp: { function: 'ADS-B out · Mode S', performance: '20 W · TSO-C112e', form: '47×36×11 mm · 50 g', fit: 'serial · SMA' }, value_usd: 2000 },
+  orinnano: { slot: 'companion', name: 'Companion computer · 40 TOPS', mpn: 'Jetson Orin Nano 8GB', vendor: 'NVIDIA', origin: 'CN', real: true, stock: 'in stock · 2 wk', attrs: {}, cmp: { function: 'onboard compute', performance: '40 TOPS · 8 GB', form: '70×45 mm module on carrier · 140 g', fit: 'Ethernet · USB · CSI' }, value_usd: 250 },
+  hg2409p: { slot: 'antenna', name: 'Telemetry antenna · 2.4 GHz · 9 dBi flat patch', mpn: 'HG2409P', vendor: 'L-com', origin: 'US', real: true, stock: 'in stock · 1 wk', attrs: {}, cmp: { function: 'directional telemetry', performance: '9 dBi · 2.4 GHz · 60° beam', form: '114 × 114 × 32 mm flat panel · 0.2 kg', fit: 'N-female · SMA pigtail' }, value_usd: 55 },
+  ifc60: { slot: 'parachute', name: 'Recovery parachute · 8 kg', mpn: 'IFC-60-S', vendor: 'Fruity Chutes', origin: 'US', real: true, stock: 'built to order · 4 wk', attrs: {}, cmp: { function: 'ballistic recovery', performance: '8 kg at 4.5 m/s', form: '60 in canopy · 300 g', fit: 'servo release' }, value_usd: 480 },
 };
 
 export const PART_IDS = Object.keys(CATALOG) as PartId[];
@@ -97,6 +155,7 @@ export const PALETTE: Record<Slot, PartId[]> = {
   gnss: ['crpa', 'mcode', 'neom9n'],
   datalink: ['aescustom', 'pmddl'],
   pod: ['podeo'],
+  camera: ['imx477'], lidar: ['lw20'], esc: ['alpha80'], motor: ['at7215'], servo: ['hv6120'], airspeed: ['ms4525'], transponder: ['ping200'], companion: ['orinnano'], antenna: ['hg2409p'], parachute: ['ifc60'],
 };
 
 /** Editable regulated fields per slot, with the valid input range the spec panel enforces. */
@@ -136,12 +195,16 @@ export const FIELDS: Record<Slot, FieldSpec[]> = {
     { key: 'crypto_bits', label: 'symmetric key length', unit: 'bits', min: 0, max: 512, dp: 0, threshold: '> 56 bits and not mass-market (5A002.a)' },
   ],
   pod: [],
+  camera: [], lidar: [], esc: [], motor: [], servo: [], airspeed: [], transponder: [], companion: [], antenna: [], parachute: [],
 };
 /** IMU accelerometer field (row 7) lives beside the gyro fields. */
 FIELDS.imu.push({ key: 'accel_bias', label: 'accelerometer bias stability · per year', unit: 'µg', min: 1, max: 10000, dp: 0, nullable: true, threshold: '< 130 µg (7A001.a.1.a) · MT < 1250 µg (7A101.a) · ITAR < 10 µg (XII(e)(11))' });
 /** Boolean features the spec shows as declared checkboxes on the part. */
 export interface BoolFieldSpec { key: 'gnss_adaptive' | 'gnss_antijam' | 'gnss_pps'; label: string }
-export const BOOL_FIELDS: Record<Slot, BoolFieldSpec[]> = { battery: [], thermal: [], imu: [], fc: [], gnss: [{ key: 'gnss_adaptive', label: 'adaptive (controlled reception pattern) antenna' }, { key: 'gnss_antijam', label: 'anti-jam null steering' }, { key: 'gnss_pps', label: 'PPS / M-code decryption' }], datalink: [], pod: [] };
+export const BOOL_FIELDS: Record<Slot, BoolFieldSpec[]> = {
+  battery: [], thermal: [], imu: [], fc: [], gnss: [{ key: 'gnss_adaptive', label: 'adaptive (controlled reception pattern) antenna' }, { key: 'gnss_antijam', label: 'anti-jam null steering' }, { key: 'gnss_pps', label: 'PPS / M-code decryption' }], datalink: [], pod: [],
+  camera: [], lidar: [], esc: [], motor: [], servo: [], airspeed: [], transponder: [], companion: [], antenna: [], parachute: [],
+};
 export const CRYPTO_OPTIONS = ['none', 'AES-256 · declared mass-market', 'AES-256 · not mass-market'];
 
 /** Default placement on the plate (metres, plate origin). Thermal core rides the far end of the span. */
@@ -153,11 +216,25 @@ export const DEFAULT_POS: Record<Slot, (span: number) => { x: number; y: number 
   gnss: () => ({ x: 1.9, y: 0.2 }),
   datalink: () => ({ x: 2.3, y: 0.78 }),
   pod: () => ({ x: 0.4, y: 0.82 }),
+  camera: (span) => ({ x: span - 0.95, y: 0.85 }),
+  lidar: (span) => ({ x: span - 1.0, y: 0.2 }),
+  esc: () => ({ x: 0.9, y: 0.25 }),
+  motor: () => ({ x: 0.2, y: 0.5 }),
+  servo: (span) => ({ x: span - 0.4, y: 1.0 }),
+  airspeed: (span) => ({ x: span - 1.3, y: 0.95 }),
+  transponder: () => ({ x: 2.0, y: 0.95 }),
+  companion: () => ({ x: 1.05, y: 0.62 }),
+  antenna: () => ({ x: 2.55, y: 0.2 }),
+  parachute: () => ({ x: 1.3, y: 0.95 }),
 };
 
-export const BASELINE_PARTS: Record<Slot, PartId | null> = { battery: 'p45b', thermal: 'lepton', imu: 'icm', fc: 'h743', gnss: 'neom9n', datalink: 'pmddl', pod: 'podeo' };
+const EXTRA_NULL = { camera: null, lidar: null, esc: null, motor: null, servo: null, airspeed: null, transponder: null, companion: null, antenna: null, parachute: null } as const;
+export const BASELINE_PARTS: Record<Slot, PartId | null> = { battery: 'p45b', thermal: 'lepton', imu: 'icm', fc: 'h743', gnss: 'neom9n', datalink: 'pmddl', pod: 'podeo', ...EXTRA_NULL };
 /** The model placed when a generic component is dragged in from the palette. */
-export const DEFAULT_PART: Record<Slot, PartId> = { battery: 'p45b', thermal: 'lepton', imu: 'icm', fc: 'h743', gnss: 'neom9n', datalink: 'pmddl', pod: 'podeo' };
+export const DEFAULT_PART: Record<Slot, PartId> = {
+  battery: 'p45b', thermal: 'lepton', imu: 'icm', fc: 'h743', gnss: 'neom9n', datalink: 'pmddl', pod: 'podeo',
+  camera: 'imx477', lidar: 'lw20', esc: 'alpha80', motor: 'at7215', servo: 'hv6120', airspeed: 'ms4525', transponder: 'ping200', companion: 'orinnano', antenna: 'hg2409p', parachute: 'ifc60',
+};
 
 export const AIRFRAME = { name: 'Kestrel airframe', mpn: 'KSTRL-AF-01', vendor: 'in-house', origin: 'US', real: true as const };
 
@@ -263,7 +340,8 @@ export const PLATE_W = 1.2;
 export const PLATE_T = 0.08;
 
 export type Dims = Record<Node, number>;
-export const DIMS0: Dims = { battery: 0.35, imu: 0.1, fc: 0.03, thermal: 0.3, airframe: 0.8, gnss: 0.06, datalink: 0.12, pod: 0.3 };
+export const EXTRA_DIMS = { camera: 0.12, lidar: 0.14, esc: 0.06, motor: 0.25, servo: 0.12, airspeed: 0.06, transponder: 0.05, companion: 0.08, antenna: 0.04, parachute: 0.22 } as const;
+export const DIMS0: Dims = { battery: 0.35, imu: 0.1, fc: 0.03, thermal: 0.3, airframe: 0.8, gnss: 0.06, datalink: 0.12, pod: 0.3, ...EXTRA_DIMS };
 
 export const SPAN_MIN = 1.5;
 export const SPAN_MAX = 6.0;
