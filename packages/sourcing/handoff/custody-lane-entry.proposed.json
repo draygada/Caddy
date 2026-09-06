@@ -1,6 +1,6 @@
 {
   "sourcing": {
-    "branch": "lane/sourcing-rulings",
+    "branch": "lane/sourcing-live-cache",
     "worktree": "/Users/charliehaywood/Downloads/CADdyDaddy-sourcing",
     "worktree_label": "forge/sourcing",
     "write_allowlist": [
