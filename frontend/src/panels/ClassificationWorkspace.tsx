@@ -33,6 +33,12 @@ const card: CSSProperties = { border: '1px solid var(--line, #d8dde3)', borderRa
 const mono: CSSProperties = { fontFamily: 'Geist Mono, ui-monospace, monospace' };
 const input: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '9px 10px', border: '1px solid var(--line, #bcc4cc)', borderRadius: 6, background: 'var(--surface, #fff)', color: 'inherit', font: 'inherit' };
 
+export type ClassificationRunMode = 'scripted' | 'live-claude';
+
+export function classificationRunEnabled(mode: ClassificationRunMode, running: boolean, accessToken: string, publicSyntheticConfirmed: boolean): boolean {
+  return !running && (mode === 'scripted' || (accessToken.trim().length > 0 && publicSyntheticConfirmed));
+}
+
 function label(value: string): string {
   return value.replaceAll('_', ' ').toLowerCase();
 }
@@ -44,6 +50,9 @@ export function ClassificationWorkspace() {
   const [liveResult, setLiveResult] = useState<ClassificationDetermination | null>(null);
   const [liveState, setLiveState] = useState<'idle' | 'running' | 'valid' | 'error'>('idle');
   const [liveError, setLiveError] = useState<{ code: string; message: string } | null>(null);
+  const [runMode, setRunMode] = useState<ClassificationRunMode>('scripted');
+  const [liveAccessToken, setLiveAccessToken] = useState('');
+  const [publicSyntheticConfirmed, setPublicSyntheticConfirmed] = useState(false);
   const requestSequence = useRef(0);
 
   const [scenarioId, setScenarioId] = useState(WORKSPACE_SCENARIOS[0].id);
@@ -68,7 +77,12 @@ export function ClassificationWorkspace() {
     }
 
     try {
-      const result = await evaluateClassification({ description, facts, item_kind: itemKind });
+      const result = await evaluateClassification(
+        { description, facts, item_kind: itemKind },
+        runMode === 'live-claude'
+          ? { liveAuthorization: { accessToken: liveAccessToken, publicSyntheticDataConfirmed: publicSyntheticConfirmed } }
+          : undefined,
+      );
       if (sequence !== requestSequence.current) return;
       setLiveResult(result);
       setLiveState('valid');
@@ -122,9 +136,34 @@ export function ClassificationWorkspace() {
                 </select>
               </label>
             </div>
+            <fieldset style={{ margin: 0, padding: 12, border: '1px solid var(--line, #d8dde3)', borderRadius: 7, display: 'grid', gap: 10 }}>
+              <legend style={{ padding: '0 5px', fontSize: 11, fontWeight: 850 }}>Connected execution mode</legend>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'start', fontSize: 11 }}>
+                <input type="radio" name="classification-run-mode" value="scripted" checked={runMode === 'scripted'} onChange={() => setRunMode('scripted')} />
+                <span><b>ScriptedModel</b> · deterministic, zero-token path; selected by default and always available.</span>
+              </label>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'start', fontSize: 11 }}>
+                <input type="radio" name="classification-run-mode" value="live-claude" checked={runMode === 'live-claude'} onChange={() => setRunMode('live-claude')} />
+                <span><b>Live Claude</b> · sends the description and facts to the connected service for onward processing by Anthropic.</span>
+              </label>
+              {runMode === 'live-claude' && <div aria-label="Live Claude authorization" style={{ padding: 12, border: '1px solid #d49a45', borderRadius: 6, background: '#fff8e9', display: 'grid', gap: 10 }}>
+                <div role="note" style={{ color: '#653c00', fontSize: 11, lineHeight: 1.5 }}>
+                  <b>External data transfer.</b> This request sends the product description and facts to Anthropic. It is not approved for CUI, export-controlled technical data, customer data, secrets, or other non-public information. Use public or synthetic demo data only.
+                </div>
+                <label style={{ display: 'grid', gap: 5, fontSize: 11, fontWeight: 750 }}>
+                  Short-lived demo access token
+                  <input aria-label="Live Claude demo access token" type="password" autoComplete="off" spellCheck={false} value={liveAccessToken} onChange={(event) => setLiveAccessToken(event.target.value)} style={input} />
+                  <span style={{ color: 'var(--muted, #66717c)', fontSize: 9, fontWeight: 500 }}>Held in this React session only. Do not enter a raw Anthropic API key; the service secret belongs server-side.</span>
+                </label>
+                <label style={{ display: 'flex', gap: 8, alignItems: 'start', fontSize: 11, fontWeight: 750 }}>
+                  <input aria-label="Confirm public or synthetic data only" type="checkbox" checked={publicSyntheticConfirmed} onChange={(event) => setPublicSyntheticConfirmed(event.target.checked)} />
+                  <span>I affirm that this description and facts contain public or synthetic data only and no CUI, export-controlled technical data, customer data, or secrets.</span>
+                </label>
+              </div>}
+            </fieldset>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <button type="button" onClick={runLive} disabled={liveState === 'running'} style={{ border: 0, borderRadius: 6, padding: '10px 14px', background: '#176b45', color: '#fff', fontWeight: 850, cursor: liveState === 'running' ? 'wait' : 'pointer', opacity: liveState === 'running' ? .65 : 1 }}>
-                {liveState === 'running' ? 'Running Charlie engine…' : 'Run Charlie engine'}
+              <button type="button" onClick={runLive} disabled={!classificationRunEnabled(runMode, liveState === 'running', liveAccessToken, publicSyntheticConfirmed)} style={{ border: 0, borderRadius: 6, padding: '10px 14px', background: '#176b45', color: '#fff', fontWeight: 850, cursor: classificationRunEnabled(runMode, liveState === 'running', liveAccessToken, publicSyntheticConfirmed) ? 'pointer' : 'not-allowed', opacity: classificationRunEnabled(runMode, liveState === 'running', liveAccessToken, publicSyntheticConfirmed) ? 1 : .55 }}>
+                {liveState === 'running' ? 'Running Charlie engine…' : runMode === 'live-claude' ? 'Run with live Claude' : 'Run deterministic ScriptedModel'}
               </button>
               <span style={{ fontSize: 11, color: 'var(--muted, #66717c)' }}>No synthetic fallback. Failed and stale requests never replace the last contract-valid result.</span>
             </div>
@@ -223,8 +262,9 @@ function LiveDetermination({ result }: { result: ClassificationDetermination }) 
     <section aria-labelledby="provenance-title" style={{ ...card, padding: 14 }}>
       <h4 id="provenance-title" style={{ margin: 0, fontSize: 14 }}>Execution provenance</h4>
       <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 8 }}>
-        <Metric name="Model" value={result.provenance.model || 'scripted / not reported'} /><Metric name="Calls" value={`${result.provenance.budget.calls_used} / ${result.provenance.budget.calls_cap}`} /><Metric name="Cost · micro-USD" value={`${result.provenance.budget.cost_used_microusd} / ${result.provenance.budget.cost_cap_microusd}`} /><Metric name="Dropped candidates" value={String(result.provenance.dropped_candidates.length)} />
+        <Metric name="Service-reported provider / model" value={result.provenance.model || 'not reported by connected response'} /><Metric name="Calls" value={`${result.provenance.budget.calls_used} / ${result.provenance.budget.calls_cap}`} /><Metric name="Cost · micro-USD" value={`${result.provenance.budget.cost_used_microusd} / ${result.provenance.budget.cost_cap_microusd}`} /><Metric name="Dropped candidates" value={String(result.provenance.dropped_candidates.length)} />
       </div>
+      <div role="note" style={{ marginTop: 8, color: 'var(--muted, #66717c)', fontSize: 9 }}>Provider/model identity is reported by the connected response; the client does not infer or independently certify it. Output remains review-only and is not a legal determination.</div>
       <details style={{ marginTop: 10 }} open><summary style={{ cursor: 'pointer', fontSize: 11, fontWeight: 850 }}>Model calls · {result.provenance.calls.length}</summary><div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', marginTop: 7, fontSize: 9 }}><thead><tr><th>Stage</th><th>Provision</th><th>Prompt hash</th><th>Response hash</th><th>µUSD</th></tr></thead><tbody>{result.provenance.calls.map((call, index) => <tr key={`${call.prompt_sha256}:${index}`}><td>{call.stage}</td><td>{call.provision ?? 'proposal'}</td><td style={mono}>{call.prompt_sha256.slice(0, 16)}…</td><td style={mono}>{call.response_sha256 ? `${call.response_sha256.slice(0, 16)}…` : 'none'}</td><td>{call.cost_microusd}</td></tr>)}</tbody></table>
       </div></details>

@@ -59,6 +59,44 @@ describe('classification client', () => {
     expect(result.determination.jurisdiction).toBe('EAR99');
     expect(result.candidates[0].elements[0].citation).toMatchObject({ start: 3, end: 14, unit_sha256: H });
     expect(result.provenance).toMatchObject({ model: 'scripted', budget: { calls_used: 1 }, dropped_candidates: [{ provision: 'invalid' }] });
+    const scriptedInit = (fetchImpl.mock.calls[0] as unknown as [unknown, RequestInit])[1];
+    expect(scriptedInit.headers).toEqual({ 'content-type': 'application/json' });
+  });
+
+  it('sends the live token header only with explicit authorization and confirmation', async () => {
+    const token = 'demo-live-token-never-render';
+    const defaultFetch = vi.fn(async () => jsonResponse(validDetermination()));
+    await evaluateClassification({ description: 'public fixture', facts: {}, item_kind: 'commodity' }, { fetchImpl: defaultFetch });
+    const defaultInit = (defaultFetch.mock.calls[0] as unknown as [unknown, RequestInit])[1];
+    expect(defaultInit.headers).not.toHaveProperty('X-CADdyDaddy-Live-Token');
+
+    const liveFetch = vi.fn(async () => jsonResponse(validDetermination()));
+    await evaluateClassification({ description: 'public fixture', facts: {}, item_kind: 'commodity' }, {
+      fetchImpl: liveFetch,
+      liveAuthorization: { accessToken: token, publicSyntheticDataConfirmed: true },
+    });
+    const liveInit = (liveFetch.mock.calls[0] as unknown as [unknown, RequestInit])[1];
+    expect(liveInit.headers).toMatchObject({
+      'content-type': 'application/json',
+      'X-CADdyDaddy-Live-Token': token,
+    });
+    expect(String(liveInit.body)).not.toContain(token);
+  });
+
+  it('blocks incomplete live authorization and rejects secret-bearing output', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse(validDetermination()));
+    await expect(evaluateClassification({ description: 'public fixture', facts: {}, item_kind: 'commodity' }, {
+      fetchImpl,
+      liveAuthorization: { accessToken: 'demo-secret', publicSyntheticDataConfirmed: false },
+    })).rejects.toMatchObject({ code: 'REQUEST_INVALID' });
+    expect(fetchImpl).not.toHaveBeenCalled();
+
+    const echoed = validDetermination();
+    echoed.provenance.model = 'demo-secret';
+    await expect(evaluateClassification({ description: 'public fixture', facts: {}, item_kind: 'commodity' }, {
+      fetchImpl: vi.fn(async () => jsonResponse(echoed)),
+      liveAuthorization: { accessToken: 'demo-secret', publicSyntheticDataConfirmed: true },
+    })).rejects.toMatchObject({ code: 'SCHEMA_INVALID', message: expect.not.stringContaining('demo-secret') });
   });
 
   it('rejects a wrong response identity before it can become live evidence', () => {

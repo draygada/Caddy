@@ -8,6 +8,11 @@ export interface ClassificationRequest {
   item_kind: ClassificationItemKind;
 }
 
+export interface LiveClassificationAuthorization {
+  accessToken: string;
+  publicSyntheticDataConfirmed: boolean;
+}
+
 export interface ClassificationCitation {
   unit_key: string;
   unit_sha256: string;
@@ -272,16 +277,23 @@ function failureDetail(payload: unknown): { code: string; message: string } {
   };
 }
 
-export async function evaluateClassification(request: ClassificationRequest, options: { fetchImpl?: typeof fetch; signal?: AbortSignal } = {}): Promise<ClassificationDetermination> {
+export async function evaluateClassification(request: ClassificationRequest, options: { fetchImpl?: typeof fetch; signal?: AbortSignal; liveAuthorization?: LiveClassificationAuthorization } = {}): Promise<ClassificationDetermination> {
   const description = request.description.trim();
   if (!description) throw new ClassificationClientError('REQUEST_INVALID', 'Enter a product or part description before running Charlie engine.');
   if (!request.facts || typeof request.facts !== 'object' || Array.isArray(request.facts)) throw new ClassificationClientError('REQUEST_INVALID', 'Facts must be a JSON object.');
   if (!ITEM_KINDS.includes(request.item_kind)) throw new ClassificationClientError('REQUEST_INVALID', 'Item kind must be commodity, software, or technology.');
 
+  const liveToken = options.liveAuthorization?.accessToken.trim() ?? '';
+  if (options.liveAuthorization && (!liveToken || !options.liveAuthorization.publicSyntheticDataConfirmed)) {
+    throw new ClassificationClientError('REQUEST_INVALID', 'Live Claude requires a demo access token and confirmation that the submitted data is public or synthetic.');
+  }
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (liveToken) headers['X-CADdyDaddy-Live-Token'] = liveToken;
+
   let response: Response;
   try {
     response = await (options.fetchImpl ?? fetch)(CLASSIFICATION_ENDPOINT, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
+      method: 'POST', headers,
       body: JSON.stringify({
         product_or_part: description,
         facts: request.facts,
@@ -291,7 +303,8 @@ export async function evaluateClassification(request: ClassificationRequest, opt
       signal: options.signal,
     });
   } catch (error) {
-    throw new ClassificationClientError('BACKEND_UNAVAILABLE', `Charlie engine is unavailable: ${error instanceof Error ? error.message : 'network request failed'}`);
+    const detail = liveToken ? 'network request failed' : error instanceof Error ? error.message : 'network request failed';
+    throw new ClassificationClientError('BACKEND_UNAVAILABLE', `Charlie engine is unavailable: ${detail}`);
   }
 
   let payload: unknown = null;
@@ -299,6 +312,9 @@ export async function evaluateClassification(request: ClassificationRequest, opt
     payload = await response.json();
   } catch {
     if (response.ok) throw new ClassificationClientError('SCHEMA_INVALID', 'Charlie engine returned a non-JSON response. The last valid result was retained.');
+  }
+  if (liveToken && JSON.stringify(payload).includes(liveToken)) {
+    throw new ClassificationClientError('SCHEMA_INVALID', 'Charlie engine returned unsafe secret-bearing output. The response was rejected and the last valid result was retained.');
   }
   if (!response.ok) {
     const detail = failureDetail(payload);
