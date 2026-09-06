@@ -198,7 +198,7 @@ function ServiceSourcing() {
               <div className="grid gap-3">
                 <div className="border border-line2 rounded-r p-2 grid gap-1 text-[12px]">
                   <div className="flex flex-wrap justify-between gap-2"><b>{receipt.state} · simulated</b><span className="font-mono break-all">{receipt.receipt_id}</span></div>
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2"><span>execution <b>{receipt.execution_mode}</b></span><span>external effect <b>{receipt.external_effect}</b></span><span>recorded send effect <b>{receipt.send_effect}</b></span><span>retry <b>{receipt.retry_disposition}</b></span></div>
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2"><span>execution <b>{receipt.execution_mode}</b></span><span>external effect <b>{receipt.external_effect}</b></span><span>simulated outcome record (no external send) <b>{receipt.send_effect}</b></span><span>retry <b>{receipt.retry_disposition}</b></span></div>
                   <div className="font-mono break-all text-muted">receipt sha256 {receipt.receipt_sha256} · detail {receipt.detail_code}</div>
                 </div>
                 <div className="flex flex-wrap items-end gap-2">
