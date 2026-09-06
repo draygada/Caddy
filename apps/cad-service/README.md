@@ -122,3 +122,12 @@ copies with any distributed artifact under the repository's approved source-acce
 - Native CAD files, native assemblies, drawings, CAM/toolpaths, G-code, and manufacturing
   release outputs fail explicitly as unsupported.
 - This service is not connected to the shipped frontend in this lane.
+
+## Lane J2 redistribution evidence
+
+The pinned OCP wheel is unchanged. Its standalone metadata is not a complete
+notice/source bundle, so deployment packaging must also include licenses/**.
+Run scripts/verify_redistribution_evidence.py against the Linux site-packages
+tree. A passing result closes objective artifact mapping and source-availability
+HOLDs only; it does not make a legal determination. Technical deployment
+authority is already granted, while this Lane J2 task itself prohibits deploy.

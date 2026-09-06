@@ -122,3 +122,13 @@ Redistribution remains HOLD until all items below are evidenced:
 
 PASS may be recorded only when every HOLD above is replaced by an evidence pointer and the
 repository license authority records approval. Deployment authority is a separate gate.
+
+## Lane J2 objective evidence supplement (2026-09-05)
+
+The exact per-ELF component and notice index is
+licenses/native-runtime-manifest.v1.json; corresponding-source coordinates and
+verified hashes are in licenses/native-source-artifacts.v1.json. Verbatim
+Ubuntu, conda, OCP, OCCT, and pydantic-core license evidence is under licenses/.
+These records supersede the earlier factual HOLD for unidentified native
+components or missing source coordinates. They do not make a legal
+determination or record repository-owner acceptance.

@@ -62,3 +62,13 @@ Replace the adapter when an admitted geometry service exposes durable revision s
 persistent topological naming, a production sketch/mate solver, and verified native
 assembly/drawing/manufacturing exchange, or when packaging/relink obligations cannot be met for
 the current wheel.
+
+## Lane J2 native evidence update
+
+The exact unmodified wheel is paired with a 70-ELF/22-component manifest,
+verbatim package notices, the original auditwheel SBOM, and hash-verified
+corresponding-source coordinates under apps/cad-service/licenses/. This closes
+the factual unidentified-component and missing-source-artifact HOLDs when the
+service packages that directory and its verifier passes. Repository-owner
+acceptance remains an explicit human governance gate, not an ungranted
+technical deployment authority claim or a legal conclusion.

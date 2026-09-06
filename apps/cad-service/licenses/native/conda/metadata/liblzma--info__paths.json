@@ -1,0 +1,17 @@
+{
+  "paths": [
+    {
+      "_path": "lib/liblzma.so.5",
+      "path_type": "hardlink",
+      "sha256": "01783e82ad99579760a8f6196c5843529b890abd8e2c294cb0d464260536911b",
+      "size_in_bytes": 222712
+    },
+    {
+      "_path": "lib/liblzma.so.5.8.2",
+      "path_type": "hardlink",
+      "sha256": "01783e82ad99579760a8f6196c5843529b890abd8e2c294cb0d464260536911b",
+      "size_in_bytes": 222712
+    }
+  ],
+  "paths_version": 1
+}
