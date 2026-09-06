@@ -560,14 +560,16 @@ export class OrderClient {
     } catch {
       throw new OrderServiceError('ORDER_RESPONSE_INVALID', 'The order service returned non-JSON data.', response.status);
     }
-    validateEnvelope(value, this.candidate);
     if (!response.ok) {
+      // the status comes first: a proxy or adapter rejection carries its own diagnostic and is not an order envelope
+      const rejected = value && typeof value === 'object' ? (value as { diagnostic?: { code?: unknown; message?: unknown } }) : {};
       throw new OrderServiceError(
-        value.diagnostic?.code ?? 'ORDER_SERVICE_REJECTED',
-        value.diagnostic?.message ?? 'The order service rejected the operation.',
+        typeof rejected.diagnostic?.code === 'string' && rejected.diagnostic.code ? rejected.diagnostic.code : 'ORDER_SERVICE_REJECTED',
+        typeof rejected.diagnostic?.message === 'string' && rejected.diagnostic.message ? rejected.diagnostic.message : 'The order service rejected the operation.',
         response.status,
       );
     }
+    validateEnvelope(value, this.candidate);
     validate(value);
     if (value.package_envelope) this.packageEnvelope = await validatePackageEnvelope(value.package_envelope, this.candidate);
     if (value.state_token) {

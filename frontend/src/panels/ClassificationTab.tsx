@@ -4,7 +4,7 @@ import { useStore, intakeIncomplete } from '../store';
 import { CATALOG, CORE_SLOTS, GENERIC_NAME, SLOTS, type Node, type Slot } from '../lib/catalog';
 import { AF_THUMB, THUMBS, type ThumbFace } from '../lib/geometry';
 import type { Outcome, Rule } from '../lib/rules';
-import { attentionOf, destCellsOf, overallOf, slotStatus } from '../lib/viewmodel';
+import { destCellsOf, overallOf, slotStatus } from '../lib/viewmodel';
 
 type Level = 0 | 1 | 2 | 3 | 4;
 const LEVEL_COLOR: Record<Level, string> = { 0: 'var(--m2)', 1: 'var(--amber)', 2: 'var(--amber)', 3: 'var(--red)', 4: 'var(--black)' };
@@ -168,37 +168,23 @@ export function ClassificationTab({ o }: { o: Outcome }) {
       {reasonFor && (() => {
         const r = rows.find((x) => x.node === reasonFor);
         if (!r) return null;
-        const st = slotStatus(o, s.unconfirmed, r.node);
         const cells = destCellsOf(o, r.node);
-        const attention = attentionOf(o, s.unconfirmed).filter((t) => t.target?.slot === r.node);
         const mtFixed = o.rules.some((x) => x.cols === 'MT');
         return (
           <>
             <div className="fixed inset-0 z-[29] bg-scrim" onMouseDown={() => setReasonFor(null)} />
-            <div role="dialog" aria-label={r.name + ' reasoning'} className="fixed z-[30] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(94vw,760px)] max-h-[85vh] panel flex flex-col">
+            <div role="dialog" aria-label={r.name + ' reasoning'} className="fixed z-[30] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(96vw,1100px)] max-h-[90vh] panel flex flex-col">
               <div className="panel-head">
-                <div className="panel-title">{r.name} <span className="sub">· {r.model} · why it reads</span></div>
+                <div className="panel-title text-[15px]">{r.name} <span className="sub">· {r.model}</span></div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[12px] font-semibold whitespace-nowrap" style={{ color: st.color }}>{st.word}</span>
                   <button onClick={() => setReasonFor(null)} className="btn btn-xs btn-icon" aria-label="Close" title="Close · Esc">×</button>
                 </div>
               </div>
-              <div className="overflow-auto min-h-0 p-4 grid gap-3 text-[13px]">
+              <div className="overflow-auto min-h-0 p-5 grid gap-4 text-[14px]">
                 <div className="flex items-baseline gap-3 flex-wrap">
                   <span className="status-word text-[16px]" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>
                   <span className="text-muted">{overall.sub}</span>
                 </div>
-                {attention.length > 0 && (
-                  <div className="grid gap-1">
-                    <div className="font-semibold">Needs attention</div>
-                    {attention.map((t, i) => (
-                      <div key={i} className="grid grid-cols-[auto_1fr] gap-2 items-start">
-                        <span className="font-mono font-bold px-[5px] py-px rounded-r whitespace-nowrap" style={{ color: t.color, background: t.bg }}>{t.glyph} {t.word}</span>
-                        <span>{t.text} <span className="text-muted">· {t.action}</span></span>
-                      </div>
-                    ))}
-                  </div>
-                )}
                 {r.rules.length === 0 && r.cannot.length === 0 && r.advisories.length === 0 && <div className="text-muted">{r.why}</div>}
                 {r.rules.map((rule) => (
                   <div key={rule.id} className="border border-line rounded-r p-3 grid gap-2 bg-surface">
@@ -220,11 +206,15 @@ export function ClassificationTab({ o }: { o: Outcome }) {
                 )}
                 <div className="grid gap-1 border-t border-line2 pt-3">
                   <div className="font-semibold">Destinations <span className="text-muted font-normal">· {r.name}{r.node === 'airframe' ? ' (product)' : ''}</span></div>
-                  <div className="grid grid-cols-5 gap-2">
-                    {cells.map((c) => <div key={c.code} className="min-w-0"><div className="font-mono text-[12px] text-muted">{c.code}</div><div className="font-mono font-bold inline-block px-1 rounded-r" style={{ color: c.color, background: c.bg }}>{c.word}</div><div className="text-[11px] text-muted leading-[1.3]">{c.para}</div></div>)}
-                  </div>
+                  {cells.every((c) => c.word === cells[0].word && c.para === cells[0].para) ? (
+                    <div className="flex items-baseline gap-2 flex-wrap"><span className="font-mono font-bold px-1 rounded-r" style={{ color: cells[0].color, background: cells[0].bg }}>{cells[0].word}</span><span>{cells.map((c) => c.code).join(' · ')}</span><span className="text-muted">· {cells[0].para}</span></div>
+                  ) : (
+                    <div className="grid grid-cols-5 gap-3">
+                      {cells.map((c) => <div key={c.code} className="min-w-0"><div className="font-mono text-[12px] text-muted">{c.code}</div><div className="font-mono font-bold inline-block px-1 rounded-r" style={{ color: c.color, background: c.bg }}>{c.word}</div><div className="text-[12px] text-muted leading-[1.3]">{c.para}</div></div>)}
+                    </div>
+                  )}
                   {mtFixed && <div className="font-semibold">MT fired; strip fixed at the strictest column set.</div>}
-                  <div className="text-amber font-semibold text-[12px]">Limited scan only · a no-match result is not NLR or export authorization. Parts 744 and 746 are not modeled.</div>
+                  <div className="text-[12px] text-muted">Limited scan · a no-match result is not NLR or export authorization · Parts 744 and 746 are not modeled.</div>
                 </div>
                 <div className="flex gap-2 border-t border-line2 pt-3"><button onClick={() => { setReasonFor(null); s.select(r.node); s.setWorkspace('design'); }} className="btn">Open in Design</button></div>
               </div>

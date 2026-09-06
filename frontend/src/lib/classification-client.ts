@@ -318,8 +318,11 @@ export async function evaluateClassification(request: ClassificationRequest, opt
   }
   if (!response.ok) {
     const detail = failureDetail(payload);
-    if ([403, 423, 451].includes(response.status) || /POLICY|BLOCK/i.test(detail.code)) {
+    if ([401, 403, 423, 451].includes(response.status) || /POLICY|BLOCK|DENIED/i.test(detail.code)) {
       throw new ClassificationClientError('POLICY_BLOCKED', detail.message || 'Charlie engine blocked this request under the active policy. No determination was produced.');
+    }
+    if (response.status === 429 || /BUDGET/i.test(detail.code)) {
+      throw new ClassificationClientError('POLICY_BLOCKED', detail.message || 'Charlie engine ran out of its call or cost budget before a determination.');
     }
     throw new ClassificationClientError('BACKEND_UNAVAILABLE', detail.message || `Charlie engine request failed with HTTP ${response.status}.`);
   }
