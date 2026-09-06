@@ -13,6 +13,8 @@ import type {
 } from './types';
 import { BrowserCadError, exportCadInBrowser, importCadInBrowser, recomputeCadInBrowser } from './browser-kernel';
 
+export type CadExecutionPreference = 'AUTO' | 'BROWSER_JSCAD_BOUNDED';
+
 export class CadApiError extends Error {
   code: 'CAD_API_UNAVAILABLE' | 'CAD_API_REJECTED' | 'CAD_RESPONSE_INVALID' | 'CAD_STALE';
   status: number | null;
@@ -98,7 +100,14 @@ async function postJson(path: string, payload: unknown, fetchImpl: typeof fetch)
   }
 }
 
-export async function recomputeCad(request: CadRecomputeRequest, fetchImpl: typeof fetch = fetch): Promise<CadRecomputeResponse> {
+export async function recomputeCad(
+  request: CadRecomputeRequest,
+  fetchImpl: typeof fetch = fetch,
+  executionPreference: CadExecutionPreference = 'AUTO',
+): Promise<CadRecomputeResponse> {
+  if (executionPreference === 'BROWSER_JSCAD_BOUNDED') {
+    return runBrowser(() => recomputeCadInBrowser(request));
+  }
   try {
     return parseCadRecomputeResponse(await postJson('/api/cad/recompute', request, fetchImpl));
   } catch (error) {

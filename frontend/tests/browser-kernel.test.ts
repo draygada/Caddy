@@ -101,4 +101,40 @@ describe('BROWSER_JSCAD_BOUNDED', () => {
     expect(connected).toHaveBeenCalledOnce();
     await expect(exportCad({ document: result.document, format: 'STEP', revisionId: result.revisionId }, unavailable)).rejects.toThrow(/owner approval/);
   });
+
+  it('keeps the accepted browser revision chain authoritative across sequential sketch and extrude edits', async () => {
+    vi.stubGlobal('window', {});
+    const serverMock = vi.fn(async () => {
+      if (serverMock.mock.calls.length === 1) return new Response('CAD service not configured', { status: 503 });
+      return new Response('competing server revision', { status: 409 });
+    });
+    const server = serverMock as unknown as typeof fetch;
+    const base = createCadDocument('Sequential browser workflow', 'document:sequential-browser');
+    const sketch = createSketchOperation(profile('sketch:sequential'), 'operation:sequential-sketch');
+    const sketchDraft = applyCadIntent(base, sketch);
+    const sketchResult = await recomputeCad({ document: sketchDraft, operation: sketch, expectedRevisionId: base.revisionId }, server);
+    const extrude = createFeatureOperation({
+      id: 'operation:sequential-extrude',
+      kind: 'feature.extrude',
+      name: 'Extrude sequential plate',
+      inputIds: ['sketch:sequential'],
+      outputBodyName: 'Sequential body',
+      parameters: { distance: 6 },
+    });
+    const extrudeDraft = applyCadIntent(sketchResult.document, extrude);
+    const extrudeResult = await recomputeCad(
+      { document: extrudeDraft, operation: extrude, expectedRevisionId: sketchResult.revisionId },
+      server,
+      sketchResult.kernel.engineMode === 'BROWSER_JSCAD_BOUNDED' ? 'BROWSER_JSCAD_BOUNDED' : 'AUTO',
+    );
+
+    expect(serverMock).toHaveBeenCalledOnce();
+    expect(extrudeResult.kernel.engineMode).toBe('BROWSER_JSCAD_BOUNDED');
+    expect(extrudeResult.document.operations.map((item) => item.id)).toEqual([
+      'operation:sequential-sketch',
+      'operation:sequential-extrude',
+    ]);
+    expect(extrudeResult.mesh.triangles.length).toBeGreaterThan(0);
+    expect(extrudeResult.geometry?.totalVolume).toBeCloseTo(1200, 4);
+  });
 });

@@ -83,10 +83,11 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   async function submitOperation(operation: CadOperation) {
     const requestId = cadId('request');
     const draft = applyCadIntent(state.document, operation);
+    const executionPreference = state.kernel?.engineMode === 'BROWSER_JSCAD_BOUNDED' ? 'BROWSER_JSCAD_BOUNDED' : 'AUTO';
     dispatch({ type: 'stage', operation, requestId });
     dispatch({ type: 'started', requestId });
     try {
-      const response = await recomputeCad({ document: draft, operation, expectedRevisionId: state.lastValidDocument.revisionId }, fetchImpl);
+      const response = await recomputeCad({ document: draft, operation, expectedRevisionId: state.lastValidDocument.revisionId }, fetchImpl, executionPreference);
       dispatch({ type: 'succeeded', requestId, response });
       setFormError(null);
     } catch (error) {
