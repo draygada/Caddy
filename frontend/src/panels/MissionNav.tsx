@@ -19,8 +19,8 @@ interface MissionNavProps {
 
 export function MissionNav({ active, onSelect }: MissionNavProps) {
   return (
-    <nav aria-label="Product workspaces" className="flex-none min-w-0 border-b border-line2 bg-surface">
-      <div className="flex items-stretch gap-1 overflow-x-auto px-2 py-[6px] [scrollbar-width:thin]">
+    <nav aria-label="Product workspaces" className="relative flex-none min-w-0 border-b border-line2 bg-surface">
+      <div className="flex items-stretch gap-1 overflow-x-auto py-[6px] pl-2 pr-10 sm:pr-2 [scrollbar-width:thin]">
         {WORKSPACES.map((workspace) => {
           const selected = active === workspace.id;
           return (
@@ -44,6 +44,7 @@ export function MissionNav({ active, onSelect }: MissionNavProps) {
           );
         })}
       </div>
+      <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-10 items-center justify-center border-l border-line2 bg-surface font-mono text-[9px] text-muted sm:hidden">MORE &gt;</span>
     </nav>
   );
 }

@@ -90,8 +90,8 @@ export function TripwireAtlasWorkspace() {
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-auto p-3 grid grid-cols-[220px_minmax(320px,0.95fr)_minmax(380px,1.25fr)] gap-3 max-[1100px]:grid-cols-[210px_minmax(0,1fr)] max-[760px]:grid-cols-1">
-        <nav aria-label="Scenario revisions" className="panel self-start max-[760px]:order-1">
+      <div className="flex-1 min-h-0 overflow-auto p-3 grid grid-cols-[220px_minmax(320px,0.95fr)_minmax(380px,1.25fr)] gap-3 max-[1100px]:grid-cols-[210px_minmax(0,1fr)] max-[760px]:block">
+        <nav aria-label="Scenario revisions" className="panel self-start max-[760px]:mb-3">
           <div className="panel-head"><div className="panel-title">Revision rail <span className="sub">5 fixtures</span></div></div>
           <div className="p-2 grid gap-1">
             {TRIPWIRE_ATLAS.scenarios.map((item) => (
@@ -119,7 +119,7 @@ export function TripwireAtlasWorkspace() {
           </div>
         </nav>
 
-        <main className="grid gap-3 content-start max-[760px]:order-2">
+        <main className="grid gap-3 content-start max-[760px]:mb-3">
           <div className="panel">
             <div className="panel-head"><div className="panel-title">{scenario.shortLabel} / {scenario.label}</div><span className="chip">REV {shortHash(scenario.designRevision)}</span></div>
             <div className="p-3 grid gap-3">

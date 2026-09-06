@@ -67,7 +67,6 @@ export function Sourcing({ o }: { o: Outcome }) {
   const n = r?.lines.length ?? 0;
   // start at the first part without a selection
   useEffect(() => { if (r && k == null && stage >= 4) { const i = r.lines.findIndex((l) => !r.selections[l.id]); setK(i < 0 ? n : i); } if (!r) { setK(null); setStage(-1); } if (r && stage === -1 && k == null) setStage(4); }, [r, k, n, stage]);
-  useEffect(() => { if (stage >= 0 && stage < 4) { const id = setTimeout(() => setStage(stage + 1), 550); return () => clearTimeout(id); } }, [stage]);
   useEffect(() => { setPick(null); setReasons({}); setErr(null); setTab('none'); setAdj(null); setRefDraft(''); }, [k]);
 
   const rail = r && (
@@ -96,7 +95,7 @@ export function Sourcing({ o }: { o: Outcome }) {
       { label: 'estimate landed cost', detail: 'declared code × origin × dated tariff table · ' + FIXTURES.tariff },
     ];
     const running = stage >= 0 && stage < 4;
-    const start = () => { setStage(0); s.openRound(shipTo, qty, mode, intake); };
+    const start = () => { s.openRound(shipTo, qty, mode, intake); setStage(4); };
     const counts = r ? { offers: Object.values(r.offers).flat().length, blocked: Object.values(r.offers).flat().filter((x) => x.status === 'review_blocked').length, review: Object.values(r.offers).flat().filter((x) => x.status === 'review_required').length } : null;
     return (
       <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">

@@ -51,6 +51,7 @@ export function Now() {
   const sourcingEvents = events.filter((event) => event.lane === 'sourcing' || event.lane === 'order').length;
   const fixtureCount = Object.keys(FIXTURES).length;
   const latest = events[0];
+  const releaseSha = import.meta.env.VITE_GIT_SHA?.trim() || 'UNKNOWN';
 
   return (
     <main className="h-full overflow-auto bg-bg text-ink" style={{ backgroundImage: 'radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--focus) 10%, transparent), transparent 28%), linear-gradient(135deg, transparent 68%, color-mix(in srgb, var(--amber) 7%, transparent))' }}>
@@ -61,7 +62,7 @@ export function Now() {
             <div>
               <div className="flex flex-wrap gap-2 mb-4">
                 <span className="chip font-mono">CADdyDaddy / {PROGRESS_ATLAS.version}</span>
-                <span className="chip font-mono text-muted">GIT SHA UNKNOWN</span>
+                <span className="chip font-mono text-muted">GIT SHA {releaseSha === 'UNKNOWN' ? 'UNKNOWN' : releaseSha.slice(0, 12)}</span>
                 <span className="chip font-mono text-muted">READ-ONLY PROJECTION</span>
               </div>
               <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-muted m-0">Now / Engineering Atlas</p>
@@ -118,7 +119,7 @@ export function Now() {
                 <div className="flex gap-3"><span className="w-24 shrink-0">DESIGN HASH</span><span className="text-ink break-all">{designHashOf(snapshot)}</span></div>
                 <div className="flex gap-3"><span className="w-24 shrink-0">LOG HEAD</span><span className="text-ink break-all">{latest ? `#${latest.seq} ${latest.kind} / ${latest.hash}` : 'UNKNOWN'}</span></div>
                 <div className="flex gap-3"><span className="w-24 shrink-0">EXPORT PACK</span><span className="text-ink break-all">{pack} / {PACKS[pack].sha}</span></div>
-                <div className="flex gap-3"><span className="w-24 shrink-0">GIT SHA</span><span className="text-ink">UNKNOWN / not injected</span></div>
+                <div className="flex gap-3"><span className="w-24 shrink-0">GIT SHA</span><span className="text-ink break-all">{releaseSha === 'UNKNOWN' ? 'UNKNOWN / not injected' : releaseSha}</span></div>
               </div>
             </section>
 
