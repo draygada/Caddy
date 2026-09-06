@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from cad_service.app import app as cad_service_app
+from cad_service.app import create_app
+from cad_service.settings import DeploymentSettings, VERCEL_DOCUMENTED_BODY_LIMIT_BYTES
 
 
-VERCEL_DOCUMENTED_BODY_LIMIT_BYTES = 4_500_000
 SERVICE_BODY_LIMIT_BYTES = 4_250_000
 
 Scope = dict[str, Any]
@@ -43,7 +44,7 @@ async def _send_json(send: Send, status: int, code: str, message: str, limit: in
 
 
 class BoundedPayloadASGI:
-    """Fail closed below the provider's request and response body limits."""
+    """Fail closed on transport size, wall time, and per-instance concurrency."""
 
     def __init__(
         self,
@@ -51,6 +52,8 @@ class BoundedPayloadASGI:
         *,
         max_request_bytes: int = SERVICE_BODY_LIMIT_BYTES,
         max_response_bytes: int = SERVICE_BODY_LIMIT_BYTES,
+        request_timeout_seconds: float = 40,
+        max_concurrency: int = 1,
     ) -> None:
         if max_request_bytes >= VERCEL_DOCUMENTED_BODY_LIMIT_BYTES:
             raise ValueError("request limit must preserve headroom below Vercel's limit")
@@ -59,6 +62,10 @@ class BoundedPayloadASGI:
         self.inner = inner
         self.max_request_bytes = max_request_bytes
         self.max_response_bytes = max_response_bytes
+        self.request_timeout_seconds = request_timeout_seconds
+        self.max_concurrency = max_concurrency
+        self._active = 0
+        self._active_lock = asyncio.Lock()
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope.get("type") != "http":
@@ -72,6 +79,9 @@ class BoundedPayloadASGI:
                 declared_length = int(content_length)
             except ValueError:
                 await _send_json(send, 400, "CONTENT_LENGTH_INVALID", "Content-Length must be an integer", self.max_request_bytes)
+                return
+            if declared_length < 0:
+                await _send_json(send, 400, "CONTENT_LENGTH_INVALID", "Content-Length cannot be negative", self.max_request_bytes)
                 return
             if declared_length > self.max_request_bytes:
                 await _send_json(send, 413, "REQUEST_PAYLOAD_TOO_LARGE", "Request exceeds the CAD service transport limit", self.max_request_bytes)
@@ -115,11 +125,30 @@ class BoundedPayloadASGI:
                     raise ResponsePayloadTooLarge
                 response_bodies.append(message)
 
+        protected = scope.get("path") == "/ready" or str(scope.get("path", "")).startswith("/v1/")
+        admitted = False
+        if protected:
+            async with self._active_lock:
+                if self._active >= self.max_concurrency:
+                    await _send_json(send, 503, "SERVICE_BUSY", "Native CAD concurrency limit reached", self.max_concurrency)
+                    return
+                self._active += 1
+                admitted = True
         try:
-            await self.inner(scope, replay_receive, capture_send)
+            await asyncio.wait_for(
+                self.inner(scope, replay_receive, capture_send),
+                timeout=self.request_timeout_seconds,
+            )
+        except TimeoutError:
+            await _send_json(send, 504, "REQUEST_TIMEOUT", "CAD request exceeded the transport deadline", int(self.request_timeout_seconds))
+            return
         except ResponsePayloadTooLarge:
             await _send_json(send, 413, "RESPONSE_PAYLOAD_TOO_LARGE", "Response exceeds the CAD service transport limit", self.max_response_bytes)
             return
+        finally:
+            if admitted:
+                async with self._active_lock:
+                    self._active -= 1
 
         if response_start is None:
             await _send_json(send, 500, "ASGI_RESPONSE_INVALID", "Application did not start a response", self.max_response_bytes)
@@ -129,4 +158,11 @@ class BoundedPayloadASGI:
             await send(message)
 
 
-app = BoundedPayloadASGI(cad_service_app)
+settings = DeploymentSettings.from_env()
+app = BoundedPayloadASGI(
+    create_app(settings),
+    max_request_bytes=settings.max_request_bytes,
+    max_response_bytes=settings.max_response_bytes,
+    request_timeout_seconds=settings.transport_timeout_seconds,
+    max_concurrency=settings.max_concurrency,
+)

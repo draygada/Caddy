@@ -1,4 +1,4 @@
-# CAD authoring service candidate
+# Native CAD service deployment candidate
 
 This is a deterministic, stateless FastAPI adapter over Open CASCADE Technology (OCCT). It
 executes real B-rep operations. It does not return fixture geometry or claim that an immutable
@@ -12,33 +12,78 @@ snapshot was recomputed.
 | Standard Vercel Python size preflight | PASS | 265,146,169 logical bytes (252.863 MiB) for the pinned Linux x86_64 runtime dependencies against a 500 MiB limit |
 | Vercel request/response payload preflight | PASS WITH BOUND | `api/index.py` rejects either direction above 4,250,000 bytes, below Vercel's 4.5 MB limit |
 | Vercel provider build | NOT RUN | This lane does not deploy or mutate provider state |
-| OCI definition | PASS WITH UNVERIFIED BUILD | Digest-pinned Dockerfile exists; Docker is unavailable on the measurement host |
+| OCI definition | READY FOR LOCAL BUILD PROOF | Digest-pinned, non-root image with native readiness, complete notice closure, and bounded execution |
 | Runtime redistribution | ARTIFACT EVIDENCE PASS; RELEASE HOLD | The native closure is mapped and hash-verified; legal determination is not performed and repository-owner acceptance is unrecorded |
 
-Artifact evidence: **PASS**. Legal determination: **NOT_PERFORMED**. The overall release gate is
-**HOLD** because a provider-produced bundle and the required human governance decisions remain
-unrecorded. Technical packaging evidence is not distribution approval.
+Artifact evidence: **PASS**. Legal determination: **NOT_PERFORMED**. Provider deployment and
+repository-owner acceptance remain outside this implementation task. Technical packaging evidence
+is not distribution approval or an IP/licensing conclusion.
 
 ## Run locally
 
 ```bash
 uv sync --project apps/cad-service
-uv run --project apps/cad-service uvicorn api.index:app --app-dir apps/cad-service
+uv run --project apps/cad-service python -m cad_service.server
 ```
 
 Endpoints:
 
 - `GET /health`
+- `GET /ready` (starts one isolated worker and validates a 1 mm OCCT solid)
 - `GET /v1/capabilities`
 - `POST /v1/recompute`
 - `POST /v1/assemblies/solve`
 - `POST /v1/exchange`
 
-The deployment adapter buffers and bounds request and response bodies. CAD exchange or mesh
-payloads that cannot fit below 4,250,000 bytes fail explicitly. Large artifacts need direct
-object-storage upload/download with signed references; that path is not implemented here.
+Every native transaction runs in a one-shot subprocess. The parent terminates it after the native
+deadline, while the transport independently caps wall time, concurrent native requests, request
+bytes, and response bytes. Model contracts also cap sketches, loops, entities, features, assembly
+instances, mates, exchange payloads, and tessellation resolution. CAD exchange or mesh payloads
+that cannot fit below 4,250,000 bytes fail explicitly. Large artifacts need direct object-storage
+upload/download with signed references; that path is not implemented here.
 
-## Vercel preflight
+## Environment contract
+
+| Variable | Default | Boundary |
+|---|---:|---|
+| `PORT` | `8000` | Listener port, 1-65535 |
+| `CAD_CORS_ORIGINS` | empty | Exact comma-separated HTTP(S) origins; empty denies cross-origin browser access and `*` is rejected |
+| `CAD_ALLOWED_HOSTS` | `localhost,127.0.0.1,testserver` | Exact hosts or narrow Starlette host patterns; bare `*` is rejected |
+| `CAD_MAX_REQUEST_BYTES` | `4250000` | 1,024-4,499,999 bytes |
+| `CAD_MAX_RESPONSE_BYTES` | `4250000` | 1,024-4,499,999 bytes |
+| `CAD_TRANSPORT_TIMEOUT_SECONDS` | `40` | 2-120 seconds and greater than the native timeout |
+| `CAD_NATIVE_TIMEOUT_SECONDS` | `30` | Hard subprocess deadline, 1-110 seconds |
+| `CAD_NATIVE_CPU_SECONDS` | `25` | Per-worker OS CPU limit on POSIX |
+| `CAD_NATIVE_MAX_ADDRESS_SPACE_MIB` | `0` | Optional POSIX address-space cap; `0` delegates memory enforcement to the container platform |
+| `CAD_NATIVE_MAX_OPEN_FILES` | `256` | Per-worker POSIX file-descriptor cap, 64-4,096 |
+| `CAD_MAX_CONCURRENCY` | `1` | Native requests admitted per instance, 1-8 |
+| `CAD_KEEPALIVE_SECONDS` | `5` | HTTP keep-alive, 1-30 seconds |
+
+No credential, API key, storage connection, or secret is read by this service. The native child
+receives an allowlisted environment rather than inheriting the server environment. CORS is not
+authentication; expose this unauthenticated stateless candidate only behind a platform access
+policy or with synthetic/public data.
+
+## Hosting adapters
+
+The primary adapter is the OCI image plus `apps/cad-service/render.yaml`. The Blueprint uses a
+1 CPU / 2 GB instance, checks `/ready`, permits only the current candidate frontend origin, and
+keeps auto-deploy off. In Render, select this file as the Blueprint path; no provider action is
+performed by this repository change.
+
+```bash
+docker build -f apps/cad-service/Dockerfile -t caddydaddy-cad-service:0.2.0 apps/cad-service
+docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=256m \
+  --cpus 1 --memory 2g --pids-limit 128 --security-opt no-new-privileges \
+  -e CAD_CORS_ORIGINS=https://operator.example \
+  -e CAD_ALLOWED_HOSTS=localhost -p 8000:8000 caddydaddy-cad-service:0.2.0
+curl --fail http://localhost:8000/ready
+```
+
+The Vercel Python adapter remains a bounded secondary path, not a proven release. The measured
+265,146,169-byte Linux closure fits Vercel's documented 500 MiB standard Python limit as of this
+packet, but Python is beta and request/response bodies remain hard-limited to 4.5 MB. Large
+Function beta is not required by the measured closure. Use `apps/cad-service` as the project root.
 
 Use `apps/cad-service` as the Vercel project root. Python `3.12` is pinned in
 `.python-version`; `api/index.py` is the ASGI entrypoint; `vercel.json` routes all paths to it.
@@ -70,15 +115,13 @@ Do not release a provider artifact unless its closure includes `licenses/**`,
 passes against the installed runtime. Those engineering checks do not provide legal approval or
 repository-owner acceptance.
 
-## OCI fallback
+## OCI runtime details
 
 The image is fixed to Linux amd64 and the official Python
 `3.12.11-slim-bookworm` manifest digest. The default OCP wheel URL and SHA-256 are also pinned.
 
 ```bash
-docker build -f apps/cad-service/Dockerfile -t caddydaddy-cad-service:0.1.0 apps/cad-service
-docker run --read-only --tmpfs /tmp:rw,noexec,nosuid,size=256m \
-  -p 8000:8000 caddydaddy-cad-service:0.1.0
+docker build -f apps/cad-service/Dockerfile -t caddydaddy-cad-service:0.2.0 apps/cad-service
 ```
 
 To test a user-rebuilt or relinked OCP wheel, publish the exact wheel to an access-controlled
@@ -133,6 +176,8 @@ copies with any distributed artifact under the repository's approved source-acce
   release outputs fail explicitly as unsupported.
 - Frontend contracts and local tests do not by themselves prove that this service is reachable in
   a deployed candidate.
+- The service is stateless and unauthenticated. CORS and host validation narrow browser behavior
+  but do not replace an identity-aware gateway, durable rate limiting, or authorization.
 
 ## Lane J2 redistribution evidence
 

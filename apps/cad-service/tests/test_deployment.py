@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import time
 import subprocess
 import sys
 from pathlib import Path
@@ -65,7 +66,36 @@ def test_deployment_files_pin_runtime_and_route_to_asgi() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text()
     assert "python:3.12.11-slim-bookworm@sha256:" in dockerfile
     assert "USER 10001:10001" in dockerfile
-    assert "api.index:app" in dockerfile
+    assert "cad_service.server" in dockerfile
+    assert "THIRD_PARTY_NOTICES.md REDISTRIBUTION_EVIDENCE.md" in dockerfile
+    blueprint = (ROOT / "render.yaml").read_text()
+    assert "runtime: docker" in blueprint
+    assert "plan: 1c-2g" in blueprint
+    assert "healthCheckPath: /ready" in blueprint
+    assert "autoDeployTrigger: off" in blueprint
+
+
+def test_transport_timeout_is_explicit() -> None:
+    inner = FastAPI()
+
+    @inner.get("/v1/slow")
+    async def slow() -> dict[str, bool]:
+        import asyncio
+
+        await asyncio.sleep(0.05)
+        return {"completed": True}
+
+    guarded = BoundedPayloadASGI(
+        inner,
+        max_request_bytes=32,
+        max_response_bytes=128,
+        request_timeout_seconds=0.01,
+    )
+    started = time.monotonic()
+    response = TestClient(guarded).get("/v1/slow")
+    assert response.status_code == 504
+    assert response.json()["code"] == "REQUEST_TIMEOUT"
+    assert time.monotonic() - started < 0.5
 
 
 def test_primary_license_files_have_recorded_hashes() -> None:
