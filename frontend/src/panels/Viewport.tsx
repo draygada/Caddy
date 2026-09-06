@@ -125,7 +125,7 @@ function SheetView({ span }: { span: number }) {
 
 export function Viewport({ o: _o }: { o: Outcome }) {
   const s = useStore();
-  const orbit = useRef({ on: false, pan: false, start: [0, 0, 0, 0, 0, 0, 0.7], moved: false });
+  const orbit = useRef({ on: false, pan: false, start: [0, 0, 0, 0, 0, 0, 0.7], moved: false, bg: false });
   const cube = useRef({ on: false, start: [0, 0, 0, 0], moved: false });
   const move = useRef<{ slot: Slot; from: Pos; grab: Pos; moved: boolean } | null>(null);
   const prRef = useRef<{ pr: Projector; ca: number; sa: number; extents: Record<Slot, Extent> } | null>(null);
@@ -223,7 +223,8 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     if (e.button !== 0 && e.button !== 1) return;
     if (s.marking) s.patch({ marking: null });
     const [x, y] = svgPt(e);
-    orbit.current = { on: true, pan: e.shiftKey || e.button === 1 || s.navMode === 'pan', start: [x, y, s.az, s.el, s.pan.x, s.pan.y, s.zoom], moved: false };
+    // a press on empty space (not a body) that does not turn into a drag clears the selection
+    orbit.current = { on: true, pan: e.shiftKey || e.button === 1 || s.navMode === 'pan', start: [x, y, s.az, s.el, s.pan.x, s.pan.y, s.zoom], moved: false, bg: e.target === e.currentTarget };
   };
   const vpMove = (e: RMouseEvent<SVGSVGElement>) => {
     const mv = move.current;
@@ -245,7 +246,9 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     const mv = move.current;
     if (mv) { move.current = null; if (mv.moved) { s.commitMove(mv.slot, mv.from); orbit.current.moved = true; setTimeout(() => { orbit.current.moved = false; }, 0); } return; }
     const ob = orbit.current; if (!ob.on) return;
-    ob.on = false; ob.pan = false; setTimeout(() => { ob.moved = false; }, 0);
+    ob.on = false; ob.pan = false;
+    if (!ob.moved && ob.bg && s.sel) s.patch({ sel: null, selBody: null, selFace: null });
+    setTimeout(() => { ob.moved = false; }, 0);
   };
   const bodyDown = (body: string) => (e: RMouseEvent<SVGPolygonElement>) => {
     if (e.button !== 0 || e.shiftKey || !isBodyId(body) || body === 'plate' || body === 'flange' || !s.parts[body] || s.viewSeq != null || s.dialog?.kind === 'measure' || s.selFilter === 'face') return;
