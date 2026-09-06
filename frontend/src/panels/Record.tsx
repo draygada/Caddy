@@ -1,65 +1,64 @@
+import { useEffect, useState } from 'react';
 import { useStore } from '../store';
-import { STATUS_WORD } from '../lib/sourcing';
+import { rederiveProductThread, tamperProductThread, useProductThread, type ProductThreadVerification } from '../lib/product-thread';
 
-/** /record: the printable design decision record. Cmd-P prints it; no PDF library. */
+const short = (value: string | null) => value ? `${value.slice(0, 12)}...${value.slice(-8)}` : 'GENESIS';
+
+/** /record: printable, memory-only product thread plus explicitly untracked legacy projection. */
 export function Record() {
   const s = useStore();
-  const r = s.round;
-  const design = s.events.filter((e) => e.lane === 'design').slice().reverse();
-  const sourcing = s.events.filter((e) => e.lane === 'sourcing' || e.lane === 'order').slice().reverse();
-  const footer = (
-    <div className="text-[11px] text-muted border-t border-line2 pt-2 mt-4 grid gap-1">
-      <div>22 CFR 120.41 Note 2: documents contemporaneous with development, in their totality · 22 CFR 122.5(a): none of it may be altered once recorded</div>
-      <div>15 CFR 762.2 · 19 CFR 163.4 · 31 CFR 501.601 · retention computed per transaction as the longest applicable window (ITAR printed as five years from the 122.5 anchor; anchor and period to be confirmed from the section)</div>
-      <div>local demo record shaped for human review; a broker validates applicability and retention · sequence markers and the tamper control are simulations, not signatures or a cryptographic hash chain · production KMS/HSM-backed key custody is a roadmap requirement · rendered from current local event and round projections</div>
-    </div>
-  );
+  const thread = useProductThread();
+  const [verification, setVerification] = useState<ProductThreadVerification | null>(null);
+  const legacyEvents = s.events;
+  const untrackedCount = legacyEvents.length;
+
+  useEffect(() => setVerification(null), [thread.mutationVersion, untrackedCount]);
+
+  const rederive = async () => setVerification(await rederiveProductThread(untrackedCount));
+  const tamper = async () => {
+    const latest = thread.events.at(-1);
+    if (!latest || !tamperProductThread(latest.sequence)) return;
+    setVerification(await rederiveProductThread(untrackedCount));
+  };
+
   return (
-    <div role="dialog" aria-label="Design decision record" className="absolute inset-0 bg-bg z-[9] flex flex-col overflow-x-hidden">
+    <div role="dialog" aria-label="Product decision record" className="absolute inset-0 bg-bg z-[9] flex flex-col overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-[10px] border-b border-line2 bg-surface print:hidden">
-        <span className="min-w-0 break-words text-[13px] font-semibold">/record <span className="text-muted font-normal">· design decision record · printable</span></span>
-        <span className="flex flex-wrap gap-2"><button onClick={() => window.print()} className="btn btn-primary">Print · Cmd-P</button><button onClick={() => s.patch({ recordOpen: false })} className="btn">Close · Esc</button></span>
+        <span className="min-w-0 break-words text-[13px] font-semibold">/record <span className="text-muted font-normal">· shared product thread · printable</span></span>
+        <span className="flex flex-wrap gap-2"><button onClick={() => void rederive()} className="btn btn-primary">Re-derive all recorded lanes</button><button onClick={() => void tamper()} disabled={thread.events.length === 0} className="btn disabled:opacity-40">Tamper latest + verify</button><button onClick={() => window.print()} className="btn">Print · Cmd-P</button><button onClick={() => s.patch({ recordOpen: false })} className="btn">Close · Esc</button></span>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 sm:p-6 bg-surface text-ink">
-        <div className="grid w-full min-w-0 max-w-[880px] mx-auto gap-6 text-[13px] [overflow-wrap:anywhere]" id="record">
-          <section className="min-w-0 break-after-page">
-            <h1 className="text-[20px] font-bold m-0">Design decision record · Kestrel</h1>
-            <div className="text-muted">local event head #{s.events.length} · sequence marker {s.events[0]?.hash} · export pack {s.pack} · printed {new Date().toISOString().slice(0, 16).replace('T', ' ')}</div>
-            <h2 className="text-[15px] font-semibold mt-4 mb-1">1 · Design events</h2>
-            <div className="max-w-full overflow-x-auto overscroll-x-contain print:overflow-visible">
-              <table className="w-full min-w-[720px] border-collapse print:min-w-0"><thead><tr className="text-left text-muted"><th className="py-1 pr-2">#</th><th className="pr-2">kind</th><th className="pr-2">what</th><th className="pr-2">paragraph · number</th><th>intent</th></tr></thead>
-                <tbody>{design.map((e) => <tr key={e.seq} className="border-t border-line2 align-top"><td className="py-1 pr-2 font-mono">{e.seq}</td><td className="pr-2 font-mono">{e.kind}</td><td className="pr-2">{e.text}</td><td className="pr-2 text-muted">{e.entry}</td><td className="italic text-muted">{e.intent || '(none typed)'}</td></tr>)}</tbody></table>
+        <div className="grid w-full min-w-0 max-w-[1100px] mx-auto gap-5 text-[13px] [overflow-wrap:anywhere]" id="record">
+          <section className="border border-amber rounded-r p-3 bg-surface2">
+            <h1 className="text-[20px] font-bold m-0">CADdyDaddy product revision thread</h1>
+            <div className="font-mono text-[11px] break-all mt-2">{thread.productId} · {thread.threadId}</div>
+            <div className="text-amber mt-2"><b>MEMORY ONLY · UNSIGNED.</b> This thread resets on reload, has no server persistence, user authentication, Ed25519 signature, KMS/HSM custody, or cross-browser concurrency guarantee.</div>
+          </section>
+
+          <section className="panel p-3 grid gap-2">
+            <div className="flex flex-wrap justify-between gap-2"><h2 className="text-[15px] font-semibold m-0">Integrity and replay</h2><span className="chip">{verification?.status ?? 'NOT_REDERIVED'}</span></div>
+            <div className="font-mono text-[11px] break-all">recorded {thread.events.length} · head {short(thread.events.at(-1)?.eventHash ?? null)} · untracked legacy {untrackedCount}</div>
+            {verification && <div role={verification.status === 'BROKEN' ? 'alert' : 'status'} className={`border rounded-r p-2 ${verification.status === 'BROKEN' ? 'border-red text-red' : verification.status === 'INCOMPLETE_UNTRACKED' ? 'border-amber text-amber' : 'border-line text-ink'}`}><b>{verification.status}</b> · {verification.detail}</div>}
+            {!verification && <div className="text-muted">Run re-derive to recompute every event hash, previous-hash link, and every recorded lane projection.</div>}
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2">
+              {verification && Object.entries(verification.lanes).map(([lane, projection]) => <div key={lane} className="border border-line2 rounded-r p-2"><b>{lane}</b> · {projection.count} event(s)<div className="font-mono text-[10px] break-all">#{projection.lastSequence} {projection.lastEventType}<br />{short(projection.headEventHash)}</div></div>)}
             </div>
-            {footer}
           </section>
-          <section className="min-w-0 break-after-page">
-            <h2 className="text-[15px] font-semibold mb-1">2 · Party trees and outcomes</h2>
-            {!r && <div className="text-muted">no round opened</div>}
-            {r && Object.entries(r.offers).flatMap(([lineId, list]) => list.map((ro) => (
-              <div key={ro.offer.id} className="border-t border-line2 py-1">
-                <b>{r.lines.find((l) => l.id === lineId)?.description}</b> · {ro.offer.seller} · {STATUS_WORD[ro.status]} · {ro.tier} · {ro.because}
-                <div className="text-muted text-[12px]">{ro.tree.children.map((c) => c.name + ' (' + c.role + (c.pct != null ? ' ' + c.pct + ' %' : '') + ' · ' + c.screening + ')').join(' · ') || 'no children walked'}</div>
-              </div>
-            )))}
-            {footer}
+
+          <section className="panel min-w-0">
+            <div className="panel-head"><div className="panel-title">Recorded product-thread envelopes</div><span className="sub">all lanes · oldest first</span></div>
+            <div className="max-w-full overflow-x-auto overscroll-x-contain">
+              <table className="w-full min-w-[1050px] border-collapse"><thead><tr className="text-left text-muted"><th className="p-2"># / lane</th><th className="p-2">event</th><th className="p-2">revision + artifacts</th><th className="p-2">actor / attestation</th><th className="p-2">continuity</th><th className="p-2">boundary</th></tr></thead>
+                <tbody>{thread.events.map((event) => <tr key={`${event.sequence}:${event.eventHash}`} className="border-t border-line2 align-top"><td className="p-2 font-mono">#{event.sequence}<br />{event.sourceLane}<br />{event.timestamp}</td><td className="p-2"><b>{event.eventType}</b><br /><span className="text-muted">{event.summary}</span></td><td className="p-2 font-mono text-[11px]">{event.revisionId ?? 'no revision supplied'}{event.artifacts.map((artifact) => <div key={`${event.sequence}:${artifact.artifactId}`} className="mt-1 break-all">{artifact.kind} · {artifact.artifactId} · {artifact.sha256}</div>)}</td><td className="p-2 font-mono text-[11px]">{event.actorId}<br />{event.actorAttestation}</td><td className="p-2 font-mono text-[10px] break-all">prev {event.previousHash ?? 'GENESIS'}<br />event {event.eventHash}</td><td className="p-2 text-[11px]">{event.durabilityBoundary}<br />{event.signatureBoundary}</td></tr>)}</tbody>
+              </table>
+            </div>
+            {thread.events.length === 0 && <div className="p-3 text-muted">No connected workflow outcome has been recorded in this browser session.</div>}
           </section>
-          <section className="min-w-0 break-after-page">
-            <h2 className="text-[15px] font-semibold mb-1">3 · Selections with declined alternatives and reasons</h2>
-            {r && Object.entries(r.selections).map(([lineId, sel]) => (
-              <div key={lineId} className="border-t border-line2 py-1"><b>{r.lines.find((l) => l.id === lineId)?.description}</b> · selected {r.offers[lineId]?.find((x) => x.offer.id === sel.offerId)?.offer.seller} · attestor {sel.attestor} · #{sel.seq}
-                <div className="text-muted text-[12px]">{sel.declined.length ? sel.declined.map((d) => 'declined ' + d.seller + ' · ' + d.reason + ' · was ' + STATUS_WORD[d.statusAtDecline]).join(' · ') : 'no alternatives shown'}</div>
-              </div>
-            ))}
-            {r && Object.keys(r.selections).length === 0 && <div className="text-muted">no selections</div>}
-            <h2 className="text-[15px] font-semibold mt-4 mb-1">4 · Estimate ladders</h2>
-            {r && Object.entries(r.selections).map(([lineId, sel]) => { const ro = r.offers[lineId]?.find((x) => x.offer.id === sel.offerId); return ro ? <div key={lineId} className="border-t border-line2 py-1"><b>{ro.offer.seller}</b> · {ro.ladder.rows.map((rw) => rw.layer + ' ' + rw.rate + (rw.amount != null ? ' $' + rw.amount.toFixed(2) : '')).join(' · ')} · total {ro.ladder.total?.toFixed(2) ?? 'rate not verified'} · hash {ro.ladder.hash}</div> : null; })}
-            <h2 className="text-[15px] font-semibold mt-4 mb-1">5 · Technical-data declarations and export gates</h2>
-            {r?.declaration ? <div>{r.declaration.personStatus} · {r.declaration.sharing} · reference {r.declaration.reference || 'none'} (typed, not validated) · attestor {r.declaration.attestor}</div> : <div className="text-muted">none</div>}
-            {r && Object.entries(r.references).map(([lineId, ref]) => <div key={lineId}>{r.lines.find((l) => l.id === lineId)?.description} · reference {ref.ref} · typed, not validated · attestor {ref.attestor}</div>)}
-            <h2 className="text-[15px] font-semibold mt-4 mb-1">6 · Sourcing and order events</h2>
-            {sourcing.map((e) => <div key={e.seq} className="border-t border-line2 py-1"><span className="font-mono">#{e.seq} {e.kind}</span> · {e.text} <span className="text-muted">· {e.entry}</span></div>)}
-            {s.memos.length > 0 && <><h2 className="text-[15px] font-semibold mt-4 mb-1">7 · Intent memos</h2>{s.memos.map((m) => <pre key={m.id} className="whitespace-pre-wrap font-sans text-[12px] border-t border-line2 py-1 m-0">{m.text}{'\n'}attested by {m.signedBy} · local content marker {m.hash}</pre>)}</>}
-            {footer}
+
+          <section className="panel p-3 grid gap-2">
+            <h2 className="text-[15px] font-semibold m-0">Outside the product thread · never counted as replay-complete</h2>
+            <div className="text-amber"><b>{untrackedCount} legacy event(s)</b> remain in the older design/sourcing projection. They lack the new envelope and are deliberately not imported or presented as cryptographically linked.</div>
+            <div className="max-h-48 overflow-y-auto font-mono text-[11px]">{legacyEvents.map((event) => <div key={event.seq} className="border-t border-line2 py-1">#{event.seq} · {event.lane} · {event.kind} · {event.text}</div>)}</div>
           </section>
         </div>
       </div>

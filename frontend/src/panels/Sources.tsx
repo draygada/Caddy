@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { DOCS, type SourceDocId } from '../lib/sources';
 import { SLOT_LABEL, type Slot } from '../lib/catalog';
 import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, utf8ByteSpan, type OperationsEnvelope, type ProvenanceAcceptEnvelope, type ProvenanceInspectEnvelope, type ProvenanceVerifyEnvelope, type UserProvidedSource } from '../lib/operations-client';
+import { appendProductEvent } from '../lib/product-thread';
 
 const DOC_IDS: SourceDocId[] = ['gx220-vendor-page', 'hg5700-brochure', 'lepton-datasheet'];
 
@@ -78,7 +79,23 @@ function ServiceProvenance() {
           {inputMode === 'offline-demo' && <label className="grid gap-1 text-muted">Offline demo document<select value={documentId} onChange={(event) => { setDocumentId(event.target.value as ServiceDocumentId); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink">{Object.keys(SERVICE_PRESETS).map((id) => <option key={id}>{id}</option>)}</select></label>}
           <button className="btn btn-primary" disabled={busy !== null} onClick={inspect}>{busy === 'inspect' ? 'Inspecting…' : 'Inspect + verify source hash'}</button>
           <button className="btn disabled:opacity-40" disabled={!inspected || busy !== null} onClick={verify}>{busy === 'verify' ? 'Rereading…' : `Verify exact span · ${claim.quote}`}</button>
-          <button className="btn disabled:opacity-40" disabled={!verified || busy !== null} onClick={() => run('accept', async (api) => setAccepted(await api.acceptVerifiedChange(verified!.verification.receipt_sha256, verified!.verification.field)))}>Accept for local review</button>
+          <button className="btn disabled:opacity-40" disabled={!verified || busy !== null} onClick={() => run('accept', async (api) => {
+            const value = await api.acceptVerifiedChange(verified!.verification.receipt_sha256, verified!.verification.field);
+            setAccepted(value);
+            await appendProductEvent({
+              sourceLane: 'sources',
+              eventType: 'sources.change_accepted_for_local_review',
+              summary: `${value.change.target} = ${value.change.value} ${value.change.unit}; CAD mutation ${String(value.change.mutated_cad)}.`,
+              actorId: 'operator:browser-demo',
+              actorAttestation: 'OPERATOR_ACTION_RECORDED',
+              revisionId: value.candidate.revision_id,
+              artifacts: [
+                { artifactId: `source:${verified!.verification.document_id}`, kind: 'source-document', sha256: verified!.verification.source_sha256 },
+                { artifactId: `verification:${verified!.verification.document_id}`, kind: 'source-verification-receipt', sha256: value.change.receipt_sha256 },
+              ],
+              payload: { field: value.change.target, value: value.change.value, unit: value.change.unit, mutatedCad: value.change.mutated_cad, claimCeiling: value.claim_ceiling },
+            });
+          })}>Accept for local review</button>
         </div>
         {inputMode === 'live-bounded' && (
           <div className="border border-line2 rounded-r p-3 grid gap-2" aria-label="Candidate 0.2 source service input, available when connected">

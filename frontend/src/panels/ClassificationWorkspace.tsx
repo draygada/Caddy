@@ -14,6 +14,7 @@ import {
   type CandidateDisposition,
   type Stage,
 } from '../lib/classification-workspace';
+import { appendProductEvent } from '../lib/product-thread';
 
 const stageLabels: Record<Stage, string> = {
   usml_enumerated: 'USML enumerated',
@@ -84,6 +85,27 @@ export function ClassificationWorkspace() {
           : undefined,
       );
       if (sequence !== requestSequence.current) return;
+      await appendProductEvent({
+        sourceLane: 'classification',
+        eventType: 'classification.determination_recorded',
+        summary: `${result.determination.jurisdiction} · ${result.determination.classification.join(', ') || 'no closed classification'} · ${runMode}.`,
+        actorId: `service:${result.provenance.model}`,
+        actorAttestation: 'SERVICE_REPORTED',
+        revisionId: result.item.part_revision_id,
+        artifacts: [
+          { artifactId: `classification-snapshot:${result.snapshot_sha256}`, kind: 'classification-fact-snapshot', sha256: result.snapshot_sha256 },
+          { artifactId: `classification-pack:${result.pack_sha256}`, kind: 'classification-reference-pack', sha256: result.pack_sha256 },
+        ],
+        payload: {
+          jurisdiction: result.determination.jurisdiction,
+          classification: result.determination.classification,
+          usmlStep: result.determination.usml_step,
+          cclStep: result.determination.ccl_step,
+          itemKind: result.item.item_kind,
+          model: result.provenance.model,
+          legalEffect: 'NONE',
+        },
+      });
       setLiveResult(result);
       setLiveState('valid');
     } catch (error) {
