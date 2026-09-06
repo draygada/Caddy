@@ -161,7 +161,7 @@ export function Sources() {
               <div className="flex gap-2 flex-wrap">
                 {DOC_IDS.map((id) => <button key={id} onClick={() => s.dropDocument(id, DOCS[id].slot ?? slot)} className={'btn whitespace-normal text-left ' + (src.doc === id ? 'btn-primary' : '')}>{DOCS[id].title}{DOCS[id].poisoned ? ' ☠' : ''}</button>)}
               </div>
-              <div className="text-[12px] text-muted">Call A returns unverified claims (field, value, unit, quote, fixture string start/end, synthetic fixture marker). No classification field exists in the schema. The checker compares the selected cached string, parse and value in that order; only its accept constructs a typed Spec.</div>
+              <div className="text-[12px] text-muted">Call A returns unverified claims (field, value, unit, quote, fixture string start/end, synthetic fixture marker). No classification field exists in the schema. The checker compares the selected cached string, parse and value in that order; its accept constructs a typed Spec but does not establish human review.</div>
             </div>
           </div>
           {doc && (
@@ -197,9 +197,9 @@ export function Sources() {
                     <div className="text-[12px] text-muted">{p.verdict.note}</div>
                     {p.verdict.ok && src.slot && (
                       <div className="flex gap-2 items-center flex-wrap">
-                        <button onClick={() => s.applyExtraction(src.slot!, p.verdict.ok ? p.verdict.spec.field : '', p.claim.value, p.claim.unit)} disabled={s.viewSeq != null} className="btn btn-primary disabled:opacity-50">Apply to {SLOT_LABEL[src.slot]} · extracted_by extractor</button>
-                        {s.extracted[src.slot + '.' + p.claim.field] && !s.extracted[src.slot + '.' + p.claim.field].verified && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" onChange={() => s.markVerified(src.slot!, p.claim.field)} /> human checked against selected fixture text</label>}
-                        {s.extracted[src.slot + '.' + p.claim.field]?.verified && <span className="chip chip-sm">human checked · L2</span>}
+                        <button onClick={() => s.applyExtraction(src.slot!, p)} disabled={s.viewSeq != null} className="btn btn-primary disabled:opacity-50">Apply accepted span to {SLOT_LABEL[src.slot]} · extractor</button>
+                        {s.extracted[src.slot + '.' + p.claim.field] && s.extracted[src.slot + '.' + p.claim.field].acceptance === 'NONE' && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" onChange={(event) => { if (event.currentTarget.checked) s.acknowledgeExtraction(src.slot!, p.claim.field); }} /> Acknowledge unauthenticated browser-session acceptance · memory only · no identity</label>}
+                        {s.extracted[src.slot + '.' + p.claim.field]?.acceptance === 'UNAUTHENTICATED_BROWSER_SESSION' && <span className="chip chip-sm">SESSION ACCEPTED · MEMORY ONLY · NO IDENTITY · NOT HUMAN REVIEW</span>}
                       </div>
                     )}
                   </div>

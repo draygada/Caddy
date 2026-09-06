@@ -8,6 +8,10 @@ describe('product-thread panel wiring', () => {
   it('records successful source and classification outcomes', () => {
     expect(sourcesSource).toContain("eventType: 'sources.change_accepted_for_local_review'");
     expect(sourcesSource).toContain("kind: 'source-verification-receipt'");
+    expect(sourcesSource).toContain('UNAUTHENTICATED_BROWSER_SESSION');
+    expect(sourcesSource).toContain('NOT HUMAN REVIEW');
+    expect(sourcesSource).not.toContain('human checked against selected fixture text');
+    expect(sourcesSource).not.toContain('human checked · L2');
     expect(classificationSource).toContain("eventType: 'classification.determination_recorded'");
     expect(classificationSource).toContain("kind: 'classification-reference-pack'");
   });
