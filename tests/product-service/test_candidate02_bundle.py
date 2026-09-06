@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -80,16 +81,34 @@ def _document() -> dict:
 
 
 def _kernel_response(revision: str) -> dict:
+    brep = b"brep-bytes"
     return {
+        "schema_version": "caddydaddy.recompute-result/1",
+        "status": "SUCCEEDED",
+        "document_id": "document:cold",
         "revision_id": revision,
+        "parent_revision_id": None,
         "document_hash": "c" * 64,
         "geometry_hash": "d" * 64,
         "kernel": {"name": "OpenCascade", "version": "7.9.3"},
+        "constraint_mode": "VALIDATE_ONLY",
+        "operation_status": {"feature:sketch": "SUCCEEDED", "feature:extrude": "SUCCEEDED"},
         "bodies": [{
             "body_id": "body:plate",
             "producing_feature_id": "feature:extrude",
             "brep_base64": "YnJlcC1ieXRlcw==",
-            "mesh": {"positions": [0, 0, 0, 1, 0, 0, 0, 1, 1], "indices": [0, 1, 2]},
+            "brep_sha256": hashlib.sha256(brep).hexdigest(),
+            "valid": True,
+            "bounds_mm": [0, 0, 0, 20, 10, 8],
+            "topology": {"solids": 1},
+            "area_mm2": 1,
+            "volume_mm3": 1,
+            "mesh": {
+                "positions": [0, 0, 0, 1, 0, 0, 0, 1, 1],
+                "normals": [0, 0, 1, 0, 0, 1, 0, 0, 1],
+                "indices": [0, 1, 2],
+                "triangle_count": 1,
+            },
         }],
         "diagnostics": [],
     }

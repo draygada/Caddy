@@ -57,7 +57,10 @@ export const useTripwireStore = create<TripwireState>((set, get) => ({
     }
     set({ phase: 'running', result: null, error: null });
     try {
-      const result = await runTripwire(candidate, selectedEntityId);
+      // This legacy store does not possess the active release identity. The rendered
+      // Tripwire panel uses its revision-bound Core load; this dormant path must fail
+      // closed instead of treating historical evidence as its own current revision.
+      const result = await runTripwire(candidate, selectedEntityId, null);
       set({ result, phase: result.displayState === 'BOUND' ? 'bound' : 'blocked' });
     } catch (error) {
       set({ phase: 'error', error: publicTripwireError(error) });
