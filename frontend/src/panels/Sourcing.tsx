@@ -92,7 +92,7 @@ export function Sourcing({ o }: { o: Outcome }) {
     const stages = [
       { label: 'resolve offers', detail: 'committed catalog · ' + FIXTURES.offers },
       { label: 'walk owners', detail: 'seller and manufacturer · full walk where controlled, foreign or flagged · ' + FIXTURES.ownership },
-      { label: 'screen fixture names', detail: 'synthetic CSL fixture slice · exact and suffix-normalised · ' + FIXTURES.csl },
+      { label: 'screen fixture names', detail: 'exact and suffix-normalised · ' + FIXTURES.csl },
       { label: 'estimate landed cost', detail: 'declared code × origin × dated tariff table · ' + FIXTURES.tariff },
     ];
     const running = stage >= 0 && stage < 4;
