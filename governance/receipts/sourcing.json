@@ -1,6 +1,6 @@
 {
   "lane": "sourcing",
-  "branch": "lane/sourcing",
+  "branch": "lane/sourcing-search",
   "worktree": "/Users/charliehaywood/Downloads/CADdyDaddy-sourcing",
   "exclusive_write_paths": [
     "packages/sourcing/**",
@@ -14,20 +14,20 @@
     "writer_id": "charlie-haywood/claude-code-session",
     "task_id": "sourcing-lane-2026-09-05",
     "model": "claude-fable-5-1",
-    "authority": "Charlie Haywood, in-session instruction 2026-09-05 evening: implement the sourcing backend per the DNHacks engineering direction and feature specs"
+    "authority": "Charlie Haywood, in-session instructions 2026-09-05/06: implement the sourcing backend per the DNHacks engineering direction and feature specs, then the part-search lane of the 2026-09-05 agentic part-search research on a separate branch off lane/sourcing"
   },
   "lease_acquired_at": "2026-09-06T00:20:00Z",
   "renew_by": null,
   "expires_at": null,
-  "candidate_commit": "3b7e840845c250f821884be50ffe9acd84ed9fca",
-  "registry_status": "NOT_ADMITTED — proposed entry in packages/sourcing/handoff/custody-lane-entry.proposed.json",
+  "candidate_commit": "6fd70505b7ca8dbfe89a723b19d843fa9890c295",
+  "registry_status": "NOT_ADMITTED — proposal at packages/sourcing/handoff/custody-lane-entry.proposed.json",
   "now_observation": {
     "schema_version": "1.0.0",
-    "observed_at": "2026-09-06T00:20:00Z",
+    "observed_at": "2026-09-06T07:45:24Z",
     "worktree_label": "forge/sourcing",
     "task": {
       "id": "sourcing-lane-2026-09-05",
-      "title": "Sourcing lane: round state machine over pure functions and dated fixtures (S1–S4, package, synthetic order)",
+      "title": "Sourcing lane + search lane (byte-verified proposer on copies), live refresh scripts, HTTP adapter and page, engine adapter",
       "evidence_class": "MEASURED",
       "evidence_ref": "packages/sourcing/HANDOFF.md"
     },
@@ -48,18 +48,18 @@
     "lane_state": {
       "value": "IMPLEMENTED_LOCAL_UNADMITTED",
       "evidence_class": "MEASURED",
-      "evidence_ref": "git:3b7e840845c250f821884be50ffe9acd84ed9fca"
+      "evidence_ref": "git:6fd70505b7ca8dbfe89a723b19d843fa9890c295"
     },
     "current_action": {
-      "value": "code, fixtures and tests committed on the lane branch; handoff written; awaiting integrator admission",
+      "value": "search lane, API and page committed on the lane branch; handoff rewritten; awaiting integrator admission and Charlie's live cache recording",
       "evidence_class": "MEASURED",
       "evidence_ref": "packages/sourcing/HANDOFF.md"
     },
     "last_evidenced_change": {
       "kind": "commit",
-      "occurred_at": "2026-09-06T00:20:00Z",
+      "occurred_at": "2026-09-06T07:34:48Z",
       "evidence_class": "MEASURED",
-      "evidence_ref": "git:3b7e840845c250f821884be50ffe9acd84ed9fca"
+      "evidence_ref": "git:6fd70505b7ca8dbfe89a723b19d843fa9890c295"
     },
     "blockers": [
       {
@@ -67,7 +67,7 @@
         "state": "HOLD",
         "summary": "lane `sourcing` is not in governance/custody.v1.json",
         "clearer": "main integration owner",
-        "next_unblock": "admit the proposed lane entry from packages/sourcing/handoff/",
+        "next_unblock": "admit the lane from packages/sourcing/handoff/custody-lane-entry.proposed.json",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/handoff/custody-lane-entry.proposed.json"
       },
@@ -88,22 +88,40 @@
         "next_unblock": "read the ten headings and the two untyped Chapter 99 headings; flip verified to true in data/tariff.json",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/data/tariff.json"
+      },
+      {
+        "id": "llm-cache-not-recorded",
+        "state": "HOLD",
+        "summary": "data/llm_cache is empty; the page prints 'abstained: cache miss' until one live run records it",
+        "clearer": "Charlie (key holder)",
+        "next_unblock": "make seed, then TRIPWIRE_LLM=live ANTHROPIC_API_KEY=… make record-cache, then make eval (cache_misses 0), then commit data/llm_cache",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/sourcing/data/llm_cache/"
+      },
+      {
+        "id": "rules-draft-gaps",
+        "state": "HOLD",
+        "summary": "rules.DRAFT.json has no 7A002.a.2 branch and its 848 row names part classes the lane does not use; DRAFT pending sign-off (D-6)",
+        "clearer": "Charlie",
+        "next_unblock": "sign off rules.json per DRAFT_REVIEW.md; add the a.2 row; align part_class names",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/sourcing/HANDOFF.md"
       }
     ],
     "checks": [
       {
         "name": "pytest tests/sourcing",
         "state": "PASSED",
-        "observed_at": "2026-09-06T00:40:00Z",
-        "candidate": "3b7e840845c250f821884be50ffe9acd84ed9fca",
+        "observed_at": "2026-09-06T07:45:24Z",
+        "candidate": "6fd70505b7ca8dbfe89a723b19d843fa9890c295",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/HANDOFF.md"
       },
       {
-        "name": "tools/check_custody.py --lane sourcing (against the proposed registry entry)",
+        "name": "tools/check_custody.py --lane sourcing (patched copy, over the repository registry merged with the lane's proposal)",
         "state": "PASSED",
-        "observed_at": "2026-09-06T00:40:00Z",
-        "candidate": "3b7e840845c250f821884be50ffe9acd84ed9fca",
+        "observed_at": "2026-09-06T07:45:24Z",
+        "candidate": "6fd70505b7ca8dbfe89a723b19d843fa9890c295",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/HANDOFF.md"
       }
