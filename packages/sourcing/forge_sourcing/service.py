@@ -29,8 +29,8 @@ BLOCKING_ESCALATIONS = ("no_offer_match", "origin_depends_on_lot")
 
 
 class Service:
-    def __init__(self, data_dir: Path):
-        self.store = FixtureStore(data_dir)
+    def __init__(self, data_dir: Path, *, csl_file: Path | str | None = None):
+        self.store = FixtureStore(data_dir, csl_file=csl_file)
         self.thread = Thread()
         self.rounds: dict[str, dict] = {}
         self.adjudications: dict[str, dict] = {}   # key: f"{round_id}|{offer_hash}|{party_id}"

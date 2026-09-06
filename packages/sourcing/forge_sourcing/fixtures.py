@@ -14,11 +14,13 @@ FILES = {
     "tariff": "tariff.json",
     "csl": "csl_subset.csv",
 }
+FULL_CSL_SHA = "44f89e8fe741992455c03cf6516a70f20984a38bafe5b91327dad31599bfafec"
 
 
 class FixtureStore:
-    def __init__(self, data_dir: Path):
+    def __init__(self, data_dir: Path, *, csl_file: Path | str | None = None):
         self.data_dir = Path(data_dir)
+        self.csl_path = Path(csl_file) if csl_file else self.data_dir / FILES["csl"]
         self.manifest: dict[str, dict] = {}
         self.offers = self._load_json("offers")
         self.ownership = self._load_json("ownership")
@@ -48,8 +50,7 @@ class FixtureStore:
         return doc
 
     def _load_csl(self):
-        path = self.data_dir / FILES["csl"]
-        raw = path.read_bytes()
+        raw = self.csl_path.read_bytes()
         rows = list(csv.DictReader(raw.decode("utf-8").splitlines()))
         index: dict[str, list[tuple[dict, str]]] = {}
         exact: dict[str, list[dict]] = {}
@@ -60,14 +61,16 @@ class FixtureStore:
                 alt = alt.strip()
                 if alt:
                     index.setdefault(normalize(alt), []).append((row, "alt_name"))
-        self.manifest["csl"] = {
-            "file": FILES["csl"],
-            "source": "Consolidated Screening List, data.trade.gov consolidated.csv; committed subset of the 2026-09-04 snapshot (full file sha256 44f89e8fe741992455c03cf6516a70f20984a38bafe5b91327dad31599bfafec, 26,082 data rows); rows copied verbatim",
-            "retrieved_at": "2026-09-04T00:00:00Z",
-            "revision": "subset-2026-09-05",
-            "sha256": sha256_bytes(raw),
-            "row_count": len(rows),
-        }
+        digest = sha256_bytes(raw)
+        if self.csl_path.name == FILES["csl"]:
+            source, revision = ("Consolidated Screening List, data.trade.gov consolidated.csv; committed subset of the 2026-09-04 snapshot "
+                                f"(full file sha256 {FULL_CSL_SHA}, 26,082 data rows); rows copied verbatim"), "subset-2026-09-05"
+        elif digest == FULL_CSL_SHA:
+            source, revision = "Consolidated Screening List, data.trade.gov consolidated.csv; full 2026-09-04 snapshot", "full-2026-09-04"
+        else:
+            source, revision = f"Consolidated Screening List, data.trade.gov consolidated.csv; file {self.csl_path.name} (sha computed at load)", f"full-{digest[:8]}"
+        self.manifest["csl"] = {"file": self.csl_path.name, "source": source, "retrieved_at": "2026-09-04T00:00:00Z", "revision": revision,
+                                "sha256": digest, "row_count": len(rows)}
         return rows, {"exact": exact, "normalized": index}
 
     # ------------------------------------------------------------ access
