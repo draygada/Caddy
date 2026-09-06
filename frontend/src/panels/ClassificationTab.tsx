@@ -58,7 +58,6 @@ function Thumb({ faces }: { faces: ThumbFace[] | null }) {
 /** Classification: the part visually, why it trips, and the regulation behind an expand. Only parts of concern up front. */
 export function ClassificationTab({ o }: { o: Outcome }) {
   const s = useStore();
-  const [showClean, setShowClean] = useState(false);
   const [reasonFor, setReasonFor] = useState<Node | null>(null);
   useEffect(() => {
     if (!reasonFor) return;
@@ -151,11 +150,8 @@ export function ClassificationTab({ o }: { o: Outcome }) {
 
       {clean.length > 0 && (
         <div className="panel">
-          <button onClick={() => setShowClean((v) => !v)} aria-expanded={showClean} className="row-hover w-full text-left flex justify-between items-center px-4 min-h-12 bg-transparent border-0 text-ink cursor-pointer">
-            <span className="text-[14px]"><b>{clean.length} part{clean.length === 1 ? '' : 's'}</b> <span className="text-muted">· no match in the modeled rows · {clean.map((r) => r.name).join(', ')}</span></span>
-            <span className="text-[13px] text-muted">{showClean ? 'hide' : 'show'}</span>
-          </button>
-          {showClean && clean.map((r) => <Row key={r.node} r={r} />)}
+          <div className="panel-head"><div className="panel-title">{clean.length} part{clean.length === 1 ? '' : 's'} <span className="sub">· no match in the modeled rows</span></div><span /></div>
+          {clean.map((r) => <Row key={r.node} r={r} />)}
         </div>
       )}
 
