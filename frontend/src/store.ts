@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
   BASELINE_PARTS, CATALOG, CMP_KEYS, DECLARED0, DEFAULT_POS, DIMS0, EXTRUDE_MAX, EXTRUDE_MIN, FIELDS, RULES_EVALUATED, SCENARIO, SEED_EVENTS, SEED_FEATURES,
-  CORE_SLOTS, GENERIC_NAME, SLOTS, SLOT_LABEL, SPAN_BASELINE, SPAN_MAX, SPAN_MIN, PLATE_W,
+  CORE_SLOTS, GENERIC_NAME, SLOTS, SLOT_LABEL, SPAN_BASELINE, SPAN_MAX, SPAN_MIN,
   type CmpKey, type Declared, type Dims, type Feature, type FieldSpec, type Lane, type Node, type PartAttrs, type PartId, type Slot, type TimelineEvent,
 } from './lib/catalog';
 import { GEO0, type Geo, type Pos, type Positions, type Snapshot } from './lib/design';
@@ -289,23 +289,26 @@ function readUrl(): { theme: Theme; demoBar: boolean; serviceState: ServiceState
 }
 
 const attrsFor = (parts: Parts): Attrs => Object.fromEntries(SLOTS.map((s) => [s, parts[s] ? { ...CATALOG[parts[s] as PartId].attrs } : {}])) as Attrs;
-const posFor = (span: number): Positions => Object.fromEntries(SLOTS.map((s) => [s, DEFAULT_POS[s](span)])) as Positions;
+/** Default part positions for a plate of length L and width W (metres). */
+const posFor = (L: number, W: number): Positions => Object.fromEntries(SLOTS.map((s) => [s, DEFAULT_POS[s](L, W)])) as Positions;
 
 const baselineSnapshot = (): Snapshot => ({
-  parts: { ...BASELINE_PARTS }, attrs: attrsFor(BASELINE_PARTS), pos: posFor(SPAN_BASELINE), span: SPAN_BASELINE, dims: { ...DIMS0 }, features: SEED_FEATURES.slice(), geo: { ...GEO0 }, sketch: { ...SKETCH_DEFAULT }, tint: {}, unconfirmed: {}, declared: { ...DECLARED0 },
+  parts: { ...BASELINE_PARTS }, attrs: attrsFor(BASELINE_PARTS), pos: posFor(GEO0.plateL, GEO0.plateW), span: SPAN_BASELINE, dims: { ...DIMS0 }, features: SEED_FEATURES.slice(), geo: { ...GEO0 }, sketch: { ...SKETCH_DEFAULT }, tint: {}, unconfirmed: {}, declared: { ...DECLARED0 },
 });
 const pickSnapshot = (s: Snapshot): Snapshot => ({ parts: s.parts, attrs: s.attrs, pos: s.pos, span: s.span, dims: s.dims, features: s.features, geo: s.geo, sketch: s.sketch, tint: s.tint, unconfirmed: s.unconfirmed, declared: s.declared });
 
 /** Merlin, the second sample: a 7 inch civil survey quad, about half built. Frame, pack, flight controller, its IMU, the 4-in-1 controller and a motor sit on the plate; the rest are in the project, not placed. */
 export const MERLIN_SLOTS: Slot[] = ['frame', 'battery', 'fc', 'imu', 'esc', 'motor', 'prop', 'gnss', 'datalink', 'camera', 'transponder'];
 const merlinSnapshot = (): Snapshot => {
+  // a 600 x 300 x 6 mm assembly plate: the 270 x 199 mm frame takes the far half, the small parts sit in two columns on the near half
+  const geo: Geo = { ...GEO0, plateL: 0.6, plateW: 0.3 };
   const parts: Parts = { ...(Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts), frame: 'chimera7', battery: 'tattu1300', fc: 'px6cmini', imu: 'icm', esc: 'tekko65', motor: 'f60prov' };
   const pos: Positions = {
-    ...posFor(SPAN_BASELINE),
-    battery: { x: 0.15, y: 0.1 }, esc: { x: 0.15, y: 0.55 }, fc: { x: 0.65, y: 0.6 }, imu: { x: 1.0, y: 0.12 }, motor: { x: 1.35, y: 0.08 }, frame: { x: 1.75, y: 0.58 },
-    gnss: { x: 1.35, y: 0.5 }, datalink: { x: 1.3, y: 0.85 }, prop: { x: 1.95, y: 0.0 }, camera: { x: 2.7, y: 0.12 }, transponder: { x: 2.7, y: 0.36 },
+    ...posFor(geo.plateL, geo.plateW),
+    battery: { x: 0.02, y: 0.02 }, esc: { x: 0.02, y: 0.08 }, fc: { x: 0.02, y: 0.15 }, datalink: { x: 0.02, y: 0.22 }, camera: { x: 0.02, y: 0.265 },
+    imu: { x: 0.13, y: 0.02 }, gnss: { x: 0.17, y: 0.02 }, transponder: { x: 0.24, y: 0.02 }, motor: { x: 0.13, y: 0.06 }, prop: { x: 0.11, y: 0.115 }, frame: { x: 0.31, y: 0.09 },
   };
-  return { ...baselineSnapshot(), parts, attrs: attrsFor(parts), pos };
+  return { ...baselineSnapshot(), parts, attrs: attrsFor(parts), pos, geo, features: [{ n: 'f1', text: 'assembly plate · 0.600 × 0.300 × 0.006 m', kind: 'sketch' }, { n: 'f2', text: 'flange · 0.006 × 0.300 × 0.060 m', kind: 'extrude' }, { n: 'f3', text: '4 holes ⌀ 6.5 mm · plate', kind: 'hole' }] };
 };
 export const SAMPLE_PROJECTS: Project[] = [
   { id: 'kestrel', name: 'Kestrel', description: 'Fixed-wing survey drone · 7 slots · the demo design', intake: { ...INTAKE_DEFAULT, civilProduct: true }, createdAt: '2026-09-04 18:10', openedAt: '2026-09-05 09:12', components: [...CORE_SLOTS] },
@@ -331,7 +334,7 @@ const baseline = () => {
     rederive: null as { line: string; detail: string } | null, step: 0, keysOpen: false,
     az: ISO.az, el: ISO.el, zoom: ISO.zoom, pan: { x: 0, y: 0 },
     dialog: null as Dialog | null, preview: null as Preview | null, marking: null as WorkbenchState['marking'], measure: { a: null, b: null } as WorkbenchState['measure'],
-    isolated: null as BodyId | null, section: { on: false, axis: 0, at: 1.5 } as Section,
+    isolated: null as BodyId | null, section: { on: false, axis: 0, at: GEO0.plateL / 2 } as Section,
     fieldMsg: {} as Record<string, string>, dragging: false, dragPart: null as PartId | null,
   };
 };
@@ -377,7 +380,8 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       if (!p) return;
       const opened: Project = { ...p, openedAt: now(), components: p.components?.length ? p.components : [...CORE_SLOTS] };
       // an older snapshot may predate library components: fill any missing slot with empty state
-      const snap = p.snapshot ? { ...p.snapshot, parts: { ...(Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts), ...p.snapshot.parts }, attrs: { ...(Object.fromEntries(SLOTS.map((sl) => [sl, {}])) as Attrs), ...p.snapshot.attrs }, pos: { ...posFor(p.snapshot.span), ...p.snapshot.pos }, dims: { ...DIMS0, ...p.snapshot.dims } } : {};
+      const geo: Geo = { ...GEO0, ...p.snapshot?.geo };
+      const snap = p.snapshot ? { ...p.snapshot, geo, parts: { ...(Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts), ...p.snapshot.parts }, attrs: { ...(Object.fromEntries(SLOTS.map((sl) => [sl, {}])) as Attrs), ...p.snapshot.attrs }, pos: { ...posFor(geo.plateL, geo.plateW), ...p.snapshot.pos }, dims: { ...DIMS0, ...p.snapshot.dims } } : {};
       set({ ...baseline(), ...snap, round: null, sourcingOpen: false, workspace: 'design', project: opened, projects: s.projects.map((x) => (x.id === id ? opened : x)) });
     },
     addComponent: (slot) => {
@@ -657,7 +661,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const az = Math.abs(x) + Math.abs(y) < 1e-9 ? get().az : Math.atan2(x, y);
       set({ az, el, pan: { x: 0, y: 0 } });
     },
-    fit: () => set((s) => ({ pan: { x: 0, y: 0 }, zoom: Math.max(0.3, Math.min(4, +(2.1 / s.span).toFixed(2))) })),
+    fit: () => set((s) => ({ pan: { x: 0, y: 0 }, zoom: Math.max(0.3, Math.min(4, +(0.32 / s.geo.plateL).toFixed(2))) })),
     toggleHidden: (id) => set((s) => ({ hidden: { ...s.hidden, [id]: !s.hidden[id] } })),
     isolate: (id) => set({ isolated: id }),
 
@@ -708,8 +712,9 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     commitMove: (slot, from) => {
       const s = get();
       const to = s.pos[slot];
-      if (Math.abs(to.x - from.x) < 1e-3 && Math.abs(to.y - from.y) < 1e-3) return;
-      append({ kind: 'part_moved', text: SLOT_LABEL[slot] + ' · (' + from.x.toFixed(2) + ', ' + from.y.toFixed(2) + ') → (' + to.x.toFixed(2) + ', ' + to.y.toFixed(2) + ') m', entry: 'geometry only · no rule reads position · re-evaluated ' + RULES_EVALUATED + ' · 0 changed', intent: '' });
+      if (Math.abs(to.x - from.x) < 1e-3 && Math.abs(to.y - from.y) < 1e-3 && Math.abs((to.z ?? 0) - (from.z ?? 0)) < 1e-3) return;
+      const at = (p: Pos) => '(' + p.x.toFixed(2) + ', ' + p.y.toFixed(2) + ', ' + (p.z ?? 0).toFixed(2) + ')';
+      append({ kind: 'part_moved', text: SLOT_LABEL[slot] + ' · ' + at(from) + ' → ' + at(to) + ' m', entry: 'geometry only · no rule reads position · re-evaluated ' + RULES_EVALUATED + ' · 0 changed', intent: '' });
     },
 
     setAttr: (slot, field, text) => {
@@ -837,15 +842,14 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const parsed = parseDecimal(text);
       if (parsed == null) { set({ spanMsg: 'not a number · accepted formats: 3.4 · 3,4 · 3.4 m', spanErr: true }); return; }
       let v = parsed, msg = '';
-      if (v < SPAN_MIN) { v = SPAN_MIN; msg = 'clamped to 1.5 m (min)'; } else if (v > SPAN_MAX) { v = SPAN_MAX; msg = 'clamped to 6.0 m (max)'; }
+      if (v < SPAN_MIN) { v = SPAN_MIN; msg = 'clamped to ' + SPAN_MIN.toFixed(1) + ' m (min)'; } else if (v > SPAN_MAX) { v = SPAN_MAX; msg = 'clamped to ' + SPAN_MAX.toFixed(1) + ' m (max)'; }
       const s = get();
       if (v === s.span) { set({ spanText: v.toFixed(1), spanMsg: msg, spanErr: false }); return; }
       const before = service.evaluate(design(), get().pack), after = service.evaluate({ parts: s.parts, attrs: s.attrs, span: v, declared: s.declared }, s.pack);
       const changed = countChanged(before, after);
       const old = s.span;
-      const pos = { ...s.pos };
-      for (const sl of SLOTS) pos[sl] = { x: Math.min(pos[sl].x, v - 0.3), y: pos[sl].y };
-      set({ span: v, spanText: v.toFixed(1), spanErr: false, pos, spanMsg: msg || ('applied · cruise_W ' + after.cruiseW.toFixed(0) + ' W · range ' + (after.range ?? 0).toFixed(0) + ' km'), lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: 'span ' + old.toFixed(1) + ' → ' + v.toFixed(1) + ' m', keysOpen: false });
+      // the span is the wing, not the plate: no part moves
+      set({ span: v, spanText: v.toFixed(1), spanErr: false, spanMsg: msg || ('applied · cruise_W ' + after.cruiseW.toFixed(0) + ' W · range ' + (after.range ?? 0).toFixed(0) + ' km'), lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: 'span ' + old.toFixed(1) + ' → ' + v.toFixed(1) + ' m', keysOpen: false });
       const crossed = after.range != null && before.range != null && after.range >= 300 && before.range < 300;
       append({ kind: 'attr_changed', text: 'airframe · span ' + old.toFixed(1) + ' m → ' + v.toFixed(1) + ' m', entry: crossed ? '9A012 MT · range ' + (after.range ?? 0).toFixed(0) + ' km ≥ 300 km' : 're-evaluated ' + RULES_EVALUATED + ' · ' + changed + ' changed', intent: '' });
     },
@@ -856,7 +860,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const solved = solveSketch(s.sketch);
       if (solved.overall === 'CONTRADICTORY') return 'contradictory sketch · remove the conflicting constraint';
       const n = nextFeature(s);
-      const label = 'plate profile · ' + s.span.toFixed(3) + ' × ' + PLATE_W.toFixed(3) + ' m · ' + solved.overall + ' · ' + solved.dof + ' DOF';
+      const label = 'plate profile · ' + s.geo.plateL.toFixed(3) + ' × ' + s.geo.plateW.toFixed(3) + ' m · ' + solved.overall + ' · ' + solved.dof + ' DOF';
       set({ features: s.features.concat([{ n, text: label, kind: 'sketch' }]) });
       append({ kind: 'feature_added', text: n + ' · sketch · ' + label, entry: 'profile committed · ready for extrusion · re-evaluated ' + RULES_EVALUATED + ' · 0 changed', intent: '' });
       return solved.overall + ' · ' + solved.dof + ' DOF';
@@ -866,7 +870,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       if (!editable()) return 'viewing history · restore to edit';
       const s = get();
       let v = value, msg = '';
-      if (v < EXTRUDE_MIN) { v = EXTRUDE_MIN; msg = 'clamped to 0.02 m'; } else if (v > EXTRUDE_MAX) { v = EXTRUDE_MAX; msg = 'clamped to 1.5 m'; }
+      if (v < EXTRUDE_MIN) { v = EXTRUDE_MIN; msg = 'clamped to ' + EXTRUDE_MIN + ' m'; } else if (v > EXTRUDE_MAX) { v = EXTRUDE_MAX; msg = 'clamped to ' + EXTRUDE_MAX + ' m'; }
       const old = s.dims[target];
       if (Math.abs(v - old) < 1e-6) return 'unchanged';
       const n = nextFeature(s);
@@ -958,7 +962,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       if (k >= SCENARIO.length - 1) return;
       const acts: (() => void)[] = [
         () => a.select('battery'), () => a.swap('battery', 'amprius'), () => a.confirm('benji'),
-        () => { a.select('airframe'); get().setSpan('3.4'); }, () => { a.select('thermal'); get().swap('thermal', 'boson'); },
+        () => { a.select('airframe'); get().setSpan('2.0'); }, () => { a.select('thermal'); get().swap('thermal', 'boson'); },
         () => { a.select('imu'); get().swap('imu', 'hg5700'); }, () => { a.select('fc'); get().swap('fc', 'h753'); },
       ];
       acts[k]();

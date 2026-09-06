@@ -3,7 +3,7 @@
 // so the shell renders an outcome before the seam is wired; the browser will
 // render the backend's response verbatim once it exists.
 import {
-  CATALOG, CELLS, DECLARED0, DEST, LEVEL, LISTED_AIRCRAFT, PACKS, SLOTS, TONE,
+  CATALOG, CELLS, DECLARED0, DEST, LEVEL, LISTED_AIRCRAFT, PACKS, SLOTS, SPAN_BASELINE, TONE,
   type ColSet, type Declared, type DestCode, type DestWord, type Node, type PackId, type PartAttrs, type PartId, type Slot, type Tone,
 } from './catalog';
 
@@ -41,8 +41,9 @@ export interface Design { parts: Parts; attrs: Attrs; span: number; declared?: D
 const f2 = (n: number) => n.toFixed(2);
 const ECFR = (p: PackId) => PACKS[p].ecfr_date;
 
+/** Declared simplification: 200 W of fixed load plus 120 W of induced power at the 1.8 m baseline span, falling with the square of the span ratio. */
 export function cruiseWatts(span: number): number {
-  return 200 + 120 * Math.pow(3 / span, 2);
+  return 200 + 120 * Math.pow(SPAN_BASELINE / span, 2);
 }
 
 export function outcome(d: Design, packId: PackId = 'v2'): Outcome {

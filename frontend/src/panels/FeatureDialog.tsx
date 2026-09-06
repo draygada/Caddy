@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore, nodeOfBody, BODY_LABEL, type BodyId } from '../store';
-import { EXTRUDE_MAX, EXTRUDE_MIN, PLATE_T, PLATE_W, SLOT_LABEL, CATALOG, type Slot } from '../lib/catalog';
+import { EXTRUDE_MAX, EXTRUDE_MIN, PLATE_T, SLOT_LABEL, CATALOG, type Slot } from '../lib/catalog';
 import { CONSTRAINTS, SKETCH_COLOR, solveSketch } from '../lib/sketch';
 import { fmtLen, fmtNum, fromUnit, unitStep, type Unit } from '../lib/units';
 import { buildBodies } from '../lib/scene';
@@ -65,7 +65,7 @@ export function FeatureDialog({ docked = false }: { docked?: boolean } = {}) {
         return (
           <Frame title="Extrude" sub="plate sketch → solid body" onCancel={cancel} okDisabled={readOnly} onOk={() => { s.applyGeo({ plateT: thickness }, 'extrude', 'extrude · plate profile to ' + thickness.toFixed(3) + ' m'); s.closeDialog(); }} okLabel="Commit extrusion">
             {ro}
-            <LenField id="dlg-extrude-plate" label="profile depth" metres={thickness} units={u} min={0.02} max={0.5} onChange={(m) => s.setPreview({ ...s.preview, geo: { ...s.geo, plateT: m } })} hint="drives the rendered plate, mounted bodies, properties, section plane, and design hash" />
+            <LenField id="dlg-extrude-plate" label="profile depth" metres={thickness} units={u} min={0.002} max={0.05} onChange={(m) => s.setPreview({ ...s.preview, geo: { ...s.geo, plateT: m } })} hint="drives the rendered plate, mounted bodies, properties, section plane, and design hash" />
             <div className="text-[12px] text-muted">Consumes the committed plate profile and appends an <span className="font-mono">extrude</span> feature plus a <span className="font-mono">feature_added</span> event.</div>
           </Frame>
         );
@@ -84,14 +84,14 @@ export function FeatureDialog({ docked = false }: { docked?: boolean } = {}) {
       return (
         <Frame title="Hole" sub="base plate · 4 through holes" onCancel={cancel} okDisabled={readOnly} onOk={() => { s.applyGeo({ holeD: geo.holeD }, 'hole', '4 holes ⌀ ' + geo.holeD.toFixed(3) + ' m · plate'); s.closeDialog(); }}>
           {ro}
-          <LenField id="dlg-hole" label="diameter" metres={geo.holeD} units={u} min={0.02} max={0.36} onChange={(m) => s.setPreview({ ...s.preview, geo: { ...s.geo, holeD: m } })} />
+          <LenField id="dlg-hole" label="diameter" metres={geo.holeD} units={u} min={0.003} max={0.03} onChange={(m) => s.setPreview({ ...s.preview, geo: { ...s.geo, holeD: m } })} />
         </Frame>
       );
     case 'fillet':
       return (
         <Frame title="Fillet" sub="base plate · 4 corners" onCancel={cancel} okDisabled={readOnly} onOk={() => { s.applyGeo({ fillet: geo.fillet, chamfer: 0 }, 'fillet', 'fillet · plate corners r ' + geo.fillet.toFixed(3) + ' m'); s.closeDialog(); }}>
           {ro}
-          <LenField id="dlg-fillet" label="radius" metres={geo.fillet} units={u} min={0} max={Math.min(0.55, s.span / 2 - 0.02)} onChange={(m) => s.setPreview({ ...s.preview, geo: { ...s.geo, fillet: m, chamfer: 0 } })} />
+          <LenField id="dlg-fillet" label="radius" metres={geo.fillet} units={u} min={0} max={Math.min(0.05, geo.plateW / 2 - 0.012)} onChange={(m) => s.setPreview({ ...s.preview, geo: { ...s.geo, fillet: m, chamfer: 0 } })} />
           {s.geo.chamfer > 0 && <div className="text-[12px] text-muted">replaces the current chamfer ({fmtLen(s.geo.chamfer, u, true)})</div>}
         </Frame>
       );
@@ -99,7 +99,7 @@ export function FeatureDialog({ docked = false }: { docked?: boolean } = {}) {
       return (
         <Frame title="Chamfer" sub="base plate · 4 corners" onCancel={cancel} okDisabled={readOnly} onOk={() => { s.applyGeo({ chamfer: geo.chamfer, fillet: 0 }, 'chamfer', 'chamfer · plate corners ' + geo.chamfer.toFixed(3) + ' m'); s.closeDialog(); }}>
           {ro}
-          <LenField id="dlg-chamfer" label="distance" metres={geo.chamfer} units={u} min={0} max={Math.min(0.55, s.span / 2 - 0.02)} onChange={(m) => s.setPreview({ ...s.preview, geo: { ...s.geo, chamfer: m, fillet: 0 } })} />
+          <LenField id="dlg-chamfer" label="distance" metres={geo.chamfer} units={u} min={0} max={Math.min(0.05, geo.plateW / 2 - 0.012)} onChange={(m) => s.setPreview({ ...s.preview, geo: { ...s.geo, chamfer: m, fillet: 0 } })} />
           {s.geo.fillet > 0 && <div className="text-[12px] text-muted">replaces the current fillet ({fmtLen(s.geo.fillet, u, true)})</div>}
         </Frame>
       );
@@ -109,14 +109,14 @@ export function FeatureDialog({ docked = false }: { docked?: boolean } = {}) {
       return (
         <Frame title="Move" sub={BODY_LABEL[slot]} onCancel={cancel} okDisabled={readOnly} onOk={() => { const from = s.pos[slot]; s.moveTo(slot, p); s.commitMove(slot, from); s.closeDialog(); }}>
           {ro}
-          <LenField id="dlg-mx" label="X · along the span" metres={p.x} units={u} min={0.05} max={s.span - 0.3} onChange={(m) => s.setPreview({ ...s.preview, pos: { ...pos, [slot]: { ...p, x: m } } })} />
-          <LenField id="dlg-my" label="Y · across the plate" metres={p.y} units={u} min={0.05} max={PLATE_W - 0.25} onChange={(m) => s.setPreview({ ...s.preview, pos: { ...pos, [slot]: { ...p, y: m } } })} />
+          <LenField id="dlg-mx" label="X · along the plate" metres={p.x} units={u} min={0.005} max={geo.plateL - 0.03} onChange={(m) => s.setPreview({ ...s.preview, pos: { ...pos, [slot]: { ...p, x: m } } })} />
+          <LenField id="dlg-my" label="Y · across the plate" metres={p.y} units={u} min={0.005} max={geo.plateW - 0.025} onChange={(m) => s.setPreview({ ...s.preview, pos: { ...pos, [slot]: { ...p, y: m } } })} />
           <div className="text-[12px] text-muted">or drag the body in the viewport · position feeds no rule</div>
         </Frame>
       );
     }
     case 'measure': {
-      const bodies = buildBodies({ span: s.span, dims, geo, parts: s.parts, attrs: s.attrs, pos });
+      const bodies = buildBodies({ dims, geo, parts: s.parts, attrs: s.attrs, pos });
       const info = (b: BodyId | null) => { if (!b) return null; const bb = bounds3(bodies[b]); return { bb, c: boundsCenter(bb), size: [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]] as const, vol: boundsVolume(bb) }; };
       const A = info(s.measure.a), B = info(s.measure.b);
       const dist = A && B ? Math.hypot(B.c[0] - A.c[0], B.c[1] - A.c[1], B.c[2] - A.c[2]) : null;
@@ -145,11 +145,11 @@ export function FeatureDialog({ docked = false }: { docked?: boolean } = {}) {
     }
     case 'section': {
       const sec = s.section;
-      const maxAt = sec.axis === 0 ? s.span : sec.axis === 1 ? PLATE_W : PLATE_T + Math.max(dims.airframe, 1.6);
+      const maxAt = sec.axis === 0 ? geo.plateL : sec.axis === 1 ? geo.plateW : (geo.plateT ?? PLATE_T) + Math.max(dims.airframe, 0.15);
       return (
         <Frame title="Section analysis" sub="clip the model at a plane" onCancel={() => { s.patch({ section: { ...sec, on: false } }); s.closeDialog(); }} onOk={() => s.closeDialog()} okLabel="Keep">
           <div role="radiogroup" aria-label="plane" className="flex gap-1">
-            {(['X', 'Y', 'Z'] as const).map((ax, i) => <button key={ax} role="radio" aria-checked={sec.axis === i} onClick={() => s.patch({ section: { on: true, axis: i as 0 | 1 | 2, at: i === 0 ? s.span / 2 : i === 1 ? PLATE_W / 2 : 0.3 } })} className="btn font-semibold" style={{ background: sec.axis === i ? 'var(--accent)' : 'transparent', color: sec.axis === i ? 'var(--accentfg)' : 'var(--ink)' }}>{ax} plane</button>)}
+            {(['X', 'Y', 'Z'] as const).map((ax, i) => <button key={ax} role="radio" aria-checked={sec.axis === i} onClick={() => s.patch({ section: { on: true, axis: i as 0 | 1 | 2, at: i === 0 ? geo.plateL / 2 : i === 1 ? geo.plateW / 2 : 0.03 } })} className="btn font-semibold" style={{ background: sec.axis === i ? 'var(--accent)' : 'transparent', color: sec.axis === i ? 'var(--accentfg)' : 'var(--ink)' }}>{ax} plane</button>)}
           </div>
           <LenField id="dlg-section" label="offset along the axis" metres={sec.at} units={u} min={0} max={maxAt} onChange={(m) => s.patch({ section: { ...sec, on: true, at: m } })} />
           <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={sec.on} onChange={(e) => s.patch({ section: { ...sec, on: e.target.checked } })} /> section on</label>
@@ -197,7 +197,7 @@ export function FeatureDialog({ docked = false }: { docked?: boolean } = {}) {
     }
     case 'properties': {
       const b = d.target!;
-      const bodies = buildBodies({ span: s.span, dims, geo, parts: s.parts, attrs: s.attrs, pos });
+      const bodies = buildBodies({ dims, geo, parts: s.parts, attrs: s.attrs, pos });
       const bb = bounds3(bodies[b]);
       const size = [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]];
       const slot = b !== 'plate' && b !== 'flange' ? b : null;

@@ -12,20 +12,20 @@ describe('timeline replay (undo is supersede)', () => {
     st.reset();
     st.swap('battery', 'amprius');
     st.confirm('benji');
-    st.setSpan('3.4');
+    st.setSpan('2.0');
     const s1 = useStore.getState();
     expect(s1.events.length).toBe(6);
-    expect(s1.span).toBe(3.4);
+    expect(s1.span).toBe(2.0);
     s1.viewAt(4); // after the swap, before confirm and span
     const s2 = useStore.getState();
     expect(s2.viewSeq).toBe(4);
-    expect(s2.span).toBe(3.0);
+    expect(s2.span).toBe(1.8);
     expect(s2.parts.battery).toBe('amprius');
     expect(s2.editable()).toBe(false);
-    s2.setSpan('5.0'); // blocked while replaying
-    expect(useStore.getState().span).toBe(3.0);
+    s2.setSpan('2.2'); // blocked while replaying
+    expect(useStore.getState().span).toBe(1.8);
     s2.viewAt(null);
-    expect(useStore.getState().span).toBe(3.4);
+    expect(useStore.getState().span).toBe(2.0);
     useStore.getState().viewAt(3); // baseline
     expect(useStore.getState().parts.battery).toBe('p45b');
     useStore.getState().restoreHere();
@@ -39,8 +39,8 @@ describe('timeline replay (undo is supersede)', () => {
   it('feature dialogs append geometry features; versions pin a seq', () => {
     const st = useStore.getState();
     st.reset();
-    st.applyGeo({ fillet: 0.1 }, 'fillet', 'fillet · plate corners r 0.100 m');
-    expect(useStore.getState().geo.fillet).toBe(0.1);
+    st.applyGeo({ fillet: 0.01 }, 'fillet', 'fillet · plate corners r 0.010 m');
+    expect(useStore.getState().geo.fillet).toBe(0.01);
     expect(useStore.getState().features.at(-1)?.kind).toBe('fillet');
     useStore.getState().saveVersion('rounded corners');
     expect(useStore.getState().versions.length).toBe(2);
@@ -52,11 +52,11 @@ describe('timeline replay (undo is supersede)', () => {
     st.toggleConstraint('hole_inset_y');
     expect(st.commitSketch()).toBe('SOLVED · 0 DOF');
     expect(useStore.getState().features.at(-1)?.kind).toBe('sketch');
-    useStore.getState().applyGeo({ plateT: 0.2 }, 'extrude', 'extrude · plate profile to 0.200 m');
+    useStore.getState().applyGeo({ plateT: 0.02 }, 'extrude', 'extrude · plate profile to 0.020 m');
     const current = useStore.getState();
-    expect(current.geo.plateT).toBe(0.2);
+    expect(current.geo.plateT).toBe(0.02);
     expect(current.features.at(-1)?.kind).toBe('extrude');
-    expect(buildBodies(current.snapshot()).plate.c?.[2]).toBeCloseTo(0.1, 9);
+    expect(buildBodies(current.snapshot()).plate.c?.[2]).toBeCloseTo(0.01, 9);
   });
 });
 
@@ -96,6 +96,24 @@ describe('units and geometry helpers', () => {
     expect(plateOutline(3, 1.2, 0.1, 0).length).toBe(24);
     expect(plateOutline(3, 1.2, 0, 0.1).length).toBe(8);
     expect(plateOutline(3, 1.2, 0, 0).length).toBe(4);
+  });
+});
+
+describe('the Merlin sample project', () => {
+  it('opens half built: six of eleven components placed, the rest listed but empty, and the preview scene builds for every slot', () => {
+    const st = useStore.getState();
+    st.reset();
+    st.openProject('merlin');
+    const s = useStore.getState();
+    expect(s.project?.id).toBe('merlin');
+    expect(s.project?.components).toHaveLength(11);
+    const placed = s.project!.components.filter((sl) => s.parts[sl]);
+    expect(placed).toEqual(['frame', 'battery', 'fc', 'imu', 'esc', 'motor']);
+    expect(s.parts.prop).toBeNull();
+    expect(s.parts.thermal).toBeNull();
+    const bodies = buildBodies(s.snapshot());
+    for (const sl of placed) expect(bodies[sl].faces.length).toBeGreaterThan(6);
+    expect(useStore.getState().projects.find((p) => p.id === 'kestrel')?.snapshot).toBeUndefined();
   });
 });
 

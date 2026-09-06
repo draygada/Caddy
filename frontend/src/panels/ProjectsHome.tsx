@@ -68,7 +68,7 @@ export function ProjectsHome() {
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
             {projects.map((p) => (
               <button key={p.id} onClick={() => openProject(p.id)} className="project-card panel text-left p-0 grid gap-0 cursor-pointer overflow-hidden">
-                <DesignPreview snap={p.snapshot ?? baselineSnapshotFor(p.id)} className="w-full block border-b border-line2" />
+                <DesignPreview snap={p.snapshot ?? baselineSnapshotFor(p.id)} components={p.components} className="w-full block border-b border-line2" />
                 <div className="p-4 grid gap-2">
                 <div className="flex justify-between gap-2 items-baseline"><span className="project-name text-[16px] font-semibold">{p.name}</span><span className="text-[12px] text-muted">opened {p.openedAt.slice(5)}</span></div>
                 <div className="text-[13px] text-muted min-h-[18px]">{p.description || 'no description'}</div>

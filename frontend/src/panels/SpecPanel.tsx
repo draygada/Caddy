@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore, fieldKey } from '../store';
-import { BOOL_FIELDS, CATALOG, CMP_KEYS, CRYPTO_OPTIONS, GENERIC_NAME, PALETTE, SLOT_LABEL, type PartId } from '../lib/catalog';
+import { BOOL_FIELDS, CATALOG, CMP_KEYS, CRYPTO_OPTIONS, GENERIC_NAME, PALETTE, SLOT_LABEL, SPAN_BASELINE, type PartId } from '../lib/catalog';
 import type { Outcome } from '../lib/rules';
 import { partOf, specAttrsOf } from '../lib/viewmodel';
 import { fmtNum, fromUnit, toUnit } from '../lib/units';
@@ -141,7 +141,7 @@ export function SpecPanel({ o }: { o: Outcome }) {
               {sel === 'airframe' && (
                 <div className="grid gap-[6px]">
                   <div className="text-muted">geometry · usable pack fraction 0.80 · cruise 90 km/h (declared)</div>
-                  <div className="font-mono">cruise_W = 200 + 120 × (3.0/{s.span.toFixed(1)})² = <b>{o.cruiseW.toFixed(0)} W</b></div>
+                  <div className="font-mono">cruise_W = 200 + 120 × ({SPAN_BASELINE.toFixed(1)}/{s.span.toFixed(1)})² = <b>{o.cruiseW.toFixed(0)} W</b></div>
                   <div className="font-mono">endurance = <b>{o.endurance != null ? o.endurance.toFixed(2) : '·'} h</b> <span className="text-muted">· pack_Wh × 0.80 / cruise_W</span></div>
                   <div className="font-mono">range = <b>{o.range != null ? o.range.toFixed(0) : '·'} km</b> <span className="text-muted">· endurance × 90 km/h</span></div>
                 </div>
