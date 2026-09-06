@@ -1,0 +1,153 @@
+{
+  "$defs": {
+    "Diagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "feature_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Feature Id"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "INFO",
+            "WARNING",
+            "ERROR"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "message"
+      ],
+      "title": "Diagnostic",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "bounds_mm": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Bounds Mm",
+      "type": "array"
+    },
+    "brep_base64": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Brep Base64"
+    },
+    "content_base64": {
+      "title": "Content Base64",
+      "type": "string"
+    },
+    "content_sha256": {
+      "title": "Content Sha256",
+      "type": "string"
+    },
+    "diagnostics": {
+      "items": {
+        "$ref": "#/$defs/Diagnostic"
+      },
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "direction": {
+      "enum": [
+        "IMPORT",
+        "EXPORT"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "editable_brep": {
+      "title": "Editable Brep",
+      "type": "boolean"
+    },
+    "exact_geometry": {
+      "title": "Exact Geometry",
+      "type": "boolean"
+    },
+    "format": {
+      "enum": [
+        "STEP",
+        "IGES",
+        "STL"
+      ],
+      "title": "Format",
+      "type": "string"
+    },
+    "request_id": {
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "caddydaddy.exchange-result/1",
+      "default": "caddydaddy.exchange-result/1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "const": "SUCCEEDED",
+      "default": "SUCCEEDED",
+      "title": "Status",
+      "type": "string"
+    },
+    "topology": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Topology",
+      "type": "object"
+    },
+    "verification": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Verification",
+      "type": "array"
+    }
+  },
+  "required": [
+    "request_id",
+    "direction",
+    "format",
+    "exact_geometry",
+    "editable_brep",
+    "content_base64",
+    "content_sha256",
+    "brep_base64",
+    "bounds_mm",
+    "topology",
+    "verification",
+    "diagnostics"
+  ],
+  "title": "ExchangeResponse",
+  "type": "object"
+}

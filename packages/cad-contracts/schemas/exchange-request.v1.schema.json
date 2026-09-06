@@ -1,0 +1,78 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "angular_deflection_deg": {
+      "default": 15.0,
+      "exclusiveMinimum": 0,
+      "maximum": 90,
+      "title": "Angular Deflection Deg",
+      "type": "number"
+    },
+    "binary_stl": {
+      "default": true,
+      "title": "Binary Stl",
+      "type": "boolean"
+    },
+    "content_base64": {
+      "minLength": 1,
+      "title": "Content Base64",
+      "type": "string"
+    },
+    "direction": {
+      "enum": [
+        "IMPORT",
+        "EXPORT"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "format": {
+      "minLength": 1,
+      "title": "Format",
+      "type": "string"
+    },
+    "linear_deflection_mm": {
+      "default": 0.25,
+      "exclusiveMinimum": 0,
+      "title": "Linear Deflection Mm",
+      "type": "number"
+    },
+    "request_id": {
+      "minLength": 1,
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "caddydaddy.exchange-request/1",
+      "default": "caddydaddy.exchange-request/1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_revision_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Revision Id"
+    },
+    "step_schema": {
+      "const": "AP242",
+      "default": "AP242",
+      "title": "Step Schema",
+      "type": "string"
+    }
+  },
+  "required": [
+    "request_id",
+    "direction",
+    "format",
+    "content_base64"
+  ],
+  "title": "ExchangeRequest",
+  "type": "object"
+}

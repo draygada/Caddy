@@ -1,0 +1,373 @@
+{
+  "$defs": {
+    "ArcEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "$ref": "#/$defs/Point2"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "ARC",
+          "default": "ARC",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mid": {
+          "$ref": "#/$defs/Point2"
+        },
+        "start": {
+          "$ref": "#/$defs/Point2"
+        }
+      },
+      "required": [
+        "entity_id",
+        "start",
+        "mid",
+        "end"
+      ],
+      "title": "ArcEntity",
+      "type": "object"
+    },
+    "CircleEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "center": {
+          "$ref": "#/$defs/Point2"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "CIRCLE",
+          "default": "CIRCLE",
+          "title": "Kind",
+          "type": "string"
+        },
+        "radius": {
+          "exclusiveMinimum": 0,
+          "title": "Radius",
+          "type": "number"
+        }
+      },
+      "required": [
+        "entity_id",
+        "center",
+        "radius"
+      ],
+      "title": "CircleEntity",
+      "type": "object"
+    },
+    "Feature": {
+      "additionalProperties": false,
+      "properties": {
+        "depends_on": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Depends On",
+          "type": "array"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "feature_id": {
+          "minLength": 1,
+          "title": "Feature Id",
+          "type": "string"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "output_body_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Body Id"
+        },
+        "parameters": {
+          "additionalProperties": true,
+          "title": "Parameters",
+          "type": "object"
+        }
+      },
+      "required": [
+        "feature_id",
+        "kind"
+      ],
+      "title": "Feature",
+      "type": "object"
+    },
+    "LineEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "$ref": "#/$defs/Point2"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "LINE",
+          "default": "LINE",
+          "title": "Kind",
+          "type": "string"
+        },
+        "start": {
+          "$ref": "#/$defs/Point2"
+        }
+      },
+      "required": [
+        "entity_id",
+        "start",
+        "end"
+      ],
+      "title": "LineEntity",
+      "type": "object"
+    },
+    "Point2": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Point2",
+      "type": "object"
+    },
+    "Sketch": {
+      "additionalProperties": false,
+      "properties": {
+        "constraints": {
+          "items": {
+            "$ref": "#/$defs/SketchConstraint"
+          },
+          "title": "Constraints",
+          "type": "array"
+        },
+        "loops": {
+          "items": {
+            "$ref": "#/$defs/SketchLoop"
+          },
+          "minItems": 1,
+          "title": "Loops",
+          "type": "array"
+        },
+        "origin": {
+          "$ref": "#/$defs/Vector3"
+        },
+        "plane": {
+          "enum": [
+            "XY",
+            "XZ",
+            "YZ"
+          ],
+          "title": "Plane",
+          "type": "string"
+        },
+        "sketch_id": {
+          "minLength": 1,
+          "title": "Sketch Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sketch_id",
+        "plane",
+        "loops"
+      ],
+      "title": "Sketch",
+      "type": "object"
+    },
+    "SketchConstraint": {
+      "additionalProperties": false,
+      "properties": {
+        "constraint_id": {
+          "minLength": 1,
+          "title": "Constraint Id",
+          "type": "string"
+        },
+        "entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Entity Ids",
+          "type": "array"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "point_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Point Refs",
+          "type": "array"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "constraint_id",
+        "kind"
+      ],
+      "title": "SketchConstraint",
+      "type": "object"
+    },
+    "SketchLoop": {
+      "additionalProperties": false,
+      "properties": {
+        "entities": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/LineEntity"
+              },
+              {
+                "$ref": "#/$defs/ArcEntity"
+              },
+              {
+                "$ref": "#/$defs/CircleEntity"
+              }
+            ]
+          },
+          "minItems": 1,
+          "title": "Entities",
+          "type": "array"
+        },
+        "loop_id": {
+          "minLength": 1,
+          "title": "Loop Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "loop_id",
+        "entities"
+      ],
+      "title": "SketchLoop",
+      "type": "object"
+    },
+    "Vector3": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "default": 0.0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "default": 0.0,
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "default": 0.0,
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "title": "Vector3",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "document_id": {
+      "minLength": 1,
+      "title": "Document Id",
+      "type": "string"
+    },
+    "features": {
+      "items": {
+        "$ref": "#/$defs/Feature"
+      },
+      "minItems": 1,
+      "title": "Features",
+      "type": "array"
+    },
+    "metadata": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Metadata",
+      "type": "object"
+    },
+    "parent_revision_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Revision Id"
+    },
+    "schema_version": {
+      "const": "caddydaddy.cad-document/1",
+      "default": "caddydaddy.cad-document/1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sketches": {
+      "items": {
+        "$ref": "#/$defs/Sketch"
+      },
+      "title": "Sketches",
+      "type": "array"
+    },
+    "units": {
+      "const": "mm",
+      "default": "mm",
+      "title": "Units",
+      "type": "string"
+    }
+  },
+  "required": [
+    "document_id",
+    "features"
+  ],
+  "title": "CadDocument",
+  "type": "object"
+}
