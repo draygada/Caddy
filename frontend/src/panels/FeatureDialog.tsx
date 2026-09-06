@@ -149,33 +149,39 @@ export function FeatureDialog({ docked = false }: { docked?: boolean } = {}) {
     }
     case 'sketch': {
       const r = solveSketch(s.sketch);
-      const group = (role: 'required' | 'redundant' | 'contradictory', title: string) => (
-        <div className="grid gap-1">
-          <div className="text-[12px] text-muted">{title}</div>
-          {CONSTRAINTS.filter((c) => c.role === role).map((c) => (
-            <label key={c.id} className="flex items-start gap-2 text-[13px] cursor-pointer">
-              <input type="checkbox" checked={!!s.sketch[c.id]} disabled={readOnly} onChange={() => s.toggleConstraint(c.id)} className="mt-[3px]" />
-              <span className="font-mono text-muted w-4 text-center">{c.glyph}</span>
-              <span>{c.label} <span className="text-muted">· {c.entity} · {c.kind}</span></span>
-            </label>
-          ))}
-        </div>
+      // plain words for each state; the codes and DOF counts stay in the solver
+      const word = (e: 'rect' | 'holes') => {
+        const st = r.entities[e];
+        return st.state === 'SOLVED' ? 'fully defined' : st.state === 'UNDER_CONSTRAINED' ? st.dof + ' degree' + (st.dof === 1 ? '' : 's') + ' of freedom left' : st.state === 'REDUNDANT' ? 'over-defined' : 'contradictory';
+      };
+      const short = (label: string) => label.replace(' · ⌀', '');
+      const row = (c: (typeof CONSTRAINTS)[number]) => (
+        <label key={c.id} className="flex items-center gap-2 text-[13px] cursor-pointer min-h-7">
+          <input type="checkbox" checked={!!s.sketch[c.id]} disabled={readOnly} onChange={() => s.toggleConstraint(c.id)} />
+          <span>{short(c.label)}</span>
+          <span className="text-muted text-[12px] ml-auto">{c.entity}</span>
+        </label>
       );
       return (
         <Frame title="Sketch" sub="plate profile" onCancel={cancel} onOk={cancel} okLabel="Finish sketch" docked={docked}>
           {ro}
           <div className="grid gap-1">
             {(['rect', 'holes'] as const).map((e) => (
-              <div key={e} className="grid gap-[2px] border-l-2 pl-2" style={{ borderColor: SKETCH_COLOR[r.entities[e].state] }}>
-                <div className="flex justify-between gap-2 text-[13px]"><span className="font-semibold">{e}</span><span className="font-mono font-bold" style={{ color: SKETCH_COLOR[r.entities[e].state] }}>{r.entities[e].state}</span></div>
-                <div className="font-mono text-[12px] text-muted">{r.entities[e].code} · {r.entities[e].dof} DOF</div>
-                <div className="text-[12px]">{r.entities[e].guidance}</div>
+              <div key={e} className="flex items-center gap-2 text-[13px]">
+                <span className="w-[10px] h-[10px] rounded-[2px] flex-none" style={{ background: SKETCH_COLOR[r.entities[e].state] }} />
+                <span className="font-semibold w-12">{e === 'rect' ? 'plate' : 'holes'}</span>
+                <span style={{ color: SKETCH_COLOR[r.entities[e].state] }}>{word(e)}</span>
               </div>
             ))}
           </div>
-          {group('required', 'constraints')}
-          {group('redundant', 'add a redundant constraint')}
-          {group('contradictory', 'add a contradictory constraint')}
+          <div className="grid">
+            <div className="text-[12px] text-muted pb-1">constraints</div>
+            {CONSTRAINTS.filter((c) => c.role === 'required').map(row)}
+          </div>
+          <details className="grid">
+            <summary className="text-[12px] text-muted cursor-pointer select-none">what if a constraint is redundant or contradictory</summary>
+            <div className="grid pt-1">{CONSTRAINTS.filter((c) => c.role !== 'required').map(row)}</div>
+          </details>
         </Frame>
       );
     }
