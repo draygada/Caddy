@@ -1,7 +1,7 @@
 # OCP/OCCT native Vercel preview owner approval request
 
-Status: **REQUEST ONLY - NO APPROVAL GRANTED**  
-Requested decision owner: **Diego, repository owner**  
+Status: **REQUEST ONLY - NO APPROVAL GRANTED**
+Requested decision owner: **Diego, repository owner**
 Existing controlling record: `docs/OCP_OCCT_OWNER_APPROVAL.md` remains **HOLD** and is not modified
 or superseded by this unsigned request.
 
