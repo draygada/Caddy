@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type DragEvent, type MouseEvent as RMouseEvent, type WheelEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore, isBodyId, nodeOfBody, BODY_LABEL, type BodyId, type Pos } from '../store';
 import { CATALOG, CORE_SLOTS, PLATE_T, PLATE_W, SLOTS, SLOT_LABEL, type PartId, type Slot } from '../lib/catalog';
 import { boxFaces, clipFaces, K, proj, renderSolid, solidBounds, type Face, type Projector, type Solid, type Vec3 } from '../lib/geometry';
@@ -397,7 +398,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
             )}
           </div>
         </div>
-        <div className="absolute left-1/2 bottom-3 -translate-x-1/2 flex items-center gap-[2px] px-1 py-[3px] bg-surface border border-line rounded-r shadow-[0_2px_8px_rgba(0,0,0,.08)]" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="absolute left-1/2 bottom-3 -translate-x-1/2 z-[20] flex items-center gap-[2px] px-1 py-[3px] bg-surface border border-line rounded-r shadow-[0_2px_8px_rgba(0,0,0,.08)]" onMouseDown={(e) => e.stopPropagation()}>
           <button className="nav-btn" aria-pressed={s.navMode === 'orbit'} title="Orbit (drag)" onClick={() => s.patch({ navMode: 'orbit' })}><Orbit /></button>
           <button className="nav-btn" aria-pressed={s.navMode === 'pan'} title="Pan (drag · or shift-drag)" onClick={() => s.patch({ navMode: 'pan' })}><Pan /></button>
           <button className="nav-btn" aria-pressed={s.navMode === 'zoom'} title="Zoom (drag up/down · or wheel)" onClick={() => s.patch({ navMode: 'zoom' })}><Zoom /></button>
@@ -406,8 +407,9 @@ export function Viewport({ o: _o }: { o: Outcome }) {
           <span className="w-px h-5 bg-line2 mx-1" />
           <div className="relative">
             <button className="nav-btn" aria-expanded={dispOpen} title="Display settings" onClick={() => setDispOpen((v) => !v)}><Display /><span className="text-[12px] text-muted">{Math.round(s.zoom * 100)}%</span></button>
+            {dispOpen && createPortal(<div className="fixed inset-0 z-[19]" onMouseDown={(e) => { e.stopPropagation(); setDispOpen(false); }} />, document.body)}
             {dispOpen && (
-              <div role="menu" className="absolute bottom-[38px] left-0 w-[220px] bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] py-1 text-[13px]">
+              <div role="menu" className="absolute z-[20] bottom-[38px] left-0 w-[220px] bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] py-1 text-[13px]">
                 <div className="px-3 pt-1 pb-[2px] text-[12px] text-muted">Visual style</div>
                 {(['shaded', 'edges', 'wireframe'] as const).map((v) => (
                   <button key={v} role="menuitemradio" aria-checked={s.visualStyle === v} onClick={() => s.patch({ visualStyle: v })} className="row-hover w-full text-left px-3 min-h-7 grid grid-cols-[16px_1fr] gap-2 items-center bg-transparent border-0 text-ink cursor-pointer">
