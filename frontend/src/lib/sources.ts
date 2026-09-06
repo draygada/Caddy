@@ -26,19 +26,19 @@ export type FieldKey = 'bias' | 'arw' | 'accel_bias' | 'hz' | 'elements';
 export interface UnverifiedSpec { field: FieldKey; value: number; unit: string; quote: string; start: number; end: number; doc_sha256: string }
 export type Verdict = { ok: true; spec: { field: FieldKey; value: number; unit: string }; note: string } | { ok: false; reason: 'span_not_found' | 'unparseable' | 'number_mismatch' | 'schema_violation'; note: string };
 
-/** The verifier: span must match the bytes, the quote must parse to one number, and the parsed number must equal the claim. Nothing else is accepted. */
+/** Cached-fixture checker: the JavaScript string slice must match the quote, which must parse to one number equal to the claim. */
 export function verify(doc: SourceDoc, claim: UnverifiedSpec | Record<string, unknown>): Verdict {
   const forbidden = ['classification', 'jurisdiction', 'entry', 'reasons', 'origin', 'ownership', 'screening'];
   for (const k of Object.keys(claim)) if (forbidden.includes(k)) return { ok: false, reason: 'schema_violation', note: 'claim carries a forbidden key: ' + k + ' · additionalProperties: false' };
   const c = claim as UnverifiedSpec;
-  if (c.doc_sha256 !== doc.sha) return { ok: false, reason: 'span_not_found', note: 'document sha mismatch' };
+  if (c.doc_sha256 !== doc.sha) return { ok: false, reason: 'span_not_found', note: 'synthetic fixture marker mismatch' };
   const slice = doc.text.slice(c.start, c.end);
-  if (slice !== c.quote) return { ok: false, reason: 'span_not_found', note: 'bytes ' + c.start + '–' + c.end + ' read “' + slice.slice(0, 40) + '”, not the quote' };
+  if (slice !== c.quote) return { ok: false, reason: 'span_not_found', note: 'fixture string characters ' + c.start + '–' + c.end + ' read “' + slice.slice(0, 40) + '”, not the quote' };
   const m = c.quote.replace(/,/g, '').match(/(\d+(?:\.\d+)?)\s*(°\/√h|°\/h|µg|Hz|active pixels|hours?)/);
   if (!m) return { ok: false, reason: 'unparseable', note: 'no number with a unit in the quote' };
   const parsed = parseFloat(m[1]);
   if (Math.abs(parsed - c.value) > 1e-9) return { ok: false, reason: 'number_mismatch', note: 'quote parses to ' + parsed + ' ' + m[2] + ', claim says ' + c.value + ' ' + c.unit };
-  return { ok: true, spec: { field: c.field, value: c.value, unit: c.unit }, note: 'quote “' + c.quote + '” · bytes ' + c.start + '–' + c.end + ' · sha ' + doc.sha + ' · a byte match proves the document was read correctly, not that the datasheet is current' };
+  return { ok: true, spec: { field: c.field, value: c.value, unit: c.unit }, note: 'quote “' + c.quote + '” · fixture string characters ' + c.start + '–' + c.end + ' · synthetic fixture marker ' + doc.sha + ' · a string match confirms the selected cached fixture text only, not source bytes or currency' };
 }
 
 export interface Proposal { label: string; claim: UnverifiedSpec; verdict: Verdict }
@@ -87,7 +87,7 @@ export function callB(node: Node, d: Design, o: Outcome): Candidate[] {
 }
 
 export interface RulePatch { rule_id: string; field: 'threshold' | 'text'; value: number; unit: string; quote: string; start: number; end: number; doc_sha256: string }
-/** Call C over the Federal Register text: proposes the 9A012.a.2 threshold patch; the verifier checks the bytes. */
+/** Call C over cached Federal Register fixture text: proposes the 9A012.a.2 threshold patch; the checker compares its fixture string slice. */
 export function callC(): { patch: RulePatch; verdict: Verdict; from: string; to: string } {
   const doc = DOCS['fr-2026-16628'];
   const needle = '3 hours';
