@@ -18,13 +18,14 @@ function responseCapture() {
 
 function request(path: string | string[], body: unknown = { synthetic: true }) {
   const parts = Array.isArray(path) ? path : path.split('/');
+  const capture = parts.join('/');
   return {
     method: 'POST',
-    url: `/api/${parts.join('/')}`,
-    // Vercel's catch-all metadata is framework-owned and is not a stable source
-    // for the public URL path. Keep a deliberately prefixed shape here so every
-    // forwarding test proves the handler uses the exact incoming request URL.
-    query: { path: ['api', ...parts] },
+    // Vercel rewrites api/[...path] to its function entrypoint and exposes the
+    // framework-owned splat as request.query.path. This is the production shape,
+    // not a public caller query string.
+    url: `/api/[...path]?path=${encodeURIComponent(capture)}`,
+    query: { path: capture },
     headers: {
       accept: 'application/json',
       'content-type': 'application/json; charset=utf-8',
@@ -107,7 +108,7 @@ describe('integrated preview routing', () => {
     for (const candidate of [
       request('../candidate'),
       request('arbitrary'),
-      { ...request('classification'), url: '/api/classification?target=https://internal.example', query: { path: 'classification', target: 'https://internal.example' } },
+      { ...request('classification'), url: '/api/[...path]?path=classification&target=https://internal.example', query: { path: 'classification', target: 'https://internal.example' } },
     ]) {
       const { capture, response } = responseCapture();
       await handler(candidate, response);

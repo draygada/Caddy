@@ -39,8 +39,8 @@ describe('product-service proxy production runtime', () => {
 
     await productServiceProxy({
       method: 'POST',
-      url: '/api/sourcing/rounds',
-      query: { path: ['api', 'sourcing', 'rounds'] },
+      url: '/api/[...path]?path=sourcing%2Frounds',
+      query: { path: 'sourcing/rounds' },
       headers: {
         'content-type': 'application/json',
         authorization: 'Bearer must-not-cross',
@@ -75,9 +75,9 @@ describe('product-service proxy production runtime', () => {
     const fetchImpl = vi.fn<typeof fetch>();
     vi.stubGlobal('fetch', fetchImpl);
     const denied = [
-      { method: 'GET', url: '/api/health', query: { path: ['api', 'health'] }, headers: {} },
-      { method: 'POST', url: '/api/not-a-consumer', query: { path: ['api', 'not-a-consumer'] }, headers: { 'content-type': 'application/json' }, body: {} },
-      { method: 'POST', url: '/api/sourcing/rounds?debug=true', query: { path: ['api', 'sourcing', 'rounds'], debug: 'true' }, headers: { 'content-type': 'application/json' }, body: {} },
+      { method: 'GET', url: '/api/[...path]?path=health', query: { path: 'health' }, headers: {} },
+      { method: 'POST', url: '/api/[...path]?path=not-a-consumer', query: { path: 'not-a-consumer' }, headers: { 'content-type': 'application/json' }, body: {} },
+      { method: 'POST', url: '/api/[...path]?path=sourcing%2Frounds&debug=true', query: { path: 'sourcing/rounds', debug: 'true' }, headers: { 'content-type': 'application/json' }, body: {} },
     ];
 
     for (const request of denied) {

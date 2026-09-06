@@ -72,12 +72,32 @@ function targetOrigin(value: string | undefined): URL | null {
   }
 }
 
+function routeCapture(value: string | string[] | undefined): string | null {
+  const capture = Array.isArray(value) ? value.join('/') : value;
+  if (!capture) return null;
+  const parts = capture.split('/');
+  if (parts.some((part) => !part || part === '.' || part === '..')) return null;
+  return `/api/${parts.join('/')}`;
+}
+
 function requestedPath(request: ProxyRequest): string | null {
   if (request.url !== undefined) {
     try {
       const incoming = new URL(request.url, 'https://frontend.invalid');
-      if (incoming.search || incoming.hash) return null;
-      return incoming.pathname;
+      if (incoming.hash) return null;
+      if (!incoming.search) return incoming.pathname;
+
+      const templatePath = incoming.pathname === '/api/[...path]' || incoming.pathname.toLowerCase() === '/api/%5b...path%5d';
+      const query = request.query ?? {};
+      const queryKeys = Object.keys(query);
+      if (!templatePath || queryKeys.length !== 1) return null;
+      const internalKey = queryKeys[0];
+      if (internalKey !== 'path' && internalKey !== '...path') return null;
+      const internalEntries = Array.from(incoming.searchParams.entries());
+      const path = routeCapture(query[internalKey]);
+      const capture = path?.slice('/api/'.length);
+      if (internalEntries.length !== 1 || internalEntries[0][0] !== internalKey || internalEntries[0][1] !== capture) return null;
+      return path;
     } catch {
       return null;
     }
@@ -85,10 +105,7 @@ function requestedPath(request: ProxyRequest): string | null {
 
   const query = request.query ?? {};
   if (Object.keys(query).some((key) => key !== 'path')) return null;
-  const raw = query.path;
-  const parts = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split('/') : [];
-  if (parts.length === 0 || parts.some((part) => !part || part === '.' || part === '..')) return null;
-  return `/api/${parts.join('/')}`;
+  return routeCapture(query.path);
 }
 
 function declaredLength(request: ProxyRequest): number | null {
