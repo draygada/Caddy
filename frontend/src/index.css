@@ -10,6 +10,8 @@
   /* accent = the Caddy logo green (#205840, measured from the mark); focus is its brighter sibling for selection and hover */
   --m1: #d9dee6; --m2: #bcc4cf; --m3: #9ea8b5; --accent: #205840; --accentfg: #ffffff;
   --scrim: rgba(20, 24, 31, .45); --hover: rgba(32, 88, 64, .07); --focus: #2f8a63;
+  /* ViewCube: pale tiles with white grooves, like the Fusion cube */
+  --cube: #dfe4eb; --cube-top: #e6eaf0; --cube-line: #ffffff; --cube-ink: #23292f;
 }
 [data-theme="dark"] {
   --bg: #0e1217; --surface: #171c23; --surface2: #1e242d; --ink: #e8ecf1; --muted: #a3adba;
@@ -17,6 +19,7 @@
   --green: #4ade80; --amber: #f5b942; --red: #ff7b72; --black: #e8ecf1; --blackfg: #0e1217; --grey: #9aa5b1;
   --m1: #3a4250; --m2: #2c333e; --m3: #222831; --accent: #6fcf97; --accentfg: #0e1217;
   --scrim: rgba(0, 0, 0, .6); --hover: rgba(111, 207, 151, .10); --focus: #7fdba8;
+  --cube: #3a4250; --cube-top: #434c5b; --cube-line: #171c23; --cube-ink: #e8ecf1;
 }
 
 @theme inline {
@@ -80,5 +83,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   .nav-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 8px; border: 0; background: transparent; color: var(--ink); cursor: pointer; border-radius: 6px; font-size: 13px; gap: 6px; }
   .nav-btn:hover { background: var(--hover); }
   .nav-btn[aria-pressed="true"] { background: var(--accent); color: var(--accentfg); }
+  .cube-arrow { fill: var(--cube); stroke: var(--cube); cursor: pointer; transition: fill .12s, stroke .12s; }
+  .cube-arrow:hover { fill: var(--focus); stroke: var(--focus); }
   .status-word { font-family: var(--font-mono); font-weight: 700; padding: 0 4px; border-radius: 6px; white-space: nowrap; }
 }
