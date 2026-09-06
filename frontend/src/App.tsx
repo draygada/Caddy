@@ -19,7 +19,6 @@ import { Now } from './panels/Now';
 import { MissionNav } from './panels/MissionNav';
 import { ClassificationTab } from './panels/ClassificationTab';
 import { CoreAssemblyWorkspace } from './panels/CoreAssemblyWorkspace';
-import { ClassificationWorkspace } from './panels/ClassificationWorkspace';
 import { TripwireAtlasWorkspace } from './panels/TripwireAtlasWorkspace';
 import { CollaborationWorkspace } from './panels/CollaborationWorkspace';
 import { runCommand } from './commands';
@@ -133,7 +132,6 @@ export default function App() {
       case 'sources': return <div className="relative flex-1 min-h-0"><Sources embedded /></div>;
       case 'record': return <div className="relative flex-1 min-h-0"><Record embedded /></div>;
       case 'core': return <main className="flex-1 min-h-0 overflow-auto p-2"><CoreAssemblyWorkspace /></main>;
-      case 'stages': return <main className="flex-1 min-h-0 overflow-auto p-2"><ClassificationWorkspace /></main>;
       case 'atlas': return <main className="flex-1 min-h-0 overflow-auto p-2"><TripwireAtlasWorkspace /></main>;
       case 'collaboration': return <main className="flex-1 min-h-0 overflow-auto p-2"><CollaborationWorkspace /></main>;
       case 'now': return <main className="flex-1 min-h-0 overflow-auto"><Now /></main>;

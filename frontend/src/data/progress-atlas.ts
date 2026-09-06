@@ -61,15 +61,15 @@ export const PROGRESS_ATLAS: ProgressAtlasManifest = {
       ],
     },
     {
-      id: 'classification-lab',
-      name: 'Classification ordered-route lab',
+      id: 'classification-tab',
+      name: 'Classification tab · parts of concern',
       lane: 'assurance',
       status: 'fixture_backed',
-      summary: 'Exercise synthetic advocate, judge, and reconciliation waves in order, including the intentional EAR99 residual fall-through.',
-      boundary: 'Synthetic jurisdiction-only lab; draft output is not a legal determination or transaction clearance.',
+      summary: 'Show each part visually with a risk indicator, why it trips, and the modeled rule behind an expand; only parts of concern up front.',
+      boundary: 'Synthetic fourteen-row rule table; a limited scan, not NLR, not a legal determination or transaction clearance.',
       evidence: [
-        { label: 'Workspace model', path: 'frontend/src/lib/classification-workspace.ts' },
-        { label: 'Residual path', path: 'frontend/tests/classification-workspace.test.ts', test: 'intentionally falls through to EAR99 when no valid specific CCL candidate surfaces' },
+        { label: 'Tab', path: 'frontend/src/panels/ClassificationTab.tsx' },
+        { label: 'Rule table', path: 'frontend/tests/rules.test.ts', test: 'baseline: nothing fires, every column NLR, four IMU rows cannot fire' },
       ],
     },
     {
@@ -214,7 +214,7 @@ export const PROGRESS_ATLAS: ProgressAtlasManifest = {
       status: 'unavailable',
       summary: 'Issue authoritative jurisdiction, classification, licensing, eligibility, or transaction-clearance decisions.',
       boundary: 'Not implemented; every candidate assurance surface remains review-only.',
-      evidence: [{ label: 'Claim ceiling', path: 'frontend/tests/classification-workspace.test.ts', test: 'keeps the legal and coverage ceiling explicit for every scenario' }],
+      evidence: [{ label: 'Claim ceiling', path: 'frontend/src/lib/viewmodel.ts', test: 'STATUS_CLAIM_CEILING is rendered on every status surface' }],
     },
   ],
   nextSteps: [

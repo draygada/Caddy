@@ -34,7 +34,7 @@ describe('Candidate 0.1 progress atlas', () => {
   it('keeps the delivery boundaries and the dependency chain explicit', () => {
     expect(PROGRESS_ATLAS.capabilities.filter((capability) => capability.status === 'fixture_backed')).toHaveLength(5);
     expect(PROGRESS_ATLAS.capabilities.filter((capability) => capability.status === 'local_memory')).toHaveLength(2);
-    expect(PROGRESS_ATLAS.capabilities.find((capability) => capability.id === 'classification-lab')?.boundary).toContain('not a legal determination');
+    expect(PROGRESS_ATLAS.capabilities.find((capability) => capability.id === 'classification-tab')?.boundary).toContain('not a legal determination');
     expect(PROGRESS_ATLAS.capabilities.find((capability) => capability.id === 'sourcing')?.boundary).toContain('2-key CSL slice');
 
     const steps = orderedNextSteps();

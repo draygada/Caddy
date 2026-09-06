@@ -61,7 +61,6 @@ export const COMMANDS: Command[] = [
   { id: 'doc.sources', label: 'Sources · drop a datasheet, verifier, Call B', group: 'document', run: (st) => st.setWorkspace('sources') },
   { id: 'doc.record', label: '/record · printable design decision record', group: 'document', run: (st) => st.setWorkspace('record') },
   { id: 'tab.core', label: 'Core / Assembly workspace', group: 'view', run: (st) => st.setWorkspace('core') },
-  { id: 'tab.stages', label: 'Classification stages workspace', group: 'view', run: (st) => st.setWorkspace('stages') },
   { id: 'tab.atlas', label: 'Tripwire atlas', group: 'view', run: (st) => st.setWorkspace('atlas') },
   { id: 'tab.collaboration', label: 'Collaboration workspace', group: 'view', run: (st) => st.setWorkspace('collaboration') },
   { id: 'doc.door3', label: 'New from description… (Door 3)', group: 'create', run: (st) => st.openDialog('door3', null) },

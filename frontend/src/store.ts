@@ -21,7 +21,7 @@ import { PACKS, type PackId } from './lib/catalog';
 export type { Pos, Positions } from './lib/design';
 export type Theme = 'light' | 'dark';
 /** The three primary tabs plus the secondary surfaces reachable from "More" and the command box. */
-export type WorkspaceId = 'design' | 'classification' | 'sourcing' | 'core' | 'stages' | 'atlas' | 'collaboration' | 'sources' | 'record' | 'now';
+export type WorkspaceId = 'design' | 'classification' | 'sourcing' | 'core' | 'atlas' | 'collaboration' | 'sources' | 'record' | 'now';
 export const PRIMARY_WORKSPACES: { id: WorkspaceId; label: string }[] = [
   { id: 'design', label: 'Design' },
   { id: 'classification', label: 'Classification' },
@@ -31,7 +31,6 @@ export const MORE_WORKSPACES: { id: WorkspaceId; label: string; hint: string }[]
   { id: 'sources', label: 'Sources', hint: 'datasheets, the verifier, Call B' },
   { id: 'record', label: 'Record', hint: 'printable decision record' },
   { id: 'core', label: 'Core / Assembly', hint: 'immutable kernel snapshot' },
-  { id: 'stages', label: 'Classification stages', hint: 'order-of-review workspace' },
   { id: 'atlas', label: 'Tripwire atlas', hint: 'feature bibles and progress' },
   { id: 'collaboration', label: 'Collaboration', hint: 'append-only history' },
   { id: 'now', label: 'Now', hint: 'Shipyard observation' },
