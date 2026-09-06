@@ -140,6 +140,21 @@ describe('recording-only order client', () => {
     await expect(client.validatePackage('manifest-demo.json')).resolves.toMatchObject({ package: { byte_reread_verified: true } });
   });
 
+  it('invokes browser fetch without binding the OrderClient as its receiver', async () => {
+    let receiver: unknown = 'not-called';
+    const fetchImpl = function (this: unknown) {
+      receiver = this;
+      if (this !== undefined) throw new TypeError('Illegal invocation');
+      return Promise.resolve(new Response(JSON.stringify(envelope({
+        package: { package_id: 'package:demo', manifest_sha256: HASH_B, selection_count: 1, file_count: 2, byte_reread_verified: true },
+      })), { status: 200 }));
+    } as typeof fetch;
+    const client = new OrderClient(candidate, fetchImpl);
+
+    await expect(client.validatePackage('manifest-demo.json')).resolves.toMatchObject({ package: { byte_reread_verified: true } });
+    expect(receiver).toBeUndefined();
+  });
+
   it('dispatches, reads, acknowledges, reconciles, closes, and verifies through explicit routes', async () => {
     const paths: string[] = [];
     const fetchImpl = vi.fn(async (path: string | URL | Request) => {

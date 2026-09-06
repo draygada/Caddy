@@ -433,7 +433,10 @@ export class OrderClient {
   ): Promise<OrderEnvelope> {
     let response: Response;
     try {
-      response = await this.fetchImpl(path, {
+      // Chromium's native fetch rejects when the OrderClient instance is used
+      // as its Web API receiver (TypeError: Illegal invocation).
+      const fetchRequest = this.fetchImpl;
+      response = await fetchRequest(path, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body: JSON.stringify({ candidate: this.candidate, ...payload }),
