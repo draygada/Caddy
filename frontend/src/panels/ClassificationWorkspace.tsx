@@ -180,7 +180,7 @@ function ObservationColumn({ title, rows }: { title: string; rows: ReturnType<ty
         <div key={row.elementId} style={{ marginTop: 7, paddingTop: 7, borderTop: '1px solid var(--line, #e3e7eb)' }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'space-between' }}><b style={{ fontSize: 10 }}>{row.label}</b><Badge label={row.disposition} color={row.disposition === 'met' ? '#176b45' : row.disposition === 'not_met' ? '#56616d' : '#a05a00'} /></div>
           <div style={{ marginTop: 4, fontSize: 10, lineHeight: 1.35, color: 'var(--muted, #66717c)' }}>{row.note}</div>
-          <div style={{ ...mono, marginTop: 4, fontSize: 9 }}>{row.citation ? `${row.citation.unitKey} · verified excerpt` : 'no verified citation carried'}</div>
+          <div style={{ ...mono, marginTop: 4, fontSize: 9 }}>{row.citation ? `${row.citation.unitKey} · synthetic fixture excerpt` : 'no synthetic fixture citation carried'}</div>
         </div>
       ))}
     </div>

@@ -23,11 +23,12 @@ export function BoardView() {
             <label className="text-muted">board_target
               <select value={tgt} disabled={s.viewSeq != null} onChange={(e) => s.setDeclared({ board_target: e.target.value as BoardTarget }, 'board_target ' + tgt + ' → ' + e.target.value)} className="btn text-ink ml-2">{(['civil UAV', '600-series UAV', 'USML article'] as BoardTarget[]).map((x) => <option key={x}>{x}</option>)}</select>
             </label>
-            <span className="font-mono font-semibold">{entry}</span>
-            <span className="chip chip-sm">declared</span>
+            <span className="font-mono font-semibold">modeled candidate · {entry}</span>
+            <span className="chip chip-sm">human review</span>
           </div>
           <div className="font-mono text-[12px] text-muted">DRC · kicad-cli pcb drc --format json · 0 errors · 2 warnings (silkscreen overlap) · fixture</div>
-          <div className="text-[12px] text-muted">{tgt === '600-series UAV' ? 'connectors under a 600-series parent print 3A611.y.1; heat sinks 3A611.y.3 · no modeled column match at CA/DE/TW/VN (human review required); LIC to CN (RS, 742.6(a)(7)); no de minimis to PRC (734.4(a)(6)(ii))' : 'layout is the only characteristic evaluated (Note) · the GNSS body is a labelled stand-in · no live re-layout'}</div>
+          <div className="text-[12px] text-muted">{tgt === '600-series UAV' ? 'modeled candidate: connectors under a 600-series parent print 3A611.y.1; heat sinks 3A611.y.3 · no modeled column match at CA/DE/TW/VN; CN produces a license-review trigger (RS, 742.6(a)(7)); modeled no-de-minimis flag for PRC (734.4(a)(6)(ii))' : 'layout is the only characteristic evaluated (Note) · the GNSS body is a labelled stand-in · no live re-layout'}</div>
+          <div className="text-[12px] font-semibold text-amber">Declared scenario input. Outputs are limited modeled candidates for human review, not a classification, license determination, authorization, or comprehensive destination/end-use screen.</div>
         </div>
       </div>
     </div>

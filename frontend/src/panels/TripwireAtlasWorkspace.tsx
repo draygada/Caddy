@@ -176,19 +176,19 @@ export function TripwireAtlasWorkspace() {
           </div>
 
           <div className="panel">
-            <div className="panel-head"><div className="panel-title">Evidence locations <span className="sub">committed bytes + canonical source</span></div></div>
+            <div className="panel-head"><div className="panel-title">Evidence locations <span className="sub">pinned fixture references; hashes displayed, not rederived here</span></div></div>
             <div className="p-2 grid gap-2">
               {evidence.map((item) => <article id={`tripwire-evidence-${item.id}`} key={item.id} className="rounded-r border border-line2 bg-surface2 p-3 grid gap-2 scroll-m-4">
                 <div className="flex justify-between gap-2 flex-wrap"><strong className="text-[12px]">{item.label}</strong><span className="chip chip-sm">{item.approval}</span></div>
                 <div className="font-mono text-[10px] break-all text-muted">{item.repositoryPath}</div>
                 <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-1 text-[11px]"><span className="text-muted">Content date</span><span>{item.contentDate}</span><span className="text-muted">Legal relevance</span><span>{item.legalRelevance}</span><span className="text-muted">Byte span</span><span className="font-mono">{item.span ? `${item.span[0]}..${item.span[1]}` : 'not receipted'}</span><span className="text-muted">Span hash</span><span className="font-mono break-all">{item.spanSha256 ?? 'not available'}</span></div>
-                <div className="flex gap-2 flex-wrap"><a className="btn" href={item.repositoryUrl} target="_blank" rel="noreferrer">Open committed evidence</a><a className="btn" href={item.canonicalUrl} target="_blank" rel="noreferrer">Open canonical source</a></div>
+                <div className="flex gap-2 flex-wrap"><a className="btn" href={item.repositoryUrl} target="_blank" rel="noreferrer">Open pinned repository reference</a><a className="btn" href={item.canonicalUrl} target="_blank" rel="noreferrer">Open public source</a></div>
               </article>)}
             </div>
           </div>
 
           <div className="rounded-r border border-line2 p-3 text-[11px] leading-[1.5] text-muted">
-            <strong className="text-ink">Immutable projection boundary.</strong> This frontend can select, sort, focus, and display copied candidate evidence. It cannot mutate rules, evaluate destinations, approve evidence, or produce legal effect. Source bundle SHA-256: <span className="font-mono break-all">{TRIPWIRE_ATLAS.provenance.sourceBundleSha256}</span>
+            <strong className="text-ink">Read-only projection boundary.</strong> This frontend can select, sort, focus, and display copied candidate evidence. It does not rederive the displayed hashes and cannot mutate rules, evaluate destinations, approve evidence, or produce legal effect. Source bundle SHA-256 label: <span className="font-mono break-all">{TRIPWIRE_ATLAS.provenance.sourceBundleSha256}</span>
           </div>
         </aside>
       </div>

@@ -1,6 +1,7 @@
 // Call A (datasheet extraction), the verifier, Call B (alternative search) and
 // Call C (rule patch), all replayed from cache over local fixtures. The model
-// only proposes; the verifier is the only constructor of a typed value.
+// proposes cached values; this verifier gates the Sources UI apply path, while
+// direct design edits remain a separate, explicitly non-source-enforced path.
 import { CATALOG, PACKS, PALETTE, type Node, type PartId, type Slot } from './catalog';
 import { hashOf } from './hash';
 import { outcome, type Design, type Outcome } from './rules';
@@ -66,7 +67,7 @@ export const netFor = (doc: SourceDoc): NetLine[] => [{ method: 'GET', host: doc
 
 export interface Candidate { pid: PartId; name: string; state: 'green' | 'grey' | 'abstained'; why: string; net: NetLine[]; verdict: string; priceDelta: number; stock: string; origin: string; dutyNote: string }
 
-/** Call B replayed from cache: propose alternatives for a flipped node, verify each against its fixture, dry-run the engine on a copy of the tree. */
+/** Call B replayed from cache: propose catalog alternatives for a flipped node and dry-run the engine on a copy of the tree. */
 export function callB(node: Node, d: Design, o: Outcome): Candidate[] {
   if (node === 'airframe') return [];
   const slot = node as Slot;
@@ -81,7 +82,7 @@ export function callB(node: Node, d: Design, o: Outcome): Candidate[] {
     const state: Candidate['state'] = p.real === false ? 'abstained' : stillFires.length === 0 ? 'green' : 'grey';
     const why = state === 'abstained' ? 'abstained: could not verify source · synthetic part has no datasheet on the allowlist' : state === 'green' ? 'engine dry-run on a copy: ' + (firedHere.length ? firedHere.join(', ') + ' no longer fire' : 'no fire') : 'still fires ' + stillFires.join(', ') + ' on the copy';
     const host = p.vendor.includes('FLIR') ? 'flir.com' : p.vendor.includes('Honeywell') ? 'aerospace.honeywell.com' : p.vendor.includes('TDK') ? 'invensense.tdk.com' : p.vendor.includes('u-blox') ? 'u-blox.com' : p.vendor.includes('Molicel') ? 'molicel.com' : 'vendor.example';
-    return { pid, name: p.name, state, why, net: [{ method: 'GET', host, status: ALLOWLIST.includes(host) ? '200' : 'BLOCKED', sha: hashOf(pid.length * 31) }], verdict: state === 'abstained' ? 'no span resolves · abstained' : 'ACCEPTED · fields verified against the fixture bytes', priceDelta: p.value_usd - (curPart?.value_usd ?? 0), stock: p.stock, origin: p.origin, dutyNote: p.origin === 'CN' ? 'Section 301 in the ladder · federal-buyer flag' : p.origin === 'US' ? 'domestic · no entry' : 'origin ' + p.origin + ' · no Chapter 99 add-on modelled' };
+    return { pid, name: p.name, state, why, net: [{ method: 'GET', host, status: ALLOWLIST.includes(host) ? '200' : 'BLOCKED', sha: hashOf(pid.length * 31) }], verdict: state === 'abstained' ? 'no source fixture available · abstained' : 'CANDIDATE · catalog fixture present; engine dry-run completed; source fields not byte-verified', priceDelta: p.value_usd - (curPart?.value_usd ?? 0), stock: p.stock, origin: p.origin, dutyNote: p.origin === 'CN' ? 'Section 301 in the ladder · federal-buyer flag' : p.origin === 'US' ? 'domestic · no entry' : 'origin ' + p.origin + ' · no Chapter 99 add-on modelled' };
   });
 }
 

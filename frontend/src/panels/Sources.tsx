@@ -5,7 +5,7 @@ import { SLOT_LABEL, type Slot } from '../lib/catalog';
 
 const DOC_IDS: SourceDocId[] = ['gx220-vendor-page', 'hg5700-brochure', 'lepton-datasheet'];
 
-/** Sources panel: drop a datasheet, watch the network strip, see every claim go through the verifier; Call B candidates with the engine dry-run. */
+/** Sources panel: inspect cached extractor proposals, their fixture-span checks, and Call B catalog candidates with an engine dry-run. */
 export function Sources() {
   const s = useStore();
   const src = s.sources;
@@ -17,7 +17,7 @@ export function Sources() {
     <div role="dialog" aria-label="Sources" className="absolute inset-0 bg-bg z-[8] flex flex-col overflow-x-hidden">
       <div className="flex items-center justify-between gap-3 px-4 py-[10px] border-b border-line2 bg-surface flex-wrap">
         <div className="flex min-w-0 items-baseline gap-3 flex-wrap">
-          <span className="min-w-0 break-words text-[13px] font-semibold">Sources <span className="text-muted font-normal">· no number enters a rule unless it resolves to bytes</span></span>
+          <span className="min-w-0 break-words text-[13px] font-semibold">Sources <span className="text-muted font-normal">· cached extractor proposals are fixture-span checked before UI application; manual edits are separate</span></span>
           <span className="chip">{src.llmNote ? 'CACHED' : 'idle'}</span>
           {s.apiNote && <span className="min-w-0 break-words text-[12px] text-amber">{s.apiNote}</span>}
         </div>
@@ -69,8 +69,8 @@ export function Sources() {
                     {p.verdict.ok && src.slot && (
                       <div className="flex gap-2 items-center flex-wrap">
                         <button onClick={() => s.applyExtraction(src.slot!, p.verdict.ok ? p.verdict.spec.field : '', p.claim.value, p.claim.unit)} disabled={s.viewSeq != null} className="btn btn-primary disabled:opacity-50">Apply to {SLOT_LABEL[src.slot]} · extracted_by extractor</button>
-                        {s.extracted[src.slot + '.' + p.claim.field] && !s.extracted[src.slot + '.' + p.claim.field].verified && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" onChange={() => s.markVerified(src.slot!, p.claim.field)} /> verified against the datasheet (human)</label>}
-                        {s.extracted[src.slot + '.' + p.claim.field]?.verified && <span className="chip chip-sm">verified · L2</span>}
+                        {s.extracted[src.slot + '.' + p.claim.field] && !s.extracted[src.slot + '.' + p.claim.field].verified && <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" onChange={() => s.markVerified(src.slot!, p.claim.field)} /> human checked against selected fixture text</label>}
+                        {s.extracted[src.slot + '.' + p.claim.field]?.verified && <span className="chip chip-sm">human checked · L2</span>}
                       </div>
                     )}
                   </div>

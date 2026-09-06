@@ -102,7 +102,7 @@ export function CollaborationWorkspace() {
         actor: BROWSER_AGENT,
       });
       setSelectedReviewId(reviewId);
-    }, `Opened ${reviewId} with replay evidence and a separate authorization request.`);
+    }, `Opened ${reviewId} with matching supplied fingerprints and a separate authorization request.`);
   };
 
   const recordDecision = (decision: ReviewDecision) => {
@@ -208,7 +208,7 @@ export function CollaborationWorkspace() {
               <div className="mt-1 font-mono text-[11px] text-muted">{review.sourceBranch} @ {review.reviewedRevisionId} → {review.targetBranch} @ {review.expectedTargetRevisionId}</div>
             </div>
             <div className="grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-4">
-              <Metric label="Replay" value={review.assessment.conflicts.some((item) => item.code.startsWith('REPLAY_')) ? 'failed' : '2 agree'} good={!review.assessment.conflicts.some((item) => item.code.startsWith('REPLAY_'))} />
+              <Metric label="Fingerprint check" value={review.assessment.conflicts.some((item) => item.code.startsWith('REPLAY_')) ? 'mismatch' : '2 supplied match'} good={!review.assessment.conflicts.some((item) => item.code.startsWith('REPLAY_'))} />
               <Metric label="Conflicts" value={String(review.assessment.conflicts.length)} good={review.assessment.allowed} />
               <Metric label="Decision" value={review.bindingDecision ?? 'awaiting human'} good={review.bindingDecision === 'APPROVE'} />
               <Metric label="Authorization" value={authorization?.status ?? 'missing'} good={authorization?.status === 'AUTHORIZED' || authorization?.status === 'APPLIED' || authorization?.status === 'VERIFIED'} />
@@ -235,7 +235,7 @@ export function CollaborationWorkspace() {
                 {eligibility.state === 'MERGED'
                   ? <><b className="text-emerald-600">{authorization?.status ?? 'UNKNOWN'} / MERGED</b> · revision {eligibility.mergedRevisionId} is recorded in the append-only ledger.</>
                   : eligibility.eligible
-                    ? 'Eligible: exact reviewed heads, human approval, replay, conflicts, and subject-bound authorization all pass.'
+                    ? 'Eligible: exact reviewed heads, human approval, supplied-fingerprint comparison, conflicts, and subject-bound authorization all pass.'
                     : `Blocked: ${eligibility.reasons.join(' · ')}`}
               </div>
               <div className="mt-2 flex flex-wrap gap-2">

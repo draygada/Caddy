@@ -101,15 +101,15 @@ describe('Door 3, design to a target, the memo', () => {
 });
 
 describe('tamper and the log', () => {
-  it('Re-derive prints BREAK at the tampered seq; the round still opens after a reset', () => {
+  it('Re-derive prints the simulated break marker; the round still opens after a reset', () => {
     const st = useStore.getState(); st.reset();
     st.swap('battery', 'amprius');
     useStore.getState().tamper(4);
     useStore.getState().rederiveLog();
-    expect(useStore.getState().rederive?.line).toBe('BREAK at #4');
+    expect(useStore.getState().rederive?.line).toBe('SIMULATED BREAK marker at #4');
     useStore.getState().reset();
     useStore.getState().rederiveLog();
-    expect(useStore.getState().rederive?.line).toContain('chain intact');
+    expect(useStore.getState().rederive?.line).toContain('local replay complete');
     useStore.getState().openRound('US', 1, 'air', INTAKE_DEFAULT);
     expect(useStore.getState().round?.lines.length).toBe(14);
   });

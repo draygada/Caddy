@@ -236,7 +236,7 @@ export function CoreAssemblyWorkspace() {
           </div>
 
           <div className="panel">
-            <div className="panel-head"><div className="panel-title">Revision & kernel provenance</div><span className="chip">verified chain</span></div>
+            <div className="panel-head"><div className="panel-title">Revision & kernel provenance</div><span className="chip">{resolvedLoad.source === 'api' ? 'service-verified snapshot' : 'declared fixture provenance'}</span></div>
             <dl className="m-0 p-3">
               <Fact label="Revision" value={candidate.document.revisionId} />
               <Fact label="Content hash" value={candidate.forgeRevision.content_hash} />

@@ -11,7 +11,7 @@ export function Record() {
     <div className="text-[11px] text-muted border-t border-line2 pt-2 mt-4 grid gap-1">
       <div>22 CFR 120.41 Note 2: documents contemporaneous with development, in their totality · 22 CFR 122.5(a): none of it may be altered once recorded</div>
       <div>15 CFR 762.2 · 19 CFR 163.4 · 31 CFR 501.601 · retention computed per transaction as the longest applicable window (ITAR printed as five years from the 122.5 anchor; anchor and period to be confirmed from the section)</div>
-      <div>shaped like the record 19 CFR 163.4 asks for; a broker validates it · ephemeral demo key only; production KMS/HSM-backed key custody is a roadmap requirement, not an implemented security control · every count read off the log, never a table</div>
+      <div>local demo record shaped for human review; a broker validates applicability and retention · sequence markers and the tamper control are simulations, not signatures or a cryptographic hash chain · production KMS/HSM-backed key custody is a roadmap requirement · rendered from current local event and round projections</div>
     </div>
   );
   return (
@@ -24,7 +24,7 @@ export function Record() {
         <div className="grid w-full min-w-0 max-w-[880px] mx-auto gap-6 text-[13px] [overflow-wrap:anywhere]" id="record">
           <section className="min-w-0 break-after-page">
             <h1 className="text-[20px] font-bold m-0">Design decision record · Kestrel</h1>
-            <div className="text-muted">log head #{s.events.length} · {s.events[0]?.hash} · export pack {s.pack} · printed {new Date().toISOString().slice(0, 16).replace('T', ' ')}</div>
+            <div className="text-muted">local event head #{s.events.length} · sequence marker {s.events[0]?.hash} · export pack {s.pack} · printed {new Date().toISOString().slice(0, 16).replace('T', ' ')}</div>
             <h2 className="text-[15px] font-semibold mt-4 mb-1">1 · Design events</h2>
             <div className="max-w-full overflow-x-auto overscroll-x-contain print:overflow-visible">
               <table className="w-full min-w-[720px] border-collapse print:min-w-0"><thead><tr className="text-left text-muted"><th className="py-1 pr-2">#</th><th className="pr-2">kind</th><th className="pr-2">what</th><th className="pr-2">paragraph · number</th><th>intent</th></tr></thead>
@@ -58,7 +58,7 @@ export function Record() {
             {r && Object.entries(r.references).map(([lineId, ref]) => <div key={lineId}>{r.lines.find((l) => l.id === lineId)?.description} · reference {ref.ref} · typed, not validated · attestor {ref.attestor}</div>)}
             <h2 className="text-[15px] font-semibold mt-4 mb-1">6 · Sourcing and order events</h2>
             {sourcing.map((e) => <div key={e.seq} className="border-t border-line2 py-1"><span className="font-mono">#{e.seq} {e.kind}</span> · {e.text} <span className="text-muted">· {e.entry}</span></div>)}
-            {s.memos.length > 0 && <><h2 className="text-[15px] font-semibold mt-4 mb-1">7 · Intent memos</h2>{s.memos.map((m) => <pre key={m.id} className="whitespace-pre-wrap font-sans text-[12px] border-t border-line2 py-1 m-0">{m.text}{'\n'}signed by {m.signedBy} · {m.hash}</pre>)}</>}
+            {s.memos.length > 0 && <><h2 className="text-[15px] font-semibold mt-4 mb-1">7 · Intent memos</h2>{s.memos.map((m) => <pre key={m.id} className="whitespace-pre-wrap font-sans text-[12px] border-t border-line2 py-1 m-0">{m.text}{'\n'}attested by {m.signedBy} · local content marker {m.hash}</pre>)}</>}
             {footer}
           </section>
         </div>

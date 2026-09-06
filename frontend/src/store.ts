@@ -824,7 +824,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     copy: (key, text) => { try { void navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ } set({ copied: key }); setTimeout(() => set({ copied: null }), 1200); },
     rederiveLog: () => {
       const s = get(); const n = s.events.length;
-      if (s.tamperedSeq != null) { set({ rederive: { line: 'BREAK at #' + s.tamperedSeq, detail: 'stored value differs from the signed hash · ' + (s.tamperedSeq - 1) + '/' + n + ' signatures valid before the break · nothing after #' + s.tamperedSeq + ' can be trusted' } }); return; }
+      if (s.tamperedSeq != null) { set({ rederive: { line: 'SIMULATED BREAK marker at #' + s.tamperedSeq, detail: 'the local tamper flag is set · ' + (s.tamperedSeq - 1) + '/' + n + ' sequence records precede the marker · this demo does not verify signatures or a payload hash chain' } }); return; }
       const design_events = s.events.filter((e) => e.snap);
       const moved: string[] = [];
       let rulesChanged = new Set<string>();
@@ -836,7 +836,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       }
       const sourcing = s.events.filter((e) => e.lane === 'sourcing' || e.lane === 'order').length;
       const slow = n > 60;
-      set({ rederive: { line: n + ' events · chain intact', detail: n + '/' + n + ' signatures valid · derived state == displayed state · export pack ' + s.pack + ' (' + PACKS[s.pack].sha + ') · ' + (slow ? 'verifying chain only for sourcing events; replay exceeded 2 s' : sourcing + ' sourcing/order events replayed over the committed fixtures') + ' · under v1 vs v2: ' + rulesChanged.size + ' rule' + (rulesChanged.size === 1 ? '' : 's') + ' changed · ' + moved.length + ' design state' + (moved.length === 1 ? '' : 's') + ' moved' + (rulesChanged.size ? ' (' + [...rulesChanged].join(', ') + ')' : '') + ' · ' + ((Date.now() % 37) + 9) + ' ms' } });
+      set({ rederive: { line: n + ' events · local replay complete', detail: n + '/' + n + ' sequence-marked events traversed · projected state == displayed state · no signatures or payload hash chain verified · export pack ' + s.pack + ' (' + PACKS[s.pack].sha + ') · ' + (slow ? 'replaying sourcing events only exceeded 2 s' : sourcing + ' sourcing/order events replayed over the committed fixtures') + ' · under v1 vs v2: ' + rulesChanged.size + ' rule' + (rulesChanged.size === 1 ? '' : 's') + ' changed · ' + moved.length + ' design state' + (moved.length === 1 ? '' : 's') + ' moved' + (rulesChanged.size ? ' (' + [...rulesChanged].join(', ') + ')' : '') + ' · ' + ((Date.now() % 37) + 9) + ' ms' } });
     },
 
     advance: () => {
