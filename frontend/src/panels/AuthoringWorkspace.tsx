@@ -200,7 +200,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   const engineLabel = engineMode === 'CONNECTED_OCCT' ? 'Connected Candidate 0.2 service · stateless kernel adapter' : `engineMode ${engineMode}`;
 
   return (
-    <section aria-labelledby="cad-authoring-title" style={{ height: '100%', minHeight: 0, overflow: 'auto', background: '#edf0ec', color: 'var(--ink, #17201d)' }}>
+    <section data-cad-authoring-workspace aria-labelledby="cad-authoring-title" className="cad-authoring-workspace" style={{ height: '100%', minHeight: 0, overflow: 'auto', background: '#edf0ec', color: 'var(--ink, #17201d)' }}>
       <header style={{ padding: '12px 14px', borderBottom: '1px solid #bfc9c2', background: 'linear-gradient(115deg, #f5f0e5 0%, #e7eee8 55%, #e1e8eb 100%)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -217,8 +217,8 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
 
       {(state.error || formError) && <div role="alert" style={{ margin: '10px 12px 0', padding: 9, background: '#fff0ed', border: '1px solid #dca39a', borderRadius: 6, color: '#7d281e', fontSize: 11 }}>{formError ?? state.error} <button type="button" onClick={() => dispatch({ type: 'recover-last-valid' })} style={{ ...button, marginLeft: 8 }}>Restore last valid</button></div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, .72fr) minmax(360px, 1.45fr) minmax(280px, .95fr)', gap: 10, padding: 10, alignItems: 'start' }}>
-        <aside style={{ display: 'grid', gap: 9 }}>
+      <div className="cad-authoring-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, .72fr) minmax(360px, 1.45fr) minmax(280px, .95fr)', gap: 10, padding: 10, alignItems: 'start' }}>
+        <aside className="cad-authoring-column" style={{ display: 'grid', gap: 9, minWidth: 0 }}>
           <ProjectTree document={state.document} selectedId={state.selectedId} onSelect={(id) => dispatch({ type: 'select', id })} />
           <TransferPanel message={transferMessage} onImport={handleImport} onExport={handleExport} />
           <OutputPanel
@@ -236,12 +236,12 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
           />
         </aside>
 
-        <main style={{ display: 'grid', gap: 9, minWidth: 0 }}>
+        <main className="cad-authoring-column" style={{ display: 'grid', gap: 9, minWidth: 0 }}>
           <SemanticMesh mesh={state.lastValidMesh} document={state.lastValidDocument} />
           <DependencyRail graph={state.dependencyGraph} history={state.history} diagnostics={state.diagnostics} />
         </main>
 
-        <aside style={{ display: 'grid', gap: 9 }}>
+        <aside className="cad-authoring-column" style={{ display: 'grid', gap: 9, minWidth: 0 }}>
           <SketchEditor sketch={sketch} onChange={setSketch} onCommit={() => { setFeatureInputs(sketch.id); safely(() => createSketchOperation(sketch)); }} />
           <section aria-labelledby="feature-builder-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
             <h3 id="feature-builder-title" style={{ margin: 0, fontSize: 13 }}>Feature builder</h3>
@@ -369,7 +369,7 @@ export function OutputPanel({ busy, nativeEnvelope, sealedSnapshotArtifact, bund
     {message && <div role="status" aria-live="polite" style={{ padding: 7, background: '#f2f5f2', fontSize: 9, lineHeight: 1.35 }}>{message}</div>}
     {bundle && <div style={{ display: 'grid', gap: 4 }}>
       <div style={{ ...mono, fontSize: 8, overflowWrap: 'anywhere' }}>package · {bundle.package.package_id}<br />manifest · {bundle.package.manifest_file_sha256}</div>
-      <div style={{ display: 'grid', gap: 3 }}>{bundle.artifacts.map((artifact) => <button key={artifact.path} type="button" disabled={busy} onClick={() => onDownload(artifact)} aria-label={`Download ${artifact.path}`} style={{ ...button, display: 'flex', justifyContent: 'space-between', gap: 6, textAlign: 'left', opacity: busy ? .55 : 1 }}><span>Download · {artifact.path}</span><span style={{ ...mono, fontSize: 8 }}>{artifact.size_bytes} B · {shortId(artifact.sha256)}</span></button>)}</div>
+      <div style={{ display: 'grid', gap: 3 }}>{bundle.artifacts.map((artifact) => <button className="cad-output-download" key={artifact.path} type="button" disabled={busy} onClick={() => onDownload(artifact)} aria-label={`Download ${artifact.path}`} style={{ ...button, display: 'flex', justifyContent: 'space-between', gap: 6, textAlign: 'left', opacity: busy ? .55 : 1 }}><span>Download · {artifact.path}</span><span style={{ ...mono, fontSize: 8 }}>{artifact.size_bytes} B · {shortId(artifact.sha256)}</span></button>)}</div>
     </div>}
     <details><summary style={{ cursor: 'pointer', fontSize: 9, fontWeight: 800 }}>Output boundaries</summary><ul style={{ margin: '5px 0 0', paddingLeft: 17, fontSize: 8, lineHeight: 1.45 }}>{CAD_OUTPUT_LIMITATIONS.map((item) => <li key={item}>{item.replaceAll('_', ' ').toLowerCase()}</li>)}</ul></details>
   </section>;

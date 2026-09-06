@@ -74,8 +74,8 @@ export function MissionNav({ active, onSelect }: MissionNavProps) {
   };
 
   return (
-    <nav aria-label="Product workspaces" className="relative flex-none min-w-0 border-b border-line2 bg-surface">
-      <div ref={railRef} className="flex items-stretch gap-1 overflow-x-auto py-[6px] pl-2 pr-10 sm:pr-2 [scrollbar-width:thin]">
+    <nav aria-label="Product workspaces" className="relative flex max-w-full flex-none min-w-0 overflow-hidden border-b border-line2 bg-surface">
+      <div ref={railRef} data-primary-workspace-rail className="flex min-w-0 max-w-full flex-1 items-stretch gap-1 overflow-x-auto overscroll-x-contain py-[6px] px-2 [scrollbar-width:thin]">
         {WORKSPACES.map((workspace) => {
           const selected = active === workspace.id;
           return (
@@ -105,9 +105,9 @@ export function MissionNav({ active, onSelect }: MissionNavProps) {
         aria-disabled={!railState.overflow}
         disabled={!railState.overflow}
         onClick={moveRail}
-        className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center border-0 border-l border-line2 bg-surface font-mono text-[9px] text-muted disabled:cursor-default disabled:opacity-40 sm:hidden"
+        className="flex w-14 flex-none cursor-pointer items-center justify-center whitespace-nowrap border-0 border-l border-line2 bg-surface px-1 font-mono text-[9px] text-muted disabled:cursor-default disabled:opacity-40 sm:hidden"
       >
-        {reverse ? '< BACK' : 'MORE >'}
+        {reverse ? 'BACK <' : 'MORE >'}
       </button>
     </nav>
   );
