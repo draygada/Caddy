@@ -26,7 +26,7 @@ import { CoreAssemblyWorkspace } from './panels/CoreAssemblyWorkspace';
 import { AuthoringWorkspace } from './panels/AuthoringWorkspace';
 import { ClassificationWorkspace } from './panels/ClassificationWorkspace';
 import { CollaborationWorkspace } from './panels/CollaborationWorkspace';
-import { runCommand } from './commands';
+import { registerWorkspaceNavigation, runCommand } from './commands';
 import { useTripwireStore } from './tripwire-store';
 
 type MobilePanel = 'browser' | 'model' | 'status' | 'spec';
@@ -129,6 +129,8 @@ export default function App() {
     const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     if (target !== current) window.history.pushState({ workspace: next }, '', target);
   };
+
+  useEffect(() => registerWorkspaceNavigation(selectWorkspace));
 
   useEffect(() => {
     applyWorkspace(initialWorkspace);
