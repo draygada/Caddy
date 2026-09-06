@@ -30,7 +30,7 @@ export function CommandBox() {
   }, []);
   const target = st.selBody ?? (st.sel === 'airframe' ? 'plate' : st.sel);
   const list = useMemo(() => {
-    const visible = COMMANDS.filter((c) => commandAvailable(c, designMounted) && (!c.when || c.when(st, target)));
+    const visible = COMMANDS.filter((c) => c.id !== 'doc.now' && commandAvailable(c, designMounted) && (!c.when || c.when(st, target)));
     const needle = q.trim().toLowerCase();
     if (!needle) {
       const rec = recent.map((id) => visible.find((c) => c.id === id)).filter((c): c is Command => !!c);

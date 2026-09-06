@@ -84,10 +84,10 @@ export function ClassificationWorkspace() {
   return (
     <section aria-labelledby="classification-workspace-title" style={{ height: '100%', minHeight: 0, overflow: 'auto', background: 'var(--surface2, #f3f5f7)', color: 'var(--ink, #17202a)' }}>
       <header style={{ padding: '16px 18px 14px', borderBottom: '1px solid var(--line, #d8dde3)', background: 'linear-gradient(115deg, #f7f4ea 0%, #eef3f0 62%, #e8eef3 100%)' }}>
-        <div style={{ ...mono, color: '#176b45', fontSize: 11, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase' }}>Charlie engine · live service contract</div>
+        <div style={{ ...mono, color: '#176b45', fontSize: 11, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase' }}>Charlie engine · connected Candidate 0.2 service</div>
         <h2 id="classification-workspace-title" style={{ margin: '5px 0 4px', fontSize: 24 }}>Classification workspace</h2>
         <p style={{ margin: 0, maxWidth: 820, color: 'var(--muted, #5c6670)', fontSize: 13, lineHeight: 1.45 }}>
-          Run the ordered USML → CCL → EAR99 jurisdiction engine and inspect its fact snapshot, reference pack, candidate board, verified citation spans, and model-call provenance.
+          Run the ordered USML → CCL → EAR99 jurisdiction engine and inspect its fact snapshot, reference pack, candidate board, schema- and byte-span-validated reference excerpts, and model-call provenance. Source authority and legal relevance are not verified.
         </p>
         <div role="note" style={{ marginTop: 12, padding: '9px 11px', borderLeft: '4px solid #a05a00', background: '#fff8e9', color: '#653c00', fontSize: 12, lineHeight: 1.4 }}>
           Jurisdiction-screening output only. Not legal advice, export authorization, transaction clearance, sanctions screening, or permission to ship.
@@ -98,7 +98,7 @@ export function ClassificationWorkspace() {
         <section aria-labelledby="live-engine-title" style={{ ...card, overflow: 'hidden' }}>
           <div style={{ padding: 14, borderBottom: '1px solid var(--line, #d8dde3)', background: '#eef6f1', display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <div>
-              <div style={{ ...mono, color: '#176b45', fontSize: 10, fontWeight: 850, letterSpacing: '.08em' }}>LIVE CONTRACT · POST /api/classification/evaluate</div>
+              <div style={{ ...mono, color: '#176b45', fontSize: 10, fontWeight: 850, letterSpacing: '.08em' }}>CONNECTED CANDIDATE 0.2 SERVICE · POST /api/classification</div>
               <h3 id="live-engine-title" style={{ margin: '4px 0 0', fontSize: 18 }}>Run Charlie engine</h3>
             </div>
             <Badge text={liveState === 'valid' ? 'contract valid' : liveState} color={liveState === 'valid' ? '#176b45' : liveState === 'error' ? '#a13b2a' : liveState === 'running' ? '#315e7c' : '#66717c'} />
@@ -134,15 +134,15 @@ export function ClassificationWorkspace() {
 
         {liveResult
           ? <LiveDetermination result={liveResult} />
-          : <section aria-label="No live determination" style={{ ...card, padding: 14, color: 'var(--muted, #66717c)', fontSize: 12 }}>No live determination has been accepted. The offline exercise below cannot populate this evidence area.</section>}
+          : <section aria-label="No connected-service determination" style={{ ...card, padding: 14, color: 'var(--muted, #66717c)', fontSize: 12 }}>No connected-service determination has been accepted. The offline exercise below cannot populate this evidence area.</section>}
 
         <section aria-labelledby="offline-lab-title" style={{ borderTop: '4px solid #8b949d', paddingTop: 14 }}>
           <div style={{ ...card, padding: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'start', flexWrap: 'wrap' }}>
               <div style={{ maxWidth: 720 }}>
-                <div style={{ ...mono, color: '#66717c', fontSize: 10, fontWeight: 850, letterSpacing: '.08em' }}>OFFLINE EXERCISE · NOT LIVE EVIDENCE</div>
+                <div style={{ ...mono, color: '#66717c', fontSize: 10, fontWeight: 850, letterSpacing: '.08em' }}>OFFLINE EXERCISE · NOT CONNECTED-SERVICE EVIDENCE</div>
                 <h3 id="offline-lab-title" style={{ margin: '4px 0', fontSize: 18 }}>Synthetic ordered-route lab</h3>
-                <p style={{ margin: 0, color: 'var(--muted, #66717c)', fontSize: 11, lineHeight: 1.45 }}>A deterministic teaching fixture for advocate, judge, reconciliation, and intentional EAR99 residual behavior. It never substitutes for a failed live run.</p>
+                <p style={{ margin: 0, color: 'var(--muted, #66717c)', fontSize: 11, lineHeight: 1.45 }}>A deterministic teaching fixture for advocate, judge, reconciliation, and intentional EAR99 residual behavior. It never substitutes for a failed connected-service run.</p>
               </div>
               <label style={{ display: 'grid', gap: 5, minWidth: 260, fontSize: 10, fontWeight: 750 }}>
                 Offline scenario
@@ -219,7 +219,7 @@ function LiveDetermination({ result }: { result: ClassificationDetermination }) 
         <HashLine name="Snapshot" value={result.snapshot_sha256} /><HashLine name="Reference pack" value={result.pack_sha256} /><HashLine name="Part revision" value={result.item.part_revision_id ?? 'plain product description'} />
       </div>
     </div>
-    <section aria-label="Live candidate board" style={{ display: 'grid', gap: 8 }}>{result.candidates.map((candidate) => <LiveCandidate key={candidate.candidate_id} candidate={candidate} />)}</section>
+    <section aria-label="Connected-service candidate board" style={{ display: 'grid', gap: 8 }}>{result.candidates.map((candidate) => <LiveCandidate key={candidate.candidate_id} candidate={candidate} />)}</section>
     <section aria-labelledby="provenance-title" style={{ ...card, padding: 14 }}>
       <h4 id="provenance-title" style={{ margin: 0, fontSize: 14 }}>Execution provenance</h4>
       <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 8 }}>
@@ -246,7 +246,7 @@ function LiveCandidate({ candidate }: { candidate: ClassificationCandidate }) {
       {candidate.elements.map((element) => <div key={element.element_id} style={{ padding: 9, border: '1px solid var(--line, #d8dde3)', borderRadius: 6 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}><b style={{ fontSize: 10 }}>{element.unit_key} · {element.element_id}</b><Badge text={`${element.disposition} · ${element.basis}`} color={element.disposition === 'met' ? '#176b45' : element.disposition === 'not_met' ? '#56616d' : '#a05a00'} /></div>
         <div style={{ ...mono, marginTop: 5, fontSize: 9 }}>Facts: {element.facts_relied_on.join(', ') || 'none recorded'}</div>
-        {element.citation ? <div style={{ marginTop: 7, padding: 8, borderLeft: '3px solid #176b45', background: '#eef6f1' }}><div style={{ ...mono, color: '#176b45', fontSize: 9, fontWeight: 850 }}>ENGINE-VERIFIED SPAN · [{element.citation.start}, {element.citation.end}) · {element.citation.unit_sha256.slice(0, 16)}…</div><div style={{ marginTop: 4, fontSize: 10 }}>“{element.citation.quote}”</div></div> : <div style={{ marginTop: 6, color: '#a05a00', fontSize: 9 }}>No verified citation span carried.</div>}
+        {element.citation ? <div style={{ marginTop: 7, padding: 8, borderLeft: '3px solid #176b45', background: '#eef6f1' }}><div style={{ ...mono, color: '#176b45', fontSize: 9, fontWeight: 850 }}>SCHEMA- AND BYTE-SPAN VALIDATED · [{element.citation.start}, {element.citation.end}) · {element.citation.unit_sha256.slice(0, 16)}…</div><div style={{ marginTop: 4, fontSize: 10 }}>“{element.citation.quote}”</div><div style={{ marginTop: 5, color: '#56616d', fontSize: 9 }}>Source authority, currency, completeness, and legal relevance are not verified.</div></div> : <div style={{ marginTop: 6, color: '#a05a00', fontSize: 9 }}>No schema- and byte-span-validated reference excerpt carried.</div>}
       </div>)}
       {candidate.challenge && <div style={{ fontSize: 10 }}><b>Challenge:</b> {candidate.challenge.text} · {candidate.challenge.resolution}</div>}
       {candidate.reference_notes.map((note) => <div key={note} style={{ fontSize: 9, color: 'var(--muted, #66717c)' }}>Reference note · {note}</div>)}

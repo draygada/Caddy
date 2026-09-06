@@ -131,14 +131,14 @@ function ServiceSourcing() {
       </div>
       <div className="p-3 grid gap-3 text-[13px]">
         <div className="flex flex-wrap items-end gap-2">
-          <label className="grid gap-1 text-muted">input lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setRound(null); setSelectedOffer(null); setPkg(null); setDispatch(null); }} className="field text-ink"><option value="live-bounded">Live bounded input</option><option value="offline-demo">Offline demo · 2-key fixture</option></select></label>
+          <label className="grid gap-1 text-muted">input lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setRound(null); setSelectedOffer(null); setPkg(null); setDispatch(null); }} className="field text-ink"><option value="live-bounded">Connected Candidate 0.2 input</option><option value="offline-demo">Offline demo · 2-key fixture</option></select></label>
           <label className="grid gap-1 text-muted">quantity<input type="number" min={1} max={10000} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(10000, Number(event.target.value) || 1)))} className="field w-28 font-mono text-ink" /></label>
           <label className="grid gap-1 text-muted">mode<select value={mode} onChange={(event) => setMode(event.target.value as 'air' | 'ocean')} className="field text-ink"><option value="air">air</option><option value="ocean">ocean</option></select></label>
-          <button className="btn btn-primary" disabled={busy !== null} onClick={() => run('round', async (api) => { const value = await createRound(api); setRound(value); setSelectedOffer(value.round.selected_offer_id); setPkg(null); setDispatch(null); })}>{busy === 'round' ? 'Creating…' : inputMode === 'offline-demo' ? 'Run Offline demo' : 'Create live bounded round'}</button>
+          <button className="btn btn-primary" disabled={busy !== null} onClick={() => run('round', async (api) => { const value = await createRound(api); setRound(value); setSelectedOffer(value.round.selected_offer_id); setPkg(null); setDispatch(null); })}>{busy === 'round' ? 'Creating…' : inputMode === 'offline-demo' ? 'Run Offline demo' : 'Create connected bounded round'}</button>
         </div>
         {inputMode === 'live-bounded' && (
-          <div className="border border-line2 rounded-r p-3 grid gap-2" aria-label="Live bounded sourcing input">
-            <div className="flex flex-wrap justify-between gap-2"><b>Live offer + screening evidence</b><span className="text-[12px] text-muted">user-provided · hashed · revalidated each request · never full-list clearance</span></div>
+          <div className="border border-line2 rounded-r p-3 grid gap-2" aria-label="Connected Candidate 0.2 sourcing input">
+            <div className="flex flex-wrap justify-between gap-2"><b>User-provided offer + screening evidence</b><span className="text-[12px] text-muted">connected Candidate 0.2 service · hashed · revalidated each request · never full-list clearance</span></div>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2">
               <label className="grid gap-1 text-muted">seller<input value={seller} onChange={(event) => setSeller(event.target.value)} className="field text-ink" /></label>
               <label className="grid gap-1 text-muted">manufacturer<input value={manufacturer} onChange={(event) => setManufacturer(event.target.value)} className="field text-ink" /></label>
@@ -154,7 +154,7 @@ function ServiceSourcing() {
             {(!screeningComplete || !ownershipComplete || screeningStatus === 'UNKNOWN') && <div className="text-amber text-[12px]">HOLD is mandatory until screening and ownership evidence are explicitly complete. Completeness still does not imply full-list coverage or clearance.</div>}
           </div>
         )}
-        {inputMode === 'offline-demo' && <div className="border border-amber rounded-r p-2 text-[12px] text-amber"><b>Offline demo.</b> Synthetic two-key screening corpus, three fixture offers, one active match. Never substitute this lane for a live list or transaction review.</div>}
+        {inputMode === 'offline-demo' && <div className="border border-amber rounded-r p-2 text-[12px] text-amber"><b>Offline demo.</b> Synthetic two-key screening corpus, three fixture offers, one active match. Never substitute this lane for a current list or transaction review.</div>}
         {client && <div className="font-mono text-[12px] break-all text-muted">candidate {client.candidate.candidate_id} · {client.candidate.revision_id} · snapshot {client.candidate.snapshot_sha256}</div>}
         {error && <div role="alert" className="border border-red rounded-r p-2 text-red"><b>Service evidence not replaced.</b> {error}{evidence ? ' · Last valid result remains below.' : ''}</div>}
         {round && (
@@ -163,9 +163,9 @@ function ServiceSourcing() {
             {round.round.offers.map((offer) => (
               <article key={offer.offer_id} className="border border-line rounded-r p-3 grid gap-2">
                 <div className="flex flex-wrap justify-between gap-2"><b>{offer.seller}</b><span className="chip">{offer.screening_disposition}</span></div>
-                <div className="grid grid-cols-[repeat(auto-fit,minmax(145px,1fr))] gap-2 text-[12px]"><span>origin <b>{offer.origin}</b></span><span>lead <b>{offer.lead_days} days</b></span><span>landed <b>${offer.landed_cost.total_usd}</b></span><span>per unit <b>${offer.landed_cost.per_unit_usd}</b></span></div>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(145px,1fr))] gap-2 text-[12px]"><span>origin <b>{offer.origin}</b></span><span>lead <b>{offer.lead_days} days</b></span><span>modeled landed estimate <b>${offer.landed_cost.total_usd}</b></span><span>modeled per unit <b>${offer.landed_cost.per_unit_usd}</b></span></div>
                 <div className="text-[12px] text-muted">ownership walk · {ownerNames(offer)}</div>
-                <div className="text-[12px] text-muted">{offer.landed_cost.rows.map((row) => `${row.layer} $${row.amount_usd}`).join(' · ')}</div>
+                <div className="text-[12px] text-muted">{offer.landed_cost.rows.map((row) => `${row.layer} $${row.amount_usd}`).join(' · ')} · modeled estimate from declared/fixture inputs; not a supplier quote or tariff determination</div>
                 <div className="flex flex-wrap gap-2">
                   <button className="btn btn-primary disabled:opacity-40" disabled={!['eligible-fixture', 'eligible-bounded'].includes(offer.screening_disposition) || busy !== null} onClick={() => run('select', async (api) => { const value = await api.selectSourcingOffer(round.round.round_id, offer.offer_id); setSelectedOffer(value.selected_offer.offer_id); })}>{selectedOffer === offer.offer_id ? 'Selected' : 'Select eligible offer'}</button>
                   <button className="btn" disabled={busy !== null} onClick={() => run('hold', async (api) => { await api.adjudicateSourcingOffer({ round_id: round.round.round_id, offer_id: offer.offer_id, decision: 'HOLD', attestor: 'reviewer:browser-session', rationale: 'Retain the offer and original screening state for bounded comparison.' }); })}>Record HOLD</button>
@@ -186,7 +186,7 @@ function ServiceSourcing() {
               <b>Operator order lifecycle rehearsal</b>
               <div className="flex flex-wrap gap-1"><span className="chip">PROCESS_LOCAL_DEMO_ONLY</span><span className="chip">RECORDING_ONLY</span><span className="chip">external effect NONE</span></div>
             </div>
-            <div className="text-[12px] text-muted">This rehearses immutable order records against the sealed fixture package. No supplier receives a message, request, acknowledgement, or order.</div>
+            <div className="text-[12px] text-muted">This rehearses hash-linked, client-carried demo records against the sealed fixture package. They are not durable, externally authenticated, or globally replay-protected. No supplier receives a message, request, acknowledgement, or order.</div>
             <div className="flex flex-wrap items-end gap-2">
               <button className="btn btn-primary disabled:opacity-40" disabled={orderBusy !== null} onClick={() => void runOrder('validate-order-package', async (api) => { const value = await api.validatePackage(pkg.package.manifest_file); setValidatedManifest(value.package?.manifest_sha256 ?? null); return value; })}>{orderBusy === 'validate-order-package' ? 'Validating…' : validatedManifest === pkg.package.manifest_sha256 ? 'Package validated' : '1 · Validate package bytes'}</button>
               <label className="grid gap-1 text-muted">simulated recording outcome<select value={recordingOutcome} onChange={(event) => setRecordingOutcome(event.target.value as RecordingOutcome)} className="field text-ink" disabled={orderBusy !== null}><option value="DISPATCHED">DISPATCHED</option><option value="ACKNOWLEDGED">ACKNOWLEDGED</option><option value="EXCEPTION">EXCEPTION · known not sent</option><option value="UNKNOWN">UNKNOWN · reconciliation required</option></select></label>
@@ -213,7 +213,7 @@ function ServiceSourcing() {
             {visibleOrderEvidence && (
               <div className="border-t border-line2 pt-2 grid gap-1 text-[12px] text-muted">
                 <div><b className="text-ink">{visibleOrderEvidence.status}</b> · {visibleOrderEvidence.claim_ceiling}</div>
-                {visibleOrderEvidence.event_count != null && <div className="font-mono break-all">verified events {visibleOrderEvidence.event_count} · audit head {visibleOrderEvidence.audit_head_sha256}</div>}
+                {visibleOrderEvidence.event_count != null && <div className="font-mono break-all">hash-linked events {visibleOrderEvidence.event_count} · audit head {visibleOrderEvidence.audit_head_sha256}</div>}
                 {(visibleOrderEvidence.audit_events ?? visibleOrderEvidence.events ?? []).map((item) => <div key={item.event_id} className="font-mono break-all">#{item.sequence} {item.event_type} · {item.state} · {item.event_sha256}</div>)}
               </div>
             )}
@@ -257,7 +257,7 @@ function consequences(ro: ResolvedOffer, line: Line, round: Round, o: Outcome): 
   const fired = ro.ladder.rows.filter((r) => r.amount != null && r.amount > 0 && r.layer !== 'MPF' && r.layer !== 'HMF' && !r.layer.startsWith('base'));
   if (ro.ladder.domestic) out.push({ tone: 'var(--muted)', text: 'ships from the US · no entry, no duty layers' });
   else {
-    out.push({ tone: 'var(--amber)', text: '$ enters the US from ' + ro.offer.shipFrom + ' · landed ' + usd(ro.ladder.perUnit) + ' per unit' + (fired.length ? ' · ' + fired.map((r) => r.layer + ' ' + r.rate).join(' · ') : ' · no Chapter 99 add-on for origin ' + ro.offer.declaredOrigin) + ' · estimate' });
+    out.push({ tone: 'var(--amber)', text: '$ enters the US from ' + ro.offer.shipFrom + ' · modeled landed estimate ' + usd(ro.ladder.perUnit) + ' per unit' + (fired.length ? ' · ' + fired.map((r) => r.layer + ' ' + r.rate).join(' · ') : ' · no Chapter 99 add-on for origin ' + ro.offer.declaredOrigin) + ' · from declared/fixture inputs; not a supplier quote or tariff determination' });
     const mpf = ro.ladder.rows.find((r) => r.layer === 'MPF');
     if (mpf?.note.includes('minimum')) out.push({ tone: 'var(--amber)', text: '$ MPF minimum applied (' + usd(mpf.amount) + ') · on a small order the fee outweighs the duty' });
   }
@@ -316,7 +316,7 @@ export function Sourcing({ o }: { o: Outcome }) {
       { label: 'resolve offers', detail: 'committed catalog · ' + FIXTURES.offers },
       { label: 'walk owners', detail: 'seller and manufacturer · full walk where controlled, foreign or flagged · ' + FIXTURES.ownership },
       { label: 'screen fixture names', detail: 'exact and suffix-normalised · ' + FIXTURES.csl },
-      { label: 'estimate landed cost', detail: 'declared code × origin × dated tariff table · ' + FIXTURES.tariff },
+      { label: 'estimate modeled landed cost', detail: 'declared/fixture inputs · not a supplier quote or tariff determination · ' + FIXTURES.tariff },
     ];
     const running = stage >= 0 && stage < 4;
     const start = () => { s.openRound(shipTo, qty, mode, intake); setStage(4); };
@@ -488,7 +488,7 @@ export function Sourcing({ o }: { o: Outcome }) {
                 <div className="panel">
                   <div className="panel-head"><div className="panel-title">Price against regulation</div></div>
                   <div className="p-3 grid gap-1 text-[13px]">
-                    <div className="grid grid-cols-[1fr_auto] gap-2"><span>cheapest landed · <b>{cheapest.offer.seller}</b> <span style={{ color: STATUS_COLOR[cheapest.status] }}>· {STATUS_WORD[cheapest.status]}</span></span><span className="font-mono">{usd(cheapest.ladder.perUnit)}</span></div>
+                    <div className="grid grid-cols-[1fr_auto] gap-2"><span>lowest modeled landed estimate · <b>{cheapest.offer.seller}</b> <span style={{ color: STATUS_COLOR[cheapest.status] }}>· {STATUS_WORD[cheapest.status]}</span></span><span className="font-mono">{usd(cheapest.ladder.perUnit)}</span></div>
                     {clean && clean !== cheapest && <div className="grid grid-cols-[1fr_auto] gap-2"><span>cheapest with no candidate match · <b>{clean.offer.seller}</b></span><span className="font-mono">{usd(clean.ladder.perUnit)}</span></div>}
                     {delta != null && delta > 0 && <div className="text-muted">the cleaner seller costs <span className="font-mono text-ink">{usd(delta)}</span> more per unit · the cheaper one is {STATUS_WORD[cheapest.status]}{cheapest.offer.declaredOrigin === 'CN' ? ' and PRC-origin (Section 301 in the ladder, federal-buyer flag)' : ''}</div>}
                     {!clean && <div className="text-amber">no offer on this line is free of a review flag · pick with the flag on the record, or escalate</div>}
@@ -510,7 +510,7 @@ export function Sourcing({ o }: { o: Outcome }) {
 
           <div className="grid gap-3 content-start">
             <div className="panel">
-              <div className="panel-head"><div className="panel-title">Where you can get it <span className="sub">· {list.length} offer{list.length === 1 ? '' : 's'} · status first, then landed cost · blocked last</span></div></div>
+              <div className="panel-head"><div className="panel-title">Where you can get it <span className="sub">· {list.length} offer{list.length === 1 ? '' : 's'} · status first, then modeled landed-cost estimate · blocked last</span></div></div>
               <div className="p-3 grid gap-2">
                 {list.length === 0 && <div className="text-[13px] text-amber">no offer match · escalation lane: the agent may propose a seller; a human resolves.</div>}
                 {list.map((ro) => {
@@ -525,13 +525,13 @@ export function Sourcing({ o }: { o: Outcome }) {
                       <div className="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-x-3 gap-y-1 text-[12px]">
                         <div><span className="text-muted">ship-from · origin</span><br /><span className="font-mono">{ro.offer.shipFrom} · {ro.offer.declaredOrigin} <span className="chip chip-sm">declared</span></span></div>
                         <div><span className="text-muted">price</span><br /><span className="font-mono">{usd(ro.offer.unitPrice)}</span></div>
-                        <div><span className="text-muted">landed / unit</span><br /><span className="font-mono font-semibold" style={{ color: ro.ladder.unverified ? 'var(--grey)' : 'var(--ink)' }}>{usd(ro.ladder.perUnit)}</span></div>
+                        <div><span className="text-muted">modeled landed estimate / unit</span><br /><span className="font-mono font-semibold" style={{ color: ro.ladder.unverified ? 'var(--grey)' : 'var(--ink)' }}>{usd(ro.ladder.perUnit)}</span></div>
                         <div><span className="text-muted">stock · lead · MOQ</span><br /><span className="font-mono">{ro.offer.stock} · {ro.offer.leadDays} d · {ro.offer.moq}</span></div>
                         <div><span className="text-muted">seller ECCN · HTS</span><br /><span className="font-mono">{ro.offer.declaredEccn} · {ro.offer.declaredHts}</span></div>
                       </div>
                       <div className="flex gap-1 flex-wrap items-center">
                         <button onClick={() => { setPick(ro.offer.id); setTab(tab === 'owners' && on ? 'none' : 'owners'); }} className="btn">Owners · {ro.tier}</button>
-                        <button onClick={() => { setPick(ro.offer.id); setTab(tab === 'estimate' && on ? 'none' : 'estimate'); }} className="btn">Landed cost</button>
+                        <button onClick={() => { setPick(ro.offer.id); setTab(tab === 'estimate' && on ? 'none' : 'estimate'); }} className="btn">Modeled landed estimate</button>
                         {ro.status === 'review_blocked' && <button onClick={() => setAdj({ offerId: ro.offer.id, role: 'analyst', reason: 'name match on a different entity', rationale: '', action: 'false_positive' })} className="btn">Adjudicate…</button>}
                         <span className="flex-1" />
                         {sel?.offerId === ro.offer.id ? <span className="text-[13px] font-semibold text-green">picked</span> : declined ? <span className="text-[12px] text-muted">declined · {declined.reason}</span> : <button onClick={() => { setPick(ro.offer.id); setErr(null); }} className={'btn ' + (on ? 'btn-primary' : '')} disabled={ro.status === 'review_blocked'} title={ro.status === 'review_blocked' ? 'review blocked stops a pick · adjudicate first' : ''}>{on ? 'picked below' : 'Pick this'}</button>}
@@ -541,7 +541,7 @@ export function Sourcing({ o }: { o: Outcome }) {
                       )}
                       {on && tab === 'estimate' && (
                         <div className="border-t border-line2 pt-2">
-                          <div className="text-[13px] font-semibold mb-1">What it costs to land · {ro.ladder.domestic ? 'domestic · no entry' : 'entering the US'}</div>
+                          <div className="text-[13px] font-semibold mb-1">Modeled landed-cost estimate · declared/fixture inputs · not a supplier quote or tariff determination · {ro.ladder.domestic ? 'domestic · no entry' : 'entering the US'}</div>
                           <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-[2px] text-[12px]">
                             {ro.ladder.rows.map((rw, i) => <div key={i} className="contents"><div className={rw.verified ? '' : 'text-grey'}><b>{rw.layer}</b> <span className="text-muted">· {rw.citation}</span><br /><span className="text-muted">{rw.note}</span></div><div className="font-mono text-right text-amber">{rw.rate}</div><div className="font-mono text-right text-amber">{rw.amount == null ? '' : '$ ' + rw.amount.toFixed(2)}</div></div>)}
                           </div>

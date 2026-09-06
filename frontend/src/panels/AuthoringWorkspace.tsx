@@ -128,17 +128,17 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
 
   async function handleNativeSave() {
     setOutputBusy(true);
-    setOutputMessage('Validating and sealing native authoring state...');
+    setOutputMessage('Validating and sealing CADdyDaddy snapshot (.caddy.json)...');
     try {
-      if (!state.lastValidMesh) throw new Error('Run one successful kernel recompute before saving native output.');
+      if (!state.lastValidMesh) throw new Error('Run one successful kernel recompute before saving a CADdyDaddy snapshot.');
       const envelope = await sealNativeDocument(await createNativeDocumentDraft(state.lastValidDocument, state.lastValidMesh), fetchImpl);
       await downloadCadOutputArtifact(envelope.artifact);
       setNativeEnvelope(envelope);
       setOutputError(null);
-      setOutputMessage(`Saved native revision ${shortId(envelope.document.revision_id)} · ${shortId(envelope.document.document_hash)}.`);
+      setOutputMessage(`Saved CADdyDaddy snapshot revision ${shortId(envelope.document.revision_id)} · ${shortId(envelope.document.document_hash)}.`);
     } catch (error) {
-      setOutputError(error instanceof Error ? error.message : 'Native save failed closed.');
-      setOutputMessage('Last valid native/output state preserved. No file was downloaded.');
+      setOutputError(error instanceof Error ? error.message : 'CADdyDaddy snapshot save failed closed.');
+      setOutputMessage('Last valid snapshot/output state preserved. No file was downloaded.');
     } finally { setOutputBusy(false); }
   }
 
@@ -152,16 +152,16 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
       setOutputBundle(null);
       setKernelArtifacts([]);
       setOutputError(null);
-      setOutputMessage(`Loaded verified native revision ${shortId(envelope.document.revision_id)}. Exchange artifacts must be regenerated.`);
+      setOutputMessage(`Loaded schema- and hash-validated CADdyDaddy snapshot revision ${shortId(envelope.document.revision_id)}. Exchange artifacts must be regenerated.`);
     } catch (error) {
-      setOutputError(error instanceof Error ? error.message : 'Native load failed closed.');
+      setOutputError(error instanceof Error ? error.message : 'CADdyDaddy snapshot load failed closed.');
       setOutputMessage('Last valid authoring state preserved.');
     } finally { setOutputBusy(false); }
   }
 
   async function handleGenerateOutputs() {
     setOutputBusy(true);
-    setOutputMessage('Sealing native state and deriving output package...');
+    setOutputMessage('Sealing CADdyDaddy snapshot and deriving output package...');
     try {
       if (!state.lastValidMesh) throw new Error('Run one successful kernel recompute before generating outputs.');
       const envelope = await sealNativeDocument(await createNativeDocumentDraft(state.lastValidDocument, state.lastValidMesh), fetchImpl);
@@ -170,7 +170,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
       setNativeEnvelope(envelope);
       setOutputBundle(bundle);
       setOutputError(null);
-      setOutputMessage(`Verified ${bundle.artifacts.length} downloadable artifacts · package ${shortId(bundle.package.package_id)}.`);
+      setOutputMessage(`Validated ${bundle.artifacts.length} downloadable artifacts · package ${shortId(bundle.package.package_id)}.`);
     } catch (error) {
       setOutputError(error instanceof Error ? error.message : 'Output generation failed closed.');
       setOutputMessage('Last valid output bundle preserved. No replacement artifacts were admitted.');
@@ -184,7 +184,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
       <header style={{ padding: '12px 14px', borderBottom: '1px solid #bfc9c2', background: 'linear-gradient(115deg, #f5f0e5 0%, #e7eee8 55%, #e1e8eb 100%)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <div style={{ ...mono, fontSize: 10, color: '#176b45', textTransform: 'uppercase', letterSpacing: '.1em', fontWeight: 850 }}>Live authoring contract · stateless kernel adapter</div>
+            <div style={{ ...mono, fontSize: 10, color: '#176b45', textTransform: 'uppercase', letterSpacing: '.1em', fontWeight: 850 }}>Connected Candidate 0.2 service · stateless kernel adapter</div>
             <h2 id="cad-authoring-title" style={{ margin: '4px 0 2px', fontSize: 23 }}>CAD authoring workshop</h2>
             <div style={{ fontSize: 11, color: '#5d6861' }}>{state.document.name} · draft {shortId(state.document.revisionId)} · rendered {shortId(state.lastValidDocument.revisionId)}</div>
           </div>
@@ -309,7 +309,7 @@ function EntityRow({ entity, onChange, onRemove, index }: { entity: SketchEntity
 
 function SemanticMesh({ mesh, document }: { mesh: ReturnType<typeof createCadAuthoringState>['lastValidMesh']; document: CadDocument }) {
   const projected = useMemo(() => mesh?.vertices.map(([x, y, z]) => [120 + x * 3 + z, 105 - y * 3 - z * .5] as const) ?? [], [mesh]);
-  return <section aria-labelledby="mesh-title" style={{ ...card, overflow: 'hidden' }}><div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', borderBottom: '1px solid #d9dfdb' }}><h3 id="mesh-title" style={{ margin: 0, fontSize: 13 }}>Last valid semantic mesh</h3><span style={{ ...mono, fontSize: 9 }}>{mesh ? `${mesh.triangles.length} triangles` : 'no live mesh'}</span></div><svg role="img" aria-labelledby="semantic-mesh-title semantic-mesh-desc" viewBox="0 0 240 210" style={{ display: 'block', width: '100%', minHeight: 270, background: 'radial-gradient(circle at 50% 44%, #f8fbf8, #dce4df)' }}><title id="semantic-mesh-title">Revision-bound CAD mesh fallback</title><desc id="semantic-mesh-desc">Accessible two-dimensional projection of {document.bodies.length} bodies from revision {document.revisionId}.</desc><path d="M0 175 H240 M25 0 V210" stroke="#c6d0ca" strokeWidth=".5" />{mesh?.triangles.map((triangle, index) => { const points = triangle.map((vertex) => projected[vertex]).filter(Boolean).map((point) => point.join(',')).join(' '); return <polygon key={`${triangle.join('-')}:${index}`} points={points} fill={mesh.groups.find((group) => index >= group.startTriangle && index < group.startTriangle + group.triangleCount)?.color ?? '#7fa896'} fillOpacity=".52" stroke="#294d42" strokeWidth=".65" />; })}{!mesh && <text x="120" y="92" textAnchor="middle" fill="#526159" fontSize="8">No authoritative mesh yet</text>}{!mesh && <text x="120" y="108" textAnchor="middle" fill="#6c776f" fontSize="6">Author a feature, then connect /api/cad/recompute</text>}</svg><div style={{ padding: 8, fontSize: 10, color: '#66736b' }}>Semantic SVG fallback remains keyboard- and screen-reader-readable. No WebGL or successful kernel execution is implied.</div></section>;
+  return <section aria-labelledby="mesh-title" style={{ ...card, overflow: 'hidden' }}><div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', borderBottom: '1px solid #d9dfdb' }}><h3 id="mesh-title" style={{ margin: 0, fontSize: 13 }}>Last valid semantic mesh</h3><span style={{ ...mono, fontSize: 9 }}>{mesh ? `${mesh.triangles.length} triangles` : 'no connected-service mesh'}</span></div><svg role="img" aria-labelledby="semantic-mesh-title semantic-mesh-desc" viewBox="0 0 240 210" style={{ display: 'block', width: '100%', minHeight: 270, background: 'radial-gradient(circle at 50% 44%, #f8fbf8, #dce4df)' }}><title id="semantic-mesh-title">Revision-bound CAD mesh fallback</title><desc id="semantic-mesh-desc">Accessible two-dimensional projection of {document.bodies.length} bodies from revision {document.revisionId}.</desc><path d="M0 175 H240 M25 0 V210" stroke="#c6d0ca" strokeWidth=".5" />{mesh?.triangles.map((triangle, index) => { const points = triangle.map((vertex) => projected[vertex]).filter(Boolean).map((point) => point.join(',')).join(' '); return <polygon key={`${triangle.join('-')}:${index}`} points={points} fill={mesh.groups.find((group) => index >= group.startTriangle && index < group.startTriangle + group.triangleCount)?.color ?? '#7fa896'} fillOpacity=".52" stroke="#294d42" strokeWidth=".65" />; })}{!mesh && <text x="120" y="92" textAnchor="middle" fill="#526159" fontSize="8">No authoritative mesh yet</text>}{!mesh && <text x="120" y="108" textAnchor="middle" fill="#6c776f" fontSize="6">Author a feature, then connect /api/cad/recompute</text>}</svg><div style={{ padding: 8, fontSize: 10, color: '#66736b' }}>Semantic SVG fallback remains keyboard- and screen-reader-readable. No WebGL or successful kernel execution is implied.</div></section>;
 }
 
 function DependencyRail({ graph, history, diagnostics }: { graph: ReturnType<typeof createCadAuthoringState>['dependencyGraph']; history: ReturnType<typeof createCadAuthoringState>['history']; diagnostics: ReturnType<typeof createCadAuthoringState>['diagnostics'] }) {
@@ -332,13 +332,13 @@ function OutputPanel({ busy, nativeEnvelope, bundle, message, error, retainedFor
   onGenerate: () => void;
 }) {
   return <section aria-labelledby="outputs-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}><h3 id="outputs-title" style={{ margin: 0, fontSize: 13 }}>Native & manufacturing outputs</h3><span style={{ ...mono, fontSize: 8 }}>{bundle ? 'last valid' : 'not generated'}</span></div>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}><h3 id="outputs-title" style={{ margin: 0, fontSize: 13 }}>CADdyDaddy snapshot (.caddy.json) & manufacturing outputs</h3><span style={{ ...mono, fontSize: 8 }}>{bundle ? 'last valid' : 'not generated'}</span></div>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-      <button type="button" disabled={busy} onClick={onNativeSave} style={button}>Save native</button>
-      <label style={{ ...button, textAlign: 'center', opacity: busy ? .55 : 1 }}>Load native<input aria-label="Load native CAD document" type="file" accept=".json,.caddy.json,application/json" disabled={busy} style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onNativeLoad(file); event.currentTarget.value = ''; }} /></label>
+      <button type="button" disabled={busy} onClick={onNativeSave} style={button}>Save CADdyDaddy snapshot</button>
+      <label style={{ ...button, textAlign: 'center', opacity: busy ? .55 : 1 }}>Load CADdyDaddy snapshot<input aria-label="Load CADdyDaddy snapshot (.caddy.json)" type="file" accept=".json,.caddy.json,application/json" disabled={busy} style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onNativeLoad(file); event.currentTarget.value = ''; }} /></label>
     </div>
     <button type="button" disabled={busy} onClick={onGenerate} style={{ ...actionButton, opacity: busy ? .55 : 1 }}>{busy ? 'Validating outputs...' : 'Generate drawing + BOM package'}</button>
-    <div style={{ ...mono, fontSize: 8, color: '#66736b' }}>Retained exchange · {retainedFormats.length ? retainedFormats.join(' / ') : 'none'} · native {nativeEnvelope ? shortId(nativeEnvelope.document.document_hash) : 'not sealed'}</div>
+    <div style={{ ...mono, fontSize: 8, color: '#66736b' }}>Retained STEP / IGES / STL exchange · {retainedFormats.length ? retainedFormats.join(' / ') : 'none'} · CADdyDaddy snapshot {nativeEnvelope ? shortId(nativeEnvelope.document.document_hash) : 'not sealed'}</div>
     {error && <div role="alert" style={{ padding: 7, border: '1px solid #dca39a', background: '#fff0ed', color: '#7d281e', fontSize: 9 }}>{error}</div>}
     {message && <div role="status" aria-live="polite" style={{ padding: 7, background: '#f2f5f2', fontSize: 9, lineHeight: 1.35 }}>{message}</div>}
     {bundle && <div style={{ display: 'grid', gap: 4 }}>
