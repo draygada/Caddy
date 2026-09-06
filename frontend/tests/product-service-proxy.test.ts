@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createProductServiceProxy, MAX_PROXY_BODY_BYTES } from '../api/[...path]';
+import { CLASSIFICATION_REQUEST_TIMEOUT_MS, createProductServiceProxy, MAX_PROXY_BODY_BYTES } from '../api/[...path]';
 import vercelSource from '../vercel.json?raw';
 
 type Capture = { body: unknown; headers: Record<string, string>; statusCode: number };
@@ -72,10 +72,14 @@ const jsonResponse = (value: unknown, status = 200, headers: Record<string, stri
 
 describe('integrated preview routing', () => {
   it('keeps local machine contracts and removes every external API rewrite', () => {
-    const vercel = JSON.parse(vercelSource) as { rewrites: Array<{ source: string; destination: string }> };
+    const vercel = JSON.parse(vercelSource) as {
+      functions: Record<string, { maxDuration: number }>;
+      rewrites: Array<{ source: string; destination: string }>;
+    };
     expect(vercel.rewrites).toEqual([{ source: '/now', destination: '/api/now' }]);
     expect(vercel.rewrites.some(({ source, destination }) => source.startsWith('/api/') || /^https?:/i.test(destination))).toBe(false);
     expect(vercelSource).not.toContain('caddydaddy-product-service.vercel.app');
+    expect(vercel.functions['api/[...path].ts'].maxDuration).toBe(120);
   });
 
   it('fails closed without an exact approved Vercel origin', async () => {
@@ -188,6 +192,28 @@ describe('integrated preview routing', () => {
     expect(capture.statusCode).toBe(422);
     expect(capture.body).toEqual({ determination: 'UNDETERMINED' });
     expect(capture.headers['Cache-Control']).toBe('no-store');
+  });
+
+  it('keeps a live classification request open beyond the ordinary 15 second route ceiling', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi.fn<typeof fetch>().mockImplementation((_url, init) => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+      }));
+      const handler = createProductServiceProxy({ env: ENV, fetchImpl });
+      const { capture, response } = responseCapture();
+      const pending = handler(request('classification'), response);
+
+      await vi.advanceTimersByTimeAsync(15_001);
+      expect(capture.statusCode).toBe(0);
+
+      await vi.advanceTimersByTimeAsync(CLASSIFICATION_REQUEST_TIMEOUT_MS - 15_001);
+      await pending;
+      expect(capture.statusCode).toBe(502);
+      expect(capture.body).toMatchObject({ diagnostic: { code: 'PRODUCT_SERVICE_UNAVAILABLE' } });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('never leaks the live token or ambient browser credentials to another route', async () => {

@@ -15,6 +15,7 @@ type ProxyDependencies = Pick<RuntimeDependencies, 'env' | 'fetchImpl'>;
 const PRODUCT_SERVICE_ENV = 'CADDYDADDY_PRODUCT_SERVICE_URL';
 const LIVE_TOKEN_HEADER = 'X-CADdyDaddy-Live-Token';
 const REQUEST_TIMEOUT_MS = 15_000;
+export const CLASSIFICATION_REQUEST_TIMEOUT_MS = 90_000;
 export const MAX_PROXY_BODY_BYTES = 4_000_000;
 
 const ROUTES = new Map<string, ReadonlySet<string>>([
@@ -189,7 +190,8 @@ export function createProductServiceProxy(overrides: Partial<ProxyDependencies> 
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const requestTimeoutMs = path === '/api/classification' ? CLASSIFICATION_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+    const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
     try {
       const upstream = await dependencies.fetchImpl(new URL(path, target).toString(), {
         method,
