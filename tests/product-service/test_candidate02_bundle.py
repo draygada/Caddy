@@ -164,7 +164,18 @@ def test_cold_invocation_uses_hash_sealed_client_carried_cad_state() -> None:
     def export_transport(path: str, payload: dict):
         assert path == "/v1/exchange"
         assert payload["content_base64"] == "YnJlcC1ieXRlcw=="
-        return 200, {"content_base64": "c3RlcA==", "content_sha256": "e" * 64}
+        return 200, {
+            "schema_version": "caddydaddy.exchange-result/1",
+            "status": "SUCCEEDED",
+            "direction": "EXPORT",
+            "format": "STEP",
+            "content_base64": "c3RlcA==",
+            "content_sha256": hashlib.sha256(b"step").hexdigest(),
+            "brep_base64": "YnJlcC1ieXRlcw==",
+            "exact_geometry": True,
+            "editable_brep": True,
+            "verification": [{"code": "OCCT_REIMPORT_NON_NULL", "status": "PASSED"}],
+        }
 
     another_cold = Candidate02Routes(
         IDENTITY,
