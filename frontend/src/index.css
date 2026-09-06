@@ -68,7 +68,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   .btn-xs { min-height: 24px; padding: 0 8px; font-size: 12px; color: var(--muted); }
   .btn-icon { min-width: 32px; padding: 0; font-family: var(--font-mono); }
   .btn-primary.btn-xs { color: var(--accentfg); }
-  .panel { background: var(--surface); border: 1px solid var(--line2); border-radius: 6px; overflow: hidden; }
+  /* clip, not hidden: hidden zeroes the auto min-size of grid and flex items, so tall panels collapsed to the scroller height instead of growing it */
+  .panel { background: var(--surface); border: 1px solid var(--line2); border-radius: 6px; overflow: clip; }
   .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line2); }
   .panel-title { font-size: 13px; font-weight: 600; letter-spacing: .02em; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .panel-title .sub { color: var(--muted); font-weight: 400; }
