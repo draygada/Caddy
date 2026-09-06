@@ -2,13 +2,28 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://tripwire.local/schemas/design.schema.json",
   "title": "design.json — the product/assembly/part tree",
-  "description": "THE_BUILD.md §3.2. Frozen 2026-09-05 at the build-window open. The one addition beyond §3.2 is `items[]` on every node, per Charlie's parts handoff Step 0: engine v2 walks items[] (commodity|software|technology) WITHIN a product, while this tree is a physical decomposition. His recommendation, adopted here: each part node carries its own items[], and the tree is the outer loop. See docs/adr/ADR-001-items-axis.md.",
+  "description": "THE_BUILD.md §3.2. Frozen 2026-09-05 at the build-window open. Wave-0 adds candidate-only fixture labels and machine-readable graph-invariant annotations; those annotations require semantic admission and are not runtime validation. The one addition beyond §3.2 is `items[]` on every node, per Charlie's parts handoff Step 0: engine v2 walks items[] (commodity|software|technology) WITHIN a product, while this tree is a physical decomposition. His recommendation, adopted here: each part node carries its own items[], and the tree is the outer loop. See docs/adr/ADR-001-items-axis.md.",
   "type": "object",
+  "additionalProperties": false,
   "required": ["root", "nodes"],
+  "x-tripwire-graph-invariants": [
+    {"code": "duplicate_node_id", "rule": "Every nodes[].id is unique."},
+    {"code": "invalid_root", "rule": "root resolves to exactly one node whose kind is product and whose parent is null or absent."},
+    {"code": "dangling_parent", "rule": "Every non-null parent resolves to exactly one node."},
+    {"code": "cycle", "rule": "After node IDs are unique, root is valid, and every non-null parent resolves, following parent edges from any node terminates at root without revisiting a node."}
+  ],
   "properties": {
-    "root": { "type": "string", "description": "id of the product node" },
-    "rule_pack_sha": { "type": ["string", "null"] },
-    "nodes": { "type": "array", "items": { "$ref": "#/$defs/node" } }
+    "artifact_status": { "type": "string", "const": "candidate_unapproved" },
+    "fixture_mode": { "type": "string", "const": "SYNTHETIC_DEMO" },
+    "claim_ceiling": { "type": "string" },
+    "root": { "type": "string", "minLength": 1, "description": "id of the product node" },
+    "rule_pack_sha": {
+      "oneOf": [
+        { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        { "type": "null" }
+      ]
+    },
+    "nodes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } }
   },
   "$defs": {
     "node": {
@@ -16,7 +31,7 @@
       "additionalProperties": false,
       "required": ["id", "kind"],
       "properties": {
-        "id": { "type": "string" },
+        "id": { "type": "string", "minLength": 1 },
         "kind": { "enum": ["product", "assembly", "part"] },
         "parent": { "type": ["string", "null"] },
         "role": { "enum": ["nav", "sensor", "power", "comms", "structure", null] },
@@ -38,7 +53,8 @@
           "description": "ADDED beyond §3.2. The commodity/software/technology axis, nested UNDER the part rather than parallel to it. Empty is valid and is the baseline for every physical part.",
           "items": { "$ref": "#/$defs/item" }
         },
-        "declared": { "$ref": "#/$defs/declared" }
+        "declared": { "$ref": "#/$defs/declared" },
+        "provenance": { "$ref": "#/$defs/provenance" }
       }
     },
     "attr": {
@@ -65,7 +81,7 @@
       "additionalProperties": false,
       "required": ["id", "item_kind"],
       "properties": {
-        "id": { "type": "string" },
+        "id": { "type": "string", "minLength": 1 },
         "item_kind": {
           "enum": ["commodity", "software", "technology"],
           "description": "the engine-v2 axis. A physical part with firmware has one commodity item and one software item; both are evaluated under the same part node."
@@ -92,6 +108,15 @@
         "used_on": { "type": "array", "items": { "type": "string" } },
         "production_nonusml_equivalent": { "type": ["string", "null"] },
         "document_ref": { "type": ["string", "null"] }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "source_ref"],
+      "properties": {
+        "level": { "enum": ["synthetic", "declared", "verified", "missing"] },
+        "source_ref": { "type": ["string", "null"] }
       }
     }
   }

@@ -1,0 +1,53 @@
+{
+  "artifact_status": "candidate_unapproved",
+  "purpose": "Declarative request-ID and response-race vectors only; no browser or backend implementation is included in Wave 0.",
+  "contract": {
+    "request_id_type": "opaque non-negative integer monotonically allocated by the UI",
+    "backend_behavior": "Echo request_id unchanged.",
+    "ui_behavior": "Apply a response only when its request_id equals latest_issued_request_id and its design_revision, rule_pack_sha, and node bindings match the current contract state."
+  },
+  "vectors": [
+    {
+      "id": "matching-latest-response",
+      "latest_issued_request_id": 42,
+      "response_fixture": "backend/tests/fixtures/evaluate-camera-flag.json",
+      "response_mutations": {"request_id": 42},
+      "expected_ui_action": "apply"
+    },
+    {
+      "id": "late-older-response",
+      "latest_issued_request_id": 42,
+      "response_fixture": "backend/tests/fixtures/evaluate-baseline.json",
+      "response_mutations": {"request_id": 41},
+      "expected_ui_action": "discard_stale"
+    },
+    {
+      "id": "unissued-future-response",
+      "latest_issued_request_id": 42,
+      "response_fixture": "backend/tests/fixtures/evaluate-baseline.json",
+      "response_mutations": {"request_id": 43},
+      "expected_ui_action": "contract_error"
+    },
+    {
+      "id": "matching-id-wrong-design-revision",
+      "latest_issued_request_id": 42,
+      "response_fixture": "backend/tests/fixtures/evaluate-baseline.json",
+      "response_mutations": {"request_id": 42, "design_revision": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+      "expected_ui_action": "contract_error"
+    },
+    {
+      "id": "matching-id-wrong-rule-pack",
+      "latest_issued_request_id": 42,
+      "response_fixture": "backend/tests/fixtures/evaluate-baseline.json",
+      "response_mutations": {"request_id": 42, "rule_pack_sha": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+      "expected_ui_action": "contract_error"
+    },
+    {
+      "id": "matching-id-unknown-response-node",
+      "latest_issued_request_id": 42,
+      "response_fixture": "backend/tests/fixtures/evaluate-baseline.json",
+      "response_mutations": {"request_id": 42, "rename_determination_node": {"from": "kestrel", "to": "unknown-node"}},
+      "expected_ui_action": "contract_error"
+    }
+  ]
+}

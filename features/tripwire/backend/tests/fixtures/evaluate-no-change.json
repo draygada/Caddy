@@ -1,0 +1,19 @@
+{
+  "request_id": 4,
+  "stub": true,
+  "fixture_mode": "SYNTHETIC_DEMO",
+  "artifact_status": "candidate_unapproved",
+  "design_revision": "sha256:a057a02e63ddf6ca1e613b8b8343ed58a4031cf943b996b93dbf0dd2a4724655",
+  "rule_pack_sha": "sha256:ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f",
+  "rule_pack_status": "unapproved_input",
+  "destination_policy_sha": null,
+  "ecfr_date": "2026-09-01",
+  "determinations": {},
+  "delta": {
+    "changed_nodes": [],
+    "tripwires_added": [],
+    "tripwires_removed": [],
+    "rules_evaluated": []
+  },
+  "summary": {"clear": 0, "watch": 0, "question": 0, "flag": 0}
+}

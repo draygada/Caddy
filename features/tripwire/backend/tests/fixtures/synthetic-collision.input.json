@@ -1,0 +1,33 @@
+{
+  "artifact_status": "candidate_unapproved",
+  "fixture_mode": "NON_DEMO_SYNTHETIC",
+  "visibility": "test_fixture_only_never_demo",
+  "claim_ceiling": "Fabricated operators and labels used only to exercise ordering and missing-fact control flow; no regulatory or product claim.",
+  "review_order": ["USML", "CCL", "EAR99"],
+  "synthetic_candidates": [
+    {
+      "id": "SYNTH-USML-ALPHA",
+      "stage": "USML",
+      "entry": "SYNTH-USML-ALPHA",
+      "predicate": {"attribute": "synthetic_usml_gate", "operator": "equals", "threshold": true, "unit": null}
+    },
+    {
+      "id": "SYNTH-CCL-BETA",
+      "stage": "CCL",
+      "entry": "SYNTH-CCL-BETA",
+      "predicate": {"attribute": "synthetic_ccl_score", "operator": ">=", "threshold": 2, "unit": "synthetic-count"}
+    },
+    {
+      "id": "SYNTH-EAR99-FALLBACK",
+      "stage": "EAR99",
+      "entry": "SYNTH-EAR99-FALLBACK",
+      "availability": "only_after_SYNTH-USML-ALPHA_and_SYNTH-CCL-BETA_are_explicitly_rejected"
+    }
+  ],
+  "cases": [
+    {"id": "collision-usml-wins", "node_id": "synthetic-widget", "facts": {"synthetic_usml_gate": true, "synthetic_ccl_score": 2}},
+    {"id": "ccl-after-usml-rejected", "node_id": "synthetic-widget", "facts": {"synthetic_usml_gate": false, "synthetic_ccl_score": 2}},
+    {"id": "missing-ccl-fact-blocks-ear99", "node_id": "synthetic-widget", "facts": {"synthetic_usml_gate": false, "synthetic_ccl_score": null}},
+    {"id": "ear99-only-after-specific-rejections", "node_id": "synthetic-widget", "facts": {"synthetic_usml_gate": false, "synthetic_ccl_score": 1}}
+  ]
+}

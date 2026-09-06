@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tripwire.local/schemas/rules.p0-candidate.schema.json",
+  "title": "Candidate-only P0 rule-pack contract — unapproved",
+  "description": "Mechanical Wave-0 schema candidate. It defines executable shapes but approves no regulatory meaning and cannot be used as rules.P0.json without D1-D3 and qualified semantic review.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_status", "semantic_approval", "canonical_json", "policies", "rules"],
+  "properties": {
+    "artifact_status": {"const": "candidate_unapproved"},
+    "semantic_approval": {"const": false},
+    "canonical_json": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "digest"],
+      "properties": {
+        "algorithm": {"const": "RFC8785-JCS"},
+        "digest": {"const": "SHA-256"}
+      }
+    },
+    "policies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["missing_fact", "stale_fact", "incompatible_unit", "destination"],
+      "properties": {
+        "missing_fact": {"const": "cannot_evaluate_question"},
+        "stale_fact": {"const": "cannot_evaluate_question"},
+        "incompatible_unit": {"const": "cannot_evaluate_question"},
+        "destination": {"const": "not_evaluated"}
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/rule"}
+    }
+  },
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "jurisdiction", "effect", "when", "requires_entry", "source"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "jurisdiction": {"enum": ["ITAR", "EAR"]},
+        "effect": {"$ref": "#/$defs/effect"},
+        "when": {"$ref": "#/$defs/clause"},
+        "requires_entry": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1},
+          "description": "Explicit prerequisite entries. An empty array means the rule has no entry prerequisite."
+        },
+        "source": {"$ref": "#/$defs/sourceReceipt"}
+      }
+    },
+    "effect": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "entry"],
+          "properties": {
+            "kind": {"const": "add_entry"},
+            "entry": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "excluded_entry", "replacement_entry"],
+          "properties": {
+            "kind": {"const": "exclude_or_replace_entry"},
+            "excluded_entry": {"type": "string", "minLength": 1},
+            "replacement_entry": {"type": ["string", "null"]}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "entry", "reason"],
+          "properties": {
+            "kind": {"const": "add_reason"},
+            "entry": {"type": "string", "minLength": 1},
+            "reason": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "entry", "from_descendant_entries"],
+          "properties": {
+            "kind": {"const": "propagate_entry"},
+            "entry": {"type": "string", "minLength": 1},
+            "from_descendant_entries": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      ]
+    },
+    "clause": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["all"],
+          "properties": {
+            "all": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/atomOrClause"}}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["any"],
+          "properties": {
+            "any": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/atomOrClause"}}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["not"],
+          "properties": {
+            "not": {"$ref": "#/$defs/clause"}
+          }
+        }
+      ]
+    },
+    "atomOrClause": {
+      "oneOf": [
+        {"$ref": "#/$defs/numericComparison"},
+        {"$ref": "#/$defs/declaredEquality"},
+        {"$ref": "#/$defs/descendantEntry"},
+        {"$ref": "#/$defs/clause"}
+      ]
+    },
+    "numericComparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "attribute", "operator", "threshold", "unit"],
+      "properties": {
+        "kind": {"const": "numeric_comparison"},
+        "attribute": {"type": "string", "minLength": 1},
+        "operator": {"enum": ["<", "<=", ">", ">="]},
+        "threshold": {"type": "number"},
+        "unit": {"enum": ["h", "Hz", "elements"]}
+      }
+    },
+    "declaredEquality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "declared", "equals"],
+      "properties": {
+        "kind": {"const": "declared_equals"},
+        "declared": {"type": "string", "minLength": 1},
+        "equals": {"type": ["boolean", "string", "null"]}
+      }
+    },
+    "descendantEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "entry_in"],
+      "properties": {
+        "kind": {"const": "descendant_entry_in"},
+        "entry_in": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "sourceReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_file", "sha256", "raw_span", "normalized_display_text", "content_date", "url"],
+      "properties": {
+        "repository_file": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "raw_span": {
+          "type": "array",
+          "prefixItems": [{"type": "integer", "minimum": 0}, {"type": "integer", "minimum": 1}],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "normalized_display_text": {"type": "string", "minLength": 1},
+        "content_date": {"type": "string", "format": "date"},
+        "url": {"type": "string", "format": "uri"}
+      }
+    }
+  }
+}

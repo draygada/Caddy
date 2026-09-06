@@ -1,0 +1,75 @@
+{
+  "artifact_status": "candidate_unapproved",
+  "fixture_mode": "NON_DEMO_SYNTHETIC",
+  "visibility": "test_fixture_only_never_demo",
+  "outputs": [
+    {
+      "case_id": "collision-usml-wins",
+      "review_trace": [
+        {"stage": "USML", "candidate": "SYNTH-USML-ALPHA", "result": "matched"},
+        {"stage": "CCL", "candidate": "SYNTH-CCL-BETA", "result": "not_reached"},
+        {"stage": "EAR99", "candidate": "SYNTH-EAR99-FALLBACK", "result": "unavailable"}
+      ],
+      "determination": {
+        "state": "flag",
+        "jurisdiction": "ITAR",
+        "entry": "SYNTH-USML-ALPHA",
+        "facts": [
+          {"attribute": "synthetic_usml_gate", "observed": true, "unit": null, "operator": "equals", "threshold": true}
+        ]
+      }
+    },
+    {
+      "case_id": "ccl-after-usml-rejected",
+      "review_trace": [
+        {"stage": "USML", "candidate": "SYNTH-USML-ALPHA", "result": "rejected"},
+        {"stage": "CCL", "candidate": "SYNTH-CCL-BETA", "result": "matched"},
+        {"stage": "EAR99", "candidate": "SYNTH-EAR99-FALLBACK", "result": "unavailable"}
+      ],
+      "determination": {
+        "state": "flag",
+        "jurisdiction": "EAR",
+        "entry": "SYNTH-CCL-BETA",
+        "facts": [
+          {"attribute": "synthetic_usml_gate", "observed": false, "unit": null, "operator": "equals", "threshold": true},
+          {"attribute": "synthetic_ccl_score", "observed": 2, "unit": "synthetic-count", "operator": ">=", "threshold": 2}
+        ]
+      }
+    },
+    {
+      "case_id": "missing-ccl-fact-blocks-ear99",
+      "review_trace": [
+        {"stage": "USML", "candidate": "SYNTH-USML-ALPHA", "result": "rejected"},
+        {"stage": "CCL", "candidate": "SYNTH-CCL-BETA", "result": "cannot_evaluate"},
+        {"stage": "EAR99", "candidate": "SYNTH-EAR99-FALLBACK", "result": "blocked_by_unresolved_specific_candidate"}
+      ],
+      "determination": {
+        "state": "question",
+        "jurisdiction": null,
+        "entry": "SYNTH-CCL-BETA",
+        "facts": [
+          {"attribute": "synthetic_usml_gate", "observed": false, "unit": null, "operator": "equals", "threshold": true},
+          {"attribute": "synthetic_ccl_score", "observed": null, "unit": "synthetic-count", "operator": ">=", "threshold": 2}
+        ]
+      }
+    },
+    {
+      "case_id": "ear99-only-after-specific-rejections",
+      "review_trace": [
+        {"stage": "USML", "candidate": "SYNTH-USML-ALPHA", "result": "rejected"},
+        {"stage": "CCL", "candidate": "SYNTH-CCL-BETA", "result": "rejected"},
+        {"stage": "EAR99", "candidate": "SYNTH-EAR99-FALLBACK", "result": "available"}
+      ],
+      "determination": {
+        "state": "clear",
+        "jurisdiction": "EAR99",
+        "entry": "SYNTH-EAR99-FALLBACK",
+        "facts": [
+          {"attribute": "synthetic_usml_gate", "observed": false, "unit": null, "operator": "equals", "threshold": true},
+          {"attribute": "synthetic_ccl_score", "observed": 1, "unit": "synthetic-count", "operator": ">=", "threshold": 2},
+          {"attribute": "specific_candidates_rejected", "observed": ["SYNTH-USML-ALPHA", "SYNTH-CCL-BETA"], "unit": null, "operator": "equals", "threshold": ["SYNTH-USML-ALPHA", "SYNTH-CCL-BETA"]}
+        ]
+      }
+    }
+  ]
+}
