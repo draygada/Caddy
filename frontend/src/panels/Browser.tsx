@@ -4,7 +4,7 @@ import { DEFAULT_PART, GENERIC_NAME, SLOTS, type PartId, type Slot } from '../li
 import { UNITS } from '../lib/units';
 import { Body, Chevron, Component, Doc, Eye, EyeOff, Feature, Folder, Gear, Sketch, Home } from './Icons';
 
-const SWATCHES = ['#1f5a3f', '#2a78d6', '#b3261e', '#8a5a00', '#6b3fa0', '#0e7490', '#a3480a', '#4b5563'];
+const SWATCHES = ['#205840', '#2a78d6', '#b3261e', '#8a5a00', '#6b3fa0', '#0e7490', '#a3480a', '#4b5563'];
 
 interface RowProps {
   depth: number; icon: ReactNode; name: ReactNode; open?: boolean; onToggle?: () => void; hiddenId?: string; active?: boolean; dim?: boolean; radio?: boolean;
