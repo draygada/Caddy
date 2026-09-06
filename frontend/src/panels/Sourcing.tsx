@@ -3,6 +3,7 @@ import { useStore, designHashOf, ROUND_RAIL, INTAKE_DEFAULT, intakeIncomplete, t
 import type { Outcome } from '../lib/rules';
 import { GENERIC_NAME, type Slot } from '../lib/catalog';
 import { THUMBS, AF_THUMB } from '../lib/geometry';
+import { IntakeForm } from './IntakeForm';
 import { CHECKLIST, CLAIM_COST, CLAIM_OFFER, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
 
 const usd = (v: number | null | undefined) => (v == null ? 'rate not verified' : v.toLocaleString(undefined, { style: 'currency', currency: 'USD' }));
@@ -58,6 +59,8 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
   const [attestor, setAttestor] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [tab, setTab] = useState<'none' | 'owners' | 'estimate'>('none');
+  // the gate: with incomplete answers the tab shows only the questions, never the pipeline
+  const [draft, setDraft] = useState<Intake>(() => s.project?.intake ?? INTAKE_DEFAULT);
   const [adj, setAdj] = useState<{ offerId: string; role: 'analyst' | 'empowered_official'; reason: string; rationale: string; action: 'false_positive' | 'resolve' | 'pin' } | null>(null);
   const [refDraft, setRefDraft] = useState('');
   const [decl, setDecl] = useState({ personStatus: 'foreign person' as 'US person' | 'foreign person', sharing: 'assembly drawings and the BOM', reference: '' });
@@ -86,6 +89,28 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
       {!embedded && <button onClick={close} className="btn">Back to model · Esc</button>}
     </div>
   );
+
+  if (incomplete) {
+    const stillIncomplete = intakeIncomplete(draft);
+    return (
+      <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
+        {header}
+        <div className="flex-1 min-h-0 overflow-auto p-4 flex justify-center content-start">
+          <div className="panel w-full max-w-[820px] self-start">
+            <div className="panel-head"><div className="panel-title">This application requires more information</div><span className="text-[12px] text-muted">answer before sourcing starts</span></div>
+            <div className="p-4 grid gap-4 text-[13px]">
+              <div>{s.project?.intake ? 'Some use-case answers are still “not sure yet”.' : 'The use-case questions were skipped when this project was created.'} Sourcing reads the ship-to, the quantity, the transport mode, the end use and the end user before it resolves a single offer, so nothing below runs until they are answered.</div>
+              <IntakeForm value={draft} onChange={setDraft} />
+              <div className="flex gap-2 items-center flex-wrap border-t border-line2 pt-3">
+                <button onClick={() => s.setProjectIntake(draft)} disabled={stillIncomplete} className="btn btn-primary btn-lg disabled:opacity-50" title={stillIncomplete ? 'every answer must be a real choice, not “not sure yet”' : 'save the answers to the project and open sourcing'}>Save answers and start sourcing</button>
+                {stillIncomplete && <span className="text-[12px] text-amber">some answers are still “not sure yet”</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!r || k == null) {
     const stages = [
