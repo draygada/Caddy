@@ -765,7 +765,7 @@
       "version": "2.41.3"
     },
     {
-      "declared_license": "MIT-TEXT-IN-WHEEL; PYPI-LICENSE-EXPRESSION-UNSET",
+      "declared_license": "MIT",
       "id": "pypi:pydantic-core",
       "license_evidence": [
         {
@@ -777,19 +777,61 @@
       "name": "pydantic-core",
       "origin": "pypi-wheel",
       "package_artifact": {
-        "bytes": 2002028,
-        "filename": "pydantic_core-2.33.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
-        "sha256": "8f57a69461af2a5fa6e6bbd7a5f60d3b7e6cebb687f55106933188e79ad155c1",
-        "url": "https://files.pythonhosted.org/packages/f9/41/4b043778cf9c4285d59742281a769eac371b9e47e35f98ad321349cc5d61/pydantic_core-2.33.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+        "bytes": 2066284,
+        "filename": "pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        "sha256": "0fc5be0abd4a407e200d844b404e33639a554e7bd0d448e7b9ae181be4789ac2",
+        "url": "https://files.pythonhosted.org/packages/c0/a4/eb9409ec0736e50aa70a412f16c204ed149516846912f7e6724d4c73ee53/pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
       },
       "source_sets": [
-        "pypi-source:pydantic-core@2.33.2"
+        "pypi-source:pydantic-core@2.46.5"
       ],
-      "version": "2.33.2"
+      "version": "2.46.5",
+      "package_metadata_evidence": [
+        {
+          "bytes": 125376,
+          "path": "licenses/native/pypi/pydantic-core-CYCLONEDX-1.5.json",
+          "sha256": "4f40c790f0cb384a793663331904117a914a50ef220b112c399d77f1463e3dd5"
+        }
+      ],
+      "wheel_evidence": [
+        {
+          "bytes": 4692312,
+          "kind": "native-extension",
+          "sha256": "95f68ef2535a5102a03442e073d4906c01211b208902f56e24ec23cea402b5a0",
+          "wheel_path": "pydantic_core/_pydantic_core.cpython-312-x86_64-linux-gnu.so"
+        },
+        {
+          "bytes": 6573,
+          "kind": "core-metadata",
+          "sha256": "29768c038c0bb3564c0a87ef50ef78d18a2372474bdef0ba356a8c0fd4bd6028",
+          "wheel_path": "pydantic_core-2.46.5.dist-info/METADATA"
+        },
+        {
+          "bytes": 911,
+          "kind": "wheel-record",
+          "sha256": "b20b778300d7e25fdda4f0b835c14837b2057a99ca1434247167ef59a460e978",
+          "wheel_path": "pydantic_core-2.46.5.dist-info/RECORD"
+        },
+        {
+          "bytes": 1080,
+          "kind": "license",
+          "sha256": "2afdd30d54b4d62b6f488a6bcc1546e84ec5061f13f4209c03d012348783795a",
+          "wheel_path": "pydantic_core-2.46.5.dist-info/licenses/LICENSE"
+        },
+        {
+          "bom_format": "CycloneDX",
+          "bytes": 125376,
+          "component_count": 103,
+          "kind": "cyclonedx-sbom",
+          "sha256": "4f40c790f0cb384a793663331904117a914a50ef220b112c399d77f1463e3dd5",
+          "spec_version": "1.5",
+          "wheel_path": "pydantic_core-2.46.5.dist-info/sboms/pydantic-core.cyclonedx.json"
+        }
+      ]
     }
   ],
   "expected_native_file_count": 70,
-  "generated_on": "2026-09-05",
+  "generated_on": "2026-09-06",
   "native_files": [
     {
       "bytes": 162377849,
@@ -1548,13 +1590,13 @@
       "sha256": "ec91331f39a3acfdc8af10a79f5d78e5cbf4cfbf294da30b60b1caeea4f95529"
     },
     {
-      "bytes": 4776920,
+      "bytes": 4692312,
       "component_id": "pypi:pydantic-core",
       "mapping_evidence": {
         "method": "exact PyPI wheel path and extracted-file hash"
       },
       "path": "pydantic_core/_pydantic_core.cpython-312-x86_64-linux-gnu.so",
-      "sha256": "2711a346eff384909098ae5a1d1db8a8f741f2300c59c1fc651f39c370b8d0b4"
+      "sha256": "95f68ef2535a5102a03442e073d4906c01211b208902f56e24ec23cea402b5a0"
     }
   ],
   "schema": "caddydaddy.native-runtime/v1",
