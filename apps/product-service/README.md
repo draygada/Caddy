@@ -36,3 +36,15 @@ notice are not admitted to the runtime artifact.
 No provider link/state, credentials, governance/task records, private data, Tripwire CSL/PX4 data,
 Kestrel/BOM datasets, internal fixtures, tests, docs/history, source policy/config inputs, caches, or
 Git state is included.
+
+## Explicit live-classification lane
+
+Classification remains deterministic `ScriptedModel` unless `REAL_LLM_AUTHORIZED=true` exactly.
+Live mode additionally requires `ANTHROPIC_API_KEY`, an `ANTHROPIC_MODEL` of
+`claude-sonnet-5` or `claude-opus-5`, `CADDYDADDY_LIVE_LLM_ACCESS_TOKEN`, and positive bounded
+`CADDYDADDY_LIVE_LLM_CALLS_CAP`, `CADDYDADDY_LIVE_LLM_COST_CAP_MICROUSD`, and
+`CADDYDADDY_LIVE_LLM_ESTIMATED_CALL_COST_MICROUSD` values. Each live request must present the
+configured token as `X-CADdyDaddy-Live-Token`. Client call and total-cost ceilings can only lower
+the server caps; the per-call budget reservation is server-owned. Missing or invalid configuration
+fails closed, and the sanitized build probe removes every live flag and secret before importing the
+bundle. Configuration authorizes neither deployment nor spend by itself.

@@ -1,17 +1,31 @@
 {
-  "schema_version": "caddydaddy.sanitized-bundle/4",
+  "schema_version": "caddydaddy.sanitized-bundle/5",
   "candidate": "0.2",
   "target": "vercel-file-based-python-function",
   "python": "3.12",
   "build_command": "packages/core-kernel/.venv/bin/python apps/product-service/scripts/build_bundle.py --output <outside-repo-output>",
   "runtime_dependency_closure": [
+    {"name": "annotated-types", "version": "0.8.0", "license": "MIT"},
+    {"name": "anthropic", "version": "1.4.0", "license": "MIT"},
+    {"name": "anyio", "version": "4.15.1", "license": "MIT"},
     {"name": "attrs", "version": "26.1.0", "license": "MIT"},
+    {"name": "docstring-parser", "version": "0.18.0", "license": "MIT"},
+    {"name": "h11", "version": "0.16.0", "license": "MIT", "marker": "sys_platform != 'emscripten'"},
+    {"name": "httpcore2", "version": "2.12.0", "license": "BSD-3-Clause", "marker": "sys_platform != 'emscripten'"},
+    {"name": "httpx2", "version": "2.12.0", "license": "BSD-3-Clause"},
+    {"name": "idna", "version": "3.19", "license": "BSD-3-Clause"},
+    {"name": "jiter", "version": "0.16.0", "license": "MIT"},
     {"name": "jsonschema", "version": "4.25.1", "license": "MIT"},
     {"name": "jsonschema-specifications", "version": "2025.9.1", "license": "MIT"},
+    {"name": "pydantic", "version": "2.13.5", "license": "MIT"},
+    {"name": "pydantic-core", "version": "2.46.5", "license": "MIT"},
     {"name": "referencing", "version": "0.37.0", "license": "MIT"},
     {"name": "rfc8785", "version": "0.1.4", "license": "Apache-2.0"},
     {"name": "rpds-py", "version": "2026.6.3", "license": "MIT"},
-    {"name": "typing-extensions", "version": "4.16.0", "license": "PSF-2.0"}
+    {"name": "sniffio", "version": "1.3.1", "license": "MIT OR Apache-2.0"},
+    {"name": "truststore", "version": "0.10.4", "license": "MIT", "marker": "sys_platform != 'emscripten'"},
+    {"name": "typing-extensions", "version": "4.16.0", "license": "PSF-2.0"},
+    {"name": "typing-inspection", "version": "0.4.4", "license": "MIT"}
   ],
   "generated_snapshot": {
     "generator": "apps/product-service/scripts/generate_snapshot.py",

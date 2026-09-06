@@ -2,8 +2,8 @@
 
 Adapters: `ScriptedModel` (tests script each wave's output), `CacheModel` (fixtures keyed by the
 prompt's hash; the demo and the differential harness replay from it), `LiveAnthropicModel` (opt-in,
-lazy import, no dependency pinned — an integrator decision). `BudgetedModel` reserves the request's
-call and cost budget BEFORE any inner call; a breach is a hard abort, never a degraded answer.
+lazy import, activated only by its service adapter). `BudgetedModel` reserves the request's call and
+cost budget BEFORE any inner call; a breach is a hard abort, never a degraded answer.
 """
 
 from __future__ import annotations
@@ -130,9 +130,11 @@ class LiveAnthropicModel:
     """Opt-in live adapter. Not exercised by the test suite; no spend is authorized by its existence.
     Any response that is not exactly one tool-use block of the requested kind is an abstain."""
 
-    def __init__(self, *, model: str = "claude-opus-5", api_key_env: str = "ANTHROPIC_API_KEY",
+    def __init__(self, *, model: str = "claude-opus-5", api_key: str | None = None,
+                 api_key_env: str = "ANTHROPIC_API_KEY",
                  timeout_seconds: float = 20.0, max_tokens: int = 4096):
         self.model = model
+        self.api_key = api_key
         self.api_key_env = api_key_env
         self.timeout_seconds = timeout_seconds
         self.max_tokens = max_tokens
@@ -143,10 +145,11 @@ class LiveAnthropicModel:
             import anthropic  # noqa: PLC0415 - deliberately lazy; the dependency is not pinned by this lane
         except ImportError:
             return Abstain("anthropic sdk not installed")
-        if not os.environ.get(self.api_key_env):
+        api_key = self.api_key or os.environ.get(self.api_key_env)
+        if not api_key:
             return Abstain("no api key in environment")
         try:
-            client = anthropic.Anthropic(timeout=self.timeout_seconds, max_retries=0)
+            client = anthropic.Anthropic(api_key=api_key, timeout=self.timeout_seconds, max_retries=0)
             message = client.messages.create(
                 model=self.model,
                 max_tokens=self.max_tokens,

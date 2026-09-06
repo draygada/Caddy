@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import os
 from pathlib import Path
 import sys
 from unittest.mock import patch
@@ -17,7 +18,7 @@ for source_root in (REPO / "apps" / "product-service", REPO / "packages" / "clas
 from forge_classification import default_pack  # noqa: E402
 from forge_classification.contracts import load_schema  # noqa: E402
 from forge_classification.model import ScriptedModel  # noqa: E402
-from product_service.classification_api import ClassificationAdapter  # noqa: E402
+from product_service.classification_api import ClassificationAdapter, LIVE_ENV_NAMES  # noqa: E402
 
 
 REQUEST = {
@@ -100,8 +101,23 @@ def _assert_no_partial_determination(body: dict) -> None:
     assert "determination" not in body and "candidates" not in body and "provenance" not in body
 
 
+LIVE_ENV = {
+    "REAL_LLM_AUTHORIZED": "true",
+    "ANTHROPIC_API_KEY": "test-api-key-never-sent",
+    "ANTHROPIC_MODEL": "claude-sonnet-5",
+    "CADDYDADDY_LIVE_LLM_ACCESS_TOKEN": "test-live-token",
+    "CADDYDADDY_LIVE_LLM_CALLS_CAP": "4",
+    "CADDYDADDY_LIVE_LLM_COST_CAP_MICROUSD": "1000000",
+    "CADDYDADDY_LIVE_LLM_ESTIMATED_CALL_COST_MICROUSD": "1000",
+}
+
+
 def test_default_adapter_is_scripted_local_and_conservatively_undetermined() -> None:
-    status, body = ClassificationAdapter().classify(REQUEST)
+    environment = {name: "unexpected" for name in LIVE_ENV_NAMES if name != "REAL_LLM_AUTHORIZED"}
+    status, body = ClassificationAdapter(
+        environment=environment,
+        live_model_factory=lambda *_: (_ for _ in ()).throw(AssertionError("live model constructed")),
+    ).classify(REQUEST)
 
     assert status == 200
     jsonschema.validate(body, load_schema("determination"))
@@ -110,6 +126,112 @@ def test_default_adapter_is_scripted_local_and_conservatively_undetermined() -> 
     assert body["provenance"]["model"] == "ScriptedModel"
     assert body["provenance"]["budget"]["calls_used"] == 2
     assert len(body["snapshot_sha256"]) == 64 and len(body["pack_sha256"]) == 64
+
+
+def test_live_lane_requires_every_server_gate_and_valid_caps() -> None:
+    cases = []
+    for missing in LIVE_ENV:
+        if missing != "REAL_LLM_AUTHORIZED":
+            cases.append({key: value for key, value in LIVE_ENV.items() if key != missing})
+    cases.extend(
+        [
+            {**LIVE_ENV, "ANTHROPIC_MODEL": "claude-unknown"},
+            {**LIVE_ENV, "CADDYDADDY_LIVE_LLM_CALLS_CAP": "0"},
+            {**LIVE_ENV, "CADDYDADDY_LIVE_LLM_COST_CAP_MICROUSD": "not-an-integer"},
+            {
+                **LIVE_ENV,
+                "CADDYDADDY_LIVE_LLM_COST_CAP_MICROUSD": "999",
+                "CADDYDADDY_LIVE_LLM_ESTIMATED_CALL_COST_MICROUSD": "1000",
+            },
+        ]
+    )
+    for environment in cases:
+        constructed = False
+
+        def factory(*_args):
+            nonlocal constructed
+            constructed = True
+            raise AssertionError("must not construct")
+
+        status, body = ClassificationAdapter(environment=environment, live_model_factory=factory).classify(
+            REQUEST,
+            presented_token="test-live-token",
+        )
+        assert status == 503 and constructed is False
+        assert body["diagnostic"]["code"] == "CLASSIFICATION_LIVE_CONFIGURATION_INVALID"
+        assert not any(value in str(body) for value in LIVE_ENV.values())
+        _assert_no_partial_determination(body)
+
+
+def test_missing_or_wrong_live_token_is_401_before_model_construction() -> None:
+    for presented in (None, "", "wrong-token"):
+        constructed = False
+
+        def factory(*_args):
+            nonlocal constructed
+            constructed = True
+            raise AssertionError("must not construct")
+
+        status, body = ClassificationAdapter(environment=LIVE_ENV, live_model_factory=factory).classify(
+            REQUEST,
+            presented_token=presented,
+        )
+        assert status == 401 and constructed is False
+        assert body["diagnostic"] == {
+            "code": "CLASSIFICATION_LIVE_ACCESS_DENIED",
+            "message": "live classification access denied",
+        }
+        assert "Anthropic" not in str(body) and "claude" not in str(body) and "api" not in str(body).lower()
+        _assert_no_partial_determination(body)
+
+
+def test_live_adapter_uses_allowlisted_model_and_server_owned_budget_caps_with_mock_only() -> None:
+    pack = default_pack()
+    scripted = _ear99_model(pack)
+    constructed = []
+
+    class MockExternalModel:
+        def propose(self, kind, prompt, schema):
+            return scripted.propose(kind, prompt, schema)
+
+    def factory(model, api_key):
+        constructed.append((model, api_key))
+        return MockExternalModel()
+
+    request = {
+        **REQUEST,
+        "budget": {
+            "calls_cap": 64,
+            "cost_cap_microusd": 100_000_000,
+            "estimated_cost_microusd": 0,
+        },
+    }
+    status, body = ClassificationAdapter(
+        environment=LIVE_ENV,
+        live_model_factory=factory,
+        pack_factory=lambda: pack,
+    ).classify(request, presented_token="test-live-token")
+
+    assert status == 200
+    assert constructed == [("claude-sonnet-5", "test-api-key-never-sent")]
+    assert body["provenance"]["model"] == "MockExternalModel"
+    assert body["provenance"]["budget"] == {
+        "calls_cap": 4,
+        "calls_used": 4,
+        "cost_cap_microusd": 1_000_000,
+        "cost_used_microusd": 4_000,
+    }
+
+    lower_status, lower_body = ClassificationAdapter(
+        environment=LIVE_ENV,
+        live_model_factory=factory,
+        pack_factory=lambda: pack,
+    ).classify(
+        {**REQUEST, "budget": {"calls_cap": 1, "cost_cap_microusd": 500}},
+        presented_token="test-live-token",
+    )
+    assert lower_status == 429
+    _assert_no_partial_determination(lower_body)
 
 
 def test_adapter_preserves_empty_ccl_candidate_ear99_residual_and_full_provenance() -> None:

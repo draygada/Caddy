@@ -189,13 +189,27 @@ def test_static_spa_routing_and_runtime_pins(vercel_bundle: tuple[Path, Path, di
     requirements = (bundle / "requirements.txt").read_text(encoding="utf-8").splitlines()
     assert requirements == [
         "--only-binary=:all:",
+        "annotated-types==0.8.0",
+        "anthropic==1.4.0",
+        "anyio==4.15.1",
         "attrs==26.1.0",
+        "docstring-parser==0.18.0",
+        "h11==0.16.0 ; sys_platform != 'emscripten'",
+        "httpcore2==2.12.0 ; sys_platform != 'emscripten'",
+        "httpx2==2.12.0",
+        "idna==3.19",
+        "jiter==0.16.0",
         "jsonschema==4.25.1",
         "jsonschema-specifications==2025.9.1",
+        "pydantic==2.13.5",
+        "pydantic-core==2.46.5",
         "referencing==0.37.0",
         "rfc8785==0.1.4",
         "rpds-py==2026.6.3",
+        "sniffio==1.3.1",
+        "truststore==0.10.4 ; sys_platform != 'emscripten'",
         "typing-extensions==4.16.0",
+        "typing-inspection==0.4.4",
     ]
     assert (bundle / "public" / "index.html").is_file()
     assert (bundle / "public" / "build-manifest.json").is_file()
@@ -304,6 +318,27 @@ def test_forbidden_paths_content_and_sensitive_datasets_are_absent(
     notice = (bundle / "apps" / "product-service" / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
     assert "redistribution review remains unresolved" in notice
     assert not (bundle / "packages" / "core-kernel").exists()
+
+
+def test_build_probe_scrubs_live_llm_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    live_environment = {
+        "REAL_LLM_AUTHORIZED": "true",
+        "ANTHROPIC_API_KEY": "must-never-reach-probe",
+        "ANTHROPIC_MODEL": "claude-opus-5",
+        "CADDYDADDY_LIVE_LLM_ACCESS_TOKEN": "must-never-reach-probe",
+        "CADDYDADDY_LIVE_LLM_CALLS_CAP": "4",
+        "CADDYDADDY_LIVE_LLM_COST_CAP_MICROUSD": "1000000",
+        "CADDYDADDY_LIVE_LLM_ESTIMATED_CALL_COST_MICROUSD": "1000",
+    }
+    for name, value in live_environment.items():
+        monkeypatch.setenv(name, value)
+
+    summary, _ = _build(tmp_path / "sanitized-live-env")
+
+    assert summary["runtime_probe"]["classification_status"] == 200
+    assert summary["runtime_probe"]["classification_model"] == "ScriptedModel"
 
 
 def test_snapshot_tamper_stale_manifest_and_missing_evaluator_fail_closed(
