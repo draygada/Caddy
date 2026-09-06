@@ -85,7 +85,7 @@ function requestedPath(request: ProxyRequest): string | null {
     try {
       const incoming = new URL(request.url, 'https://frontend.invalid');
       if (incoming.hash) return null;
-      if (!incoming.search) return incoming.pathname;
+      if (!incoming.search) return Object.keys(request.query ?? {}).length === 0 ? incoming.pathname : null;
 
       const templatePath = incoming.pathname === '/api/[...path]' || incoming.pathname.toLowerCase() === '/api/%5b...path%5d';
       const query = request.query ?? {};
@@ -102,10 +102,7 @@ function requestedPath(request: ProxyRequest): string | null {
       return null;
     }
   }
-
-  const query = request.query ?? {};
-  if (Object.keys(query).some((key) => key !== 'path')) return null;
-  return routeCapture(query.path);
+  return null;
 }
 
 function declaredLength(request: ProxyRequest): number | null {

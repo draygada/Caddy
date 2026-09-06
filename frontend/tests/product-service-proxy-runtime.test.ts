@@ -78,6 +78,8 @@ describe('product-service proxy production runtime', () => {
       { method: 'GET', url: '/api/[...path]?path=health', query: { path: 'health' }, headers: {} },
       { method: 'POST', url: '/api/[...path]?path=not-a-consumer', query: { path: 'not-a-consumer' }, headers: { 'content-type': 'application/json' }, body: {} },
       { method: 'POST', url: '/api/[...path]?path=sourcing%2Frounds&debug=true', query: { path: 'sourcing/rounds', debug: 'true' }, headers: { 'content-type': 'application/json' }, body: {} },
+      { method: 'POST', url: '/api/classification', query: { debug: 'true' }, headers: { 'content-type': 'application/json' }, body: {} },
+      { method: 'POST', url: '/api/[...path]?path=classification&path=orders%2Fdispatches', query: { path: ['classification', 'orders/dispatches'] }, headers: { 'content-type': 'application/json' }, body: {} },
     ];
 
     for (const request of denied) {
