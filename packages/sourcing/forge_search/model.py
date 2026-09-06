@@ -16,6 +16,8 @@ from typing import Any, Protocol
 
 from forge_sourcing.hashing import sha256_bytes
 
+from .schemas import api_schema
+
 MODEL_FOR_KIND = {"extract": "claude-sonnet-5", "search": "claude-opus-5", "escalation": "claude-opus-5"}
 ESTIMATED_MICROUSD = {"extract": 106_000, "search": 27_500, "escalation": 27_500}   # S3 §(d), S5 verifier: 20 pages × 2,250 tok
 
@@ -140,7 +142,12 @@ class LiveAnthropicModel:
         return response
 
     def _complete(self, kind: str, prompt: str, schema: dict) -> tuple[dict | Abstain, dict | None]:
-        """One provider call → (response or Abstain, usage or None). Usage is reported whenever tokens were spent, abstain or not."""
+        """One provider call → (response or Abstain, usage or None). Usage is reported whenever tokens were spent, abstain or not.
+
+        The request carries `api_schema(schema)`, not `schema`: structured outputs 400 on `maxItems` and the rest
+        (see schemas.API_UNSUPPORTED_KEYWORDS). The full schema is still enforced — by the CALLER's
+        `validate(response, schema)`, which is the fail-closed gate for the caps, patterns and minimums.
+        """
         try:
             import anthropic  # noqa: PLC0415 - deliberately lazy; pinned only in the `live` extra
         except ImportError:
@@ -151,7 +158,7 @@ class LiveAnthropicModel:
         try:
             client = anthropic.Anthropic(timeout=self.timeout_seconds, max_retries=0)
             message = client.messages.create(model=model, max_tokens=self.max_tokens, messages=[{"role": "user", "content": prompt}],
-                                             output_config={"format": {"type": "json_schema", "schema": schema}, "effort": "low"})
+                                             output_config={"format": {"type": "json_schema", "schema": api_schema(schema)}, "effort": "low"})
         except Exception as error:  # noqa: BLE001 - every provider failure is an abstain, never a guess
             return Abstain(f"provider error: {type(error).__name__}"), None
         u = getattr(message, "usage", None)
