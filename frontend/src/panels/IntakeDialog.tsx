@@ -28,7 +28,7 @@ export function IntakeDialog() {
   return (
     <div className="absolute inset-0 z-[40] bg-scrim flex items-center justify-center p-4" onMouseDown={() => patch({ intakeOpen: false })}>
       <div role="dialog" aria-label="Use case" onMouseDown={(e) => e.stopPropagation()} className="w-full max-w-[760px] bg-surface border border-line rounded-r shadow-[0_16px_40px_rgba(0,0,0,.22)] flex flex-col max-h-full">
-        <div className="panel-head"><div className="panel-title">{project.name} · use case <span className="sub">· declared facts · badged, never inferred</span></div><button onClick={() => patch({ intakeOpen: false })} className="btn">Close · Esc</button></div>
+        <div className="panel-head"><div className="panel-title">{project.name} · use case <span className="sub">· declared facts · badged, never inferred</span></div><button onClick={() => patch({ intakeOpen: false })} className="btn btn-xs btn-icon" aria-label="Close" title="Close · Esc">×</button></div>
         <div className="p-4 overflow-auto"><IntakeForm value={draft} onChange={setDraft} /></div>
         <div className="px-4 py-3 border-t border-line2 flex justify-end gap-2">
           <button onClick={() => patch({ intakeOpen: false })} className="btn">Cancel</button>

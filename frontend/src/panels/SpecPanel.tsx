@@ -136,7 +136,7 @@ export function SpecPanel({ o }: { o: Outcome }) {
         <>
           <div className="fixed inset-0 z-[29] bg-scrim" onMouseDown={() => setInfoOpen(false)} />
           <div role="dialog" aria-label="Feature history and geometry" className="fixed z-[30] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(92vw,520px)] max-h-[80vh] panel flex flex-col">
-            <div className="panel-head"><div className="panel-title">{title} <span className="sub">· history and geometry</span></div><button onClick={() => setInfoOpen(false)} className="btn btn-xs">Close · Esc</button></div>
+            <div className="panel-head"><div className="panel-title">{title} <span className="sub">· history and geometry</span></div><button onClick={() => setInfoOpen(false)} className="btn btn-xs btn-icon" aria-label="Close" title="Close · Esc">×</button></div>
             <div className="overflow-auto min-h-0 p-3 grid gap-3 text-[13px]">
               {sel === 'airframe' && (
                 <div className="grid gap-[6px]">

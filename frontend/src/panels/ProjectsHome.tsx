@@ -43,7 +43,7 @@ export function ProjectsHome() {
           {creating && (
             <div className="fixed inset-0 z-[40] bg-scrim flex items-center justify-center p-4" onMouseDown={() => setCreating(false)}>
             <div role="dialog" aria-label="New project" onMouseDown={(e) => e.stopPropagation()} className="panel w-full max-w-[820px] max-h-full flex flex-col shadow-[0_16px_40px_rgba(0,0,0,.22)]">
-              <div className="panel-head"><div className="panel-title">New project <span className="sub">· the use case comes first</span></div><button onClick={() => setCreating(false)} className="btn">Cancel · Esc</button></div>
+              <div className="panel-head"><div className="panel-title">New project <span className="sub">· the use case comes first</span></div><button onClick={() => setCreating(false)} className="btn btn-xs btn-icon" aria-label="Cancel" title="Cancel · Esc">×</button></div>
               <div className="p-4 grid gap-4 overflow-auto">
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-3 text-[13px]">
                   <label className="grid gap-1 text-muted">project name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Kestrel v2" className="field" autoFocus /></label>

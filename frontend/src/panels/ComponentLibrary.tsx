@@ -23,7 +23,7 @@ export function ComponentLibrary({ onClose }: { onClose: () => void }) {
       <div role="dialog" aria-label="Component library" onMouseDown={(e) => e.stopPropagation()} className="panel w-full max-w-[760px] max-h-full flex flex-col shadow-[0_16px_40px_rgba(0,0,0,.22)]">
         <div className="panel-head">
           <div className="panel-title">Add components <span className="sub">· the library · a type joins the project, then you place it</span></div>
-          <button onClick={onClose} className="btn">Close · Esc</button>
+          <button onClick={onClose} className="btn btn-xs btn-icon" aria-label="Close" title="Close · Esc">×</button>
         </div>
         <div className="px-4 pt-3">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the library" aria-label="Search the component library" className="field w-full" autoFocus />

@@ -51,7 +51,7 @@ export function Reasoning({ o }: { o: Outcome }) {
           <span className="status-word text-[16px]" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>
           <span className="text-[13px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">{overall.sub}</span>
         </div>
-        <button onClick={s.closeAll} className="btn">Back to model · Esc</button>
+        <button onClick={s.closeAll} className="btn btn-xs btn-icon" aria-label="Back to model" title="Back to model · Esc">×</button>
       </div>
       <div className="flex-1 min-h-0 overflow-auto p-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 content-start">
         <div className="grid gap-4 content-start">

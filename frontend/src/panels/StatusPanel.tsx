@@ -25,8 +25,8 @@ export function StatusPanel({ o, onClose }: { o: Outcome; onClose?: () => void }
       <div className="panel-head py-[6px]">
         <div className="panel-title">Product status</div>
         <div className="flex gap-1">
-          <button onClick={() => useStore.getState().setWorkspace('classification')} className="btn btn-xs" title="the full reasoning, part by part">Classification tab</button>
-          {onClose && <button onClick={onClose} className="btn btn-xs" aria-label="Collapse product status">Close · Esc</button>}
+          <button onClick={() => useStore.getState().setWorkspace('classification')} className="btn btn-xs btn-primary" title="the full reasoning, part by part">View classification</button>
+          {onClose && <button onClick={onClose} className="btn btn-xs btn-icon" aria-label="Close" title="Close · Esc">×</button>}
         </div>
       </div>
       {incomplete ? (

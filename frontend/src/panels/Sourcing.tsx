@@ -310,7 +310,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
         {r && <span className="chip">ship-to {r.shipTo}</span>}{r && <span className="chip">qty {r.qty}</span>}{r && <span className="chip">{r.mode}</span>}
         {rail}
       </div>
-      {!embedded && <button onClick={close} className="btn">Back to model · Esc</button>}
+      {!embedded && <button onClick={close} className="btn btn-xs btn-icon" aria-label="Back to model" title="Back to model · Esc">×</button>}
     </div>
   );
 
