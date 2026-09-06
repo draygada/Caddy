@@ -17,9 +17,9 @@ function download(path: string, kind: string, sha256: string): CadOutputArtifact
   };
 }
 
-function deployedServiceBundle(): CadOutputBundle {
+function serviceBundle(bomPath: 'bom.csv' | 'bom/bom.csv' = 'bom/bom.csv'): CadOutputBundle {
   const packageArtifacts = [
-    download('bom/bom.csv', 'BOM_CSV', digest('1')),
+    download(bomPath, 'BOM_CSV', digest('1')),
     download('document/native.caddy.json', 'NATIVE_DOCUMENT', digest('2')),
     download('drawings/top.svg', 'ORTHOGRAPHIC_SVG', digest('3')),
     download('drawings/top.dxf', 'ORTHOGRAPHIC_DXF', digest('4')),
@@ -80,7 +80,7 @@ const acceptedCad = {
 
 describe('deployed CAD generate response contract', () => {
   it('derives exact manifest and nested BOM identities from the actual service schema', () => {
-    const bundle = deployedServiceBundle();
+    const bundle = serviceBundle();
     const registration = productOutputRegistration(bundle, acceptedCad);
 
     expect(registration.artifactManifestSha256).toBe(bundle.package.manifest_file_sha256);
@@ -91,8 +91,32 @@ describe('deployed CAD generate response contract', () => {
     }));
   });
 
+  it('preserves compatibility with the canonical flat BOM fixture identity', () => {
+    const bundle = serviceBundle('bom.csv');
+    const registration = productOutputRegistration(bundle, acceptedCad);
+
+    expect(registration.artifactManifestSha256).toBe(bundle.package.manifest_file_sha256);
+    expect(registration.bomSha256).toBe(digest('1'));
+    expect(registration.artifacts).toContainEqual(expect.objectContaining({
+      artifactId: `cad-output:${bundle.package.package_id}:bom.csv`,
+      sha256: digest('1'),
+    }));
+  });
+
+  it('rejects simultaneous flat and nested BOM descriptors', () => {
+    const bundle = serviceBundle();
+    const nestedArtifact = bundle.artifacts.find((artifact) => artifact.path === 'bom/bom.csv')!;
+    const nestedDescriptor = bundle.package.artifacts.find((artifact) => artifact.path === 'bom/bom.csv')!;
+    bundle.artifacts = [{ ...nestedArtifact, path: 'bom.csv' }, ...bundle.artifacts];
+    bundle.package.artifacts = [{ ...nestedDescriptor, path: 'bom.csv' }, ...bundle.package.artifacts];
+
+    expect(() => productOutputRegistration(bundle, acceptedCad)).toThrow(
+      'Generated outputs are missing exact manifest or BOM identities.',
+    );
+  });
+
   it('fails closed when the downloadable BOM identity differs from its package descriptor', () => {
-    const bundle = deployedServiceBundle();
+    const bundle = serviceBundle();
     bundle.artifacts = bundle.artifacts.map((artifact) => artifact.path === 'bom/bom.csv'
       ? { ...artifact, sha256: digest('a') }
       : artifact);

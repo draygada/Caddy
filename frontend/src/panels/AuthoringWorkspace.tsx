@@ -143,13 +143,24 @@ export function productOutputRegistration(bundle: CadOutputBundle, acceptedCad: 
     sha256: canonicalProductSha256(artifact.sha256, `CAD output ${artifact.path} SHA-256`),
   }));
   const manifestArtifact = bundle.artifacts.find((artifact) => artifact.path === 'manifest.json');
-  const bomArtifact = bundle.artifacts.find((artifact) => artifact.path === 'bom/bom.csv');
-  const packageBomDescriptor = bundle.package.artifacts.find((artifact) => artifact.path === 'bom/bom.csv');
+  const isKnownBomPath = (path: string) => path === 'bom.csv' || path === 'bom/bom.csv';
+  const bomArtifacts = bundle.artifacts.filter((artifact) => isKnownBomPath(artifact.path));
+  const packageBomDescriptors = bundle.package.artifacts.filter((artifact) => isKnownBomPath(artifact.path));
+  const bomArtifact = bomArtifacts.length === 1 ? bomArtifacts[0] : undefined;
+  const packageBomDescriptor = packageBomDescriptors.length === 1 ? packageBomDescriptors[0] : undefined;
   const manifestSha256 = manifestArtifact && canonicalProductSha256(manifestArtifact.sha256, 'CAD output manifest SHA-256');
   const packageManifestSha256 = canonicalProductSha256(bundle.package.manifest_file_sha256, 'CAD package manifest SHA-256');
   const bomSha256 = bomArtifact && canonicalProductSha256(bomArtifact.sha256, 'CAD output BOM SHA-256');
   const packageBomSha256 = packageBomDescriptor && canonicalProductSha256(packageBomDescriptor.sha256, 'CAD package BOM SHA-256');
-  if (!manifestSha256 || manifestSha256 !== packageManifestSha256 || !bomSha256 || bomSha256 !== packageBomSha256) {
+  if (
+    !manifestSha256
+    || manifestSha256 !== packageManifestSha256
+    || !bomArtifact
+    || !packageBomDescriptor
+    || bomArtifact.path !== packageBomDescriptor.path
+    || !bomSha256
+    || bomSha256 !== packageBomSha256
+  ) {
     throw new Error('Generated outputs are missing exact manifest or BOM identities.');
   }
   return {
