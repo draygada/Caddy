@@ -21,7 +21,8 @@ export function EngineRun({ label, description, facts }: { label: string; descri
       setResult(await evaluateClassification({ description, facts, item_kind: 'commodity' }, live ? { liveAuthorization: liveAuth } : {}));
     } catch (e) {
       setResult(null);
-      setError(e instanceof ClassificationClientError ? e.code + ' · ' + e.message : e instanceof Error ? e.message : 'the engine request failed');
+      const denied = e instanceof ClassificationClientError && /access denied/i.test(e.message);
+      setError(denied && !live ? 'The service runs in the live lane and needs the live access token. Open Settings, paste the token, tick the public-or-synthetic box, then run again.' : e instanceof ClassificationClientError ? e.code + ' · ' + e.message : e instanceof Error ? e.message : 'the engine request failed');
     } finally { setBusy(false); }
   };
   const d = result?.determination;
