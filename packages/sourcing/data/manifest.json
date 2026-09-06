@@ -30,5 +30,43 @@
     "revision": "subset-2026-09-05",
     "sha256": "fa863267f01d3367159a7fbe9d67173d6123a435aa795e3625f1aab551f145eb",
     "row_count": 7
+  },
+  "search": {
+    "search/documents.json": {
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    "search/fixtures/gx220_vendor_page.html": {
+      "sha256": "164ab9e7c1a3a9f82dfd28e1afbd0d3b496e4a3f3bf3404d24695310cf1fc660",
+      "bytes": 854
+    },
+    "search/fixtures/icm42688p_test_excerpt.txt": {
+      "sha256": "522ea1b7da6a4a0ff094d9262e8962b6b9b590478b8381d35c0e48bf342339be",
+      "bytes": 427
+    },
+    "search/fixtures/imu_ng_synthetic_sheet.txt": {
+      "sha256": "be5751c90231b68d10c1508d230eb17036b7770eef660c071da78a8716fbe7f8",
+      "bytes": 281
+    },
+    "search/fixtures/lepton35_test_sheet.txt": {
+      "sha256": "9f686b5c9915c3073c2f98b9a9cd0547aa940d805a37ce2e9f9e6ea1f772f23b",
+      "bytes": 319
+    },
+    "search/fixtures/molicel_p45b_test_excerpt.txt": {
+      "sha256": "d7828393aec2a5ed29dc322dcd3025912aec262e886284bbc94db629fa26f2b8",
+      "bytes": 380
+    },
+    "search/gold_swaps.json": {
+      "sha256": "ffb45598034a1f1d36d31846b0660f00bd09bd45faefddd8690b7ca9ccca72cf",
+      "bytes": 2176
+    },
+    "search/pool.json": {
+      "sha256": "56682ab9e537405df1e051e3bec2d9b9c188cf71e3172d9f2dd3aa2b8188cd46",
+      "bytes": 14294
+    },
+    "search/rules.DRAFT.json": {
+      "sha256": "ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f",
+      "bytes": 38805
+    }
   }
 }

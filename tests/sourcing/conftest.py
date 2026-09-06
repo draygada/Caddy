@@ -36,6 +36,23 @@ def f4_state(kestrel) -> dict:
     return {"design_hash": f4["design_hash"], "design_seq": f4["design_seq"], "product": f4["product"], "nodes": nodes}
 
 
+def _state(kestrel: dict, name: str) -> dict:
+    base = kestrel["states"]["baseline"]
+    st = kestrel["states"][name]
+    nodes = [st["replace_nodes"].get(n["node_id"], n) for n in base["nodes"]]
+    return {"design_hash": st["design_hash"], "design_seq": st["design_seq"], "product": st["product"], "nodes": nodes}
+
+
+@pytest.fixture
+def f3_state(kestrel) -> dict:
+    return _state(kestrel, "f3_boson")
+
+
+@pytest.fixture
+def f11_state(kestrel) -> dict:
+    return _state(kestrel, "f11_sicore")
+
+
 @pytest.fixture
 def service(data_dir):
     from forge_sourcing.service import Service

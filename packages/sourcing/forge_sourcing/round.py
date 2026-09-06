@@ -9,6 +9,8 @@ STATUS_LABEL = {"opened": "opened", "offers_resolved": "offers", "screened": "sc
 SHIP_TO = {
     "US-bench": {"country": "US", "label": "United States prototype bench"},
     "TW-assembly": {"country": "TW", "label": "Taiwan assembly site"},
+    "DE-assembly": {"country": "DE", "label": "Germany assembly site"},
+    "CA-assembly": {"country": "CA", "label": "Canada assembly site"},
 }
 
 

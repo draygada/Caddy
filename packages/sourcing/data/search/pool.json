@@ -1,0 +1,225 @@
+{
+  "fixture": "search_pool",
+  "revision": "2026-09-05",
+  "retrieved_at": "2026-09-05T23:30:00Z",
+  "source": "Owned candidate pool. Rows typed from THE BUILD §2.1 (baseline and swap parts), the tripwire catalog.json of 2026-09-04, and the manufacturer pages the 2026-09-05 S2 verifier read (GroupGets Boson+ page; TDK DS-000347 v1.9; Honeywell N61-2474-000-001 brochure; Molicel INR21700P45B v1.4 datasheet; Amprius SA102 page). Declared fields are unverified until a datasheet span is accepted by the verifier. SYNTHETIC candidates and documents are badged. No distributor API was called.",
+  "claim_ceiling": "A candidate pool the team owns; declared fields are manufacturer or team claims with a source and a date, never a determination.",
+  "fit_rule": "string comparator values match by case-insensitive substring; numeric values by equality or by {min, max} on decimal strings; a missing candidate field is unresolved, never a pass",
+  "aliases": {"nose_thermal": "thermal_core", "thermal": "thermal_core", "imu": "imu", "cells": "battery_cells", "iomcu": "io_mcu"},
+  "slots": {
+    "thermal_core": {
+      "part_class": "thermal_imager",
+      "role": "sensor",
+      "comparator": {
+        "function": {"kind": "thermal_imager"},
+        "performance": {"resolution_w": {"min": "160"}, "resolution_h": {"min": "120"}},
+        "form": {"interface": "SPI video; I2C (CCI) control"},
+        "fit": {"package": "Lepton socket (Molex 105028)"}
+      },
+      "candidates": [
+        {
+          "mpn": "500-0771-01",
+          "manufacturer": "Teledyne FLIR",
+          "aml": true,
+          "synthetic": false,
+          "declared": {"kind": "thermal_imager", "frame_rate_hz": "8.7", "resolution_w": "160", "resolution_h": "120", "interface": "SPI video; I2C (CCI) control", "package": "Lepton socket (Molex 105028)", "supply_v": "2.8"},
+          "documents": [
+            {"url": "https://groupgets-files.s3.amazonaws.com/lepton/Resources/Lepton%20Series%20Datasheet.pdf", "kind": "datasheet"},
+            {"url": "https://www1.futureelectronics.com/doc/FLIR%20SYSTEMS/Lepton%20Export%20fact%20sheet.pdf", "kind": "export_fact_sheet"},
+            {"url": "fixture://lepton35_test_sheet.txt", "kind": "synthetic_test_sheet"}
+          ],
+          "offer": {
+            "offer_id": "thermal-flir-direct", "mpn": "500-0771-01",
+            "seller": {"name": "Teledyne FLIR LLC", "display": "Teledyne FLIR direct", "country": "US", "authorized_distributor": true, "synthetic": false},
+            "ship_from": "US",
+            "manufacturer": {"name": "Teledyne FLIR LLC", "display": "Teledyne FLIR", "country_of_origin": "US", "origin_basis": "declared by manufacturer (Lepton export fact sheet)"},
+            "unit_price_usd": "239.00", "price_basis": "GroupGets list price, THE BUILD §2.4; typed, unverified for a direct purchase",
+            "stock": "in stock", "lead_time_days": 21, "moq": 1,
+            "declared_eccn": {"value": "6A993.a", "state": "manufacturer self-classification", "declared_by": "Teledyne FLIR export fact sheet", "date": "2026-09-05"},
+            "declared_hts": {"value": "8525.80", "declared_by": "Charlie typed", "date": "2026-09-05"},
+            "source_url": "https://www.flir.com/products/lepton/"
+          }
+        },
+        {
+          "mpn": "20640A012-6PAAX",
+          "manufacturer": "Teledyne FLIR",
+          "aml": false,
+          "synthetic": false,
+          "declared": {"kind": "thermal_imager", "frame_rate_hz": "60", "resolution_w": "640", "resolution_h": "512", "interface": "USB; CMOS parallel", "package": "Boson core 21 x 21 mm", "note": "one catalog line; 60/30 Hz or 9 Hz and the ECCN are bound per destination at fulfilment (GroupGets page, 2026-09-05)"},
+          "documents": [{"url": "https://groupgets.com/products/boson-plus", "kind": "product_page"}],
+          "offer": {
+            "offer_id": "boson-groupgets-pool", "mpn": "20640A012-6PAAX",
+            "seller": {"name": "GroupGets LLC", "display": "GroupGets", "country": "US", "authorized_distributor": true, "synthetic": false},
+            "ship_from": "US",
+            "manufacturer": {"name": "Teledyne FLIR LLC", "display": "Teledyne FLIR", "country_of_origin": "US", "origin_basis": "declared by seller (GroupGets page: Country of Origin USA)"},
+            "unit_price_usd": "4448.00", "price_basis": "GroupGets page, THE BUILD §2.1",
+            "stock": "in stock", "lead_time_days": 14, "moq": 1,
+            "declared_eccn": {"value": "6A003.b.4.b", "state": "seller-declared for 60/30 Hz; 9 Hz ships as 6A993.a", "declared_by": "GroupGets page", "date": "2026-09-05"},
+            "declared_hts": {"value": "9013.80", "declared_by": "GroupGets page (9013.80.9100)", "date": "2026-09-05"},
+            "source_url": "https://groupgets.com/products/boson-plus"
+          }
+        }
+      ]
+    },
+    "imu": {
+      "part_class": "sensor",
+      "role": "nav",
+      "comparator": {
+        "function": {"kind": "imu_6axis"},
+        "performance": {"gyro_rate_range_deg_s": {"min": "1000"}},
+        "form": {"interface": "SPI"},
+        "fit": {"package": "LGA-14 2.5 x 3.0 mm"}
+      },
+      "candidates": [
+        {
+          "mpn": "ICM-42688-P",
+          "manufacturer": "TDK InvenSense",
+          "aml": true,
+          "synthetic": false,
+          "declared": {"kind": "imu_6axis", "gyro_rate_range_deg_s": "2000", "interface": "SPI/I2C/I3C", "package": "LGA-14 2.5 x 3.0 mm", "supply_v": "1.8"},
+          "documents": [
+            {"url": "https://d17t6iyxenbwp1.cloudfront.net/s3fs-public/2026-06/DS-000347%20ICM-42688-P%20v1.9.pdf", "kind": "datasheet"},
+            {"url": "fixture://icm42688p_test_excerpt.txt", "kind": "synthetic_test_sheet"}
+          ],
+          "offer": {
+            "offer_id": "imu-tdk-direct", "mpn": "ICM-42688-P",
+            "seller": {"name": "TDK InvenSense", "display": "TDK InvenSense direct", "country": "US", "authorized_distributor": true, "synthetic": false},
+            "ship_from": "US",
+            "manufacturer": {"name": "TDK InvenSense", "display": "TDK InvenSense", "country_of_origin": "US", "origin_basis": "declared by seller (LCSC capture C1850418 says US)"},
+            "unit_price_usd": "8.90", "price_basis": "LCSC capture C1850418, 2026-09-04; typed, unverified for a direct purchase",
+            "stock": "in stock", "lead_time_days": 10, "moq": 1,
+            "declared_eccn": {"value": "7A994", "state": "distributor-declared", "declared_by": "LCSC capture C1850418", "date": "2026-09-04"},
+            "declared_hts": {"value": "9029.90.8080", "declared_by": "LCSC capture htsMap.US", "date": "2026-09-04"},
+            "source_url": "https://www.invensense.tdk.com/en-us/products/6-axis/icm-42688-p/"
+          }
+        },
+        {
+          "mpn": "IMU-NG",
+          "manufacturer": "Nordkap Sensor AS",
+          "aml": false,
+          "synthetic": true,
+          "declared": {"kind": "imu_6axis", "gyro_arw_deg_sqrt_h": "0.0008", "gyro_rate_range_deg_s": "400", "interface": "RS-422", "package": "module 40 x 40 x 20 mm"},
+          "documents": [{"url": "fixture://imu_ng_synthetic_sheet.txt", "kind": "synthetic_datasheet"}],
+          "offer": {
+            "offer_id": "imung-nordkap-pool", "mpn": "IMU-NG",
+            "seller": {"name": "Nordkap Sensor AS", "display": "Nordkap Sensor", "country": "NO", "authorized_distributor": true, "synthetic": true},
+            "ship_from": "NO",
+            "manufacturer": {"name": "Nordkap Sensor AS", "display": "Nordkap Sensor", "country_of_origin": "NO", "origin_basis": "SYNTHETIC"},
+            "unit_price_usd": "12500.00", "price_basis": "SYNTHETIC",
+            "stock": "quote", "lead_time_days": 90, "moq": 1,
+            "declared_eccn": {"value": null, "state": "not yet classified", "declared_by": null, "date": null},
+            "declared_hts": {"value": "9014.20", "declared_by": "Charlie typed", "date": "2026-09-05"},
+            "source_url": null
+          }
+        },
+        {
+          "mpn": "GX-220",
+          "manufacturer": "Gyrotech Components Ltd.",
+          "aml": false,
+          "synthetic": true,
+          "declared": {"kind": "imu_6axis", "interface": "SPI", "package": "LGA-14 2.5 x 3.0 mm"},
+          "documents": [{"url": "fixture://gx220_vendor_page.html", "kind": "vendor_page_poisoned"}],
+          "offer": {
+            "offer_id": "gx220-gyrotech", "mpn": "GX-220",
+            "seller": {"name": "Gyrotech Components Ltd.", "display": "Gyrotech (SYNTHETIC)", "country": "US", "authorized_distributor": false, "synthetic": true},
+            "ship_from": "US",
+            "manufacturer": {"name": "Gyrotech Components Ltd.", "display": "Gyrotech", "country_of_origin": "US", "origin_basis": "SYNTHETIC vendor page"},
+            "unit_price_usd": "45.00", "price_basis": "SYNTHETIC",
+            "stock": "in stock", "lead_time_days": 7, "moq": 1,
+            "declared_eccn": {"value": "EAR99", "state": "vendor banner on a SYNTHETIC page; no path into the rule", "declared_by": "GX-220 vendor page", "date": "2026-09-05"},
+            "declared_hts": {"value": "9014.20", "declared_by": "Charlie typed", "date": "2026-09-05"},
+            "source_url": "fixture://gx220_vendor_page.html"
+          }
+        }
+      ]
+    },
+    "battery_cells": {
+      "part_class": "cell",
+      "role": "power",
+      "comparator": {
+        "function": {"kind": "li_ion_cell"},
+        "performance": {"capacity_ah": {"min": "4.0"}},
+        "form": {"format": "21700"},
+        "fit": {"format": "21700"}
+      },
+      "candidates": [
+        {
+          "mpn": "INR-21700-P45B",
+          "manufacturer": "Molicel",
+          "aml": true,
+          "synthetic": false,
+          "declared": {"kind": "li_ion_cell", "format": "21700", "energy_density_wh_kg": "242", "nominal_v": "3.6", "capacity_ah": "4.5", "mass_g_max": "70"},
+          "documents": [
+            {"url": "https://www.molicel.com/wp-content/uploads/INR21700P45B_1.4_Product-Data-Sheet-of-INR-21700-P45B-80109.pdf", "kind": "datasheet"},
+            {"url": "fixture://molicel_p45b_test_excerpt.txt", "kind": "synthetic_test_sheet"}
+          ],
+          "offer": {
+            "offer_id": "cells-molicel-direct-pool", "mpn": "INR-21700-P45B",
+            "seller": {"name": "E-One Moli Energy Corp.", "display": "Molicel direct", "country": "TW", "authorized_distributor": true, "synthetic": false},
+            "ship_from": "TW",
+            "manufacturer": {"name": "E-One Moli Energy Corp.", "display": "Molicel", "country_of_origin": "TW", "origin_basis": "declared by seller"},
+            "unit_price_usd": "6.00", "price_basis": "THE BUILD §2.4: unit value ~ $6",
+            "stock": "in stock", "lead_time_days": 14, "moq": 48,
+            "declared_eccn": {"value": null, "state": "not yet classified", "declared_by": null, "date": null},
+            "declared_hts": {"value": "8507.60", "declared_by": "Charlie typed", "date": "2026-09-05"},
+            "source_url": "https://www.molicel.com/inr-21700-p45b/",
+            "carriage": "UN3480 lithium-ion cells; hazmat carriage documentation, not a customs filing"
+          }
+        },
+        {
+          "mpn": "SA102",
+          "manufacturer": "Amprius",
+          "aml": false,
+          "synthetic": false,
+          "declared": {"kind": "li_ion_cell", "format": "pouch 56.5 x 49.5 mm", "energy_density_wh_kg": "450", "capacity_ah": "4.3", "note": "Preliminary; nominal voltage and mass not published (amprius.com/products/sa102, 2026-09-05)"},
+          "documents": [{"url": "https://amprius.com/products/sa102/", "kind": "product_page"}],
+          "offer": {
+            "offer_id": "sicore-amprius-direct", "mpn": "SA102",
+            "seller": {"name": "Amprius Technologies, Inc.", "display": "Amprius direct", "country": "US", "authorized_distributor": true, "synthetic": false},
+            "ship_from": "US",
+            "manufacturer": {"name": "Amprius Technologies, Inc.", "display": "Amprius", "country_of_origin": "US", "origin_basis": "declared by manufacturer page"},
+            "unit_price_usd": null, "price_basis": "quote only",
+            "stock": "quote", "lead_time_days": null, "moq": null,
+            "declared_eccn": {"value": null, "state": "not yet classified", "declared_by": null, "date": null},
+            "declared_hts": {"value": "8507.60", "declared_by": "Charlie typed", "date": "2026-09-05"},
+            "source_url": "https://amprius.com/products/sa102/"
+          }
+        }
+      ]
+    },
+    "io_mcu": {
+      "part_class": "ic",
+      "role": null,
+      "comparator": {
+        "function": {"kind": "mcu"},
+        "performance": {},
+        "form": {"package": "LQFP-48"},
+        "fit": {"package": "LQFP-48"}
+      },
+      "candidates": [
+        {
+          "mpn": "STM32F100C8T6B",
+          "manufacturer": "STMicroelectronics",
+          "aml": true,
+          "synthetic": false,
+          "declared": {"kind": "mcu", "package": "LQFP-48", "max_operating_temp_c": "85", "min_operating_temp_c": "-40"},
+          "documents": [
+            {"url": "https://www.st.com/resource/en/datasheet/stm32f100c8.pdf", "kind": "datasheet"},
+            {"url": "https://estore.st.com/en/stm32f100c8t6b-cpn.html", "kind": "product_page"}
+          ],
+          "offer": {
+            "offer_id": "io-mcu-st-direct-pool", "mpn": "STM32F100C8T6B",
+            "seller": {"name": "STMicroelectronics", "display": "ST eStore", "country": "CH", "authorized_distributor": true, "synthetic": false},
+            "ship_from": "NL",
+            "manufacturer": {"name": "STMicroelectronics", "display": "STMicroelectronics", "country_of_origin": "MY", "origin_basis": "declared by seller; origin depends on lot", "origin_depends_on_lot": true},
+            "unit_price_usd": "3.20", "price_basis": "THE BUILD §2.4; typed, unverified",
+            "stock": "in stock", "lead_time_days": 7, "moq": 1,
+            "declared_eccn": {"value": "EAR99", "state": "manufacturer self-classification", "declared_by": "ST product page", "date": "2026-09-05"},
+            "declared_hts": {"value": "8542.31", "declared_by": "Charlie typed", "date": "2026-09-05"},
+            "source_url": "https://estore.st.com/en/stm32f100c8t6b-cpn.html"
+          }
+        }
+      ]
+    }
+  }
+}

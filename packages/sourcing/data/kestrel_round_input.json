@@ -68,6 +68,44 @@
           "evaluation": {"jurisdiction": "EAR", "entries": ["7A003.d.1"], "fired": ["7A002.a.1.a", "7A102.a", "7A003.d.1"], "contains_defense_article": [], "flags": [],
             "destinations": {"TW": {"state": "LIC", "because": ["7A003.d.1: NS Column 1 + MT Column 1 + AT Column 1; Taiwan X in NS1 and MT1", "STA barred, 740.20(b)(2)(iii)", "unless a licence exception not modelled applies"]}, "CN": {"state": "LIC, no exception", "because": ["7A003.d.1: NS1 + MT1; China X in every NS and MT column; not Group B"]}}}}
       }
+    },
+    "f3_boson": {
+      "design_hash": "5c2e9f1b7a3d4e6f8091a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f7",
+      "design_seq": 13,
+      "product": {"node_id": "kestrel", "final_assembly_country": "US", "declared": {"prime_flowdown": false}},
+      "replace_nodes": {
+        "thermal_core": {
+          "node_id": "thermal_core", "slot": "thermal_core", "part_class": "thermal_imager", "item_kind": "commodity",
+          "mpn": "20640A012-6PAAX", "manufacturer": "Teledyne FLIR", "origin": "US", "quantity_per": 1, "value_usd": "4448.00",
+          "description": "Boson+ 640, 60 Hz as ordered in the US; one catalog line whose frame rate and ECCN are bound per destination at fulfilment (GroupGets page, 2026-09-05)",
+          "evaluation": {
+            "jurisdiction": "EAR", "entries": ["6A003.b.4.b"], "fired": ["6A003.b.4.b"], "contains_defense_article": [], "flags": [],
+            "destinations": {
+              "TW": {"state": "LIC", "because": ["6A003.b.4.b: NS Column 2; Taiwan X in NS2", "STA barred to A:6 for 6A003.b.4 (740.20(b)(2)(x)); LVS not available", "unless a licence exception not modelled applies"]},
+              "CN": {"state": "LIC", "because": ["6A003.b.4.b: NS2; China X in every NS column; 744.9 line"]}
+            }
+          }
+        }
+      }
+    },
+    "f11_sicore": {
+      "design_hash": "9a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b",
+      "design_seq": 14,
+      "product": {"node_id": "kestrel", "final_assembly_country": "US", "declared": {"prime_flowdown": false}},
+      "replace_nodes": {
+        "battery_cells": {
+          "node_id": "battery_cells", "slot": "battery_bay", "part_class": "cell", "item_kind": "commodity",
+          "mpn": "SA102", "manufacturer": "Amprius", "origin": "US", "quantity_per": 48, "value_usd": null,
+          "description": "SiCore SA102 high-energy pouch cell, 450 Wh/kg (preliminary; capacity 4.3 Ah published, mass and nominal voltage not published)",
+          "evaluation": {
+            "jurisdiction": "EAR", "entries": ["3A001.e.1.b"], "fired": ["3A001.e.1.b"], "contains_defense_article": [], "flags": [],
+            "destinations": {
+              "TW": {"state": "LIC, or STA (c)(2), or LVS", "because": ["3A001.e.1.b: NS Column 2; Taiwan X in NS2", "STA 740.20(c)(2) candidate; LVS $3,000 per order (740.3)", "unless a licence exception not modelled applies"]},
+              "CN": {"state": "LIC", "because": ["3A001.e.1.b: NS2; China X in every NS column"]}
+            }
+          }
+        }
+      }
     }
   }
 }
