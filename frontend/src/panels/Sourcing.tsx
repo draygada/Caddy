@@ -294,6 +294,8 @@ function consequences(ro: ResolvedOffer, line: Line, round: Round, o: Outcome): 
 }
 
 type Step = 1 | 2 | 3 | 4;
+/** lucide pencil, 1.6 stroke, the same weight as the top bar gear */
+const EditIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" /></svg>;
 const STEPS: { n: Step; label: string }[] = [{ n: 1, label: 'Use case' }, { n: 2, label: 'Pick suppliers' }, { n: 3, label: 'Package and order' }, { n: 4, label: 'Customs filing' }];
 /** the product service names parts by key; the design names them by slot */
 const PART_KEY: Partial<Record<string, string>> = { fc: 'flight-controller', battery: 'battery-pack', imu: 'imu', gnss: 'gnss-receiver', datalink: 'datalink-radio', thermal: 'thermal-core', pod: 'sensor-pod', esc: 'esc', motor: 'motor', prop: 'propeller', camera: 'camera', transponder: 'transponder' };
@@ -372,8 +374,8 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
     return (
       <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
         {stepper}
-        <div className="flex-1 min-h-0 overflow-auto px-6 py-8 md:px-10 flex justify-center content-start">
-          <div className="w-full max-w-[960px] self-start grid gap-4">
+        <div className="flex-1 min-h-0 overflow-auto px-6 py-5 md:px-10 flex justify-center content-start">
+          <div className="w-full max-w-[1120px] self-start grid gap-5">
             {incomplete ? (
               <div className="panel">
                 <div className="panel-head" role="status"><div className="panel-title">This application requires more information</div><span className="text-[12px] text-muted">answer before sourcing starts</span></div>
@@ -389,15 +391,15 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
             ) : (() => {
               const placed = components.filter((sl) => s.parts[sl]);
               // keys read as labels: uppercase, tracked, muted; values keep their case
-              const KV = ({ k, v, mono = false }: { k: string; v: React.ReactNode; mono?: boolean }) => <><span className="text-[12px] uppercase tracking-[.05em] text-muted whitespace-nowrap">{k}</span><span className={'min-w-0 ' + (mono ? 'font-mono' : '')}>{v}</span></>;
+              const KV = ({ k, v, mono = false }: { k: string; v: React.ReactNode; mono?: boolean }) => <><span className="text-[12px] uppercase tracking-[.05em] text-muted whitespace-nowrap leading-6">{k}</span><span className={'min-w-0 leading-6 ' + (mono ? 'font-mono' : '')}>{v}</span></>;
               const shipLabel = SHIP_TO.find((x) => x.code === shipTo)?.label ?? shipTo;
               return (
                 <>
                   <div className="panel">
                     <div className="panel-head"><div className="panel-title">{s.project?.name ?? 'Project'} <span className="sub">· what sourcing will read</span></div><span className="chip">declared</span></div>
-                    <div className="p-4 grid gap-3 text-[13px]">
-                      {s.project?.description && <div className="text-[14px]">{s.project.description}</div>}
-                      <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto_1fr] gap-x-6 gap-y-1 items-baseline">
+                    <div className="p-5 grid gap-3 text-[14px]">
+                      {s.project?.description && <div className="text-[15px]">{s.project.description}</div>}
+                      <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto_1fr] gap-x-8 gap-y-1.5 items-baseline">
                         <KV k="design state" v={'#' + s.events.length + ' · ' + s.features.length + ' feature' + (s.features.length === 1 ? '' : 's')} mono />
                         <KV k="span" v={s.span.toFixed(2) + ' m'} mono />
                         <KV k="created" v={s.project?.createdAt ?? ''} mono />
@@ -406,17 +408,17 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                     </div>
                   </div>
                   {/* the use case and the components side by side; each panel carries its own edit action */}
-                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 items-start">
+                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-5 items-start">
                     <div className="panel">
-                      <div className="panel-head"><div className="panel-title">Use case <span className="sub">· and shipping</span></div><button onClick={() => s.patch({ intakeOpen: true })} className="btn btn-xs">Edit use case</button></div>
-                      <div className="p-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-[13px] items-baseline">
+                      <div className="panel-head"><div className="panel-title">Use case <span className="sub">· and shipping</span></div><button onClick={() => s.patch({ intakeOpen: true })} className="btn btn-xs btn-icon" aria-label="Edit use case" title="Edit use case"><EditIcon /></button></div>
+                      <div className="p-5 grid grid-cols-[auto_1fr] gap-x-8 gap-y-1.5 text-[14px] items-baseline">
                         <KV k="product for" v={intake.endUse} />
                         <KV k="end user" v={intake.endUser} />
                         <KV k="used on an aircraft" v={intake.usedOn} />
                         <KV k="civil product" v={intake.civilProduct ? 'declared' : 'not declared'} />
                         <KV k="BVLOS" v={intake.bvlos ? 'declared' : 'not declared'} />
                         <KV k="notes" v={intake.notes.trim() || <span className="text-muted">none</span>} />
-                        <span className="col-span-2 border-t border-line2 my-1" />
+                        <span className="col-span-2 border-t border-line2 my-2" />
                         <KV k="ships to" v={shipLabel} />
                         <KV k="units" v={String(qty)} mono />
                         <KV k="transport" v={mode} mono />
@@ -424,22 +426,21 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                       </div>
                     </div>
                     <div className="panel">
-                      <div className="panel-head"><div className="panel-title">Components <span className="sub">· {placed.length} placed · {components.length - placed.length} not placed</span></div><button onClick={() => s.setWorkspace('design')} className="btn btn-xs">Edit in Design</button></div>
-                      <div className="grid text-[13px]">
+                      <div className="panel-head"><div className="panel-title">Components <span className="sub">· {placed.length} placed · {components.length - placed.length} not placed</span></div><button onClick={() => s.setWorkspace('design')} className="btn btn-xs btn-icon" aria-label="Edit components in Design" title="Edit components in Design"><EditIcon /></button></div>
+                      <div className="grid text-[14px]">
                         {components.map((sl) => { const pid = s.parts[sl]; const part = pid ? CATALOG[pid] : null; return (
-                          <div key={sl} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-3 items-center px-4 min-h-8 border-t border-line2">
+                          <div key={sl} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] gap-4 items-center px-5 min-h-10 border-t border-line2">
                             <span className="font-semibold whitespace-nowrap overflow-hidden text-ellipsis">{GENERIC_NAME[sl]}</span>
                             <span className={part ? 'min-w-0 whitespace-nowrap overflow-hidden text-ellipsis' : 'text-muted'}>{part ? part.name : 'not placed · sourcing lists the empty line'}</span>
-                            <span className="font-mono text-[12px] text-muted whitespace-nowrap">{part ? part.vendor + ' · ' + part.origin : ''}</span>
+                            <span className="font-mono text-[13px] text-muted whitespace-nowrap">{part ? part.vendor + ' · ' + part.origin : ''}</span>
                           </div>
                         ); })}
                       </div>
                     </div>
                   </div>
-                  {/* one call to action; what it does is written under it, an existing round is a text link */}
-                  <div className="grid justify-items-center gap-2 pt-2">
+                  {/* one call to action; an existing round is a text link under it */}
+                  <div className="grid justify-items-center gap-2 pt-3">
                     <button onClick={start} disabled={s.viewSeq != null} className="btn btn-primary min-h-12 px-10 text-[15px] disabled:opacity-50 w-full sm:w-auto sm:min-w-[260px]">{r ? 'Open a new round' : 'Find suppliers'}</button>
-                    <span className="text-[12px] text-muted text-center">opens a round for {components.length} line{components.length === 1 ? '' : 's'} · ship-to {shipTo} · {qty} unit{qty === 1 ? '' : 's'} · {mode}</span>
                     {r && <button onClick={() => setStepWanted(2)} className="bg-transparent border-0 p-0 min-h-8 text-[13px] text-ink underline underline-offset-2 cursor-pointer">Continue round {r.id} instead</button>}
                   </div>
                 </>
