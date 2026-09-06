@@ -30,7 +30,7 @@ export function EngineRun({ label, description, facts }: { label: string; descri
   return (
     <div className="grid gap-2 border border-line rounded-r p-3 bg-surface text-[13px]">
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={run} disabled={busy} className={'btn ' + (live ? 'btn-primary' : '') + ' disabled:opacity-50'} aria-busy={busy}>{busy ? 'Asking the engine…' : (live ? 'Ask Claude' : 'Run the engine') + ' · ' + label}</button>
+        <button onClick={run} disabled={busy} className={'btn ' + (live ? 'btn-primary' : '') + ' disabled:opacity-50'} aria-busy={busy}>{busy ? 'Running…' : 'Run classification · ' + label}</button>
         <span className="text-[12px] text-muted">{live ? 'live lane · the service routes this call to Claude under the server caps' : 'no live token in Settings · a service in the live lane denies the call; one in the scripted lane answers with its deterministic model'}</span>
       </div>
       {error && <div role="alert" className="text-red font-semibold">{error}</div>}
