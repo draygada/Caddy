@@ -1,0 +1,87 @@
+{
+  "request_id": 5,
+  "stub": true,
+  "fixture_mode": "SYNTHETIC_DEMO",
+  "artifact_status": "candidate_unapproved",
+  "design_revision": "sha256:b2b6616f7fd782afb2fc7de35e4e7700f3c8d7e2600d6b70c9f9c142e840bbbf",
+  "rule_pack_sha": "sha256:ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f",
+  "rule_pack_status": "unapproved_input",
+  "destination_policy_sha": null,
+  "ecfr_date": "2026-09-01",
+  "determinations": {
+    "nose_thermal": {
+      "state": "question",
+      "jurisdiction": null,
+      "entries": [],
+      "direct_tripwires": [],
+      "propagated_tripwires": [],
+      "unresolved_tripwires": [
+        {
+          "rule_id": "CCL-6A003.b.4.b",
+          "state": "cannot_evaluate",
+          "jurisdiction": "EAR",
+          "entry": "6A003.b.4.b",
+          "reason_for_control": [],
+          "node_id": "nose_thermal",
+          "cause_node_id": "nose_thermal",
+          "problem": "missing_fact",
+          "facts": [
+            {"attribute": "fpa_entry", "observed": null, "unit": null, "operator": "equals", "threshold": "6A002.a.3.f"},
+            {"attribute": "frame_rate_hz", "observed": 60, "unit": "Hz", "operator": ">", "threshold": 9},
+            {"attribute": "note_3_a_exclusion_applies", "observed": false, "unit": null, "operator": "equals", "threshold": false},
+            {"attribute": "note_3_b_exclusion_applies", "observed": null, "unit": null, "operator": "equals", "threshold": false},
+            {"attribute": "note_3_c_exclusion_applies", "observed": null, "unit": null, "operator": "equals", "threshold": false}
+          ],
+          "text": "[UNAPPROVED SHAPE VECTOR] Missing FPA qualification and Note 3 exclusion evidence; frame rate alone cannot establish an entry.",
+          "source_url": "https://www.ecfr.gov/current/title-15/part-774",
+          "ecfr_date": "2026-09-01",
+          "rule_effective": null,
+          "evidence": {"level": "missing", "sha256": null, "span": null}
+        }
+      ],
+      "destinations": {"status": "not_evaluated", "reason": "P0 has no approved destination policy"},
+      "evidence_level": "missing"
+    },
+    "kestrel": {
+      "state": "question",
+      "jurisdiction": null,
+      "entries": [],
+      "direct_tripwires": [],
+      "propagated_tripwires": [],
+      "unresolved_tripwires": [
+        {
+          "rule_id": "CCL-9A012.a.3",
+          "state": "cannot_evaluate",
+          "jurisdiction": "EAR",
+          "entry": "9A012.a.3",
+          "reason_for_control": [],
+          "node_id": "kestrel",
+          "cause_node_id": "nose_thermal",
+          "path": ["nose_thermal", "kestrel"],
+          "problem": "missing_fact",
+          "facts": [
+            {"attribute": "bvlos", "observed": true, "unit": null, "operator": "equals", "threshold": true},
+            {"attribute": "installed_descendant_entry", "observed": null, "unit": null, "operator": "in", "threshold": ["6A003.b.3", "6A003.b.4.b", "6A008.d", "6A008.e", "6A008.f", "6A008.g", "6A008.h"]}
+          ],
+          "text": "[UNAPPROVED SHAPE VECTOR] Parent propagation cannot evaluate until the child has a valid determination.",
+          "source_url": "https://www.ecfr.gov/current/title-15/part-774",
+          "ecfr_date": "2026-09-01",
+          "rule_effective": "2026-08-13",
+          "evidence": {"level": "missing", "sha256": null, "span": null}
+        }
+      ],
+      "destinations": {"status": "not_evaluated", "reason": "P0 has no approved destination policy"},
+      "evidence_level": "missing"
+    }
+  },
+  "delta": {
+    "changed_nodes": ["nose_thermal", "kestrel"],
+    "tripwires_added": [
+      {"node_id": "nose_thermal", "rule_id": "CCL-6A003.b.4.b", "kind": "unresolved"},
+      {"node_id": "kestrel", "rule_id": "CCL-9A012.a.3", "kind": "unresolved", "cause_node_id": "nose_thermal"}
+    ],
+    "tripwires_removed": [],
+    "rules_evaluated": ["CCL-6A003.b.4.b", "CCL-9A012.a.3"]
+  },
+  "summary": {"clear": 0, "watch": 0, "question": 2, "flag": 0}
+}

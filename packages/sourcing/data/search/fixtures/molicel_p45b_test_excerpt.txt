@@ -1,0 +1,6 @@
+SYNTHETIC TEST EXCERPT. Written by the Strafe team on 2026-09-05 from the figures the S2 verifier read in Molicel datasheet INR21700P45B v1.4. Not a vendor document.
+Part: INR-21700-P45B lithium-ion cell.
+Capacity: Typical 4500 mAh / 16.2 Wh; Minimum 4300 mAh / 15.5 Wh.
+Cell Voltage: Nominal 3.6 V.
+Weight: 70 g (Max).
+Energy Density: Volumetric 643 Wh/l; Gravimetric 242 Wh/kg.

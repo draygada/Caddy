@@ -1,0 +1,951 @@
+[
+  {
+    "id": "CCL-9A012.a.2",
+    "jurisdiction": "EAR",
+    "entry": "9A012.a.2",
+    "applies_to": {"part_class": "airframe", "role": "structure"},
+    "when": {
+      "all": [
+        {"declared": "bvlos", "equals": true},
+        {"attr": "endurance_h", "op": ">=", "threshold": 3.0, "unit": "h"}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS1", "AT1"],
+    "reasons_if_mt": null,
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": false},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "a.2. A maximum 'endurance' of 3 hours or greater;",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": "2026-08-13",
+    "provenance": {"build_md_row": 1, "candidate_text_section": "### 9A012.a.2"}
+  },
+  {
+    "id": "CCL-9A012-MT-range",
+    "jurisdiction": "EAR",
+    "entry": "9A012 (MT)",
+    "applies_to": {"part_class": "airframe", "role": "structure"},
+    "when": {
+      "all": [
+        {"declared": "bvlos", "equals": true},
+        {"attr": "range_km", "op": ">=", "threshold": 300, "unit": "km"}
+      ]
+    },
+    "mt": null,
+    "reasons": ["MT1"],
+    "reasons_if_mt": null,
+    "sta": {"para": "c1iiA", "barred": false, "barred_if_mt": false},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "MT applies to “Unmanned Aerial Vehicles” (“UAVs”) and Remotely Piloted Vehicles (RPVs) that are capable of a maximum range of at least 300 kilometers (km), regardless of payload, and “UAVs” that meet the requirements of 9A120",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": "2026-08-13",
+    "provenance": {"build_md_row": 2, "candidate_text_section": "### 9A012.a"}
+  },
+  {
+    "id": "CCL-6A003.b.4.b",
+    "jurisdiction": "EAR",
+    "entry": "6A003.b.4.b",
+    "applies_to": {"part_class": "sensor", "role": "sensor"},
+    "when": {
+      "all": [
+        {"attr": "frame_rate_hz", "op": ">", "threshold": 9, "unit": "Hz"}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS2", "AT1"],
+    "reasons_if_mt": null,
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": false},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "b.4.b. Incorporating “focal plane arrays” controlled by 6A002.a.3.f; or",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 3, "candidate_text_section": "### 6A003.b.4.b"}
+  },
+  {
+    "id": "CCL-9A012.a.3",
+    "jurisdiction": "EAR",
+    "entry": "9A012.a.3",
+    "applies_to": {"part_class": "airframe", "role": "structure"},
+    "when": {
+      "all": [
+        {"declared": "bvlos", "equals": true},
+        {"any_descendant": {"entry_in": ["6A003.b.3", "6A003.b.4.b", "6A008.d", "6A008.e", "6A008.f", "6A008.g", "6A008.h"]}}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS1", "AT1"],
+    "reasons_if_mt": null,
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": false},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "a.3. “UAVs” or unmanned “airships” incorporating items specified in ECCN 6A003.b.3, 6A003.b.4.b, or 6A008.d to .h;",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": "2026-08-13",
+    "provenance": {"build_md_row": 3, "candidate_text_section": "### 9A012.a.3"}
+  },
+  {
+    "id": "RELEASE-6A003.b.4.b-note3a",
+    "jurisdiction": "EAR",
+    "entry": "6A993.a",
+    "applies_to": {"part_class": "sensor", "role": "sensor"},
+    "when": {
+      "all": [
+        {"attr": "frame_rate_hz", "op": "<=", "threshold": 9, "unit": "Hz"}
+      ]
+    },
+    "mt": null,
+    "reasons": null,
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "a. A maximum frame rate equal to or less than 9 Hz;",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 3, "candidate_text_section": "### 6A003.b.4.b"}
+  },
+  {
+    "id": "CCL-6A003.b.4.b-RS1",
+    "jurisdiction": "EAR",
+    "entry": "6A003.b.4.b (RS1)",
+    "applies_to": {"part_class": "sensor", "role": "sensor"},
+    "when": {
+      "any": [
+        {"attr": "frame_rate_hz", "op": ">", "threshold": 60, "unit": "Hz"},
+        {"attr": "elements", "op": ">", "threshold": 111000, "unit": "elements"}
+      ]
+    },
+    "mt": null,
+    "reasons": ["RS1"],
+    "reasons_if_mt": null,
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": false},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "RS applies to 6A003.b.3, 6A003.b.4.a, 6A003.b.4.c and to items controlled in 6A003.b.4.b that have a frame rate greater than 60 Hz or that incorporate a focal plane array with more than 111,000 elements, or to items in 6A003.b.4.b when being exported or reexported to be embedded in a civil product. (But see § 742.6(a)(2)(iii) and (v) for certain exemptions)",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 4, "candidate_text_section": "### 6A003.b.4.b"}
+  },
+  {
+    "id": "CCL-7A002.a.1.a",
+    "jurisdiction": "EAR",
+    "entry": "7A002.a.1.a",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"attr": "gyro_rate_range_deg_s", "op": "<", "threshold": 500, "unit": "deg/s"},
+        {"attr": "gyro_bias_stability_1mo_deg_h", "op": "<", "threshold": 0.5, "unit": "deg/h"}
+      ]
+    },
+    "mt": {
+      "entry": "7A102.a",
+      "when": {
+        "all": [
+          {"attr": "gyro_drift_rate_stability_1sigma_deg_h", "op": "<", "threshold": 0.5, "unit": "deg/h"}
+        ]
+      },
+      "cannot_fire_text": "MT: drift-rate stability (1 σ, IEEE 528-2001 §2.247) not published"
+    },
+    "reasons": ["NS1", "AT1"],
+    "reasons_if_mt": ["NS1", "MT1", "AT1"],
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": true},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "a.1.a. A “bias” “stability” of less (better) than 0.5 degree per hour, when measured in a 1 g environment over a period of one month, and with respect to a fixed calibration value; or",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 5, "candidate_text_section": "### 7A003"}
+  },
+  {
+    "id": "CCL-7A003.d.1",
+    "jurisdiction": "EAR",
+    "entry": "7A003.d.1",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"attr": "gyro_rate_range_deg_s", "op": "<", "threshold": 500, "unit": "deg/s"},
+        {"attr": "gyro_bias_stability_1mo_deg_h", "op": "<", "threshold": 0.5, "unit": "deg/h"}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS1", "AT1"],
+    "reasons_if_mt": null,
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": false},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "d.1. Performance specified by 7A001 or 7A002 along any axis, without the use of any aiding references; or",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 5, "candidate_text_section": "### 7A003"}
+  },
+  {
+    "id": "CCL-9A012.a.5",
+    "jurisdiction": "EAR",
+    "entry": "9A012.a.5",
+    "applies_to": {"part_class": "airframe", "role": "structure"},
+    "when": {
+      "all": [
+        {"declared": "bvlos", "equals": true},
+        {"any_descendant": {"entry_in": ["7A001", "7A002", "7A003", "7A005"]}}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS1", "AT1"],
+    "reasons_if_mt": null,
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": false},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "a.5. “UAVs” or unmanned “airships” incorporating “inertial measurement equipment or systems” using accelerometers or gyros specified in ECCNs 7A001, 7A002, 7A003, or 7A005.",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": "2026-08-13",
+    "provenance": {"build_md_row": 5, "candidate_text_section": "### 9A012.a.5"}
+  },
+  {
+    "id": "USML-XII(e)(12)(i)",
+    "jurisdiction": "ITAR",
+    "entry": "XII(e)(12)(i)",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"attr": "gyro_arw_deg_sqrt_h", "op": "<", "threshold": 0.001, "unit": "deg/sqrt(h)"}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "(i) Having an angle random walk of less (better) than 0.001 degrees per square root hour; or",
+    "url": "https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M/part-121/section-121.1",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 6, "candidate_text_section": "### XII(e)(12)"}
+  },
+  {
+    "id": "CCL-7A002.a.1.b",
+    "jurisdiction": "EAR",
+    "entry": "7A002.a.1.b",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"attr": "gyro_rate_range_deg_s", "op": "<", "threshold": 500, "unit": "deg/s"},
+        {"attr": "gyro_arw_deg_sqrt_h", "op": "<=", "threshold": 0.0035, "unit": "deg/sqrt(h)"}
+      ],
+      "not": [
+        {"declared": "spinning_mass", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS1", "AT1"],
+    "reasons_if_mt": null,
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": false},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "a.1.b. An “angle random walk” of less (better) than or equal to 0.0035 degree per square root hour; or",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 6, "candidate_text_section": "### 7A003"}
+  },
+  {
+    "id": "USML-VIII(a)(5)",
+    "jurisdiction": "ITAR",
+    "entry": "VIII(a)(5)",
+    "applies_to": {"part_class": "airframe", "role": "structure"},
+    "when": {
+      "all": [
+        {"declared": "designed_to_incorporate", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "* (5) Unmanned aerial vehicles (UAVs) specially designed to incorporate a defense article;",
+    "url": "https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M/part-121/section-121.1",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 6, "candidate_text_section": "### VIII(a)(5)"}
+  },
+  {
+    "id": "RELEASE-7A002.a.1.b-spinning-mass",
+    "jurisdiction": "EAR",
+    "entry": "7A002.a.1.b Note",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"declared": "spinning_mass", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "7A002.a.1.b does not control “spinning mass gyros”.",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 6, "candidate_text_section": "### 7A003"}
+  },
+  {
+    "id": "CCL-7A001.a.1.a",
+    "jurisdiction": "EAR",
+    "entry": "7A001.a.1.a",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"attr": "accel_linear_range_g", "op": "<=", "threshold": 15, "unit": "g"},
+        {"attr": "accel_bias_stability_1yr_ug", "op": "<", "threshold": 130, "unit": "micro g"}
+      ]
+    },
+    "mt": {
+      "entry": "7A101.a",
+      "when": {
+        "all": [
+          {"declared": "designed_for_inertial_nav", "equals": true},
+          {"attr": "accel_scale_factor_repeatability_ppm", "op": "<", "threshold": 1250, "unit": "ppm"},
+          {"attr": "accel_bias_repeatability_ug", "op": "<", "threshold": 1250, "unit": "micro g"}
+        ]
+      },
+      "cannot_fire_text": "MT: cannot fire, scale-factor repeatability not published"
+    },
+    "reasons": ["NS1"],
+    "reasons_if_mt": ["NS1", "MT1"],
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": true},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "a.1.a. A “bias” “stability” of less (better) than 130 micro g with respect to a fixed calibration value over a period of one year; or",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 7, "candidate_text_section": "### 7A003"}
+  },
+  {
+    "id": "USML-XII(e)(11)-bias-scale",
+    "jurisdiction": "ITAR",
+    "entry": "XII(e)(11)",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"attr": "accel_bias_repeatability_ug", "op": "<", "threshold": 10, "unit": "micro g"},
+        {"attr": "accel_scale_factor_repeatability_ppm", "op": "<", "threshold": 10, "unit": "ppm"}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "(11) Accelerometers having a bias repeatability of less (better) than 10 µg and a scale factor repeatability of less (better) than 10 parts per million, or capable of measuring greater than 100,000 g (MT);",
+    "url": "https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M/part-121/section-121.1",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 7, "candidate_text_section": "### XII(e)(12)"}
+  },
+  {
+    "id": "USML-XII(e)(11)-high-g",
+    "jurisdiction": "ITAR",
+    "entry": "XII(e)(11)",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"attr": "accel_linear_range_g", "op": ">", "threshold": 100000, "unit": "g"}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "(11) Accelerometers having a bias repeatability of less (better) than 10 µg and a scale factor repeatability of less (better) than 10 parts per million, or capable of measuring greater than 100,000 g (MT);",
+    "url": "https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M/part-121/section-121.1",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 7, "candidate_text_section": "### XII(e)(12)"}
+  },
+  {
+    "id": "CCL-7A005.b-adaptive-antenna",
+    "jurisdiction": "EAR",
+    "entry": "7A005.b",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"declared": "adaptive_antenna", "equals": true}
+      ]
+    },
+    "mt": {
+      "entry": "7A105.b.3",
+      "when": {
+        "all": [
+          {"declared": "anti_jam", "equals": true}
+        ],
+        "not": [
+          {"declared": "civil_gnss_service", "equals": true}
+        ]
+      },
+      "cannot_fire_text": null
+    },
+    "reasons": ["NS1"],
+    "reasons_if_mt": ["NS1", "MT1"],
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": true},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "b. Employing 'adaptive antenna systems'.",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 8, "candidate_text_section": "### 7A003"}
+  },
+  {
+    "id": "CCL-7A105.b.1-speed",
+    "jurisdiction": "EAR",
+    "entry": "7A105.b.1",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"attr": "navigation_speed_m_s", "op": ">", "threshold": 600, "unit": "m/s"}
+      ]
+    },
+    "mt": null,
+    "reasons": ["MT1"],
+    "reasons_if_mt": null,
+    "sta": {"para": null, "barred": true, "barred_if_mt": true},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "b.1. Capable of providing navigation information at speeds in excess of 600 m/s;",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 8, "candidate_text_section": "### 7A105.b.1"}
+  },
+  {
+    "id": "USML-XII(d)(2)(ii)",
+    "jurisdiction": "ITAR",
+    "entry": "XII(d)(2)(ii)",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"declared": "pps_decryption", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "(ii) Global Positioning System (GPS) receiving equipment specially designed for encryption or decryption (e.g., Y-Code, M-Code) of GPS protected positioning service (PPS) signals (MT if designed or modified for airborne applications);",
+    "url": "https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M/part-121/section-121.1",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 8, "candidate_text_section": "### XI"}
+  },
+  {
+    "id": "RELEASE-7A105.b.2-b.3-civil-service",
+    "jurisdiction": "EAR",
+    "entry": "7A105.b.2/.b.3 Note",
+    "applies_to": {"part_class": "sensor", "role": "nav"},
+    "when": {
+      "all": [
+        {"declared": "civil_gnss_service", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "7A105.b.2 and 7A105.b.3 do not control equipment designed for commercial, civil or Safety of Life (e.g., data integrity, flight safety) 'navigation satellite system' services.",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 8, "candidate_text_section": "### 7A105.b.1"}
+  },
+  {
+    "id": "CCL-3A001.a.2.a",
+    "jurisdiction": "EAR",
+    "entry": "3A001.a.2.a",
+    "applies_to": {"part_class": "ic", "role": null},
+    "when": {
+      "all": [
+        {"attr": "max_operating_temp_c", "op": ">", "threshold": 125, "unit": "deg C"}
+      ],
+      "not": [
+        {"declared": "civil_automobile_or_railway", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS2"],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": 5000,
+    "gbs": true,
+    "text": "a.2.a. Rated for operation at an ambient temperature above 398 K (+125 °C);",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 9, "candidate_text_section": "### 3A991.a.2"}
+  },
+  {
+    "id": "CCL-3A001.a.2.b",
+    "jurisdiction": "EAR",
+    "entry": "3A001.a.2.b",
+    "applies_to": {"part_class": "ic", "role": null},
+    "when": {
+      "all": [
+        {"attr": "min_operating_temp_c", "op": "<", "threshold": -55, "unit": "deg C"}
+      ],
+      "not": [
+        {"declared": "civil_automobile_or_railway", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS2"],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": 5000,
+    "gbs": true,
+    "text": "a.2.b. Rated for operation at an ambient temperature below 218 K (−55 °C); or",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 9, "candidate_text_section": "### 3A991.a.2"}
+  },
+  {
+    "id": "CCL-3A001.a.2.c",
+    "jurisdiction": "EAR",
+    "entry": "3A001.a.2.c",
+    "applies_to": {"part_class": "ic", "role": null},
+    "when": {
+      "all": [
+        {"attr": "min_operating_temp_c", "op": "<=", "threshold": -55, "unit": "deg C"},
+        {"attr": "max_operating_temp_c", "op": ">=", "threshold": 125, "unit": "deg C"}
+      ],
+      "not": [
+        {"declared": "civil_automobile_or_railway", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS2"],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": 5000,
+    "gbs": true,
+    "text": "a.2.c. Rated for operation over the entire ambient temperature range from 218 K (−55 °C) to 398 K (+125 °C);",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 9, "candidate_text_section": "### 3A991.a.2"}
+  },
+  {
+    "id": "RELEASE-3A001.a.2-civil-auto-rail",
+    "jurisdiction": "EAR",
+    "entry": "3A001.a.2 Note",
+    "applies_to": {"part_class": "ic", "role": null},
+    "when": {
+      "all": [
+        {"declared": "civil_automobile_or_railway", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "3A001.a.2 does not apply to integrated circuits designed for civil automobile or railway train applications.",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 9, "candidate_text_section": "### 3A991.a.2"}
+  },
+  {
+    "id": "CCL-5A002.a-symmetric",
+    "jurisdiction": "EAR",
+    "entry": "5A002.a",
+    "applies_to": {"part_class": "radio", "role": "comms"},
+    "when": {
+      "all": [
+        {"declared": "data_confidentiality_cryptography", "equals": true},
+        {"attr": "symmetric_key_bits", "op": ">", "threshold": 56, "unit": "bits"},
+        {"declared": "mass_market", "equals": false}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS1", "EI"],
+    "reasons_if_mt": null,
+    "sta": {"para": null, "barred": true, "barred_if_mt": false},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "2.a. A “symmetric algorithm” employing a key length in excess of 56 bits, not including parity bits;",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 10, "candidate_text_section": "### 5A002"}
+  },
+  {
+    "id": "RELEASE-5A002-to-5A992.c-mass-market",
+    "jurisdiction": "EAR",
+    "entry": "5A992.c",
+    "applies_to": {"part_class": "radio", "role": "comms"},
+    "when": {
+      "all": [
+        {"declared": "data_confidentiality_cryptography", "equals": true},
+        {"attr": "symmetric_key_bits", "op": ">", "threshold": 56, "unit": "bits"},
+        {"declared": "mass_market", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": null,
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "Related Controls: (1) ECCN 5A002.a controls “components” providing the means or functions necessary for “information security.” All such “components” are presumptively “specially designed” and controlled by 5A002.a. (2) See USML Categories XI (including XI(b)) and XIII(b) (including XIII(b)(2)) for controls on systems, equipment, and components described in 5A002.d or .e that are “subject to the ITAR” (see 22 CFR parts 120 through 130). (3) For “satellite navigation system” receiving equipment containing or employing decryption see 7A005, and for related decryption “software” and “technology” see 7D005 and 7E001. (4) Noting that items may be controlled elsewhere on the CCL, examples of items not controlled by ECCN 5A002.a.4 include the following: (a) An automobile where the only 'cryptography for data confidentiality' having a 'described security algorithm' is performed by a Category 5—Part 2 Note 3 eligible mobile telephone that is built into the car. In this case, secure phone communications support a non-primary function of the automobile but the mobile telephone (equipment), as a standalone item, is not controlled by ECCN 5A002 because it is excluded by the Cryptography Note (Note 3) (See ECCN 5A992.c). (b) An exercise bike with an embedded Category 5—Part 2 Note 3 eligible web browser, where the only controlled cryptography is performed by the web browser. In this case, secure web browsing supports a non-primary function of the exercise bike but the web browser (“software”), as a standalone item, is not controlled by ECCN 5D002 because it is excluded by the Cryptography Note (Note 3) (See ECCN 5D992.c). (5) After classification or self-classification in accordance with § 740.17(b) of the EAR, mass market encryption commodities that meet eligibility requirements are released from “EI” and “NS” controls. These commodities are designated 5A992.c. (6) See also ECCNs 3A090 and 4A090.",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 10, "candidate_text_section": "### 5A992.c"}
+  },
+  {
+    "id": "CCL-3A001.e.1.b",
+    "jurisdiction": "EAR",
+    "entry": "3A001.e.1.b",
+    "applies_to": {"part_class": "cell", "role": "power"},
+    "when": {
+      "all": [
+        {"attr": "energy_density_wh_kg", "op": ">", "threshold": 350, "unit": "Wh/kg"}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS2"],
+    "reasons_if_mt": null,
+    "sta": {"para": "c2", "barred": false, "barred_if_mt": false},
+    "lvs_usd": 3000,
+    "gbs": false,
+    "text": "e.1.b. 'Secondary cells' having an 'energy density' exceeding 350 Wh/kg at 20 °C;",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 11, "candidate_text_section": "### 3A991.a.2"}
+  },
+  {
+    "id": "RELEASE-3A001.e-battery",
+    "jurisdiction": "EAR",
+    "entry": "3A001.e Note",
+    "applies_to": {"part_class": "battery", "role": "power"},
+    "when": {
+      "all": [
+        {"part_class_in": ["battery", "battery_pack"]}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "3A001.e does not control batteries, including single-cell batteries.",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 11, "candidate_text_section": "### 3A991.a.2"}
+  },
+  {
+    "id": "CCL-9A991.d-board-civil-uav",
+    "jurisdiction": "EAR",
+    "entry": "9A991.d",
+    "applies_to": {"part_class": "pcb", "role": "nav"},
+    "when": {
+      "all": [
+        {"declared": "board_target", "equals": "civil_uav"}
+      ]
+    },
+    "mt": null,
+    "reasons": null,
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "d. “Parts” and “components,” “specially designed” for “aircraft,” n.e.s.",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 12, "candidate_text_section": "### 9A991"}
+  },
+  {
+    "id": "CCL-3A611.g-board-600-series",
+    "jurisdiction": "EAR",
+    "entry": "3A611.g",
+    "applies_to": {"part_class": "pcb", "role": "nav"},
+    "when": {
+      "all": [
+        {"declared": "board_target", "equals": "600_series_uav"}
+      ]
+    },
+    "mt": null,
+    "reasons": ["NS1", "RS1"],
+    "reasons_if_mt": null,
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": false},
+    "lvs_usd": 1500,
+    "gbs": false,
+    "text": "g. Printed circuit boards and populated circuit card assemblies that are not controlled by paragraph .y of this entry and for which the layout is “specially designed” for “600 series” items.",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 12, "candidate_text_section": "### 3A611"}
+  },
+  {
+    "id": "USML-XI(c)(2)-board",
+    "jurisdiction": "ITAR",
+    "entry": "XI(c)(2)",
+    "applies_to": {"part_class": "pcb", "role": "nav"},
+    "when": {
+      "all": [
+        {"declared": "board_target", "equals": "usml_article"}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "(2) Printed Circuit Boards (PCBs) and populated circuit card assemblies for which the layout is specially designed for defense articles in this subchapter;",
+    "url": "https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M/part-121/section-121.1",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 12, "candidate_text_section": "### XI"}
+  },
+  {
+    "id": "RELEASE-3A611.y.1-connector",
+    "jurisdiction": "EAR",
+    "entry": "3A611.y.1",
+    "applies_to": {"part_class": "connector", "role": null},
+    "when": {
+      "all": [
+        {"part_class_in": ["connector"]},
+        {"ancestor": {"jurisdiction": "EAR"}}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "y.1. Electrical connectors;",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 12, "candidate_text_section": "### 3A611"}
+  },
+  {
+    "id": "RELEASE-3A611.y.3-heat-sink",
+    "jurisdiction": "EAR",
+    "entry": "3A611.y.3",
+    "applies_to": {"part_class": "heat_sink", "role": null},
+    "when": {
+      "all": [
+        {"part_class_in": ["heat_sink"]},
+        {"ancestor": {"jurisdiction": "EAR"}}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "y.3. Heat sinks;",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 12, "candidate_text_section": "### 3A611"}
+  },
+  {
+    "id": "USML-VIII(h)(1)-listed-aircraft",
+    "jurisdiction": "ITAR",
+    "entry": "VIII(h)(1)",
+    "applies_to": {"part_class": "sensor_pod", "role": "sensor"},
+    "when": {
+      "all": [
+        {"declared": "used_on", "equals": ["F-22"]}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "(1) Parts, components, accessories, and attachments specially designed for aircraft listed within paragraphs (h)(1)(i) through (ii) of this category, excluding those common to aircraft that are or were in production and are not listed within paragraphs (h)(1)(i) through (iv) of this category, as follows:",
+    "url": "https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M/part-121/section-121.1",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 13, "candidate_text_section": "### VIII(h)"}
+  },
+  {
+    "id": "USML-120.41(a)(2)-catch",
+    "jurisdiction": "ITAR",
+    "entry": "120.41(a)(2)",
+    "applies_to": {"part_class": null, "role": null},
+    "when": {
+      "all": [
+        {"ancestor": {"jurisdiction": "ITAR"}}
+      ],
+      "not": [
+        {"part_class_in": ["fastener", "washer", "spacer", "insulator", "grommet", "bushing", "spring", "wire", "solder"]},
+        {"declared": "production_nonusml_equivalent", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "(2) Is a part, component, accessory, attachment, or software for use in or with a defense article.",
+    "url": "https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M/part-120/subpart-C/section-120.41",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 13, "candidate_text_section": "### 120.41"}
+  },
+  {
+    "id": "RELEASE-120.41(b)(2)-commodity-list",
+    "jurisdiction": "ITAR",
+    "entry": "120.41(b)(2)",
+    "applies_to": {"part_class": null, "role": null},
+    "when": {
+      "all": [
+        {"ancestor": {"jurisdiction": "ITAR"}},
+        {"part_class_in": ["fastener", "washer", "spacer", "insulator", "grommet", "bushing", "spring", "wire", "solder"]}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "(2) Is, regardless of form or fit, a fastener (e.g., screws, bolts, nuts, nut plates, studs, inserts, clips, rivets, pins), washer, spacer, insulator, grommet, bushing, spring, wire, or solder;",
+    "url": "https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M/part-120/subpart-C/section-120.41",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 13, "candidate_text_section": "### 120.41"}
+  },
+  {
+    "id": "RELEASE-120.41(b)(3)-production-equivalent",
+    "jurisdiction": "ITAR",
+    "entry": "120.41(b)(3)",
+    "applies_to": {"part_class": null, "role": null},
+    "when": {
+      "all": [
+        {"ancestor": {"jurisdiction": "ITAR"}},
+        {"declared": "production_nonusml_equivalent", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "(3) Has the same function, performance capabilities, and the same or equivalent form and fit as a commodity or software used in or with a commodity that:",
+    "url": "https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M/part-120/subpart-C/section-120.41",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 13, "candidate_text_section": "### 120.41"}
+  },
+  {
+    "id": "CCL-9A610.x-unlisted-aircraft",
+    "jurisdiction": "EAR",
+    "entry": "9A610.x",
+    "applies_to": {"part_class": "sensor_pod", "role": "sensor"},
+    "when": {
+      "all": [
+        {"declared": "used_on", "equals": ["F-16"]}
+      ],
+      "not": [
+        {"declared": "production_nonusml_equivalent", "equals": true}
+      ]
+    },
+    "mt": null,
+    "reasons": null,
+    "reasons_if_mt": null,
+    "sta": {"para": "c1", "barred": false, "barred_if_mt": false},
+    "lvs_usd": null,
+    "gbs": false,
+    "text": "x. “Parts,” “components,” “accessories,” and “attachments” that are “specially designed” for a commodity enumerated or otherwise described in ECCN 9A610 (except for 9A610.y) or a defense article enumerated or otherwise described in USML Category VIII and not elsewhere specified on the USML or in 9A610.y, 9A619.y, or 3A611.y.",
+    "url": "https://www.ecfr.gov/current/title-15/subtitle-B/chapter-VII/subchapter-C/part-774/appendix-Supplement%20No.%201%20to%20Part%20774",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 13, "candidate_text_section": "### 9A610"}
+  },
+  {
+    "id": "ITAR-120.41-note2-missing-document",
+    "jurisdiction": "ITAR",
+    "entry": "120.41 Note 2",
+    "applies_to": {"part_class": null, "role": null},
+    "when": {
+      "all": [
+        {"ancestor": {"jurisdiction": "ITAR"}},
+        {"declared": "document_ref", "equals": null}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": "For a defense article not to be specially designed on the basis of paragraph (b)(4) or (5) of this section, documents contemporaneous with its development, in their totality, must establish the elements of paragraph (b)(4) or (5). Such documents may include concept design information, marketing plans, declarations in patent applications, or contracts. Absent such documents, the commodity may not be excluded from being specially designed by either paragraph (b)(4) or (5).",
+    "url": "https://www.ecfr.gov/current/title-22/chapter-I/subchapter-M/part-120/subpart-C/section-120.41",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 13, "candidate_text_section": "### 120.41"}
+  },
+  {
+    "id": "USG-FY2020-NDAA-848-PRC-component",
+    "jurisdiction": "EAR",
+    "entry": "NO_EXPORT_CONTROL_CHANGE",
+    "applies_to": {"part_class": null, "role": null},
+    "when": {
+      "all": [
+        {"declared": "origin", "equals": "CN"},
+        {"part_class_in": ["flight_controller", "radio", "camera", "gimbal"]}
+      ]
+    },
+    "mt": null,
+    "reasons": [],
+    "reasons_if_mt": null,
+    "sta": null,
+    "lvs_usd": null,
+    "gbs": null,
+    "text": null,
+    "url": "https://www.federalregister.gov/documents/2024/11/12/2024-26061",
+    "ecfr_date": "2026-09-01",
+    "rule_effective": null,
+    "provenance": {"build_md_row": 14, "candidate_text_section": "### NOT FOUND entries"}
+  }
+]

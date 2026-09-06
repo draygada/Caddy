@@ -1,0 +1,67 @@
+{
+ "fixture://gx220_vendor_page.html": {
+  "bytes": 854,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-05T23:30:00Z",
+  "sha256": "164ab9e7c1a3a9f82dfd28e1afbd0d3b496e4a3f3bf3404d24695310cf1fc660",
+  "status": "FIXTURE",
+  "text_sha256": "d83747c28443ea6184696017bfdd949e8aa72c68836b24030e462c6e14c93a84"
+ },
+ "fixture://icm42688p_test_excerpt.txt": {
+  "bytes": 427,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-05T23:30:00Z",
+  "sha256": "522ea1b7da6a4a0ff094d9262e8962b6b9b590478b8381d35c0e48bf342339be",
+  "status": "FIXTURE",
+  "text_sha256": "522ea1b7da6a4a0ff094d9262e8962b6b9b590478b8381d35c0e48bf342339be"
+ },
+ "fixture://imu_ng_synthetic_sheet.txt": {
+  "bytes": 281,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-05T23:30:00Z",
+  "sha256": "be5751c90231b68d10c1508d230eb17036b7770eef660c071da78a8716fbe7f8",
+  "status": "FIXTURE",
+  "text_sha256": "be5751c90231b68d10c1508d230eb17036b7770eef660c071da78a8716fbe7f8"
+ },
+ "fixture://lepton35_test_sheet.txt": {
+  "bytes": 319,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-05T23:30:00Z",
+  "sha256": "9f686b5c9915c3073c2f98b9a9cd0547aa940d805a37ce2e9f9e6ea1f772f23b",
+  "status": "FIXTURE",
+  "text_sha256": "9f686b5c9915c3073c2f98b9a9cd0547aa940d805a37ce2e9f9e6ea1f772f23b"
+ },
+ "fixture://molicel_p45b_test_excerpt.txt": {
+  "bytes": 380,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-05T23:30:00Z",
+  "sha256": "d7828393aec2a5ed29dc322dcd3025912aec262e886284bbc94db629fa26f2b8",
+  "status": "FIXTURE",
+  "text_sha256": "d7828393aec2a5ed29dc322dcd3025912aec262e886284bbc94db629fa26f2b8"
+ }
+}

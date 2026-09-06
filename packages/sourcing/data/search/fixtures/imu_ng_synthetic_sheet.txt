@@ -1,0 +1,4 @@
+SYNTHETIC DATASHEET. IMU-NG fibre-optic gyro inertial unit, Nordkap Sensor AS. SYNTHETIC part and SYNTHETIC seller for the DNHacks 2026 demo. Not a real product.
+Gyro rate range: 400 deg/s.
+Angle random walk: 0.0008 deg/sqrt(h).
+Interface: RS-422. Package: module 40 x 40 x 20 mm.

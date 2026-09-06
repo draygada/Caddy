@@ -1,0 +1,6 @@
+SYNTHETIC TEST SHEET. Written by the Strafe team on 2026-09-05 for offline tests. Not a vendor document.
+Part: Lepton 3.5 thermal camera core, manufacturer part number 500-0771-01.
+Array format: 160 x 120 pixels, 12 um pitch.
+Frame rate: 8.7 Hz effective.
+Interface: SPI video; I2C (CCI) control.
+Input voltage: 2.8 V.

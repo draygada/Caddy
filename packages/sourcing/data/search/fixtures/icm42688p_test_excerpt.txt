@@ -1,0 +1,6 @@
+SYNTHETIC TEST EXCERPT. Written by the Strafe team on 2026-09-05 to mirror what the TDK DS-000347 v1.9 datasheet does and does not publish. Not a vendor document.
+Part: ICM-42688-P six-axis MotionTracking device.
+Gyroscope full-scale range: 2000 dps.
+Gyroscope noise: 2.8 mdps/rtHz.
+GYRO Offset Temp Stability (mdps/°C): 5.
+No bias stability, in-run bias instability or angle random walk figure is published in this document.
