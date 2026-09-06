@@ -1,6 +1,6 @@
 import { useStore } from '../store';
 import type { Outcome } from '../lib/rules';
-import { attentionOf, overallOf, slotStatus } from '../lib/viewmodel';
+import { attentionOf, overallOf, slotStatus, STATUS_CLAIM_CEILING } from '../lib/viewmodel';
 import { GENERIC_NAME, SLOTS, type Node } from '../lib/catalog';
 
 export function StatusPanel({ o }: { o: Outcome }) {
@@ -15,11 +15,21 @@ export function StatusPanel({ o }: { o: Outcome }) {
   return (
     <div data-panel="status" aria-live="polite" className="panel flex-none">
       <div className="panel-head">
-        <div className="panel-title">Product status <span className="sub">· Kestrel, as designed</span></div>
+        <div className="panel-title">Modeled review status <span className="sub">· Kestrel, as designed</span></div>
         <span className="flex gap-1">
           <button onClick={openReasoning} className="btn">Reasoning · {attentionCount}</button>
           <button onClick={() => useStore.getState().patch({ sourcingOpen: true })} className="btn btn-primary">Source this design</button>
         </span>
+      </div>
+      <div
+        role="note"
+        aria-label="Claim ceiling"
+        data-testid="status-claim-ceiling"
+        className="mx-3 mt-3 p-2 text-[12px] leading-snug"
+        style={{ border: '1px solid var(--amber)', borderLeftWidth: 4, background: 'var(--surface2)' }}
+      >
+        <div className="font-semibold" style={{ color: 'var(--amber)' }}>{STATUS_CLAIM_CEILING.title}</div>
+        <div>{STATUS_CLAIM_CEILING.body}</div>
       </div>
       <div className="p-3 grid gap-1 border-b border-line2">
         <span className="status-word text-[20px] justify-self-start" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>

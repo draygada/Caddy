@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BASELINE_PARTS, CATALOG, SLOTS, type PartId, type Slot } from '../src/lib/catalog';
 import { countChanged, outcome, type Design, type Parts } from '../src/lib/rules';
 import { parseDecimal } from '../src/lib/hash';
+import { attentionOf, cardGroupsOf, destCellsOf, overallOf, slotStatus, STATUS_CLAIM_CEILING } from '../src/lib/viewmodel';
 
 const design = (over: Partial<Parts> = {}, span = 3.0, edit: Partial<Record<Slot, Record<string, number | null>>> = {}): Design => {
   const parts: Parts = { ...BASELINE_PARTS, ...over };
@@ -68,5 +69,53 @@ describe('parseDecimal (Postel)', () => {
     expect(parseDecimal('3,4')).toBe(3.4);
     expect(parseDecimal('3.4 m')).toBe(3.4);
     expect(parseDecimal('three')).toBeNull();
+  });
+});
+
+describe('Design workbench legal-result claim ceiling', () => {
+  it('presents modeled control and destination matches only as review candidates', () => {
+    const o = outcome(design({ battery: 'amprius' }));
+    const rawOutcome = JSON.stringify(o);
+    const overall = overallOf(o);
+    const attention = attentionOf(o, {});
+    const destinations = destCellsOf(o, 'airframe');
+    const cards = cardGroupsOf(o, {}, []).flatMap((group) => group.cards);
+
+    expect(Object.fromEntries(o.cols.airframe.map((d) => [d.code, d.word]))).toMatchObject({ DE: 'STA', TW: 'LIC', VN: 'LIC', CN: 'LIC' });
+    expect(overall.word).toBe('LIC candidate · review trigger');
+    expect(overall.entries).toContain('modeled candidate match');
+    expect(slotStatus(o, {}, 'airframe').word).toContain('candidate · review');
+    expect(attention.map((item) => item.word)).toEqual(expect.arrayContaining(['LIC candidate', 'STA candidate']));
+    expect(destinations.find((cell) => cell.code === 'TW')).toMatchObject({ word: 'LIC candidate' });
+    expect(cards.filter((card) => card.glyph === '●').every((card) => card.word === 'CCL candidate')).toBe(true);
+
+    const surfacedLanguage = [
+      overall.word, overall.sub, overall.entries,
+      ...attention.flatMap((item) => [item.word, item.text, item.action]),
+      ...destinations.flatMap((cell) => [cell.word, cell.para]),
+      ...cards.flatMap((card) => [card.word]),
+    ].join(' ');
+    expect(surfacedLanguage).not.toMatch(/licen[cs]e required|meets the parameters|apply before/i);
+    expect(JSON.stringify(o)).toBe(rawOutcome);
+  });
+
+  it('keeps USML first in the presentation severity order without changing denial results', () => {
+    const o = outcome(design({ imu: 'imung' }));
+
+    expect(o.cols.airframe.find((d) => d.code === 'CN')?.word).toBe('DENIAL');
+    expect(overallOf(o).word).toBe('USML candidate · review trigger');
+    expect(attentionOf(o, {})[0].word).toBe('USML candidate');
+    expect(destCellsOf(o, 'airframe').find((cell) => cell.code === 'CN')?.word).toBe('DENIAL candidate');
+  });
+
+  it('states the full claim ceiling used on the primary Status surface', () => {
+    const claimCeiling = STATUS_CLAIM_CEILING.title + ' ' + STATUS_CLAIM_CEILING.body;
+
+    expect(claimCeiling).toContain('limited modeled rows');
+    expect(claimCeiling).toContain('Human review required');
+    expect(claimCeiling).toContain('not NLR');
+    expect(claimCeiling).toContain('a legal determination');
+    expect(claimCeiling).toContain('export authorization');
+    expect(claimCeiling).toContain('broad Parts 744 / 746 analysis');
   });
 });

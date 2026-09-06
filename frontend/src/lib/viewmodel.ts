@@ -9,12 +9,16 @@ export interface StatusWord { word: string; color: string }
 export type Unconfirmed = Partial<Record<Slot, number>>;
 
 export const col = (t: string) => 'var(--' + t + ')';
+export const STATUS_CLAIM_CEILING = {
+  title: 'Claim ceiling · limited modeled rows',
+  body: 'Human review required. This output is not NLR, a legal determination, export authorization, or broad Parts 744 / 746 analysis.',
+} as const;
 
 export function slotStatus(o: Outcome, unconfirmed: Unconfirmed, slot: Node): StatusWord {
   if (slot !== 'airframe' && unconfirmed[slot]) return { word: '? unconfirmed', color: col('amber') };
   const rs = o.rules.filter((r) => r.node === slot);
-  if (rs.some((r) => r.kind === 'USML')) return { word: 'USML · DDTC', color: col('black') };
-  if (rs.length) return { word: rs[0].entry + (rs.length > 1 ? ' +' + (rs.length - 1) : ''), color: col('red') };
+  if (rs.some((r) => r.kind === 'USML')) return { word: 'USML candidate · review', color: col('black') };
+  if (rs.length) return { word: rs[0].entry + (rs.length > 1 ? ' +' + (rs.length - 1) : '') + ' candidate · review', color: col('red') };
   const cannot = o.cannot.filter((c) => c.node === slot).length;
   if (cannot) return { word: 'review · missing evidence ×' + cannot, color: col('amber') };
   return { word: 'no match · limited scan', color: col('amber') };
@@ -34,13 +38,13 @@ export function overallOf(o: Outcome): Overall {
   const partEntries = o.rules.filter((r) => r.node !== 'airframe').map((r) => r.entry + ' (' + SLOT_LABEL[r.node] + ')');
   const licDest = af.filter((d) => d.word === 'LIC').map((d) => d.code), staDest = af.filter((d) => d.word === 'STA').map((d) => d.code);
   let overall: Omit<Overall, 'entries'>;
-  if (o.rules.some((r) => r.kind === 'USML')) overall = { glyph: '■', word: 'USML · DDTC', color: 'var(--blackfg)', bg: 'var(--black)', sub: 'a defense article is in the tree; every destination needs DDTC authorization; CN is a 126.1 denial' };
-  else if (licDest.length) overall = { glyph: '●', word: 'LIC · licence required', color: col('red'), bg: 'transparent', sub: 'at ' + licDest.join(' · ') + (staDest.length ? ' · exception path at ' + staDest.join(' · ') : '') };
-  else if (staDest.length) overall = { glyph: '?', word: 'STA · exception path', color: col('amber'), bg: 'transparent', sub: 'at ' + staDest.join(' · ') + ' · conditions apply' };
+  if (o.rules.some((r) => r.kind === 'USML')) overall = { glyph: '■', word: 'USML candidate · review trigger', color: 'var(--blackfg)', bg: 'var(--black)', sub: 'modeled USML control match in the design tree · route destination and foreign-person scenarios to qualified human review' };
+  else if (licDest.length) overall = { glyph: '●', word: 'LIC candidate · review trigger', color: col('red'), bg: 'transparent', sub: 'modeled destination trigger at ' + licDest.join(' · ') + (staDest.length ? ' · modeled STA candidate at ' + staDest.join(' · ') : '') };
+  else if (staDest.length) overall = { glyph: '?', word: 'STA candidate · review trigger', color: col('amber'), bg: 'transparent', sub: 'modeled destination candidate at ' + staDest.join(' · ') + ' · human review of all conditions required' };
   else overall = { glyph: '?', word: 'Limited scan · review required', color: col('amber'), bg: 'transparent', sub: 'no match in the modeled rows · Parts 744 / 746 and other controls were not evaluated' };
   const entries = productEntries.length
-    ? 'as designed, meets the parameters of ' + productEntries.join(' · ') + (partEntries.length ? ' · parts: ' + partEntries.join(' · ') : '')
-    : partEntries.length ? 'no product match in the modeled rows · parts with modeled matches: ' + partEntries.join(' · ') : 'no match among 14 modeled rows · not an NLR or export authorization';
+    ? 'modeled candidate match for ' + productEntries.join(' · ') + (partEntries.length ? ' · part candidates: ' + partEntries.join(' · ') : '')
+    : partEntries.length ? 'no product match in the modeled rows · parts with modeled candidate matches: ' + partEntries.join(' · ') : 'no match among 14 modeled rows · not an NLR or export authorization';
   return { ...overall, entries };
 }
 
@@ -50,10 +54,10 @@ export function attentionOf(o: Outcome, unconfirmed: Unconfirmed): Attention[] {
   const licDest = af.filter((d) => d.word === 'LIC').map((d) => d.code), staDest = af.filter((d) => d.word === 'STA').map((d) => d.code);
   const mt = o.rules.some((r) => r.cols === 'MT');
   const a: Attention[] = [];
-  if (o.rules.some((r) => r.kind === 'USML')) a.push({ glyph: '■', word: 'DDTC', color: 'var(--blackfg)', bg: 'var(--black)', text: 'defense article incorporated (see-through)', action: 'DDTC authorization before any export or foreign-person disclosure', target: { kind: 'go', slot: 'imu' } });
-  if (mt) a.push({ glyph: '●', word: 'MT', color: col('red'), bg: 'transparent', text: 'MT column fired · STA barred', action: 'licence at DE · TW · VN · CN', target: { kind: 'go', slot: 'airframe' } });
-  else if (licDest.length) a.push({ glyph: '●', word: 'LIC', color: col('red'), bg: 'transparent', text: 'licence required at ' + licDest.join(' · '), action: 'apply before shipping, or change the design', target: { kind: 'go', slot: 'airframe' } });
-  if (staDest.length && !mt) a.push({ glyph: '?', word: 'STA', color: col('amber'), bg: 'transparent', text: 'exception path at ' + staDest.join(' · '), action: '740.20 conditions and consignee statement', target: { kind: 'go', slot: 'airframe' } });
+  if (o.rules.some((r) => r.kind === 'USML')) a.push({ glyph: '■', word: 'USML candidate', color: 'var(--blackfg)', bg: 'var(--black)', text: 'modeled USML control match · review trigger', action: 'route export and foreign-person scenarios to a qualified human reviewer', target: { kind: 'go', slot: 'imu' } });
+  if (mt) a.push({ glyph: '●', word: 'MT candidate', color: col('red'), bg: 'transparent', text: 'modeled MT-column trigger · this model does not surface an STA candidate', action: 'review destination candidates for DE · TW · VN · CN', target: { kind: 'go', slot: 'airframe' } });
+  else if (licDest.length) a.push({ glyph: '●', word: 'LIC candidate', color: col('red'), bg: 'transparent', text: 'modeled destination review trigger at ' + licDest.join(' · '), action: 'route to qualified human review before shipping or changing the design', target: { kind: 'go', slot: 'airframe' } });
+  if (staDest.length && !mt) a.push({ glyph: '?', word: 'STA candidate', color: col('amber'), bg: 'transparent', text: 'modeled exception candidate at ' + staDest.join(' · '), action: 'review 740.20 conditions and consignee-statement evidence with a qualified human', target: { kind: 'go', slot: 'airframe' } });
   (Object.keys(unconfirmed) as Slot[]).forEach((slot) => a.push({ glyph: '?', word: 'attest', color: col('amber'), bg: 'transparent', text: 'swap on ' + SLOT_LABEL[slot] + ' unconfirmed', action: 'Confirm with an attestor, or leave amber', target: { kind: 'reopen', slot } }));
   o.advisories.filter((x) => x.entry.startsWith('§848')).forEach((x) => a.push({ glyph: '$', word: 'buyer', color: col('amber'), bg: 'transparent', text: 'PRC-origin part on ' + SLOT_LABEL[x.node], action: 'federal-buyer flags · amber, never red', target: { kind: 'go', slot: x.node } }));
   o.cannot.forEach((c) => a.push({ glyph: '○', word: 'data', color: col('grey'), bg: 'transparent', text: c.entry + ' cannot fire on ' + SLOT_LABEL[c.node], action: 'a datasheet with the field is needed', target: { kind: 'go', slot: c.node } }));
@@ -65,7 +69,7 @@ export interface DestCellVM { code: string; word: string; para: string; color: s
 export function destCellsOf(o: Outcome, node: Node): DestCellVM[] {
   return o.cols[node].map((d) => d.word === 'NLR'
     ? { code: d.code, word: 'REVIEW', para: 'no match in modeled columns · incomplete coverage', color: col('amber'), bg: 'transparent' }
-    : { code: d.code, word: d.word, para: d.para, color: d.tone === 'black' ? 'var(--blackfg)' : col(d.tone), bg: d.tone === 'black' ? 'var(--black)' : 'transparent' });
+    : { code: d.code, word: d.word + ' candidate', para: 'modeled destination match · review trigger · ' + d.para, color: d.tone === 'black' ? 'var(--blackfg)' : col(d.tone), bg: d.tone === 'black' ? 'var(--black)' : 'transparent' });
 }
 
 export interface SpecAttr {
@@ -108,14 +112,14 @@ const GLYPH: Record<Rule['kind'], string> = { USML: '■', CCL: '●' };
 
 export function cardGroupsOf(o: Outcome, unconfirmed: Unconfirmed, events: TimelineEvent[]): CardGroup[] {
   const cardOf = (r: Rule): Card => ({
-    id: r.id, entry: r.entry, node: SLOT_LABEL[r.node], reason: r.reason, word: r.kind === 'USML' ? 'USML' : 'fired', glyph: GLYPH[r.kind],
+    id: r.id, entry: r.entry, node: SLOT_LABEL[r.node], reason: r.reason, word: r.kind === 'USML' ? 'USML candidate' : 'CCL candidate', glyph: GLYPH[r.kind],
     color: r.kind === 'USML' ? 'var(--blackfg)' : col('red'), bg: r.kind === 'USML' ? 'var(--black)' : 'transparent', expandable: true,
     sentence: r.sentence, number: r.number, ecfr: r.ecfr, eff: r.eff, fr: r.fr, url: r.url, atoms: r.atoms,
   });
   const groups: CardGroup[] = [];
   const usml = o.rules.filter((r) => r.kind === 'USML').map(cardOf), ccl = o.rules.filter((r) => r.kind === 'CCL').map(cardOf);
-  if (usml.length) groups.push({ name: 'USML · order of review first', count: usml.length, cards: usml });
-  if (ccl.length) groups.push({ name: 'CCL', count: ccl.length, cards: ccl });
+  if (usml.length) groups.push({ name: 'USML candidates · order of review first', count: usml.length, cards: usml });
+  if (ccl.length) groups.push({ name: 'CCL candidates · review triggers', count: ccl.length, cards: ccl });
   const openFacts = (Object.keys(unconfirmed) as Slot[]).map((slot): Card => {
     const seq = unconfirmed[slot];
     const ev = events.find((e) => e.seq === seq);
