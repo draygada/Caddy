@@ -1,0 +1,168 @@
+{
+  "case": "itar",
+  "method": {
+    "advocate_and_judge": "LiveAnthropicModel",
+    "claim_ceiling": "diagnostic candidate-adjudication ablation; not end-to-end classification or legal determination",
+    "proposal_stages": "deterministic_fixture"
+  },
+  "provider_calls": [
+    "advocate",
+    "judge"
+  ],
+  "result": {
+    "candidates": [
+      {
+        "candidate_id": "cand:b0909b22ba467b2d4254647186a30c56c34a84e8b14642b306a9809817452a77",
+        "challenge": null,
+        "elements": [
+          {
+            "basis": "stated",
+            "citation": null,
+            "disposition": "met",
+            "element_id": "article_category_UAV",
+            "facts_relied_on": [
+              "article_type"
+            ],
+            "unit_key": "USML VIII(a)(5)"
+          },
+          {
+            "basis": "stated",
+            "citation": null,
+            "disposition": "met",
+            "element_id": "specially_designed_to_incorporate_defense_article",
+            "facts_relied_on": [
+              "development_purpose",
+              "incorporates_defense_article",
+              "dual_use_development_documents",
+              "general_purpose_development",
+              "civil_equivalent"
+            ],
+            "unit_key": "USML VIII(a)(5)"
+          },
+          {
+            "basis": "stated",
+            "citation": null,
+            "disposition": "met",
+            "element_id": "parent_category_aircraft",
+            "facts_relied_on": [
+              "article_type"
+            ],
+            "unit_key": "USML VIII(a)"
+          },
+          {
+            "basis": "stated",
+            "citation": {
+              "end": 30,
+              "quote": "Aircraft and Related Articles",
+              "start": 0,
+              "unit_key": "USML VIII",
+              "unit_sha256": "95718531a5d64e0419eac0aeb614877551658a423a0176eb311dff764aa66855"
+            },
+            "disposition": "met",
+            "element_id": "heading_articles_class",
+            "facts_relied_on": [
+              "article_type"
+            ],
+            "unit_key": "USML VIII"
+          },
+          {
+            "basis": "inferred",
+            "citation": null,
+            "disposition": "met",
+            "element_id": "MT_range_threshold_not_triggering_reclassification",
+            "facts_relied_on": [
+              "maximum_range_km"
+            ],
+            "unit_key": "USML VIII(a)"
+          }
+        ],
+        "origin": "proposed",
+        "provision": "USML VIII(a)(5)",
+        "reference_notes": [
+          "citation struck on element article_category_UAV: span_not_found",
+          "citation struck on element specially_designed_to_incorporate_defense_article: span_not_found",
+          "citation struck on element parent_category_aircraft: span_not_found",
+          "citation struck on element MT_range_threshold_not_triggering_reclassification: span_not_found",
+          "citation struck on element article_category_UAV: span_not_found",
+          "citation struck on element specially_designed_to_incorporate_defense_article: span_not_found",
+          "citation struck on element parent_category_aircraft: span_not_found",
+          "citation struck on element MT_range_threshold_not_triggering_reclassification: span_not_found"
+        ],
+        "stage": "specially_designed_itar",
+        "status": "supported",
+        "why_considered": "The complete UAV was developed exclusively to incorporate a defense article.",
+        "why_rejected": null
+      },
+      {
+        "candidate_id": "cand:7305954eef3b48d86f8b31eb70f79591701f6f93112fa6d9006b17fae2a1ae82",
+        "challenge": null,
+        "elements": [],
+        "origin": "floor",
+        "provision": "EAR99",
+        "reference_notes": [],
+        "stage": "residual",
+        "status": "not_reached",
+        "why_considered": "The residual is seated on every board; it is elected only when every specific candidate is knocked out.",
+        "why_rejected": null
+      }
+    ],
+    "determination": {
+      "basis": [
+        "USML specially-designed read: caught; proposal and routed candidates agree",
+        "USML: supported — USML VIII(a)(5); the CCL is not reached by the order of review"
+      ],
+      "ccl_step": "not_reached",
+      "classification": [
+        "USML VIII(a)(5)"
+      ],
+      "jurisdiction": "ITAR",
+      "open_candidates": [],
+      "usml_step": "supported"
+    },
+    "item": {
+      "item_kind": "commodity",
+      "part_revision_id": null
+    },
+    "pack_sha256": "21818b45bcc1e5a23781cf569565cbcf9ea74a264d36a31b47975f38090f760e",
+    "provenance": {
+      "budget": {
+        "calls_cap": 3,
+        "calls_used": 3,
+        "cost_cap_microusd": 750000,
+        "cost_used_microusd": 750000
+      },
+      "calls": [
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "06039525059b64e51e7543488c529f5d9ee159a44ef6456eef8ce5deea71af91",
+          "provision": null,
+          "response_sha256": "5bb0dacbe62890fc51e10a68074a76e1170802d2aa6c42fd0347ee87844df23d",
+          "stage": "usml_propose"
+        },
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "24f4dd922f7936db653cbf56c2d2c3ca9f2151a586192a1e0bef6d0e9261c87d",
+          "provision": "USML VIII(a)(5)",
+          "response_sha256": "c2a4465db582d1e95bd2e83ab12be8a14f19eee3ff0a73278ffaf9c9176ad79a",
+          "stage": "advocate"
+        },
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "de7287257e6efdcaf0fc6644eba91038ab2a17c4a695ea76e9f543793e2ae1a5",
+          "provision": "USML VIII(a)(5)",
+          "response_sha256": "85fb2939663a19e62eaa841084b6d02ce5e67157a403cf14b99111aed356d1bf",
+          "stage": "judge"
+        }
+      ],
+      "dropped_candidates": [],
+      "model": "HybridAblationModel",
+      "reference_notes": []
+    },
+    "schema_version": "forge-classification.determination/1",
+    "snapshot_sha256": "09a39bd44bfcb6fd5b4feeedc207dfe675704480ff6c7cc509a0466706844f29"
+  },
+  "schema_version": "caddydaddy.anthropic-outcome-ablation/1",
+  "scripted_engine_calls": [
+    "usml_propose"
+  ]
+}

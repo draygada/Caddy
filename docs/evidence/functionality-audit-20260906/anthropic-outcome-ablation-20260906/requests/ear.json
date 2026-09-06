@@ -1,0 +1,21 @@
+{
+  "product_or_part": "PUBLIC SYNTHETIC hypothetical: a complete non-military civil pipeline-inspection UAV designed for controlled flight beyond the operator's direct natural vision. Maximum endurance is 90 minutes at ISA sea-level zero-wind conditions. It was developed from inception for general commercial inspection, with contemporaneous civil product requirements. It incorporates no defense article, weapon, military mission system, controlled imaging item, laser, or controlled inertial equipment. Maximum range is 120 km. The hypothetical contains no real technical data.",
+  "facts": {
+    "data_boundary": "PUBLIC_SYNTHETIC_ONLY",
+    "article_type": "complete unmanned aerial vehicle",
+    "military_design": "false",
+    "incorporates_defense_article": "false",
+    "development_purpose": "general commercial pipeline inspection",
+    "contemporaneous_civil_development_documents": "present",
+    "controlled_flight_beyond_direct_natural_vision": "true",
+    "maximum_endurance_minutes_isa_sea_level_zero_wind": "90",
+    "maximum_range_km": "120",
+    "controlled_sensor_or_inertial_items": "none"
+  },
+  "item_kind": "commodity",
+  "budget": {
+    "calls_cap": 4,
+    "cost_cap_microusd": 2000000,
+    "estimated_cost_microusd": 250000
+  }
+}

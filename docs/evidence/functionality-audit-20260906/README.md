@@ -248,3 +248,9 @@ Scores are 1 (unusable/untrustworthy) to 5 (clear and dependable).
 - Stable Vercel alias: untouched.
 - Audit data: synthetic/public only.
 - Repository evidence contains no Anthropic key or live application access token.
+
+## Outcome-ablation addendum
+
+The bounded follow-up produced one hybrid `ITAR / USML VIII(a)(5)` result, retained the fully live ambiguous `UNDETERMINED` result, and caught an unsafe apparent `EAR99` fall-through caused by a sustained self-challenge being ignored. That apparent EAR99 result is counterexample evidence, not a valid classification. The reconciler now fails closed on sustained challenges to either supported or knocked-out rulings.
+
+See [anthropic-outcome-ablation-20260906/README.md](anthropic-outcome-ablation-20260906/README.md) for the complete sanitized run packet, 12-call ledger, cleanup receipt, and claim ceilings.

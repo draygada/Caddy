@@ -1,0 +1,21 @@
+{
+  "product_or_part": "PUBLIC SYNTHETIC hypothetical: an unmanned aerial vehicle developed exclusively to carry and integrate a military target-designation payload that is itself a defense article. The airframe, payload interfaces, power conditioning, and flight software were specially designed around that defense article for a military mission. There is no civil equivalent, no general-purpose development history, no dual-use development documentation, and no commodity-jurisdiction release. The hypothetical contains no real technical data.",
+  "facts": {
+    "data_boundary": "PUBLIC_SYNTHETIC_ONLY",
+    "article_type": "complete unmanned aerial vehicle",
+    "development_purpose": "exclusive integration of a defense article for military target designation",
+    "incorporates_defense_article": "true",
+    "civil_equivalent": "none",
+    "general_purpose_development": "false",
+    "dual_use_development_documents": "none",
+    "commodity_jurisdiction_release": "none",
+    "classified_information": "none; synthetic hypothetical",
+    "maximum_range_km": "80"
+  },
+  "item_kind": "commodity",
+  "budget": {
+    "calls_cap": 4,
+    "cost_cap_microusd": 2000000,
+    "estimated_cost_microusd": 250000
+  }
+}
