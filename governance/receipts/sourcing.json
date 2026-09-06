@@ -19,7 +19,7 @@
   "lease_acquired_at": "2026-09-06T00:20:00Z",
   "renew_by": null,
   "expires_at": null,
-  "candidate_commit": null,
+  "candidate_commit": "3b7e840845c250f821884be50ffe9acd84ed9fca",
   "registry_status": "NOT_ADMITTED — proposed entry in packages/sourcing/handoff/custody-lane-entry.proposed.json",
   "now_observation": {
     "schema_version": "1.0.0",
@@ -48,7 +48,7 @@
     "lane_state": {
       "value": "IMPLEMENTED_LOCAL_UNADMITTED",
       "evidence_class": "MEASURED",
-      "evidence_ref": "packages/sourcing/HANDOFF.md"
+      "evidence_ref": "git:3b7e840845c250f821884be50ffe9acd84ed9fca"
     },
     "current_action": {
       "value": "code, fixtures and tests committed on the lane branch; handoff written; awaiting integrator admission",
@@ -59,7 +59,7 @@
       "kind": "commit",
       "occurred_at": "2026-09-06T00:20:00Z",
       "evidence_class": "MEASURED",
-      "evidence_ref": "packages/sourcing/HANDOFF.md"
+      "evidence_ref": "git:3b7e840845c250f821884be50ffe9acd84ed9fca"
     },
     "blockers": [
       {
@@ -90,7 +90,24 @@
         "evidence_ref": "packages/sourcing/data/tariff.json"
       }
     ],
-    "checks": [],
+    "checks": [
+      {
+        "name": "pytest tests/sourcing",
+        "state": "PASSED",
+        "observed_at": "2026-09-06T00:40:00Z",
+        "candidate": "3b7e840845c250f821884be50ffe9acd84ed9fca",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/sourcing/HANDOFF.md"
+      },
+      {
+        "name": "tools/check_custody.py --lane sourcing (against the proposed registry entry)",
+        "state": "PASSED",
+        "observed_at": "2026-09-06T00:40:00Z",
+        "candidate": "3b7e840845c250f821884be50ffe9acd84ed9fca",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/sourcing/HANDOFF.md"
+      }
+    ],
     "release": {
       "state": "NONE",
       "candidate": null,
