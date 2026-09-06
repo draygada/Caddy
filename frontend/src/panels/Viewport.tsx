@@ -328,38 +328,40 @@ export function Viewport({ o: _o }: { o: Outcome }) {
             <svg viewBox="0 0 200 200" role="group" aria-label="View cube: drag to orbit; click a face, edge or corner to snap" onMouseDown={cubeDown} className="absolute inset-0 w-[200px] h-[200px] block select-none cursor-grab">
               {/* rotate arrows: 90° to the neighbouring face, and the two roll arcs above */}
               {([
-                { k: 'up', pts: '90,24 110,24 100,10', title: 'Rotate up', go: () => s.patch({ el: clamp(s.el + Math.PI / 2, -1.55, 1.55) }) },
-                { k: 'down', pts: '90,176 110,176 100,190', title: 'Rotate down', go: () => s.patch({ el: clamp(s.el - Math.PI / 2, -1.55, 1.55) }) },
-                { k: 'left', pts: '24,90 24,110 10,100', title: 'Rotate left', go: () => s.patch({ az: s.az - Math.PI / 2 }) },
-                { k: 'right', pts: '176,90 176,110 190,100', title: 'Rotate right', go: () => s.patch({ az: s.az + Math.PI / 2 }) },
+                { k: 'up', pts: '93,24 107,24 100,13', title: 'Rotate up', go: () => s.patch({ el: clamp(s.el + Math.PI / 2, -1.55, 1.55) }) },
+                { k: 'down', pts: '93,176 107,176 100,187', title: 'Rotate down', go: () => s.patch({ el: clamp(s.el - Math.PI / 2, -1.55, 1.55) }) },
+                { k: 'left', pts: '24,93 24,107 13,100', title: 'Rotate left', go: () => s.patch({ az: s.az - Math.PI / 2 }) },
+                { k: 'right', pts: '176,93 176,107 187,100', title: 'Rotate right', go: () => s.patch({ az: s.az + Math.PI / 2 }) },
               ] as { k: string; pts: string; title: string; go: () => void }[]).map((a) => (
                 <polygon key={a.k} points={a.pts} className="cube-arrow" onMouseDown={(e) => e.stopPropagation()} onClick={a.go}><title>{a.title}</title></polygon>
               ))}
               <g className="cube-arrow" onMouseDown={(e) => e.stopPropagation()} onClick={() => s.patch({ az: s.az - Math.PI / 4 })}>
                 <title>Roll left 45°</title>
-                <path d="M 78 30 A 66 66 0 0 0 46.8 53.2" fill="none" strokeWidth={6} strokeLinecap="round" />
-                <polygon points="38.4,61.6 51.7,58.1 41.9,48.3" />
+                <path d="M 78 30 A 66 66 0 0 0 46 54" fill="none" strokeWidth={4} strokeLinecap="round" />
+                <polygon points="40.1,59.9 49.5,57.5 42.5,50.5" />
               </g>
               <g className="cube-arrow" onMouseDown={(e) => e.stopPropagation()} onClick={() => s.patch({ az: s.az + Math.PI / 4 })}>
                 <title>Roll right 45°</title>
-                <path d="M 122 30 A 66 66 0 0 1 153.2 53.2" fill="none" strokeWidth={6} strokeLinecap="round" />
-                <polygon points="161.6,61.6 148.3,58.1 158.1,48.3" />
+                <path d="M 122 30 A 66 66 0 0 1 154 54" fill="none" strokeWidth={4} strokeLinecap="round" />
+                <polygon points="159.9,59.9 150.5,57.5 157.5,50.5" />
               </g>
-              {/* the triad sits at the front-bottom-left corner of the cube */}
+              {/* cube tiles: pale faces with grey borders, white grooves edged in grey, white corner discs with a grey ring */}
+              {scene.cube.faces.map((cf, i) => <polygon key={'f' + i} points={cf.pts} fill={cf.fill} stroke="var(--cube-edge)" strokeWidth={3.4} strokeLinejoin="round" />)}
+              {scene.cube.faces.map((cf, i) => <polygon key={'fo' + i} points={cf.pts} fill="none" stroke="var(--cube-line)" strokeWidth={1.8} strokeLinejoin="round" />)}
+              {scene.cube.faces.flatMap((cf, i) => cf.grooves.map((ln, j) => <polyline key={'ge' + i + '-' + j} points={ln} fill="none" stroke="var(--cube-edge)" strokeWidth={3.6} strokeLinecap="round" />))}
+              {scene.cube.faces.flatMap((cf, i) => cf.grooves.map((ln, j) => <polyline key={'g' + i + '-' + j} points={ln} fill="none" stroke="var(--cube-line)" strokeWidth={2} strokeLinecap="round" />))}
+              {scene.cube.cells.filter((c) => c.kind === 'corner').map((c, i) => <circle key={'k' + i} cx={c.cx} cy={c.cy} r={4.8} fill="var(--cube-line)" stroke="var(--cube-edge)" strokeWidth={0.8} />)}
+              {/* the triad starts at the front-bottom-left corner and reads over the cube, like Fusion */}
               {(() => {
                 const t = scene.cube.triad;
                 const lab = (e: number[]) => { const dx = e[0] - t.o[0], dy = e[1] - t.o[1]; const n = Math.hypot(dx, dy) || 1; return [e[0] + (dx / n) * 9, e[1] + (dy / n) * 9]; };
                 const ax = (e: number[], color: string, name: string, op: number) => { const [lx, ly] = lab(e); return (
                   <g key={name} opacity={op} style={{ pointerEvents: 'none' }}>
-                    <line x1={t.o[0]} y1={t.o[1]} x2={e[0]} y2={e[1]} stroke={color} strokeWidth={1.4} />
-                    <text x={lx} y={ly} fill={color} fontSize="13" fontWeight="600" fontFamily="Work Sans, system-ui, sans-serif" textAnchor="middle" dominantBaseline="middle">{name}</text>
+                    <line x1={t.o[0]} y1={t.o[1]} x2={e[0]} y2={e[1]} stroke={color} strokeWidth={1.6} />
+                    <text x={lx} y={ly} fill={color} fontSize="14" fontWeight="700" fontFamily="Work Sans, system-ui, sans-serif" textAnchor="middle" dominantBaseline="middle">{name}</text>
                   </g>); };
-                return <>{ax(t.y, '#40c057', 'Y', t.yBehind ? 0.45 : 0.75)}{ax(t.x, '#e03131', 'X', 1)}{ax(t.z, '#1c3fe0', 'Z', 1)}</>;
+                return <>{ax(t.y, '#40c057', 'Y', t.yBehind ? 0.45 : 0.7)}{ax(t.x, '#e03131', 'X', 0.95)}{ax(t.z, '#1c3fe0', 'Z', 0.95)}</>;
               })()}
-              {/* cube tiles: pale faces, grooves and corner discs in the groove colour so the pads read rounded */}
-              {scene.cube.faces.map((cf, i) => <polygon key={'f' + i} points={cf.pts} fill={cf.fill} stroke="var(--cube-line)" strokeWidth={2.6} strokeLinejoin="round" />)}
-              {scene.cube.faces.flatMap((cf, i) => cf.grooves.map((ln, j) => <polyline key={'g' + i + '-' + j} points={ln} fill="none" stroke="var(--cube-line)" strokeWidth={2} strokeLinecap="round" />))}
-              {scene.cube.cells.filter((c) => c.kind === 'corner').map((c, i) => <circle key={'k' + i} cx={c.cx} cy={c.cy} r={4.6} fill="var(--cube-line)" />)}
               {/* hover highlight: every cell sharing the direction (three at a corner, two along an edge) */}
               {scene.cube.cells.filter((c) => cubeHover === c.key).map((c, i) => c.kind === 'corner'
                 ? <circle key={'h' + i} cx={c.cx} cy={c.cy} r={4.6} fill="var(--focus)" fillOpacity={0.7} />
