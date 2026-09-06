@@ -3,7 +3,7 @@
 // the same construction.
 import { CATALOG, SLOTS, type Dims, type PartId, type Slot } from './catalog';
 import type { Geo, Positions } from './design';
-import { boxFaces, discX, discZ, discZd, emptySolid, indexFaces, partSolid, plateOutline, prismFaces, solidBounds, type Face, type Solid } from './geometry';
+import { boxFaces, cylAlongX, discX, discZ, discZd, emptySolid, indexFaces, partSolid, plateOutline, prismFaces, solidBounds, type Face, type Solid, type Vec3 } from './geometry';
 import type { Attrs, Parts } from './rules';
 import { HOLE_INSET_X, HOLE_INSET_Y } from './sketch';
 
@@ -59,24 +59,77 @@ function buildFrameBodies(d: SceneInput, frame: PartId): Record<BodyKey, Solid> 
   return out;
 }
 
-/** Wing-kind airframe: the plate is the floor of the centre body; the shell (nose, walls, wing panels, winglets) is built around it as part of the same body. */
+/** A polygon with its outward normal (Newell), flipped toward the hint so winding never hides a face. */
+function poly(pts: Vec3[], hint: Vec3, fill: string): Face {
+  let nx = 0, ny = 0, nz = 0;
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; nx += (a[1] - b[1]) * (a[2] + b[2]); ny += (a[2] - b[2]) * (a[0] + b[0]); nz += (a[0] - b[0]) * (a[1] + b[1]); }
+  const len = Math.hypot(nx, ny, nz) || 1;
+  let n: Vec3 = [nx / len, ny / len, nz / len];
+  if (n[0] * hint[0] + n[1] * hint[1] + n[2] * hint[2] < 0) n = [-n[0], -n[1], -n[2]];
+  return { pts, n, slot: 'airframe', fill };
+}
+
+/** Wing-kind airframe: the plate is the floor of the centre body; the shell is a blended flying wing built around it, hatch removed so the bay shows. */
 function wingShell(L: number, W: number, T: number, wallH: number, span: number): Face[] {
-  const SKIN = '#dfe4ea', DARK = '#3a4250', panel = Math.max(0.2, (span - W) / 2);
-  const paint = (faces: Face[], fill: string) => faces.map((f) => ({ ...f, fill }));
-  let out: Face[] = [];
-  // side walls and rear bulkhead of the bay, on top of the floor plate
-  out = out.concat(paint(boxFaces(0, 0, T, L, 0.006, wallH, 'airframe'), SKIN), paint(boxFaces(0, W - 0.006, T, L, 0.006, wallH, 'airframe'), SKIN), paint(boxFaces(L - 0.006, 0.006, T, 0.006, W - 0.012, wallH, 'airframe'), SKIN));
-  // nose: a tapered block ahead of the front bulkhead
-  out = out.concat(paint(prismFaces([[-0.14, W * 0.35], [0, 0.02], [0, W - 0.02], [-0.14, W * 0.65]], 0, wallH * 0.7, 'airframe'), SKIN));
-  // wing panels: swept flying-wing planform, root chord the body length, tip chord a third of it
-  const le0 = 0.02, te0 = L - 0.02, leT = 0.30, teT = L - 0.04;
-  const left: [number, number][] = [[le0, 0], [te0, 0], [teT, -panel], [leT, -panel]];
-  const right: [number, number][] = [[le0, W], [leT, W + panel], [teT, W + panel], [te0, W]];
-  out = out.concat(paint(prismFaces(left, 0, 0.028, 'airframe'), SKIN), paint(prismFaces(right, 0, 0.028, 'airframe'), SKIN));
-  // winglets at the tips
-  out = out.concat(paint(boxFaces(leT + 0.01, -panel - 0.006, 0, teT - leT - 0.02, 0.006, 0.11, 'airframe'), DARK), paint(boxFaces(leT + 0.01, W + panel, 0, teT - leT - 0.02, 0.006, 0.11, 'airframe'), DARK));
-  // elevon hinge lines as thin dark strips along the trailing edges
-  out = out.concat(paint(boxFaces(teT - 0.004, -panel, 0.028, 0.004, panel - 0.02, 0.001, 'airframe'), DARK), paint(boxFaces(teT - 0.004, W + 0.02, 0.028, 0.004, panel - 0.02, 0.001, 'airframe'), DARK));
+  const SKIN = '#e4e8ee', CARBON = '#2b3038', ELEVON = '#cdd3db', panel = Math.max(0.25, (span - W) / 2);
+  const H = T + wallH; // top of the body, where the wing root blends in
+  const lean = 0.04; // the walls lean inward toward the hatch opening
+  const out: Face[] = [];
+  const add = (...fs: Face[]) => { out.push(...fs); };
+  // centre body: leaning side walls and the rear bulkhead, standing on the floor plate
+  add(poly([[0, 0, T], [L, 0, T], [L, lean, H], [0, lean, H]], [0, -1, 0.4], SKIN));
+  add(poly([[0, W, T], [0, W - lean, H], [L, W - lean, H], [L, W, T]], [0, 1, 0.4], SKIN));
+  add(poly([[L, 0, T], [L, W, T], [L, W - lean, H], [L, lean, H]], [1, 0, 0.3], SKIN));
+  // hatch rim: a thin lip around the opening
+  add(poly([[0, lean, H], [L, lean, H], [L, lean + 0.008, H], [0, lean + 0.008, H]], [0, 0, 1], CARBON));
+  add(poly([[0, W - lean, H], [0, W - lean - 0.008, H], [L, W - lean - 0.008, H], [L, W - lean, H]], [0, 0, 1], CARBON));
+  // nose: a two-segment loft from the front bulkhead section, through a mid section, down to a small rounded tip
+  type Sec = { x: number; y0: number; y1: number; z0: number; z1: number; lean: number };
+  const secs: Sec[] = [
+    { x: 0, y0: 0, y1: W, z0: 0, z1: H, lean },
+    { x: -0.13, y0: 0.045, y1: W - 0.045, z0: 0.004, z1: H - 0.014, lean: 0.03 },
+    { x: -0.25, y0: W / 2 - 0.035, y1: W / 2 + 0.035, z0: 0.012, z1: 0.036, lean: 0.012 },
+  ];
+  for (let i = 0; i < secs.length - 1; i++) {
+    const a = secs[i], b = secs[i + 1];
+    add(poly([[a.x, a.y0, a.z0], [b.x, b.y0, b.z0], [b.x, b.y1, b.z0], [a.x, a.y1, a.z0]], [0, 0, -1], SKIN));
+    add(poly([[a.x, a.y0 + a.lean, a.z1], [a.x, a.y1 - a.lean, a.z1], [b.x, b.y1 - b.lean, b.z1], [b.x, b.y0 + b.lean, b.z1]], [0, 0, 1], SKIN));
+    add(poly([[a.x, a.y0, a.z0], [a.x, a.y0 + a.lean, a.z1], [b.x, b.y0 + b.lean, b.z1], [b.x, b.y0, b.z0]], [-0.2, -1, 0], SKIN));
+    add(poly([[a.x, a.y1, a.z0], [b.x, b.y1, b.z0], [b.x, b.y1 - b.lean, b.z1], [a.x, a.y1 - a.lean, a.z1]], [-0.2, 1, 0], SKIN));
+  }
+  const tip = secs[secs.length - 1];
+  add(poly([[tip.x, tip.y0, tip.z0], [tip.x, tip.y0 + tip.lean, tip.z1], [tip.x, tip.y1 - tip.lean, tip.z1], [tip.x, tip.y1, tip.z0]], [-1, 0, 0], CARBON));
+  // wing panels: root chord the body length, swept and tapered to the tip, thick at the root and thin at the tip
+  const le0 = 0.0, te0 = L, leT = 0.30, teT = L - 0.02;
+  const zTopRoot = H, zBotRoot = 0, zTopTip = 0.034, zBotTip = 0.02;
+  const wing = (side: -1 | 1) => {
+    const y0 = side < 0 ? 0 : W, y1 = side < 0 ? -panel : W + panel;
+    const top: Vec3[] = [[le0, y0, zTopRoot], [te0, y0, zTopRoot], [teT, y1, zTopTip], [leT, y1, zTopTip]];
+    const bot: Vec3[] = [[le0, y0, zBotRoot], [leT, y1, zBotTip], [teT, y1, zBotTip], [te0, y0, zBotRoot]];
+    add(poly(top, [0, 0, 1], SKIN), poly(bot, [0, 0, -1], SKIN));
+    // leading edge as two bevels meeting at mid-height, carbon like a real LE strip
+    const mid: Vec3[] = [[le0 - 0.03, y0, (zTopRoot + zBotRoot) / 2], [leT - 0.012, y1, (zTopTip + zBotTip) / 2]];
+    add(poly([[le0, y0, zTopRoot], [leT, y1, zTopTip], mid[1], mid[0]], [-1, 0, 0.6], CARBON));
+    add(poly([[le0, y0, zBotRoot], mid[0], mid[1], [leT, y1, zBotTip]], [-1, 0, -0.6], CARBON));
+    // trailing edge and tip
+    add(poly([[te0, y0, zTopRoot], [te0, y0, zBotRoot], [teT, y1, zBotTip], [teT, y1, zTopTip]], [1, 0, 0], SKIN));
+    add(poly([[leT, y1, zTopTip], [teT, y1, zTopTip], [teT, y1, zBotTip], [leT, y1, zBotTip]], [0, side, 0], SKIN));
+    // elevon: the rear fifth of the panel, a hair above the skin
+    const ex0 = teT - 0.1, yi = side < 0 ? y0 - 0.04 : y0 + 0.04, yo = side < 0 ? y1 + 0.04 : y1 - 0.04;
+    const zi = zTopRoot - (zTopRoot - zTopTip) * (0.04 / panel) + 0.0006, zo = zTopTip + (zTopRoot - zTopTip) * (0.04 / panel) + 0.0006;
+    add(poly([[ex0, yi, zi], [te0 - 0.004, yi, zi], [teT - 0.004, yo, zo], [ex0 - 0.03, yo, zo]], [0, 0, 1], ELEVON));
+    // winglet: a swept fin at the tip, thin
+    const wy = side < 0 ? y1 - 0.004 : y1 + 0.004;
+    const fin: Vec3[] = [[leT + 0.02, wy, zTopTip], [teT, wy, zTopTip], [teT - 0.015, wy, zTopTip + 0.1], [leT + 0.09, wy, zTopTip + 0.1]];
+    const finIn: Vec3[] = fin.map((q) => [q[0], y1, q[2]] as Vec3);
+    add(poly(fin, [0, side, 0], CARBON), poly(finIn.slice().reverse(), [0, -side, 0], CARBON));
+    add(poly([fin[3], fin[2], finIn[2], finIn[3]], [0, 0, 1], CARBON), poly([fin[0], finIn[0], finIn[3], fin[3]], [-1, 0, 0], CARBON), poly([fin[1], fin[2], finIn[2], finIn[1]], [1, 0, 0], CARBON));
+  };
+  wing(-1); wing(1);
+  // pusher motor on the rear bulkhead with a folding prop
+  add(...cylAlongX(L, W / 2, 0.034, 0.017, 0.04, 'airframe', 12, CARBON).map((f) => ({ ...f, slot: 'airframe' })));
+  add(...boxFaces(L + 0.04, W / 2 - 0.005, 0.029, 0.01, 0.01, 0.01, 'airframe', '#c8ccd2'));
+  add(...boxFaces(L + 0.043, W / 2 + 0.006, 0.033, 0.006, 0.14, 0.002, 'airframe', CARBON), ...boxFaces(L + 0.043, W / 2 - 0.146, 0.033, 0.006, 0.14, 0.002, 'airframe', CARBON));
   return out;
 }
 
