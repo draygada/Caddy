@@ -223,8 +223,8 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     if (e.button !== 0 && e.button !== 1) return;
     if (s.marking) s.patch({ marking: null });
     const [x, y] = svgPt(e);
-    // a press on empty space (not a body) that does not turn into a drag clears the selection
-    orbit.current = { on: true, pan: e.shiftKey || e.button === 1 || s.navMode === 'pan', start: [x, y, s.az, s.el, s.pan.x, s.pan.y, s.zoom], moved: false, bg: e.target === e.currentTarget };
+    // a press on empty space (the backdrop rect or a grid line, not a body face) that does not turn into a drag clears the selection
+    orbit.current = { on: true, pan: e.shiftKey || e.button === 1 || s.navMode === 'pan', start: [x, y, s.az, s.el, s.pan.x, s.pan.y, s.zoom], moved: false, bg: ['svg', 'rect', 'line'].includes((e.target as Element).tagName) };
   };
   const vpMove = (e: RMouseEvent<SVGSVGElement>) => {
     const mv = move.current;

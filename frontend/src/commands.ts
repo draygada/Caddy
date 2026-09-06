@@ -62,7 +62,6 @@ export const COMMANDS: Command[] = [
   { id: 'tab.classification', label: 'Classification tab · parts of concern', group: 'view', keys: '2', run: (st) => st.setWorkspace('classification') },
   { id: 'doc.source', label: 'Sourcing tab · source this design', group: 'document', keys: '3', run: (st) => st.setWorkspace('sourcing') },
   { id: 'doc.door3', label: 'New from description… (Door 3)', group: 'create', run: (st) => st.openDialog('door3', null) },
-  { id: 'doc.target', label: 'Design to a target…', group: 'create', run: (st) => { st.openReasoning(); } },
   { id: 'view.board', label: 'Board view · flight controller', group: 'view', run: (st) => { st.closeDialog(); st.patch({ viewMode: 'board' }); } },
   { id: 'doc.version', label: 'Save version…', group: 'document', run: (st) => st.openDialog('save_version', null) },
   { id: 'doc.comment', label: 'Add comment…', group: 'document', run: (st) => st.openDialog('add_comment', null) },
@@ -73,7 +72,6 @@ export const COMMANDS: Command[] = [
   { id: 'review.tripwire', label: 'Tripwire · review a canonical Candidate 0.1 entity…', group: 'review', keys: 'T', scope: 'global', run: () => useTripwireStore.getState().openPanel() },
 
   { id: 'panels.timeline', label: 'Timeline drawer', group: 'panels', keys: 'L', run: (st) => st.toggleTimeline() },
-  { id: 'panels.reasoning', label: 'Reasoning · why the product reads', group: 'panels', run: (st) => st.openReasoning() },
   { id: 'panels.help', label: 'Keyboard and mouse help', group: 'panels', keys: '?', scope: 'global', run: (st) => st.toggleHelp() },
   { id: 'panels.theme', label: 'Toggle dark theme', group: 'panels', scope: 'global', run: (st) => st.toggleTheme() },
   { id: 'panels.rederive', label: 'Re-derive the log', group: 'panels', run: (st) => { st.rederiveLog(); st.openTimeline(); } },

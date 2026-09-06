@@ -6,7 +6,6 @@ import { Browser } from './panels/Browser';
 import { Viewport } from './panels/Viewport';
 import { StatusPanel } from './panels/StatusPanel';
 import { SpecPanel } from './panels/SpecPanel';
-import { Reasoning } from './panels/Reasoning';
 import { Sourcing } from './panels/Sourcing';
 import { Timeline } from './panels/Timeline';
 import { HelpOverlay } from './panels/HelpOverlay';
@@ -73,7 +72,6 @@ export default function App() {
   const span = useStore((s) => s.span);
   const demoBar = useStore((s) => s.demoBar);
   const unreachable = useStore((s) => s.serviceState === 'unreachable');
-  const reasoningOpen = useStore((s) => s.reasoningOpen);
   const sourcingOpen = useStore((s) => s.sourcingOpen);
   const declared = useStore((s) => s.declared);
   const pack = useStore((s) => s.pack);
@@ -161,7 +159,6 @@ export default function App() {
       {active !== 'sourcing' && <NeedsInfoBanner compact />}
       {surface}
       <IntakeDialog />
-      {reasoningOpen && <Reasoning o={o} />}
       {timelineOpen && <Timeline />}
       {helpOpen && <HelpOverlay />}
       <CommandBox />

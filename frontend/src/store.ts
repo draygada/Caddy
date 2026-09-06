@@ -138,7 +138,6 @@ export interface WorkbenchState extends Snapshot {
   open: Record<string, boolean>;
   timelineOpen: boolean;
   helpOpen: boolean;
-  reasoningOpen: boolean;
   cmdOpen: boolean;
   recent: string[];
   dialog: Dialog | null;
@@ -236,7 +235,6 @@ export interface WorkbenchState extends Snapshot {
   openTimeline: () => void;
   toggleTimeline: () => void;
   toggleHelp: () => void;
-  openReasoning: () => void;
   setView: (name: ViewName) => void;
   setViewDir: (dir: [number, number, number]) => void;
   fit: () => void;
@@ -348,7 +346,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     ...baseline(),
     units: 'm',
     selFilter: 'component',
-    timelineOpen: false, helpOpen: false, reasoningOpen: false, cmdOpen: false, recent: [],
+    timelineOpen: false, helpOpen: false, cmdOpen: false, recent: [],
     namedViews: [], homeView: { ...ISO },
     lane: 'all', copied: null, viewMode: 'model', grid: true, navMode: 'orbit', visualStyle: 'edges', hidden: {},
     round: null, sourcingOpen: false, injectException: false,
@@ -398,9 +396,9 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     closeProject: () => set((s) => {
       // keep the design as left, so the project card preview shows it
       const saved = s.project ? { ...s.project, snapshot: pickSnapshot(s) } : null;
-      return { project: null, projects: saved ? s.projects.map((x) => (x.id === saved.id ? saved : x)) : s.projects, intakeOpen: false, reasoningOpen: false, timelineOpen: false, sourcingOpen: false, cmdOpen: false };
+      return { project: null, projects: saved ? s.projects.map((x) => (x.id === saved.id ? saved : x)) : s.projects, intakeOpen: false, timelineOpen: false, sourcingOpen: false, cmdOpen: false };
     }),
-    setWorkspace: (w) => set({ workspace: w, sourcingOpen: w === 'sourcing', sourcesOpen: false, recordOpen: false, reasoningOpen: false, timelineOpen: false, marking: null, cmdOpen: false }),
+    setWorkspace: (w) => set({ workspace: w, sourcingOpen: w === 'sourcing', sourcesOpen: false, recordOpen: false, timelineOpen: false, marking: null, cmdOpen: false }),
     pack: 'v2', determination: null, apiWarm: false, apiNote: null, tamperedSeq: null, recordOpen: false, sourcesOpen: false,
     sources: { doc: null, slot: null, network: [], proposals: [], showHidden: false, candidates: [], candidateNode: null, llmNote: null },
     extracted: {}, escalations: {}, memos: [], slotList: null, target: null,
@@ -622,11 +620,10 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     snapshot,
     editable,
     toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
-    closeAll: () => set({ timelineOpen: false, helpOpen: false, reasoningOpen: false, sourcingOpen: false, sourcesOpen: false, recordOpen: false, cmdOpen: false, marking: null, dialog: null, preview: null }),
+    closeAll: () => set({ timelineOpen: false, helpOpen: false, sourcingOpen: false, sourcesOpen: false, recordOpen: false, cmdOpen: false, marking: null, dialog: null, preview: null }),
     openTimeline: () => set({ timelineOpen: true, helpOpen: false }),
     toggleTimeline: () => set((s) => ({ timelineOpen: !s.timelineOpen })),
     toggleHelp: () => set((s) => ({ helpOpen: !s.helpOpen, timelineOpen: false })),
-    openReasoning: () => set({ reasoningOpen: true, timelineOpen: false, helpOpen: false }),
 
     setView: (name) => {
       const s = get();
