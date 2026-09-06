@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, designHashOf, INTAKE_DEFAULT, intakeIncomplete, type Intake, type Round } from '../store';
 import type { Outcome } from '../lib/rules';
-import { GENERIC_NAME, type Slot } from '../lib/catalog';
+import { CATALOG, CORE_SLOTS, GENERIC_NAME, type Slot } from '../lib/catalog';
 import { THUMBS, AF_THUMB } from '../lib/geometry';
 import { IntakeForm } from './IntakeForm';
 import { CHECKLIST, CLAIM_COST, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
@@ -280,6 +280,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
   const intake: Intake = s.project?.intake ?? INTAKE_DEFAULT;
   const incomplete = intakeIncomplete(s.project?.intake ?? null);
   const shipTo: ShipTo = intake.shipTo, qty = intake.qty, mode: Mode = intake.mode;
+  const components: Slot[] = s.project?.components ?? [...CORE_SLOTS];
   const [stepWanted, setStepWanted] = useState<Step | null>(null);
   const [k, setK] = useState<number>(0);
   const [pick, setPick] = useState<string | null>(null);
@@ -303,8 +304,9 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
   const start = () => { s.openRound(shipTo, qty, mode, intake); setK(0); setStepWanted(2); };
 
   const stepper = (
-    <div className="flex items-center gap-3 px-4 py-2 border-b border-line2 bg-surface flex-wrap">
-      <ol aria-label={'Sourcing steps · step ' + step + ' of 3'} className="m-0 p-0 list-none flex items-center gap-2 flex-1 min-w-[320px]">
+    <div className="grid grid-cols-[1fr_auto_1fr] max-md:grid-cols-1 items-center gap-3 px-4 py-2 border-b border-line2 bg-surface">
+      <span className="max-md:hidden" />
+      <ol aria-label={'Sourcing steps · step ' + step + ' of 3'} className="m-0 p-0 list-none flex items-center gap-2 justify-self-center w-[min(100%,640px)]">
         {STEPS.map((st, i) => {
           const done = st.n === 1 ? !incomplete : st.n === 2 ? r != null && n > 0 && selectedCount === n : false;
           const on = st.n === step;
@@ -320,7 +322,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
           );
         })}
       </ol>
-      <div className="flex items-center gap-2 flex-wrap text-[12px] text-muted">
+      <div className="flex items-center gap-2 flex-wrap text-[12px] text-muted justify-self-end max-md:justify-self-center">
         {r && <span className="font-mono">{r.id} · design #{r.designSeq}</span>}
         {r && <span className="chip">ship-to {r.shipTo}</span>}{r && <span className="chip">qty {r.qty}</span>}{r && <span className="chip">{r.mode}</span>}
         {r && step === 2 && <button onClick={() => s.refineRound({})} className="btn btn-xs" title="re-screen against the same fixture slice">Re-screen</button>}
@@ -343,9 +345,9 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
       <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
         {stepper}
         <div className="flex-1 min-h-0 overflow-auto p-4 flex justify-center content-start">
-          <div className="panel w-full max-w-[820px] self-start">
+          <div className="w-full max-w-[860px] self-start grid gap-4">
             {incomplete ? (
-              <>
+              <div className="panel">
                 <div className="panel-head" role="status"><div className="panel-title">This application requires more information</div><span className="text-[12px] text-muted">answer before sourcing starts</span></div>
                 <div className="p-4 grid gap-4 text-[13px]">
                   <div>{s.project?.intake ? 'Some use-case answers are still “not sure yet”.' : 'The use-case questions were skipped when this project was created.'} Sourcing reads the ship-to, the quantity, the transport mode, the end use and the end user before it resolves a single offer.</div>
@@ -355,27 +357,69 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                     {stillIncomplete && <span className="text-[12px] text-amber">some answers are still “not sure yet”</span>}
                   </div>
                 </div>
-              </>
-            ) : (
-              <>
-                <div className="panel-head"><div className="panel-title">Use case</div><span className="chip">declared</span></div>
-                <div className="p-4 grid gap-4 text-[13px]">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <span className="text-muted">product for</span><span>{intake.endUse}</span>
-                    <span className="text-muted">end user</span><span>{intake.endUser}</span>
-                    <span className="text-muted">ships to</span><span>{SHIP_TO.find((x) => x.code === shipTo)?.label}</span>
-                    <span className="text-muted">used on an aircraft</span><span>{intake.usedOn}</span>
-                    <span className="text-muted">units · transport</span><span className="font-mono">{qty} · {mode}</span>
-                    <span className="text-muted">declared</span><span>{[intake.civilProduct ? 'civil product' : null, intake.bvlos ? 'BVLOS' : null].filter(Boolean).join(' · ') || 'none'}</span>
+              </div>
+            ) : (() => {
+              const placed = components.filter((sl) => s.parts[sl]);
+              const KV = ({ k, v, mono = false }: { k: string; v: React.ReactNode; mono?: boolean }) => <><span className="text-muted">{k}</span><span className={mono ? 'font-mono' : ''}>{v}</span></>;
+              return (
+                <>
+                  <div className="panel">
+                    <div className="panel-head"><div className="panel-title">{s.project?.name ?? 'Project'} <span className="sub">· what sourcing will read</span></div><span className="chip">declared</span></div>
+                    <div className="p-4 grid gap-4 text-[13px]">
+                      {s.project?.description && <div className="text-[14px]">{s.project.description}</div>}
+                      <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto_1fr] gap-x-6 gap-y-1 items-baseline">
+                        <KV k="design state" v={'#' + s.events.length + ' · ' + s.features.length + ' feature' + (s.features.length === 1 ? '' : 's')} mono />
+                        <KV k="span" v={s.span.toFixed(2) + ' m'} mono />
+                        <KV k="created" v={s.project?.createdAt ?? ''} mono />
+                        <KV k="components" v={placed.length + ' of ' + components.length + ' placed'} mono />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-2 flex-wrap items-center border-t border-line2 pt-3">
-                    <button onClick={start} disabled={s.viewSeq != null} className="btn btn-primary btn-lg disabled:opacity-50 w-full sm:w-auto">{r ? 'Open a new round' : 'Find suppliers'}</button>
-                    {r && <button onClick={() => setStepWanted(2)} className="btn btn-lg">Continue round {r.id}</button>}
-                    <button onClick={() => s.patch({ intakeOpen: true })} className="btn">Edit the use case</button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="panel">
+                      <div className="panel-head"><div className="panel-title">Use case</div></div>
+                      <div className="p-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-[13px] items-baseline">
+                        <KV k="product for" v={intake.endUse} />
+                        <KV k="end user" v={intake.endUser} />
+                        <KV k="used on an aircraft" v={intake.usedOn} />
+                        <KV k="civil product" v={intake.civilProduct ? 'declared' : 'not declared'} />
+                        <KV k="BVLOS" v={intake.bvlos ? 'declared' : 'not declared'} />
+                        <KV k="notes" v={intake.notes.trim() || <span className="text-muted">none</span>} />
+                      </div>
+                    </div>
+                    <div className="panel">
+                      <div className="panel-head"><div className="panel-title">Shipping</div></div>
+                      <div className="p-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-[13px] items-baseline">
+                        <KV k="ships to" v={SHIP_TO.find((x) => x.code === shipTo)?.label} />
+                        <KV k="units" v={String(qty)} mono />
+                        <KV k="transport" v={mode} mono />
+                        <KV k="export gate" v={shipTo === 'US' ? 'domestic · no export gate' : 'read per part from the classification'} />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
+                  <div className="panel">
+                    <div className="panel-head"><div className="panel-title">Components <span className="sub">· {placed.length} placed · {components.length - placed.length} not placed</span></div></div>
+                    <div className="grid text-[13px]">
+                      {components.map((sl) => { const pid = s.parts[sl]; const part = pid ? CATALOG[pid] : null; return (
+                        <div key={sl} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-3 items-center px-4 min-h-9 border-t border-line2">
+                          <span className="font-semibold whitespace-nowrap overflow-hidden text-ellipsis">{GENERIC_NAME[sl]}</span>
+                          <span className={part ? 'min-w-0 whitespace-nowrap overflow-hidden text-ellipsis' : 'text-muted'}>{part ? part.name : 'not placed · sourcing lists the empty line'}</span>
+                          <span className="font-mono text-[12px] text-muted whitespace-nowrap">{part ? part.vendor + ' · ' + part.origin : ''}</span>
+                        </div>
+                      ); })}
+                    </div>
+                  </div>
+                  <div className="panel">
+                    <div className="p-4 flex gap-2 flex-wrap items-center">
+                      <button onClick={start} disabled={s.viewSeq != null} className="btn btn-primary btn-lg disabled:opacity-50 w-full sm:w-auto">{r ? 'Open a new round' : 'Find suppliers'}</button>
+                      {r && <button onClick={() => setStepWanted(2)} className="btn btn-lg">Continue round {r.id}</button>}
+                      <button onClick={() => s.patch({ intakeOpen: true })} className="btn">Edit the use case</button>
+                      <button onClick={() => s.setWorkspace('design')} className="btn">Edit the design</button>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
