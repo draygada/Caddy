@@ -7,6 +7,7 @@ interface ProxyRequest {
   headers?: Record<string, HeaderValue>;
   method?: string;
   query?: Record<string, string | string[] | undefined>;
+  url?: string;
 }
 
 type ProxyDependencies = Pick<RuntimeDependencies, 'env' | 'fetchImpl'>;
@@ -17,7 +18,6 @@ const REQUEST_TIMEOUT_MS = 15_000;
 export const MAX_PROXY_BODY_BYTES = 4_000_000;
 
 const ROUTES = new Map<string, ReadonlySet<string>>([
-  ['/api/health', new Set(['GET'])],
   ['/api/compliance-at-design-click', new Set(['POST'])],
   ['/api/classification', new Set(['POST'])],
   ['/api/sourcing/rounds', new Set(['POST'])],
@@ -73,6 +73,16 @@ function targetOrigin(value: string | undefined): URL | null {
 }
 
 function requestedPath(request: ProxyRequest): string | null {
+  if (request.url !== undefined) {
+    try {
+      const incoming = new URL(request.url, 'https://frontend.invalid');
+      if (incoming.search || incoming.hash) return null;
+      return incoming.pathname;
+    } catch {
+      return null;
+    }
+  }
+
   const query = request.query ?? {};
   if (Object.keys(query).some((key) => key !== 'path')) return null;
   const raw = query.path;

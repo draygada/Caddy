@@ -17,9 +17,14 @@ function responseCapture() {
 }
 
 function request(path: string | string[], body: unknown = { synthetic: true }) {
+  const parts = Array.isArray(path) ? path : path.split('/');
   return {
     method: 'POST',
-    query: { path },
+    url: `/api/${parts.join('/')}`,
+    // Vercel's catch-all metadata is framework-owned and is not a stable source
+    // for the public URL path. Keep a deliberately prefixed shape here so every
+    // forwarding test proves the handler uses the exact incoming request URL.
+    query: { path: ['api', ...parts] },
     headers: {
       accept: 'application/json',
       'content-type': 'application/json; charset=utf-8',
@@ -34,6 +39,31 @@ function request(path: string | string[], body: unknown = { synthetic: true }) {
 }
 
 const ENV = { CADDYDADDY_PRODUCT_SERVICE_URL: 'https://product-preview-abc-team.vercel.app' };
+const CONSUMER_POST_ROUTES = [
+  '/api/compliance-at-design-click',
+  '/api/classification',
+  '/api/sourcing/rounds',
+  '/api/sourcing/adjudications',
+  '/api/sourcing/selections',
+  '/api/sourcing/packages',
+  '/api/sourcing/dispatches',
+  '/api/provenance/inspect',
+  '/api/provenance/verify',
+  '/api/provenance/accept',
+  '/api/cad/recompute',
+  '/api/cad/import',
+  '/api/cad/export',
+  '/api/cad/outputs/native/seal',
+  '/api/cad/outputs/native/load',
+  '/api/cad/outputs/generate',
+  '/api/orders/packages/validate',
+  '/api/orders/dispatches',
+  '/api/orders/receipts/read',
+  '/api/orders/receipts/acknowledge',
+  '/api/orders/receipts/reconcile',
+  '/api/orders/receipts/close',
+  '/api/orders/audit/verify',
+] as const;
 const jsonResponse = (value: unknown, status = 200, headers: Record<string, string> = {}) => new Response(JSON.stringify(value), {
   status,
   headers: { 'Content-Type': 'application/json; charset=utf-8', ...headers },
@@ -77,7 +107,7 @@ describe('integrated preview routing', () => {
     for (const candidate of [
       request('../candidate'),
       request('arbitrary'),
-      { ...request('classification'), query: { path: 'classification', target: 'https://internal.example' } },
+      { ...request('classification'), url: '/api/classification?target=https://internal.example', query: { path: 'classification', target: 'https://internal.example' } },
     ]) {
       const { capture, response } = responseCapture();
       await handler(candidate, response);
@@ -89,6 +119,32 @@ describe('integrated preview routing', () => {
     expect(capture.statusCode).toBe(405);
     expect(capture.headers.Allow).toBe('POST');
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('forwards every current frontend product-service consumer and denies an unknown route', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => jsonResponse({ status: 'ok' }));
+    const handler = createProductServiceProxy({ env: ENV, fetchImpl });
+
+    for (const path of CONSUMER_POST_ROUTES) {
+      const { capture, response } = responseCapture();
+      await handler(request(path.slice('/api/'.length)), response);
+      expect(capture.statusCode, path).toBe(200);
+    }
+
+    expect(fetchImpl).toHaveBeenCalledTimes(CONSUMER_POST_ROUTES.length);
+    expect(fetchImpl.mock.calls.map(([url, init]) => [url, init?.method])).toEqual(
+      CONSUMER_POST_ROUTES.map((path) => [`https://product-preview-abc-team.vercel.app${path}`, 'POST']),
+    );
+
+    const { capture, response } = responseCapture();
+    await handler(request('not-a-consumer'), response);
+    expect(capture.statusCode).toBe(404);
+    expect(capture.body).toMatchObject({
+      status: 'BLOCKED',
+      diagnostic: { code: 'PRODUCT_SERVICE_ROUTE_NOT_ALLOWED' },
+      proxyAuthority: 'ENUMERATED_PRODUCT_SERVICE_ROUTES_ONLY',
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(CONSUMER_POST_ROUTES.length);
   });
 
   it('rejects non-JSON, malformed, and oversized bodies before fetch', async () => {
