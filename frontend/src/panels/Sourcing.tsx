@@ -333,18 +333,19 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
   const stepper = (
     <div className="grid grid-cols-[1fr_auto_1fr] max-md:grid-cols-1 items-center gap-3 px-4 py-2 border-b border-line2 bg-surface">
       <span className="max-md:hidden" />
-      <ol aria-label={'Sourcing steps · step ' + step + ' of 4'} className="m-0 p-0 list-none flex items-center gap-2 justify-self-center w-[min(100%,760px)]">
+      {/* four equal columns; each connector runs from the centre of one step to the centre of the next, behind the step button */}
+      <ol aria-label={'Sourcing steps · step ' + step + ' of 4'} className="m-0 p-0 list-none grid grid-cols-4 justify-self-center w-[min(100%,760px)]">
         {STEPS.map((st, i) => {
           const done = st.n === 1 ? !incomplete : st.n === 2 ? r != null && n > 0 && selectedCount === n : st.n === 3 ? !!r?.pkg : false;
           const on = st.n === step;
           const reachable = st.n === 1 || (r != null && !incomplete);
           return (
-            <li key={st.n} className="flex items-center gap-2 flex-1 min-w-0">
-              <button onClick={() => reachable && setStepWanted(st.n)} disabled={!reachable} aria-current={on ? 'step' : undefined} className="flex items-center gap-2 bg-transparent border-0 px-1 min-h-8 max-sm:min-h-11 rounded-r text-[13px] cursor-pointer disabled:cursor-default" style={{ color: on ? 'var(--ink)' : 'var(--muted)', fontWeight: on ? 600 : 400 }}>
+            <li key={st.n} className="relative flex justify-center min-w-0">
+              {i < STEPS.length - 1 && <span aria-hidden="true" className="absolute top-1/2 left-1/2 w-full h-[2px] -translate-y-1/2" style={{ background: st.n < step ? 'var(--accent)' : 'var(--m1)' }} />}
+              <button onClick={() => reachable && setStepWanted(st.n)} disabled={!reachable} aria-current={on ? 'step' : undefined} className="relative flex items-center gap-2 bg-surface border-0 px-2 min-h-8 max-sm:min-h-11 rounded-r text-[13px] cursor-pointer disabled:cursor-default" style={{ color: on ? 'var(--ink)' : 'var(--muted)', fontWeight: on ? 600 : 400 }}>
                 <span className="w-6 h-6 rounded-full grid place-items-center font-mono text-[12px] flex-none" style={{ background: on || done ? 'var(--accent)' : 'var(--m1)', color: on || done ? 'var(--accentfg)' : 'var(--ink)' }}>{done && !on ? '✓' : st.n}</span>
-                <span className="whitespace-nowrap">{st.label}{st.n === 2 && r && <span className="text-muted font-normal"> · {selectedCount} of {n}</span>}</span>
+                <span className={'whitespace-nowrap' + (on ? '' : ' max-sm:hidden')}>{st.label}{st.n === 2 && r && <span className="text-muted font-normal"> · {selectedCount} of {n}</span>}</span>
               </button>
-              {i < STEPS.length - 1 && <span className="flex-1 h-[2px] mx-2 min-w-4" style={{ background: st.n < step ? 'var(--accent)' : 'var(--m1)' }} />}
             </li>
           );
         })}
@@ -371,8 +372,8 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
     return (
       <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
         {stepper}
-        <div className="flex-1 min-h-0 overflow-auto p-4 flex justify-center content-start">
-          <div className="w-full max-w-[860px] self-start grid gap-4">
+        <div className="flex-1 min-h-0 overflow-auto px-6 py-8 md:px-10 flex justify-center content-start">
+          <div className="w-full max-w-[960px] self-start grid gap-4">
             {incomplete ? (
               <div className="panel">
                 <div className="panel-head" role="status"><div className="panel-title">This application requires more information</div><span className="text-[12px] text-muted">answer before sourcing starts</span></div>
@@ -387,12 +388,14 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
               </div>
             ) : (() => {
               const placed = components.filter((sl) => s.parts[sl]);
-              const KV = ({ k, v, mono = false }: { k: string; v: React.ReactNode; mono?: boolean }) => <><span className="text-muted">{k}</span><span className={mono ? 'font-mono' : ''}>{v}</span></>;
+              // keys read as labels: uppercase, tracked, muted; values keep their case
+              const KV = ({ k, v, mono = false }: { k: string; v: React.ReactNode; mono?: boolean }) => <><span className="text-[12px] uppercase tracking-[.05em] text-muted whitespace-nowrap">{k}</span><span className={'min-w-0 ' + (mono ? 'font-mono' : '')}>{v}</span></>;
+              const shipLabel = SHIP_TO.find((x) => x.code === shipTo)?.label ?? shipTo;
               return (
                 <>
                   <div className="panel">
                     <div className="panel-head"><div className="panel-title">{s.project?.name ?? 'Project'} <span className="sub">· what sourcing will read</span></div><span className="chip">declared</span></div>
-                    <div className="p-4 grid gap-4 text-[13px]">
+                    <div className="p-4 grid gap-3 text-[13px]">
                       {s.project?.description && <div className="text-[14px]">{s.project.description}</div>}
                       <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto_1fr] gap-x-6 gap-y-1 items-baseline">
                         <KV k="design state" v={'#' + s.events.length + ' · ' + s.features.length + ' feature' + (s.features.length === 1 ? '' : 's')} mono />
@@ -402,9 +405,10 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* the use case and the components side by side; each panel carries its own edit action */}
+                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 items-start">
                     <div className="panel">
-                      <div className="panel-head"><div className="panel-title">Use case</div></div>
+                      <div className="panel-head"><div className="panel-title">Use case <span className="sub">· and shipping</span></div><button onClick={() => s.patch({ intakeOpen: true })} className="btn btn-xs">Edit use case</button></div>
                       <div className="p-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-[13px] items-baseline">
                         <KV k="product for" v={intake.endUse} />
                         <KV k="end user" v={intake.endUser} />
@@ -412,37 +416,31 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                         <KV k="civil product" v={intake.civilProduct ? 'declared' : 'not declared'} />
                         <KV k="BVLOS" v={intake.bvlos ? 'declared' : 'not declared'} />
                         <KV k="notes" v={intake.notes.trim() || <span className="text-muted">none</span>} />
-                      </div>
-                    </div>
-                    <div className="panel">
-                      <div className="panel-head"><div className="panel-title">Shipping</div></div>
-                      <div className="p-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-[13px] items-baseline">
-                        <KV k="ships to" v={SHIP_TO.find((x) => x.code === shipTo)?.label} />
+                        <span className="col-span-2 border-t border-line2 my-1" />
+                        <KV k="ships to" v={shipLabel} />
                         <KV k="units" v={String(qty)} mono />
                         <KV k="transport" v={mode} mono />
                         <KV k="export gate" v={shipTo === 'US' ? 'domestic · no export gate' : 'read per part from the classification'} />
                       </div>
                     </div>
-                  </div>
-                  <div className="panel">
-                    <div className="panel-head"><div className="panel-title">Components <span className="sub">· {placed.length} placed · {components.length - placed.length} not placed</span></div></div>
-                    <div className="grid text-[13px]">
-                      {components.map((sl) => { const pid = s.parts[sl]; const part = pid ? CATALOG[pid] : null; return (
-                        <div key={sl} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-3 items-center px-4 min-h-9 border-t border-line2">
-                          <span className="font-semibold whitespace-nowrap overflow-hidden text-ellipsis">{GENERIC_NAME[sl]}</span>
-                          <span className={part ? 'min-w-0 whitespace-nowrap overflow-hidden text-ellipsis' : 'text-muted'}>{part ? part.name : 'not placed · sourcing lists the empty line'}</span>
-                          <span className="font-mono text-[12px] text-muted whitespace-nowrap">{part ? part.vendor + ' · ' + part.origin : ''}</span>
-                        </div>
-                      ); })}
+                    <div className="panel">
+                      <div className="panel-head"><div className="panel-title">Components <span className="sub">· {placed.length} placed · {components.length - placed.length} not placed</span></div><button onClick={() => s.setWorkspace('design')} className="btn btn-xs">Edit in Design</button></div>
+                      <div className="grid text-[13px]">
+                        {components.map((sl) => { const pid = s.parts[sl]; const part = pid ? CATALOG[pid] : null; return (
+                          <div key={sl} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-3 items-center px-4 min-h-8 border-t border-line2">
+                            <span className="font-semibold whitespace-nowrap overflow-hidden text-ellipsis">{GENERIC_NAME[sl]}</span>
+                            <span className={part ? 'min-w-0 whitespace-nowrap overflow-hidden text-ellipsis' : 'text-muted'}>{part ? part.name : 'not placed · sourcing lists the empty line'}</span>
+                            <span className="font-mono text-[12px] text-muted whitespace-nowrap">{part ? part.vendor + ' · ' + part.origin : ''}</span>
+                          </div>
+                        ); })}
+                      </div>
                     </div>
                   </div>
-                  <div className="panel">
-                    <div className="p-4 flex gap-2 flex-wrap items-center">
-                      <button onClick={start} disabled={s.viewSeq != null} className="btn btn-primary btn-lg disabled:opacity-50 w-full sm:w-auto">{r ? 'Open a new round' : 'Find suppliers'}</button>
-                      {r && <button onClick={() => setStepWanted(2)} className="btn btn-lg">Continue round {r.id}</button>}
-                      <button onClick={() => s.patch({ intakeOpen: true })} className="btn">Edit the use case</button>
-                      <button onClick={() => s.setWorkspace('design')} className="btn">Edit the design</button>
-                    </div>
+                  {/* one call to action; what it does is written under it, an existing round is a text link */}
+                  <div className="grid justify-items-center gap-2 pt-2">
+                    <button onClick={start} disabled={s.viewSeq != null} className="btn btn-primary min-h-12 px-10 text-[15px] disabled:opacity-50 w-full sm:w-auto sm:min-w-[260px]">{r ? 'Open a new round' : 'Find suppliers'}</button>
+                    <span className="text-[12px] text-muted text-center">opens a round for {components.length} line{components.length === 1 ? '' : 's'} · ship-to {shipTo} · {qty} unit{qty === 1 ? '' : 's'} · {mode}</span>
+                    {r && <button onClick={() => setStepWanted(2)} className="bg-transparent border-0 p-0 min-h-8 text-[13px] text-ink underline underline-offset-2 cursor-pointer">Continue round {r.id} instead</button>}
                   </div>
                 </>
               );
