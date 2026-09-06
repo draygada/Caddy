@@ -24,6 +24,7 @@ const icons = {
   keyboard: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M6 10h1m3 0h1m3 0h1m3 0h.1M6 14h9m3 0h.1"/>',
   tree: '<path d="M7 4v16M7 8h5m-5 8h5"/><rect x="12" y="5" width="7" height="6" rx="1"/><rect x="12" y="13" width="7" height="6" rx="1"/>',
   cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Zm0 9 8-4.5M12 12 4 7.5m8 4.5v9"/>',
+  package: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Zm0 9 8-4.5M12 12 4 7.5m8 4.5v9M8 5.2l8 4.5v4"/>',
   close: '<path d="m6 6 12 12M18 6 6 18"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
   warning: '<path d="M12 3 2.8 20h18.4Zm0 6v5m0 3v.1"/>',

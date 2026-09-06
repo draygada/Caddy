@@ -17,15 +17,30 @@ test("shell exposes the authoring center, review surfaces, and accessibility lan
     'id="command-palette"',
     'id="exchange-modal"',
     'id="review-path"',
+    'id="sourcing-panel"',
     'class="mobile-nav"',
     "DERIVED PREVIEW · NOT GEOMETRY AUTHORITY",
   ]) assert.match(html, new RegExp(required));
   assert.match(html, /href="#viewport-canvas">Skip to viewport/);
   assert.match(html, /tabindex="0" role="application"/);
   assert.match(html, /Review readiness with Tripwire/);
+  assert.match(html, /data-action="open-sourcing"[^>]*aria-label="Open part sourcing"/);
+  assert.match(html, /data-bottom-tab="sourcing"/);
   assert.match(html, /data-mobile-panel="properties"[^>]*>[\s\S]*?<span>Review<\/span>/);
   assert.doesNotMatch(html, /https?:\/\//);
   assert.doesNotMatch(html, /AssemblyDocument|Product thread/);
+});
+
+test("part sourcing is an accessible, revision-bound synthetic read model", async () => {
+  const [main, runtime] = await Promise.all([
+    readFile(path.join(appRoot, "src", "main.js"), "utf8"),
+    readFile(path.join(appRoot, "src", "runtime-candidate.js"), "utf8"),
+  ]);
+  assert.match(main, /PART SOURCING/);
+  assert.match(main, /No supplier was contacted and no order action is available/);
+  assert.match(runtime, /SOURCING_REVISION_MISMATCH/);
+  assert.match(runtime, /offer\.kind === "SYNTHETIC"/);
+  assert.match(runtime, /offer\.screeningStatus === "NOT_EVALUATED"/);
 });
 
 test("candidate review path is honest, recoverable, and revision-pinned", async () => {

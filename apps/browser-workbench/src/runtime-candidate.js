@@ -50,6 +50,20 @@ export function validateProductCandidate(candidate) {
     requireValue(request.product_thread_id === candidate.productThreadId, "COMPLIANCE_THREAD_MISMATCH");
   }
   requireValue(candidate.states?.current?.displayState === "CURRENT", "DISPLAY_STATE_INVALID");
+  const sourcing = candidate.sourcingRound;
+  requireValue(sourcing?.schemaVersion === "caddydaddy.sourcing-round/1", "SOURCING_SCHEMA_INVALID");
+  requireValue(sourcing.status === "FIXTURE_REVIEW_ONLY" && sourcing.externalEffects === "NONE", "SOURCING_AUTHORITY_INVALID");
+  requireValue(sourcing.sourceRevisionId === candidate.document.revisionId, "SOURCING_REVISION_MISMATCH");
+  requireValue(typeof sourcing.claimCeiling === "string" && sourcing.claimCeiling.includes("Not live quotes"), "SOURCING_CLAIM_INVALID");
+  requireValue(Array.isArray(sourcing.lines) && sourcing.lines.length > 0, "SOURCING_LINES_MISSING");
+  for (const line of sourcing.lines) {
+    requireValue(typeof line.lineId === "string" && typeof line.bomItemId === "string", "SOURCING_LINE_INVALID");
+    requireValue(Number.isInteger(line.quantity) && line.quantity > 0, "SOURCING_QUANTITY_INVALID");
+    requireValue(Array.isArray(line.offers) && line.offers.length > 0, "SOURCING_OFFERS_MISSING");
+    for (const offer of line.offers) {
+      requireValue(offer.kind === "SYNTHETIC" && offer.screeningStatus === "NOT_EVALUATED", "SOURCING_OFFER_AUTHORITY_INVALID");
+    }
+  }
   candidate.candidate = { ...candidate.candidate, claim: BOUNDED_CLAIM };
   return candidate;
 }

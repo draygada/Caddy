@@ -70,6 +70,13 @@ test("mobile review-only follows media changes and blocks mutation", () => {
   store.dispose();
 });
 
+test("part sourcing opens through the shared bottom-panel state", () => {
+  const store = new WorkbenchStore(createInternalWorkbenchFixture(), { mobileQuery: mediaQuery() });
+  store.setBottomTab("sourcing");
+  assert.equal(store.state.bottomTab, "sourcing");
+  assert.equal(store.state.bottomCollapsed, false);
+});
+
 test("visibility and isolation preserve PartDocument-scoped state", () => {
   const fixture = createInternalWorkbenchFixture();
   const store = new WorkbenchStore(fixture, { mobileQuery: mediaQuery() });

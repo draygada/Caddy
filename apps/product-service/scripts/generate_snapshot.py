@@ -189,12 +189,39 @@ def _build_candidate_state(source_commit: str, source_tree: str) -> tuple[dict[s
         "complianceBindings": bindings,
     }
     current = {"key": "current", "recomputeStatus": "SUCCEEDED", "displayState": "CURRENT", "requestedRevisionId": assembly.attempted_revision_id, "displayedRevisionId": assembly.attempted_revision_id, "sourceArtifactId": assembly.current_artifact.artifact_id, "diagnostics": [], "operationStatus": {operation.operation_id: "SUCCEEDED"}, "adapterOnline": True, "editable": False}
+    sourcing_offers = [
+        {"offerId": "offer:apex-alloy-fixture", "supplier": "Apex Alloy Fixture", "kind": "SYNTHETIC", "origin": "US", "originEvidence": "FIXTURE_DECLARATION", "unitPriceUsd": "18.40", "availability": "24 fixture units", "leadTime": "5 business days", "screeningStatus": "NOT_EVALUATED", "sourceRef": "fixture:sourcing-2026-09-05#apex"},
+        {"offerId": "offer:harbor-metals-fixture", "supplier": "Harbor Metals Fixture", "kind": "SYNTHETIC", "origin": "CA", "originEvidence": "FIXTURE_DECLARATION", "unitPriceUsd": "16.75", "availability": "12 fixture units", "leadTime": "8 business days", "screeningStatus": "NOT_EVALUATED", "sourceRef": "fixture:sourcing-2026-09-05#harbor"},
+        {"offerId": "offer:vector-stock-fixture", "supplier": "Vector Stock Fixture", "kind": "SYNTHETIC", "origin": None, "originEvidence": "NOT_PROVIDED", "unitPriceUsd": "14.20", "availability": "Availability not provided", "leadTime": "Not provided", "screeningStatus": "NOT_EVALUATED", "sourceRef": "fixture:sourcing-2026-09-05#vector"},
+    ]
+    sourcing_basis = {
+        "roundId": "sourcing-round:public-demo-bracket-01",
+        "sourceRevisionId": assembly.attempted_revision_id,
+        "lines": [{
+            "lineId": "sourcing-line:public-demo-bracket",
+            "bomItemId": "bom:public-demo-bracket",
+            "label": "Public demo bracket blank",
+            "mpn": "PUBLIC-DEMO-BRACKET-01",
+            "quantity": 2,
+            "requirement": "24 × 12 × 4 mm · public demo aluminum",
+            "offers": sourcing_offers,
+        }],
+    }
+    sourcing_round = {
+        "schemaVersion": "caddydaddy.sourcing-round/1",
+        "status": "FIXTURE_REVIEW_ONLY",
+        "observedAt": CANDIDATE_TIME,
+        "claimCeiling": "Synthetic supplier offers bound to this immutable demo revision. Not live quotes, supplier screening, procurement advice, or an order.",
+        "externalEffects": "NONE",
+        "manifest": {"source": "SYNTHETIC_PUBLIC_DEMO", "sha256": canonical_sha256(sourcing_basis)},
+        **sourcing_basis,
+    }
     public = {
         "candidate": {"version": "0.1", "status": "SNAPSHOT_CANDIDATE", "observedAt": CANDIDATE_TIME, "policyState": "DRAFT_REVIEW_ONLY", "claimCeiling": BOUNDED_CLAIM, "machineClaimCeiling": "REVIEW_SUPPORT_ONLY_NO_LEGAL_CONCLUSION", "claim": BOUNDED_CLAIM, "positioning": POSITIONING, "positioningStatus": "DESIGN_INTENT_NOT_A_PRODUCT_CLAIM"},
         "productThreadId": PRODUCT_THREAD_ID,
         "adapterLabel": "Immutable core snapshot + Tripwire review-readiness bridge",
         "evidenceCeiling": "DEMONSTRATED_LOCAL_BUILD_SNAPSHOT",
-        "capabilities": {"authoring": False, "recompute": False, "import": False, "export": False, "complianceAtDesignClick": True, "reviewReadinessGuardrail": True, "regulatoryClassification": False},
+        "capabilities": {"authoring": False, "recompute": False, "import": False, "export": False, "complianceAtDesignClick": True, "reviewReadinessGuardrail": True, "partSourcingReadModel": True, "liveQuotes": False, "supplierScreening": False, "ordering": False, "externalSupplierCommunication": False, "regulatoryClassification": False},
         "forgeRevision": revision,
         "snapshotProvenance": {"mode": "PRECOMPUTED_IMMUTABLE", "source": {"commit": source_commit, "tree": source_tree}, "coreExecutedAtRuntime": False},
         "kernelProvenance": {"partResult": "forge.core-recompute-result/1", "assemblyResult": "forge.core-assembly-result/1", "viewportPacket": viewport["protocol_version"], "engineManifestHash": assembly.engine_manifest_hash, "binding": manifest.binding, "kernel": manifest.kernel, "toolchain": manifest.toolchain, "platformImage": manifest.platform_image, "geometryArtifactId": assembly.current_artifact.artifact_id, "geometryArtifactHash": assembly.current_artifact.content_hash},
@@ -202,6 +229,7 @@ def _build_candidate_state(source_commit: str, source_tree: str) -> tuple[dict[s
         "document": document,
         "states": {"current": current},
         "history": [{"sequence": 1, "revisionId": assembly.attempted_revision_id, "label": "Build-time core snapshot", "actor": "core-kernel", "disposition": "DEMONSTRATED_LOCAL", "time": "2026-09-05", "summary": "Immutable geometry snapshot projected for review; no deployed recompute"}],
+        "sourcingRound": sourcing_round,
     }
     public["candidate"]["payloadHash"] = canonical_sha256(public)
     preimage = {"public": public, "revision": revision, "bindings": bindings, "records": records}

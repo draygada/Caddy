@@ -17,8 +17,18 @@ determination."
 
 Positioning only: "We're closing the loop from idea to execution for high-stakes industries."
 
+## Part-sourcing read model
+
+The Parts button and Part sourcing tab expose one revision-bound BOM line with three deterministic
+synthetic offers. Each offer states its fixture origin, availability, lead time, origin-evidence state,
+and unevaluated screening state. The panel is display-only and creates no external effect.
+
+Sourcing claim ceiling: "Synthetic supplier offers bound to this immutable demo revision. Not live
+quotes, supplier screening, procurement advice, or an order."
+
 This candidate does not claim complete CAD, mates, kinematics, interference, authoritative compliance,
-legal approval, controlled-data handling, ordering, deployment, or production readiness.
+legal approval, controlled-data handling, live supplier data, supplier screening, ordering,
+deployment, or production readiness.
 
 ## Run and verify
 

@@ -174,7 +174,7 @@ export class WorkbenchStore {
   }
 
   setBottomTab(tab) {
-    if (!["timeline", "diagnostics", "selection"].includes(tab)) return;
+    if (!["timeline", "sourcing", "diagnostics", "selection"].includes(tab)) return;
     this.patch({ bottomTab: tab, bottomCollapsed: false }, "panel");
   }
 
