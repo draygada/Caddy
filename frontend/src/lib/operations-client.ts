@@ -377,12 +377,26 @@ export async function loadOperationsCandidateIdentity(fetchImpl: typeof fetch = 
   }
   if (!response.ok) throw new OperationsServiceError('CANDIDATE_UNAVAILABLE', `The current candidate endpoint returned HTTP ${response.status}.`, response.status);
   const value: unknown = await response.json();
-  if (!isRecord(value) || !isRecord(value.candidate) || !isRecord(value.document)) throw new OperationsServiceError('CANDIDATE_INVALID', 'The current candidate response is malformed.');
+  if (!isRecord(value) || !isRecord(value.candidate) || !isRecord(value.document) || !isRecord(value.releaseIdentity)) {
+    throw new OperationsServiceError('CANDIDATE_INVALID', 'The current candidate response omitted its canonical release identity.');
+  }
   const version = requireString(value.candidate.version, 'CANDIDATE_INVALID');
+  const candidateId = requireString(value.releaseIdentity.candidateId, 'CANDIDATE_INVALID');
+  const revisionId = requireString(value.releaseIdentity.revisionId, 'CANDIDATE_INVALID');
+  const releaseVersion = requireString(value.releaseIdentity.candidateVersion, 'CANDIDATE_INVALID');
+  if (
+    value.releaseIdentity.schemaVersion !== 'caddydaddy.release-identity/1'
+    || candidateId !== `candidate:${version}`
+    || releaseVersion !== version
+    || revisionId !== requireString(value.document.revisionId, 'CANDIDATE_INVALID')
+    || (typeof value.candidate.id === 'string' && value.candidate.id !== candidateId)
+  ) {
+    throw new OperationsServiceError('CANDIDATE_IDENTITY_CONFLICT', 'The candidate display document conflicts with its canonical release identity.');
+  }
   return {
-    candidate_id: `candidate:${version}`,
-    revision_id: requireString(value.document.revisionId, 'CANDIDATE_INVALID'),
-    snapshot_sha256: requireHash(value.candidate.payloadHash, 'CANDIDATE_INVALID'),
+    candidate_id: candidateId,
+    revision_id: revisionId,
+    snapshot_sha256: requireHash(value.releaseIdentity.snapshotSha256, 'CANDIDATE_INVALID'),
   };
 }
 
@@ -405,15 +419,21 @@ export class OperationsClient {
   }
 
   private async post<T extends OperationsEnvelope>(domain: OperationsDomain, path: string, payload: Record<string, unknown>, validate: (value: OperationsEnvelope) => asserts value is T, continueState = true): Promise<T> {
+    let body: string;
+    try {
+      body = JSON.stringify({ candidate: this.candidate, ...(continueState && this.carriedState[domain] ? { state: this.carriedState[domain] } : {}), ...payload });
+    } catch {
+      throw new OperationsServiceError('REQUEST_INVALID', `${domain} request could not be serialized.`);
+    }
     let response: Response;
     try {
       response = await this.fetchImpl(path, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidate: this.candidate, ...(continueState && this.carriedState[domain] ? { state: this.carriedState[domain] } : {}), ...payload }),
+        body,
       });
     } catch {
-      throw new OperationsServiceError('SERVICE_UNREACHABLE', `${domain} service is unreachable.`);
+      throw new OperationsServiceError('SERVICE_UNREACHABLE', `${domain} request could not reach the connected service or same-origin proxy.`);
     }
     let value: unknown;
     try {
@@ -421,12 +441,14 @@ export class OperationsClient {
     } catch {
       throw new OperationsServiceError('RESPONSE_INVALID', `${domain} service returned non-JSON data.`, response.status);
     }
-    validateEnvelope(value, this.candidate, domain);
     if (!response.ok) {
-      const code = value.diagnostic?.code ?? 'SERVICE_REJECTED';
-      const message = value.diagnostic?.message ?? `${domain} service rejected the request.`;
+      if (!isRecord(value)) throw new OperationsServiceError('RESPONSE_INVALID', `${domain} service returned a malformed rejection.`, response.status);
+      const diagnostic = isRecord(value.diagnostic) ? value.diagnostic : null;
+      const code = typeof diagnostic?.code === 'string' && diagnostic.code ? diagnostic.code : 'SERVICE_REJECTED';
+      const message = typeof diagnostic?.message === 'string' && diagnostic.message ? diagnostic.message : `${domain} service rejected the request.`;
       throw new OperationsServiceError(code, message, response.status);
     }
+    validateEnvelope(value, this.candidate, domain);
     validate(value);
     validateCarriedState(value, this.candidate, domain);
     if (value.state) this.carriedState[domain] = value.state;

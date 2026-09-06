@@ -31,9 +31,22 @@ const round = {
 
 describe('operations service client', () => {
   it('derives an exact candidate identity from the current candidate endpoint', async () => {
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ candidate: { version: '0.1', payloadHash: HASH_A }, document: { revisionId: 'revision:fixture-01' } }), { status: 200 })) as unknown as typeof fetch;
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      candidate: { id: 'candidate:0.1', version: '0.1', payloadHash: HASH_C },
+      document: { revisionId: 'revision:fixture-01' },
+      releaseIdentity: { schemaVersion: 'caddydaddy.release-identity/1', candidateId: 'candidate:0.1', candidateVersion: '0.1', revisionId: 'revision:fixture-01', snapshotSha256: HASH_A },
+    }), { status: 200 })) as unknown as typeof fetch;
     await expect(loadOperationsCandidateIdentity(fetchImpl)).resolves.toEqual(IDENTITY);
     expect(fetchImpl).toHaveBeenCalledWith('/api/candidate', { headers: { Accept: 'application/json' } });
+  });
+
+  it('rejects a display document that conflicts with the canonical release identity', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      candidate: { id: 'candidate:0.2', version: '0.2', payloadHash: HASH_C },
+      document: { revisionId: 'revision:fixture-02' },
+      releaseIdentity: { schemaVersion: 'caddydaddy.release-identity/1', candidateId: 'candidate:0.1', candidateVersion: '0.1', revisionId: 'revision:fixture-01', snapshotSha256: HASH_A },
+    }), { status: 200 })) as unknown as typeof fetch;
+    await expect(loadOperationsCandidateIdentity(fetchImpl)).rejects.toMatchObject({ code: 'CANDIDATE_IDENTITY_CONFLICT' });
   });
 
   it('posts candidate-bound sourcing requests and retains last-valid evidence after a stale response', async () => {
@@ -83,5 +96,17 @@ describe('operations service client', () => {
     malformed = true;
     await expect(client.createSourcingRound({ part_key: 'flight-controller', quantity: 1, mode: 'air' })).rejects.toBeInstanceOf(OperationsServiceError);
     expect(client.getLastValid('sourcing')).toBe(first);
+  });
+
+  it('surfaces a structured service rejection instead of misclassifying it as unreachable', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(envelope('provenance', {
+      status: 'REJECTED',
+      diagnostic: { code: 'STALE_CANDIDATE', message: 'Request candidate identity does not match the active immutable candidate.' },
+    })), { status: 409 })) as unknown as typeof fetch;
+    const client = new OperationsClient(IDENTITY, fetchImpl);
+    await expect(client.inspectSource('gx220-vendor-page')).rejects.toMatchObject({
+      code: 'STALE_CANDIDATE',
+      status: 409,
+    });
   });
 });
