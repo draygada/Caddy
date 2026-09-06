@@ -48,9 +48,12 @@ describe('classification client', () => {
     }, { fetchImpl });
 
     expect(fetchImpl).toHaveBeenCalledOnce();
-    expect(fetchImpl.mock.calls[0][0]).toBe('/api/classification/evaluate');
+    expect(fetchImpl.mock.calls[0][0]).toBe('/api/classification');
     expect(JSON.parse(String(fetchImpl.mock.calls[0][1]?.body))).toEqual({
-      description: 'commercial flight controller', facts: { 'declared.military_use': 'false' }, item_kind: 'commodity',
+      product_or_part: 'commercial flight controller',
+      facts: { 'declared.military_use': 'false' },
+      item_kind: 'commodity',
+      budget: { calls_cap: 16, cost_cap_microusd: 8_000_000, estimated_cost_microusd: 250_000 },
     });
     expect(result.schema_version).toBe('forge-classification.determination/1');
     expect(result.determination.jurisdiction).toBe('EAR99');

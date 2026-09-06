@@ -80,6 +80,12 @@ const STATUSES = ['supported', 'knocked_out', 'undetermined', 'not_reached'] as 
 const ORIGINS = ['proposed', 'floor'] as const;
 const DISPOSITIONS = ['met', 'not_met', 'indeterminate'] as const;
 const BASES = ['stated', 'inferred', 'assumed'] as const;
+const CLASSIFICATION_ENDPOINT = '/api/classification';
+const CLASSIFICATION_BUDGET = {
+  calls_cap: 16,
+  cost_cap_microusd: 8_000_000,
+  estimated_cost_microusd: 250_000,
+} as const;
 
 function invalid(path: string): never {
   throw new ClassificationClientError('SCHEMA_INVALID', `Charlie engine returned an invalid forge-classification.determination/1 response at ${path}.`);
@@ -88,6 +94,11 @@ function invalid(path: string): never {
 function object(value: unknown, path: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) invalid(path);
   return value as Record<string, unknown>;
+}
+
+function exactKeys(value: Record<string, unknown>, allowed: readonly string[], path: string): void {
+  const expected = new Set(allowed);
+  if (Object.keys(value).some((key) => !expected.has(key))) invalid(path);
 }
 
 function text(value: unknown, path: string, nonempty = false): string {
@@ -123,6 +134,7 @@ function digest(value: unknown, path: string): string {
 function citation(value: unknown, path: string): ClassificationCitation | null {
   if (value === null) return null;
   const row = object(value, path);
+  exactKeys(row, ['unit_key', 'unit_sha256', 'start', 'end', 'quote'], path);
   const start = nonnegativeInteger(row.start, `${path}.start`);
   const end = nonnegativeInteger(row.end, `${path}.end`);
   if (end < start) invalid(`${path}.end`);
@@ -137,6 +149,7 @@ function citation(value: unknown, path: string): ClassificationCitation | null {
 
 function element(value: unknown, path: string): ClassificationElement {
   const row = object(value, path);
+  exactKeys(row, ['element_id', 'unit_key', 'disposition', 'basis', 'facts_relied_on', 'citation'], path);
   return {
     element_id: text(row.element_id, `${path}.element_id`, true),
     unit_key: text(row.unit_key, `${path}.unit_key`, true),
@@ -149,10 +162,12 @@ function element(value: unknown, path: string): ClassificationElement {
 
 function candidate(value: unknown, path: string): ClassificationCandidate {
   const row = object(value, path);
+  exactKeys(row, ['candidate_id', 'provision', 'stage', 'status', 'origin', 'why_considered', 'why_rejected', 'elements', 'challenge', 'reference_notes'], path);
   if (!Array.isArray(row.elements)) invalid(`${path}.elements`);
   let challenge: ClassificationCandidate['challenge'] = null;
   if (row.challenge !== null) {
     const raw = object(row.challenge, `${path}.challenge`);
+    exactKeys(raw, ['text', 'resolution'], `${path}.challenge`);
     challenge = { text: text(raw.text, `${path}.challenge.text`), resolution: choice(raw.resolution, ['sustained', 'rejected'] as const, `${path}.challenge.resolution`) };
   }
   const result: ClassificationCandidate = {
@@ -173,11 +188,16 @@ function candidate(value: unknown, path: string): ClassificationCandidate {
 
 export function parseClassificationDetermination(value: unknown): ClassificationDetermination {
   const root = object(value, '$');
+  exactKeys(root, ['schema_version', 'snapshot_sha256', 'pack_sha256', 'item', 'determination', 'candidates', 'provenance'], '$');
   if (root.schema_version !== 'forge-classification.determination/1') invalid('$.schema_version');
   const item = object(root.item, '$.item');
   const route = object(root.determination, '$.determination');
   const provenance = object(root.provenance, '$.provenance');
   const budget = object(provenance.budget, '$.provenance.budget');
+  exactKeys(item, ['part_revision_id', 'item_kind'], '$.item');
+  exactKeys(route, ['jurisdiction', 'classification', 'usml_step', 'ccl_step', 'basis', 'open_candidates'], '$.determination');
+  exactKeys(provenance, ['model', 'calls', 'budget', 'dropped_candidates', 'reference_notes'], '$.provenance');
+  exactKeys(budget, ['calls_cap', 'calls_used', 'cost_cap_microusd', 'cost_used_microusd'], '$.provenance.budget');
   if (!Array.isArray(root.candidates)) invalid('$.candidates');
   if (!Array.isArray(provenance.calls)) invalid('$.provenance.calls');
   if (!Array.isArray(provenance.dropped_candidates)) invalid('$.provenance.dropped_candidates');
@@ -200,6 +220,7 @@ export function parseClassificationDetermination(value: unknown): Classification
       model: text(provenance.model, '$.provenance.model'),
       calls: provenance.calls.map((item, index) => {
         const row = object(item, `$.provenance.calls[${index}]`);
+        exactKeys(row, ['stage', 'provision', 'prompt_sha256', 'response_sha256', 'cost_microusd'], `$.provenance.calls[${index}]`);
         return {
           stage: text(row.stage, `$.provenance.calls[${index}].stage`),
           provision: optionalText(row.provision, `$.provenance.calls[${index}].provision`),
@@ -216,6 +237,7 @@ export function parseClassificationDetermination(value: unknown): Classification
       },
       dropped_candidates: provenance.dropped_candidates.map((item, index) => {
         const row = object(item, `$.provenance.dropped_candidates[${index}]`);
+        exactKeys(row, ['provision', 'reason'], `$.provenance.dropped_candidates[${index}]`);
         return { provision: text(row.provision, `$.provenance.dropped_candidates[${index}].provision`), reason: text(row.reason, `$.provenance.dropped_candidates[${index}].reason`) };
       }),
       reference_notes: texts(provenance.reference_notes, '$.provenance.reference_notes'),
@@ -223,16 +245,27 @@ export function parseClassificationDetermination(value: unknown): Classification
   };
 
   const decision = result.determination;
+  const spent = result.provenance.budget;
+  if (spent.calls_used > spent.calls_cap || spent.cost_used_microusd > spent.cost_cap_microusd) invalid('$.provenance.budget');
   if (decision.jurisdiction === 'EAR99' && (decision.usml_step !== 'negative' || decision.ccl_step !== 'all_knocked_out' || decision.classification.join('|') !== 'EAR99')) invalid('$.determination');
-  if (decision.jurisdiction === 'ITAR' && (decision.usml_step !== 'supported' || decision.classification.length === 0)) invalid('$.determination');
-  if (decision.jurisdiction === 'UNDETERMINED' && (!['undetermined', 'undemonstrated'].includes(decision.usml_step) || decision.classification.length > 0)) invalid('$.determination');
+  if (decision.jurisdiction === 'ITAR' && (decision.usml_step !== 'supported' || decision.ccl_step !== 'not_reached' || decision.classification.length === 0)) invalid('$.determination');
+  if (decision.jurisdiction === 'EAR' && (decision.usml_step !== 'negative' || decision.ccl_step !== 'specific_supported' || decision.classification.length === 0)) invalid('$.determination');
+  if (decision.jurisdiction === 'UNDETERMINED') {
+    const stoppedAtUsml = ['undetermined', 'undemonstrated'].includes(decision.usml_step) && decision.ccl_step === 'not_reached';
+    const stoppedAtCcl = decision.usml_step === 'negative' && decision.ccl_step === 'undetermined';
+    if ((!stoppedAtUsml && !stoppedAtCcl) || decision.classification.length > 0) invalid('$.determination');
+  }
   return result;
 }
 
 function failureDetail(payload: unknown): { code: string; message: string } {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return { code: '', message: '' };
   const root = payload as Record<string, unknown>;
-  const nested = root.error && typeof root.error === 'object' && !Array.isArray(root.error) ? root.error as Record<string, unknown> : root;
+  const nested = root.error && typeof root.error === 'object' && !Array.isArray(root.error)
+    ? root.error as Record<string, unknown>
+    : root.diagnostic && typeof root.diagnostic === 'object' && !Array.isArray(root.diagnostic)
+      ? root.diagnostic as Record<string, unknown>
+      : root;
   return {
     code: typeof nested.code === 'string' ? nested.code : '',
     message: typeof nested.message === 'string' ? nested.message : typeof root.detail === 'string' ? root.detail : '',
@@ -247,9 +280,15 @@ export async function evaluateClassification(request: ClassificationRequest, opt
 
   let response: Response;
   try {
-    response = await (options.fetchImpl ?? fetch)('/api/classification/evaluate', {
+    response = await (options.fetchImpl ?? fetch)(CLASSIFICATION_ENDPOINT, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ description, facts: request.facts, item_kind: request.item_kind }), signal: options.signal,
+      body: JSON.stringify({
+        product_or_part: description,
+        facts: request.facts,
+        item_kind: request.item_kind,
+        budget: CLASSIFICATION_BUDGET,
+      }),
+      signal: options.signal,
     });
   } catch (error) {
     throw new ClassificationClientError('BACKEND_UNAVAILABLE', `Charlie engine is unavailable: ${error instanceof Error ? error.message : 'network request failed'}`);
