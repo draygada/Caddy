@@ -83,6 +83,7 @@ export default function App() {
   const workspace = useStore((s) => s.workspace);
   const setWorkspace = useStore((s) => s.setWorkspace);
   const project = useStore((s) => s.project);
+  const sel = useStore((s) => s.sel);
   const compact = useCompactWorkspace();
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('model');
   const [statusOpen, setStatusOpen] = useState(false);
@@ -106,7 +107,7 @@ export default function App() {
       <Browser />
       <div className="flex flex-col gap-2 min-h-0 min-w-0">
         <Viewport o={o} />
-        <div className="flex-none h-[260px] flex flex-col min-h-0 [&>*]:h-full"><SpecPanel o={o} /></div>
+        {sel && <div className="flex-none h-[260px] flex flex-col min-h-0 [&>*]:h-full"><SpecPanel o={o} /></div>}
       </div>
     </div>
   ) : (
