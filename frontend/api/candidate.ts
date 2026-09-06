@@ -8,7 +8,7 @@ import {
   type ApiRequest,
   type ApiResponse,
   type RuntimeDependencies,
-} from './_machine-contracts';
+} from './_machine-contracts.js';
 
 const NATIVE_PROBE_TIMEOUT_MS = 1_500;
 

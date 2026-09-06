@@ -6,7 +6,7 @@ import {
   type ApiRequest,
   type ApiResponse,
   type RuntimeEnv,
-} from './_machine-contracts';
+} from './_machine-contracts.js';
 
 export function nowObservation(env: RuntimeEnv = runtimeEnv()) {
   const identity = buildIdentity(env);
