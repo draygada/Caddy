@@ -1,0 +1,32 @@
+{
+  "kind": "extract",
+  "model": "claude-sonnet-5",
+  "prompt_sha256": "1b0abc6525547bb74b143ea2c2493d27c506bed21b159d6bd0a648d3063d7e76",
+  "response": {
+    "specs": [
+      {
+        "doc_sha256": "18bd150ab26362aeb0f8065c6b29d1f47c1f5b05953536874e67805ef0bd9271",
+        "end": 47077,
+        "field": "gyro_rate_range_deg_s",
+        "quote": "GYRO_FS_SEL=0  ±2000  º/s 2",
+        "start": 47049,
+        "unit": "deg/s",
+        "value": "2000"
+      },
+      {
+        "doc_sha256": "18bd150ab26362aeb0f8065c6b29d1f47c1f5b05953536874e67805ef0bd9271",
+        "end": 49090,
+        "field": "accel_linear_range_g",
+        "quote": "ACCEL_FS_SEL =0  ±16  g 2",
+        "start": 49064,
+        "unit": "g",
+        "value": "16"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 140610,
+    "model": "claude-sonnet-5",
+    "output_tokens": 467
+  }
+}

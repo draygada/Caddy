@@ -1,0 +1,41 @@
+{
+  "kind": "extract",
+  "model": "claude-sonnet-5",
+  "prompt_sha256": "98fd657411fe0b4facb8de0df8d2fca13a7be3f690ef184350cd34bc6303cf16",
+  "response": {
+    "specs": [
+      {
+        "doc_sha256": "cb8e74c18d3a1eadaa68c3d975971918315605608f30b012ff84e2f1d3693869",
+        "end": 3616,
+        "field": "frame_rate_hz",
+        "quote": "Effective Frame Rate 8.7 Hz",
+        "start": 3589,
+        "unit": "Hz",
+        "value": "8.7"
+      },
+      {
+        "doc_sha256": "cb8e74c18d3a1eadaa68c3d975971918315605608f30b012ff84e2f1d3693869",
+        "end": 3537,
+        "field": "resolution_w",
+        "quote": "160 x 120 progressive scan",
+        "start": 3510,
+        "unit": "elements",
+        "value": "160"
+      },
+      {
+        "doc_sha256": "cb8e74c18d3a1eadaa68c3d975971918315605608f30b012ff84e2f1d3693869",
+        "end": 3537,
+        "field": "resolution_h",
+        "quote": "160 x 120 progressive scan",
+        "start": 3510,
+        "unit": "elements",
+        "value": "120"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 4538,
+    "model": "claude-sonnet-5",
+    "output_tokens": 345
+  }
+}

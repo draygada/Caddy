@@ -1,0 +1,30 @@
+{
+  "kind": "search",
+  "model": "claude-opus-5",
+  "prompt_sha256": "ae7bfa638ff17dbd47ca8793ab14acb73fa03b6ac2facdce932cb3fd2240393d",
+  "response": {
+    "candidates": [
+      {
+        "mpn": "ICM-42688-P",
+        "url": "https://d17t6iyxenbwp1.cloudfront.net/s3fs-public/2026-06/DS-000347%20ICM-42688-P%20v1.9.pdf"
+      },
+      {
+        "mpn": "ICM-42688-P",
+        "url": "fixture://icm42688p_test_excerpt.txt"
+      },
+      {
+        "mpn": "GX-220",
+        "url": "fixture://gx220_vendor_page.html"
+      },
+      {
+        "mpn": "IMU-NG",
+        "url": "fixture://imu_ng_synthetic_sheet.txt"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1441,
+    "model": "claude-opus-5",
+    "output_tokens": 204
+  }
+}

@@ -33,8 +33,8 @@
   },
   "search": {
     "search/documents.json": {
-      "sha256": "c0f53fbd0ec4f78956ed63e5669d6c6a16ef1b415622ac5f63049f7d5c245ba2",
-      "bytes": 2669
+      "sha256": "a8f67b9cbfbd03ce3a622d8ce95551f61f95cd8594d417606158cc9ef541aae4",
+      "bytes": 6769
     },
     "search/engine/evaluate-camera-flag.json": {
       "sha256": "6acb9faee0466c5882b1954d8311ccf24caf3554711583a858861688e3664b8f",
@@ -69,8 +69,8 @@
       "bytes": 380
     },
     "search/gold_swaps.json": {
-      "sha256": "ffb45598034a1f1d36d31846b0660f00bd09bd45faefddd8690b7ca9ccca72cf",
-      "bytes": 2176
+      "sha256": "609da5232bf30bb3b11891d7154288d66cac39ec50ee19e342f7292a5a0ba082",
+      "bytes": 2601
     },
     "search/pool.json": {
       "sha256": "56682ab9e537405df1e051e3bec2d9b9c188cf71e3172d9f2dd3aa2b8188cd46",

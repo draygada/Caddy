@@ -1,0 +1,23 @@
+{
+  "kind": "extract",
+  "model": "claude-sonnet-5",
+  "prompt_sha256": "197938f04ddee0330e3235584b9ddc4ae0ef723ec74d80f2f43c3a3a92e7cb13",
+  "response": {
+    "specs": [
+      {
+        "doc_sha256": "522ea1b7da6a4a0ff094d9262e8962b6b9b590478b8381d35c0e48bf342339be",
+        "end": 250,
+        "field": "gyro_rate_range_deg_s",
+        "quote": "Gyroscope full-scale range: 2000 dps.",
+        "start": 213,
+        "unit": "deg/s",
+        "value": "2000"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1671,
+    "model": "claude-sonnet-5",
+    "output_tokens": 194
+  }
+}
