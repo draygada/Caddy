@@ -152,6 +152,26 @@ describe('integrated preview routing', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(CONSUMER_POST_ROUTES.length);
   });
 
+  it('forwards CAD capabilities with GET only and no request body', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ status: 'BLOCKED' }, 503));
+    const handler = createProductServiceProxy({ env: ENV, fetchImpl });
+    const getRequest = { ...request('cad/capabilities'), method: 'GET', body: undefined };
+    const { capture, response } = responseCapture();
+
+    await handler(getRequest, response);
+
+    expect(capture.statusCode).toBe(503);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://product-preview-abc-team.vercel.app/api/cad/capabilities',
+      expect.objectContaining({ method: 'GET', body: undefined, headers: { Accept: 'application/json' } }),
+    );
+
+    const denied = responseCapture();
+    await handler({ ...getRequest, method: 'POST', headers: { 'content-type': 'application/json' }, body: {} }, denied.response);
+    expect(denied.capture.statusCode).toBe(405);
+    expect(denied.capture.headers.Allow).toBe('GET');
+  });
+
   it('rejects non-JSON, malformed, and oversized bodies before fetch', async () => {
     const fetchImpl = vi.fn<typeof fetch>();
     const handler = createProductServiceProxy({ env: ENV, fetchImpl });

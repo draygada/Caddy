@@ -30,6 +30,7 @@ const ROUTES = new Map<string, ReadonlySet<string>>([
   ['/api/provenance/verify', new Set(['POST'])],
   ['/api/provenance/accept', new Set(['POST'])],
   ['/api/cad/recompute', new Set(['POST'])],
+  ['/api/cad/capabilities', new Set(['GET'])],
   ['/api/cad/import', new Set(['POST'])],
   ['/api/cad/export', new Set(['POST'])],
   ['/api/cad/outputs/native/seal', new Set(['POST'])],
