@@ -122,3 +122,31 @@ def test_schema_has_no_classification_slot_and_the_search_schema_caps_candidates
     assert validate({"specs": [{**good["specs"][0], "value": 8.7}]}, EXTRACT_SCHEMA) is not None
     assert validate({"candidates": [{"mpn": "x", "url": "u"}] * 6}, SEARCH_SCHEMA) is not None
     assert validate({"candidates": [{"mpn": "x", "url": "u", "eccn": "EAR99"}]}, SEARCH_SCHEMA) is not None
+
+
+def test_a_number_binds_only_to_the_unit_adjacent_to_it():
+    """C1: on Molicel's two-figure line, 643 is the volumetric (Wh/l) figure — only 242 is Wh/kg."""
+    from forge_search.verify import Accepted, Rejected, verify
+    text, sha = _doc("molicel_p45b_test_excerpt.txt")
+    line = "Energy Density: Volumetric 643 Wh/l; Gravimetric 242 Wh/kg."
+    volumetric = verify(text, _claim(text, sha, "energy_density_wh_kg", "643", "Wh/kg", line), field_units=UNITS)
+    gravimetric = verify(text, _claim(text, sha, "energy_density_wh_kg", "242", "Wh/kg", line), field_units=UNITS)
+    assert isinstance(volumetric, Rejected) and volumetric.reason == "number_mismatch" and "242" in volumetric.detail
+    assert isinstance(gravimetric, Accepted) and gravimetric.spec.value == "242"
+
+
+def test_an_unknown_unit_spelling_fails_closed_instead_of_raising():
+    """C2: 'BİTS' lowercases to a non-key; verify must stay inside Accepted | Rejected."""
+    from forge_search.documents import text_sha256
+    from forge_search.verify import Rejected, parse_number_unit, verify
+    quote = "Interface width: 5 BİTS."
+    text = quote + "\n"
+    assert parse_number_unit(quote) is None
+    out = verify(text, _claim(text, text_sha256(text), "frame_rate_hz", "5", "Hz", quote), field_units=UNITS)
+    assert isinstance(out, Rejected) and out.reason == "unparseable"
+
+
+def test_a_degree_unit_flush_against_its_number_parses():
+    """C3: no-space vendor spelling; the bare 'h' alias must not win."""
+    from forge_search.verify import parse_number_unit
+    assert parse_number_unit("0.3°/h") == (Decimal("0.3"), "deg/h")

@@ -26,8 +26,12 @@ UNIT_ALIASES = {
     "elements": "elements", "pixels": "elements",
     "mdps/°c": "mdps/deg C", "mdps/rthz": "mdps/sqrt(Hz)", "mdps/√hz": "mdps/sqrt(Hz)",
 }
-_UNIT_ALTERNATION = "|".join(re.escape(k) for k in sorted(UNIT_ALIASES, key=len, reverse=True))
-UNIT = re.compile(rf"(?<![A-Za-z0-9])({_UNIT_ALTERNATION})(?![A-Za-z])", re.IGNORECASE)
+_BY_LENGTH = sorted(UNIT_ALIASES, key=len, reverse=True)
+_WORDY = "|".join(re.escape(k) for k in _BY_LENGTH if k[0].isalnum())
+_SYMBOLIC = "|".join(re.escape(k) for k in _BY_LENGTH if not k[0].isalnum())
+# A wordy unit needs a non-alphanumeric before it, or "h" matches inside "Wh"; a symbolic one (°/h, ℃, µg)
+# may sit flush against its number, which is how vendors write it.
+UNIT = re.compile(rf"((?<![A-Za-z0-9])(?:{_WORDY})|(?:{_SYMBOLIC}))(?![A-Za-z])", re.IGNORECASE)
 NUMBER = re.compile(r"[-+±]?\d+(?:\.\d+)?")
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _DECIMAL = re.compile(r"^[-+]?\d+(?:\.\d+)?$")
@@ -62,15 +66,33 @@ def canonical_unit(s: str) -> str | None:
     return UNIT_ALIASES.get(s.strip().lower())
 
 
+def _binds(quote: str, number: re.Match, span: tuple[int, int]) -> bool:
+    """A unit binds to a number only when nothing but separators sits between them — no letter, no digit."""
+    start, end = span
+    if start >= number.end():
+        gap = quote[number.end():start]
+    elif end <= number.start():
+        gap = quote[end:number.start()]
+    else:
+        return False
+    return not any(c.isalnum() for c in gap)
+
+
 def parse_number_unit(quote: str) -> tuple[Decimal, str] | None:
-    number = NUMBER.search(quote.replace(",", ""))
-    unit = UNIT.search(quote)
-    if not number or not unit:
-        return None
-    try:
-        return Decimal(number.group().lstrip("±+")), UNIT_ALIASES[unit.group(1).lower()]
-    except InvalidOperation:
-        return None
+    """The first number with a recognised unit adjacent to it, following or preceding. A number never borrows
+    the unit of another figure in the same quote, and a spelling that canonicalises to nothing is not a unit."""
+    quote = quote.replace(",", "")
+    # ponytail: O(numbers x units) over one quote — fine for a line, ~25s on a hostile whole-document
+    # quote; cap the gap length if a caller ever quotes a whole page.
+    units = [(m.span(), canonical_unit(m.group(1))) for m in UNIT.finditer(quote)]
+    for number in NUMBER.finditer(quote):
+        for span, unit in units:
+            if unit is not None and _binds(quote, number, span):
+                try:
+                    return Decimal(number.group().lstrip("±+")), unit
+                except InvalidOperation:
+                    return None
+    return None
 
 
 def _is_int(x) -> bool:
