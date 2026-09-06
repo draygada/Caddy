@@ -60,6 +60,20 @@ def service(data_dir):
     return Service(data_dir)
 
 
+def make_ports(model, *, offline=True):
+    """Ports over the committed fixtures with the given model; fetcher cache in a throwaway directory."""
+    import tempfile
+    from forge_search.propose import Ports
+    from forge_search.fetch import Fetcher
+    from forge_search.rules import load_rules
+    from forge_sourcing.hashing import sha256_bytes
+    tmp = Path(tempfile.mkdtemp(prefix="forge-search-"))
+    pool_raw = (DATA / "search" / "pool.json").read_bytes()
+    return Ports(fetcher=Fetcher(tmp / "fetch", tmp / "documents.json", DATA / "search" / "fixtures", offline=offline), model=model,
+                 rules=load_rules(DATA / "search" / "rules.DRAFT.json"), pool=json.loads(pool_raw.decode("utf-8")),
+                 pool_sha256=sha256_bytes(pool_raw), documents_sha256=None)
+
+
 def run_s1(service, baseline, *, quantity=1, transport_mode="air", request_key="demo-1"):
     """S1: source the baseline to the US bench. Returns the round id."""
     r = service.open_round(baseline, ship_to="US-bench", quantity=quantity, transport_mode=transport_mode,
