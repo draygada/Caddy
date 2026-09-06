@@ -63,5 +63,103 @@
   "sha256": "d7828393aec2a5ed29dc322dcd3025912aec262e886284bbc94db629fa26f2b8",
   "status": "FIXTURE",
   "text_sha256": "d7828393aec2a5ed29dc322dcd3025912aec262e886284bbc94db629fa26f2b8"
+ },
+ "https://amprius.com/products/sa102/": {
+  "bytes": 486659,
+  "chars": 9588,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-06T13:20:55Z",
+  "sha256": "1695eb5fce8ac0ce602739989fd3e86cde5fcc9b2f92955d445b2a1cf3e764ef",
+  "status": "200",
+  "text_sha256": "8a33ecc34ca47e0d5ceca6623eefd677d127d46f8b13c0295e97bc9a773185f0"
+ },
+ "https://d17t6iyxenbwp1.cloudfront.net/s3fs-public/2026-06/DS-000347%20ICM-42688-P%20v1.9.pdf": {
+  "bytes": 1402996,
+  "chars": 197428,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-06T13:20:50Z",
+  "sha256": "9c6b57b0a2e45cf0251dd2423878573bd4da46e0cc2faa93dc558c28af51300a",
+  "status": "200",
+  "text_sha256": "18bd150ab26362aeb0f8065c6b29d1f47c1f5b05953536874e67805ef0bd9271"
+ },
+ "https://estore.st.com/en/stm32f100c8t6b-cpn.html": {
+  "bytes": 392574,
+  "chars": 28747,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-06T13:21:18Z",
+  "sha256": "077ff0c4ac25eaf7d9066696ae6a079eb1758a30eaeef0cd77c26c86a7a8f7d1",
+  "status": "200",
+  "text_sha256": "d9d5771fa3331756119f7272a52ef31db02bbf592a4e37efb7d273ee8586ac70"
+ },
+ "https://groupgets-files.s3.amazonaws.com/lepton/Resources/Lepton%20Series%20Datasheet.pdf": {
+  "bytes": 664842,
+  "chars": 5168,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-06T13:20:44Z",
+  "sha256": "f51211a1c7ba3fdcb98f540e17a48b346edeb2f581aba53a4aeb47e267d4b6f2",
+  "status": "200",
+  "text_sha256": "cb8e74c18d3a1eadaa68c3d975971918315605608f30b012ff84e2f1d3693869"
+ },
+ "https://groupgets.com/products/boson-plus": {
+  "bytes": 800132,
+  "chars": 9726,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-06T13:20:47Z",
+  "sha256": "669a0dc6cf8e41f6bc16b306468421a69a016730d976ec080c7eeb466928777e",
+  "status": "200",
+  "text_sha256": "3f7adfea697a0f7bda74c9ffa808b8af13f29fd6f52bfb38721fbdd69ed3ee2f"
+ },
+ "https://www.molicel.com/wp-content/uploads/INR21700P45B_1.4_Product-Data-Sheet-of-INR-21700-P45B-80109.pdf": {
+  "bytes": 400272,
+  "chars": 1882,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-06T13:20:54Z",
+  "sha256": "54832eb1684991f097578f02dd9ecfc3ba49cbc8bea40beacd7103092b717e69",
+  "status": "200",
+  "text_sha256": "67ab1093b92e7ac1b4148099c6005a8c94a1311ae85f167a06723495547d297a"
+ },
+ "https://www1.futureelectronics.com/doc/FLIR%20SYSTEMS/Lepton%20Export%20fact%20sheet.pdf": {
+  "bytes": 27791,
+  "chars": 2453,
+  "extractor": {
+   "html": "stdlib html.parser; script/style dropped; hidden nodes kept; block tags start a new line",
+   "mode": "PdfReader(...).pages[i].extract_text(); pages joined by \\f",
+   "name": "pypdf",
+   "version": "6.17.0"
+  },
+  "retrieved_at": "2026-09-06T13:20:45Z",
+  "sha256": "8bd212a6b0414c43bf4a9ea416a969ea452d3e86052347cca1d3713c3bb4849d",
+  "status": "200",
+  "text_sha256": "bf69e6b9e3f114acefece932cd448920ca5c70f09f12716c44c373ffa2d3ee36"
  }
 }

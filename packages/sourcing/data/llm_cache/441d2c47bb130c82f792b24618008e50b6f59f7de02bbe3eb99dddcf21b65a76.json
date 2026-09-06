@@ -1,0 +1,41 @@
+{
+  "kind": "extract",
+  "model": "claude-sonnet-5",
+  "prompt_sha256": "441d2c47bb130c82f792b24618008e50b6f59f7de02bbe3eb99dddcf21b65a76",
+  "response": {
+    "specs": [
+      {
+        "doc_sha256": "9f686b5c9915c3073c2f98b9a9cd0547aa940d805a37ce2e9f9e6ea1f772f23b",
+        "end": 211,
+        "field": "resolution_w",
+        "quote": "160 x 120 pixels",
+        "start": 195,
+        "unit": "elements",
+        "value": "160"
+      },
+      {
+        "doc_sha256": "9f686b5c9915c3073c2f98b9a9cd0547aa940d805a37ce2e9f9e6ea1f772f23b",
+        "end": 211,
+        "field": "resolution_h",
+        "quote": "160 x 120 pixels",
+        "start": 195,
+        "unit": "elements",
+        "value": "120"
+      },
+      {
+        "doc_sha256": "9f686b5c9915c3073c2f98b9a9cd0547aa940d805a37ce2e9f9e6ea1f772f23b",
+        "end": 255,
+        "field": "frame_rate_hz",
+        "quote": "Frame rate: 8.7 Hz effective.",
+        "start": 226,
+        "unit": "Hz",
+        "value": "8.7"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1570,
+    "model": "claude-sonnet-5",
+    "output_tokens": 419
+  }
+}

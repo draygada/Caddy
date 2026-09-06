@@ -61,6 +61,35 @@ def test_live_model_records_every_abstain_so_usage_is_never_the_previous_calls(m
     assert res.abstained == "stubbed again" and res.usage is None and answers == []
 
 
+def test_live_model_sends_the_api_subset_of_the_schema(monkeypatch):
+    """req_011CenFs4NW6pJWRQvGJfRQs 400'd on `maxItems`: the request carries `api_schema(...)`, nothing else changes."""
+    import sys
+    from types import SimpleNamespace
+    from forge_search.model import LiveAnthropicModel
+    from forge_search.schemas import EXTRACT_SCHEMA, api_schema
+    seen: dict = {}
+
+    def _create(**kw):
+        seen["create"] = kw
+        return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text='{"specs": []}')],
+                               usage=SimpleNamespace(input_tokens=11, output_tokens=2))
+
+    def _anthropic(**kw):
+        seen["client"] = kw
+        return SimpleNamespace(messages=SimpleNamespace(create=_create))
+
+    monkeypatch.setitem(sys.modules, "anthropic", SimpleNamespace(Anthropic=_anthropic))
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "not-a-real-key")
+    m = LiveAnthropicModel()
+    assert m.propose("extract", "p", EXTRACT_SCHEMA) == {"specs": []}
+    sent = seen["create"]["output_config"]
+    assert sent == {"format": {"type": "json_schema", "schema": api_schema(EXTRACT_SCHEMA)}, "effort": "low"}
+    assert "maxItems" not in sent["format"]["schema"]["properties"]["specs"] and "maxItems" in EXTRACT_SCHEMA["properties"]["specs"]
+    assert seen["create"]["model"] == "claude-sonnet-5" and seen["create"]["max_tokens"] == 4096
+    assert seen["create"]["messages"] == [{"role": "user", "content": "p"}] and seen["client"] == {"timeout": 20.0, "max_retries": 0}
+    assert m.calls[-1].usage == {"input_tokens": 11, "output_tokens": 2, "model": "claude-sonnet-5"}
+
+
 def test_recording_model_fills_the_cache_and_replays(tmp_path: Path):
     from forge_search.model import Abstain, CacheModel, RecordingModel, ScriptedModel
     inner = ScriptedModel({"search": [{"candidates": []}]})

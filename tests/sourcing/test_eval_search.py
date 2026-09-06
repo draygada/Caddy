@@ -62,6 +62,25 @@ def test_run_gold_reports_the_six_measurements_without_a_percentage(data_dir, ke
     assert "accuracy" not in json.dumps(meas).lower() and "%" not in json.dumps(meas)
 
 
+def test_a_candidate_with_several_documents_is_observed_on_its_best_card(data_dir, kestrel):
+    """One candidate, two documents, so two cards — the unreadable one first. The gold row is about the CANDIDATE,
+    so the observation is the best card for that mpn, not whichever card the model happened to name first."""
+    from forge_search.model import ScriptedModel
+    from forge_sourcing.service import Service
+    m = _load("eval_search")
+    gold = [r for r in json.loads((DATA / "search" / "gold_swaps.json").read_text(encoding="utf-8")) if r["id"] == "thermal_lepton_after_boson"]
+    lep, lsha = _doc("lepton35_test_sheet.txt")
+    script = {"search": [{"candidates": [{"mpn": "500-0771-01", "url": "https://www1.futureelectronics.com/doc/FLIR%20SYSTEMS/Lepton%20Export%20fact%20sheet.pdf"},
+                                         {"mpn": "500-0771-01", "url": "fixture://lepton35_test_sheet.txt"}]}],
+              "extract": [{"specs": [_claim(lep, lsha, "frame_rate_hz", "8.7", "Hz", "Frame rate: 8.7 Hz effective."),
+                                     _claim(lep, lsha, "resolution_w", "160", "elements", "160 x 120 pixels"),
+                                     _claim(lep, lsha, "resolution_h", "120", "elements", "120 pixels")]}]}
+    out = m.run_gold(gold, lambda: Service(data_dir), lambda row: make_ports(ScriptedModel(script)), states=kestrel["states"])
+    r = out["results"][0]
+    assert out["measurements"]["verifier_acceptance"]["accepted"] == 3      # only the fixture card read a document; a card with no accepted span is grey
+    assert r["observed"] == "green" and r["pass"] is True and r["reason_hit"] is True and r["candidate"] == "500-0771-01"
+
+
 def test_cache_misses_are_counted_and_abstains_bucketed(data_dir, kestrel, tmp_path):
     from forge_search.model import CacheModel
     from forge_sourcing.service import Service

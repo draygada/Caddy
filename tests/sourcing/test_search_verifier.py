@@ -124,6 +124,49 @@ def test_schema_has_no_classification_slot_and_the_search_schema_caps_candidates
     assert validate({"candidates": [{"mpn": "x", "url": "u", "eccn": "EAR99"}]}, SEARCH_SCHEMA) is not None
 
 
+def _keys(node) -> set:
+    """Every mapping key anywhere in the tree — property names included, so a stray keyword cannot hide as one."""
+    if isinstance(node, dict):
+        return set(node) | {k for v in node.values() for k in _keys(v)}
+    if isinstance(node, list):
+        return {k for v in node for k in _keys(v)}
+    return set()
+
+
+def _object_schemas(node) -> list:
+    if isinstance(node, dict):
+        return ([node] if node.get("type") == "object" else []) + [s for v in node.values() for s in _object_schemas(v)]
+    if isinstance(node, list):
+        return [s for v in node for s in _object_schemas(v)]
+    return []
+
+
+def test_api_schema_strips_what_structured_outputs_reject_and_keeps_the_closed_objects():
+    """req_011CenFs4NW6pJWRQvGJfRQs: the API 400s on `maxItems`, so the request carries the stripped schema."""
+    from forge_search.schemas import API_UNSUPPORTED_KEYWORDS, EXTRACT_SCHEMA, SEARCH_SCHEMA, api_schema
+    for full in (EXTRACT_SCHEMA, SEARCH_SCHEMA):
+        stripped = api_schema(full)
+        assert not (API_UNSUPPORTED_KEYWORDS & _keys(stripped)), sorted(API_UNSUPPORTED_KEYWORDS & _keys(stripped))
+        assert API_UNSUPPORTED_KEYWORDS & _keys(full), "the full schema keeps constraining; only the copy is stripped"
+        assert stripped["properties"] is not full["properties"] and stripped["required"] is not full["required"]
+        objects = _object_schemas(stripped)
+        assert len(objects) == 2, [o.get("required") for o in objects]      # the wrapper and its item, both still closed
+        for obj in objects:
+            assert obj["additionalProperties"] is False and obj["required"] and obj["properties"]
+    assert len(api_schema(EXTRACT_SCHEMA)["properties"]["specs"]["items"]["required"]) == 7
+
+
+def test_the_caller_still_validates_the_full_schema_the_api_never_saw():
+    """The stripped keywords are not relaxed — every one of them is still a schema violation at the caller."""
+    from forge_search.schemas import EXTRACT_SCHEMA, validate
+    spec = {"field": "frame_rate_hz", "value": "8.7", "unit": "Hz", "quote": "q", "start": 0, "end": 1, "doc_sha256": "a" * 64}
+    assert validate({"specs": [spec] * 40}, EXTRACT_SCHEMA) is None
+    assert validate({"specs": [spec] * 41}, EXTRACT_SCHEMA) is not None                                  # maxItems 40
+    assert validate({"specs": [{**spec, "value": "eight point seven"}]}, EXTRACT_SCHEMA) is not None      # pattern
+    assert validate({"specs": [{**spec, "start": -1}]}, EXTRACT_SCHEMA) is not None                       # minimum 0
+    assert validate({"specs": [{**spec, "unit": ""}]}, EXTRACT_SCHEMA) is not None                        # minLength 1
+
+
 def test_a_number_binds_only_to_the_unit_adjacent_to_it():
     """C1: on Molicel's two-figure line, 643 is the volumetric (Wh/l) figure — only 242 is Wh/kg."""
     from forge_search.verify import Accepted, Rejected, verify

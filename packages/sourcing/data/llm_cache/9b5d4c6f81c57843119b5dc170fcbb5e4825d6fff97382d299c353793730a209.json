@@ -1,0 +1,23 @@
+{
+  "kind": "extract",
+  "model": "claude-sonnet-5",
+  "prompt_sha256": "9b5d4c6f81c57843119b5dc170fcbb5e4825d6fff97382d299c353793730a209",
+  "response": {
+    "specs": [
+      {
+        "doc_sha256": "67ab1093b92e7ac1b4148099c6005a8c94a1311ae85f167a06723495547d297a",
+        "end": 1034,
+        "field": "energy_density_wh_kg",
+        "quote": "242 Wh/kg",
+        "start": 1025,
+        "unit": "Wh/kg",
+        "value": "242"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 2473,
+    "model": "claude-sonnet-5",
+    "output_tokens": 168
+  }
+}

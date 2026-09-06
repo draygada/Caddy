@@ -1,0 +1,26 @@
+{
+  "kind": "search",
+  "model": "claude-opus-5",
+  "prompt_sha256": "03c99a362fe889e656b0ad68caaedaaff000d531e03b58fa5d479bd030893b79",
+  "response": {
+    "candidates": [
+      {
+        "mpn": "500-0771-01",
+        "url": "https://groupgets-files.s3.amazonaws.com/lepton/Resources/Lepton%20Series%20Datasheet.pdf"
+      },
+      {
+        "mpn": "500-0771-01",
+        "url": "https://www1.futureelectronics.com/doc/FLIR%20SYSTEMS/Lepton%20Export%20fact%20sheet.pdf"
+      },
+      {
+        "mpn": "500-0771-01",
+        "url": "fixture://lepton35_test_sheet.txt"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1106,
+    "model": "claude-opus-5",
+    "output_tokens": 184
+  }
+}

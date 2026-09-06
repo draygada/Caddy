@@ -11,9 +11,9 @@ cd packages/sourcing && make env        # venv + pins (pytest, pypdf, jsonschema
 make test                               # offline: no model, no network, no spend
 make serve                              # http://127.0.0.1:8000/  (one page over round_view; /api/sourcing/*; GET /api/sourcing/now)
 make seed                               # network: fetch the pool's real documents into .cache/fetch (allowlisted; bytes never committed)
-make eval                               # the six measurements over data/search/gold_swaps.json from the committed cache
+make eval                               # replays the committed cache (13 prompts) over data/search/gold_swaps.json: the six measurements, cache_misses 0
 make refresh-csl / refresh-hts / refresh-cross / refresh-ownership   # live public data → dated fixtures or printed rows (human-run)
-TRIPWIRE_LLM=live ANTHROPIC_API_KEY=… make record-cache               # ONE live run, $5 per run under the $50 key cap, fills data/llm_cache; then make eval must show cache_misses 0
+TRIPWIRE_LLM=live ANTHROPIC_API_KEY=… make record-cache               # RE-records data/llm_cache from live calls, $5 per run under the $50 key cap; recorded once on 2026-09-06, so only run it to replace what is committed
 ```
 
 Runtime for `forge_sourcing` is the Python standard library only. `forge_search` adds `pypdf==6.17.0` and `jsonschema==4.26.0`; the API adds `fastapi==0.121.2` and `uvicorn==0.41.0`; `anthropic==1.4.0` is opt-in for the live adapter. The suite passes with the network cable out.
@@ -49,7 +49,9 @@ One bounded `search` call over the owned pool proposes `{mpn, url}` pairs; code 
 | IMU-NG | SYNTHETIC | red | ARW 0.0008: USML XII(e)(12)(i) fires |
 | GX-220 (poisoned page) | SYNTHETIC | red | the truthful span fires 7A002.a.1.a; "five degrees per hour" ends in REJECT |
 | Molicel P45B after SiCore | REAL | grey | 242 Wh/kg verified; 3A001.e.1.b no fire; rate not verified until `make refresh-hts` |
-| STM32F100 origin escalation | REAL | grey, not confident | st.com resets non-browser connections; no source resolved; a human resolves |
+| STM32F100 origin escalation | REAL | grey, not confident | the estore page answered and the datasheet PDF timed out, so one source of two resolved; origin is a declaration no span can settle, so the agent is never confident and a human resolves |
+
+The "Why" column is the row's intent. What the recorded cache actually replays — which card bound which figure, and the five spans the verifier refused on the offsets the model gave — is measured span by span in `HANDOFF.md`, and a candidate carrying several documents is observed on its best card.
 
 The claim a judge can hear: *"No part-search, BOM or component-intelligence tool we found computes or filters parts by export-control jurisdiction or classification at the part level. Digi-Key's API returns a manufacturer-declared ECCN as a static per-part data field, but nowhere is it a searchable or filterable parameter; the closest thing to a filter, Thomasnet's 'ITAR Registered' checkbox, is a self-declared company-level DDTC-registration flag, not a per-part determination."* Never "nobody does AI part search".
 
@@ -67,8 +69,8 @@ What is said about the accept button (Step 10, rewritten per the S8 verifier): N
 | Order dispatch | synthetic adapter only, labelled SYNTHETIC; no real send exists |
 | Signing | hash chain only; Ed25519 signing belongs to the platform log module and the line says so |
 | Candidate pool (`data/search/pool.json`) | REAL rows typed from THE BUILD, the tripwire catalog and manufacturer pages; **IMU-NG and GX-220 are SYNTHETIC** and badged; declared fields are unverified until a span is accepted |
-| Documents | fixture documents are team-authored and badged SYNTHETIC; real datasheets are fetched under the allowlist into `.cache/fetch` and never committed; `data/search/documents.json` commits their hashes |
-| Model answers (`data/llm_cache/`) | empty until Charlie's one live run records them; until then the page prints "abstained: cache miss" |
+| Documents | fixture documents are team-authored and badged SYNTHETIC; real datasheets are fetched under the allowlist into `.cache/fetch` and never committed; `data/search/documents.json` commits their hashes — 12 rows now, five fixtures and the seven real documents the seeding fetched |
+| Model answers (`data/llm_cache/`) | **13 real answers**, recorded on 2026-09-06 in one live run (23 provider calls; $0.39 priced from the recorded usage) and committed. `make eval` replays them with `cache_misses 0`; a prompt outside those 13 still prints "abstained: cache miss" |
 | Draft rules (`data/search/rules.DRAFT.json`) | byte copy of the tripwire draft (sha `ac95bcdd…`), DRAFT pending Charlie (D-6); the dry-run is the first slice of the engine and goes when the engine lands |
 
 ## Determinism

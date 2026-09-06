@@ -1,33 +1,33 @@
 {
   "lane": "sourcing",
-  "branch": "lane/sourcing-rulings",
+  "branch": "lane/sourcing-live-cache",
   "worktree": "/Users/charliehaywood/Downloads/CADdyDaddy-sourcing",
   "exclusive_write_paths": [
     "packages/sourcing/**",
     "tests/sourcing/**",
     "governance/receipts/sourcing.json"
   ],
-  "base_commit": "715f24e6ddb2e64292c33d50a8559b06315eff13",
+  "base_commit": "3e834f1afa78366963347351515ec4d2def91024",
   "status": "ASSIGNED_LOCAL_CANDIDATE",
   "mutation_admitted": true,
   "writer": {
     "writer_id": "charlie-haywood/claude-code-session",
     "task_id": "sourcing-lane-2026-09-05",
     "model": "claude-fable-5-1",
-    "authority": "Charlie Haywood, in-session instructions 2026-09-05/06: implement the sourcing backend per the DNHacks engineering direction and feature specs, then the part-search lane of the 2026-09-05 agentic part-search research on a separate branch off lane/sourcing; 2026-09-06: apply the six plan-mandated rulings P-A\u2026P-F as recommended, plus residuals R-1/R-2, on lane/sourcing-rulings off merged main; 2026-09-06: close the three Minor findings from the merge-gate review of lane/sourcing-rulings (smallest change, a covering test each, nothing outside custody)"
+    "authority": "Charlie Haywood, in-session instructions 2026-09-05/06: implement the sourcing backend per the DNHacks engineering direction and feature specs, then the part-search lane of the 2026-09-05 agentic part-search research on a separate branch off lane/sourcing; 2026-09-06: apply the six plan-mandated rulings P-A\u2026P-F as recommended, plus residuals R-1/R-2, on lane/sourcing-rulings off merged main; 2026-09-06: close the three Minor findings from the merge-gate review of lane/sourcing-rulings (smallest change, a covering test each, nothing outside custody); 2026-09-06: land Charlie's one live recording run on lane/sourcing-live-cache off merged main \u2014 commit the recorded model cache and the seeded document manifest, fix the eval harness to observe the best card per candidate mpn, correct the escalation gold row to the measured words, and refresh the handoff, README and receipt; no live call from this session"
   },
   "lease_acquired_at": "2026-09-06T00:20:00Z",
   "renew_by": null,
   "expires_at": null,
-  "candidate_commit": "1ba3aa0bc37b6f29cf7224d1ff4572434d049301",
+  "candidate_commit": "876b0212edb8264efc6a408e2747a3ee7bd2b05d",
   "registry_status": "NOT_ADMITTED \u2014 proposal at packages/sourcing/handoff/custody-lane-entry.proposed.json",
   "now_observation": {
     "schema_version": "1.0.0",
-    "observed_at": "2026-09-06T13:09:00Z",
+    "observed_at": "2026-09-06T13:53:41Z",
     "worktree_label": "forge/sourcing",
     "task": {
       "id": "sourcing-lane-2026-09-05",
-      "title": "Sourcing lane + search lane (byte-verified proposer on copies), live refresh scripts, HTTP adapter and page, engine adapter; Charlie's 2026-09-06 rulings applied and the three merge-gate Minor findings closed",
+      "title": "Sourcing lane + search lane (byte-verified proposer on copies), live refresh scripts, HTTP adapter and page, engine adapter; Charlie's 2026-09-06 rulings and the merge-gate findings closed; the structured-output schema fix, one live recording run committed as data/llm_cache, and the eval harness reading the best card per candidate",
       "evidence_class": "MEASURED",
       "evidence_ref": "packages/sourcing/HANDOFF.md"
     },
@@ -48,18 +48,18 @@
     "lane_state": {
       "value": "IMPLEMENTED_LOCAL_UNADMITTED",
       "evidence_class": "MEASURED",
-      "evidence_ref": "git:1ba3aa0bc37b6f29cf7224d1ff4572434d049301"
+      "evidence_ref": "git:876b0212edb8264efc6a408e2747a3ee7bd2b05d"
     },
     "current_action": {
-      "value": "Charlie's six plan-mandated rulings (P-A honest CSL date, P-B GREEN names deferred tree rows, P-C not-guards honoured fail-closed, P-D canonical check matched|not_checked never differs, P-E root product's determination carried, P-F candidate envelope on 409) and two residuals (R-1 refine quantity 422, R-2 glued letters never bind) committed on lane/sourcing-rulings with covering tests, then the three merge-gate Minor findings closed on top (the missing-key 422 raised on the path so it travels with a router-only mount; a `not` operand keyed `all` is ONE conjunctive guard instead of two fail-open ones; the Makefile's custody base read from `git merge-base origin/main HEAD`) with a covering test each (174 passed); handoff and receipt refreshed; awaiting review and merge; Charlie's live cache recording still owed",
+      "value": "One live recording run (Charlie's key, 2026-09-06) is committed: 23 provider calls for 13 unique prompts in data/llm_cache ($1.97 reserved by estimate, $0.39 priced from the recorded usage), plus the seeded 12-row document manifest. `make eval` and `eval_search.py --mode cache --assert-cached` replay it with cache_misses 0 and all six gold rows passing (two of the six are synthetic by construction, so it is a per-row record, never a rate). Two changes were needed to get there and both have covering tests: the eval harness now observes the BEST card for the expected mpn (a candidate carries several documents, so the proposer emits several cards, and the harness had been reading the first one), and the io_mcu escalation gold row now looks for 'not confident' \u2014 the phrase every escalation prints \u2014 because the estore source answered where the row had assumed neither st.com host would. 178 passed. Reproduced offline from the cache: all ten span_not_found rejections are the model's character offsets, not the document text; the quoted sentence is present verbatim in every one. Handoff, README and receipt refreshed; awaiting review and merge; not pushed",
       "evidence_class": "MEASURED",
       "evidence_ref": "packages/sourcing/HANDOFF.md"
     },
     "last_evidenced_change": {
       "kind": "commit",
-      "occurred_at": "2026-09-06T13:06:08Z",
+      "occurred_at": "2026-09-06T13:43:41Z",
       "evidence_class": "MEASURED",
-      "evidence_ref": "git:1ba3aa0bc37b6f29cf7224d1ff4572434d049301"
+      "evidence_ref": "git:876b0212edb8264efc6a408e2747a3ee7bd2b05d"
     },
     "blockers": [
       {
@@ -90,15 +90,6 @@
         "evidence_ref": "packages/sourcing/data/tariff.json"
       },
       {
-        "id": "llm-cache-not-recorded",
-        "state": "HOLD",
-        "summary": "data/llm_cache is empty; the page prints 'abstained: cache miss' until one live run records it",
-        "clearer": "Charlie (key holder)",
-        "next_unblock": "make seed, then TRIPWIRE_LLM=live ANTHROPIC_API_KEY=\u2026 make record-cache, then make eval (cache_misses 0), then commit data/llm_cache",
-        "evidence_class": "MEASURED",
-        "evidence_ref": "packages/sourcing/data/llm_cache/"
-      },
-      {
         "id": "rules-draft-gaps",
         "state": "HOLD",
         "summary": "rules.DRAFT.json has no 7A002.a.2 branch and its 848 row names part classes the lane does not use; DRAFT pending sign-off (D-6)",
@@ -106,22 +97,48 @@
         "next_unblock": "sign off rules.json per DRAFT_REVIEW.md; add the a.2 row; align part_class names",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/HANDOFF.md"
+      },
+      {
+        "id": "span-offsets-refused",
+        "state": "HOLD",
+        "summary": "five of the sixteen figures the model quoted were refused span_not_found: the sentence is in the document verbatim, the character offsets it gave are off by 1 to 4",
+        "clearer": "search lane",
+        "next_unblock": "a bounded re-anchor near the stated offset that accepts only an exact, unique byte match, or a prompt that makes the model re-check the offsets; never relax the equality test",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/sourcing/HANDOFF.md"
+      },
+      {
+        "id": "one-live-run-only",
+        "state": "HOLD",
+        "summary": "the committed cache is one run of one model pair at one PROMPT_VERSION; nothing is known about variance, and a prompt change invalidates every key",
+        "clearer": "Charlie (key holder)",
+        "next_unblock": "a second recording run, after the recorder reads the cache before each call so a repeated prompt is not re-bought",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/sourcing/data/llm_cache/"
       }
     ],
     "checks": [
       {
         "name": "pytest tests/sourcing",
         "state": "PASSED",
-        "observed_at": "2026-09-06T13:09:00Z",
-        "candidate": "1ba3aa0bc37b6f29cf7224d1ff4572434d049301",
+        "observed_at": "2026-09-06T13:53:41Z",
+        "candidate": "876b0212edb8264efc6a408e2747a3ee7bd2b05d",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/HANDOFF.md"
       },
       {
         "name": "tools/check_custody.py --lane sourcing (patched copy, over the repository registry merged with the lane's proposal; base = this branch's merge-base with main)",
         "state": "PASSED",
-        "observed_at": "2026-09-06T13:09:00Z",
-        "candidate": "1ba3aa0bc37b6f29cf7224d1ff4572434d049301",
+        "observed_at": "2026-09-06T13:53:41Z",
+        "candidate": "876b0212edb8264efc6a408e2747a3ee7bd2b05d",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "packages/sourcing/HANDOFF.md"
+      },
+      {
+        "name": "make eval (scripts/eval_search.py --mode cache --assert-cached) over data/search/gold_swaps.json",
+        "state": "PASSED",
+        "observed_at": "2026-09-06T13:53:41Z",
+        "candidate": "876b0212edb8264efc6a408e2747a3ee7bd2b05d",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/HANDOFF.md"
       }

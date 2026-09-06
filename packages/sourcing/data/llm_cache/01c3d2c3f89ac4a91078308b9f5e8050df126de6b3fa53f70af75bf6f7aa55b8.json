@@ -1,0 +1,22 @@
+{
+  "kind": "escalation",
+  "model": "claude-opus-5",
+  "prompt_sha256": "01c3d2c3f89ac4a91078308b9f5e8050df126de6b3fa53f70af75bf6f7aa55b8",
+  "response": {
+    "candidates": [
+      {
+        "mpn": "STM32F100C8T6B",
+        "url": "https://estore.st.com/en/stm32f100c8t6b-cpn.html"
+      },
+      {
+        "mpn": "STM32F100C8T6B",
+        "url": "https://www.st.com/resource/en/datasheet/stm32f100c8.pdf"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 549,
+    "model": "claude-opus-5",
+    "output_tokens": 113
+  }
+}

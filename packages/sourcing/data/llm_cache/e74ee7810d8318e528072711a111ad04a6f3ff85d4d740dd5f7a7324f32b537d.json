@@ -1,0 +1,23 @@
+{
+  "kind": "extract",
+  "model": "claude-sonnet-5",
+  "prompt_sha256": "e74ee7810d8318e528072711a111ad04a6f3ff85d4d740dd5f7a7324f32b537d",
+  "response": {
+    "specs": [
+      {
+        "doc_sha256": "d7828393aec2a5ed29dc322dcd3025912aec262e886284bbc94db629fa26f2b8",
+        "end": 379,
+        "field": "energy_density_wh_kg",
+        "quote": "Gravimetric 242 Wh/kg",
+        "start": 358,
+        "unit": "Wh/kg",
+        "value": "242"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1126,
+    "model": "claude-sonnet-5",
+    "output_tokens": 122
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "kind": "extract",
+  "model": "claude-sonnet-5",
+  "prompt_sha256": "ec4401c0a49681cf6f22fa15c03f2e3d87eeb50101cd7bd19d31804f18835676",
+  "response": {
+    "specs": [
+      {
+        "doc_sha256": "be5751c90231b68d10c1508d230eb17036b7770eef660c071da78a8716fbe7f8",
+        "end": 189,
+        "field": "gyro_rate_range_deg_s",
+        "quote": "Gyro rate range: 400 deg/s.",
+        "start": 162,
+        "unit": "deg/s",
+        "value": "400"
+      },
+      {
+        "doc_sha256": "be5751c90231b68d10c1508d230eb17036b7770eef660c071da78a8716fbe7f8",
+        "end": 228,
+        "field": "gyro_arw_deg_sqrt_h",
+        "quote": "Angle random walk: 0.0008 deg/sqrt(h).",
+        "start": 190,
+        "unit": "deg/sqrt(h)",
+        "value": "0.0008"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1617,
+    "model": "claude-sonnet-5",
+    "output_tokens": 253
+  }
+}
