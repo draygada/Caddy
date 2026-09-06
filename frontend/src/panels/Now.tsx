@@ -42,7 +42,8 @@ export function Now() {
   const events = useStore((state) => state.events);
   const pack = useStore((state) => state.pack);
   const roundStatus = useStore((state) => state.round?.status ?? 'NO ROUND');
-  const snapshot = useStore((state) => state.snapshot());
+  const snapshotDesign = useStore((state) => state.snapshot);
+  const snapshot = snapshotDesign();
   const progress = calculateProgress();
   const nextSteps = orderedNextSteps();
   const available = PROGRESS_ATLAS.capabilities.filter((capability) => capability.status !== 'unavailable');
