@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useStore } from '../store';
+import { useStore, intakeIncomplete } from '../store';
 import { CATALOG, GENERIC_NAME, SLOTS, type Node, type Slot } from '../lib/catalog';
 import { AF_THUMB, THUMBS, type ThumbFace } from '../lib/geometry';
 import type { Outcome, Rule } from '../lib/rules';
@@ -61,6 +61,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [showClean, setShowClean] = useState(false);
   const overall = overallOf(o);
+  const incomplete = intakeIncomplete(s.project?.intake ?? null);
   const rows: PartRow[] = (['airframe', ...SLOTS] as Node[]).map((node) => {
     const unconfirmed = node !== 'airframe' && !!s.unconfirmed[node as Slot];
     const level = levelOf(o, node, unconfirmed);
@@ -132,8 +133,8 @@ export function ClassificationTab({ o }: { o: Outcome }) {
       <div className="panel">
         <div className="p-4 grid gap-2">
           <div className="flex items-baseline gap-3 flex-wrap">
-            <span className="status-word text-[22px]" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>
-            <span className="text-[14px] text-muted">{overall.sub}</span>
+            {incomplete ? <span className="status-word text-[22px]" style={{ color: 'var(--amber)' }}>? Requires more information</span> : <span className="status-word text-[22px]" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>}
+            <span className="text-[14px] text-muted">{incomplete ? 'the use-case answers are missing or “not sure yet” · the parts below are still evaluated on their own attributes' : overall.sub}</span>
           </div>
           <div className="text-[14px]">{overall.entries}</div>
           <div className="text-[12px] text-muted">{STATUS_CLAIM_CEILING.title}: {STATUS_CLAIM_CEILING.body}</div>

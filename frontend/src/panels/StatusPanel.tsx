@@ -1,4 +1,4 @@
-import { useStore } from '../store';
+import { useStore, intakeIncomplete } from '../store';
 import type { Outcome } from '../lib/rules';
 import { attentionOf, overallOf, slotStatus, STATUS_CLAIM_CEILING } from '../lib/viewmodel';
 import { GENERIC_NAME, SLOTS, type Node } from '../lib/catalog';
@@ -13,6 +13,7 @@ export function StatusPanel({ o }: { o: Outcome }) {
   const select = useStore((s) => s.select);
   const openReasoning = useStore((s) => s.openReasoning);
   const setWorkspace = useStore((s) => s.setWorkspace);
+  const incomplete = useStore((s) => intakeIncomplete(s.project?.intake ?? null));
   const nodes: Node[] = ['airframe', ...SLOTS];
   const overall = overallOf(o);
   const attentionCount = attentionOf(o, unconfirmed).length;
@@ -29,10 +30,18 @@ export function StatusPanel({ o }: { o: Outcome }) {
           <button onClick={() => setWorkspace('sourcing')} className="btn btn-primary">Source this design</button>
         </span>
       </div>
-      <div className="p-3 grid gap-1 border-b border-line2">
-        <span className="status-word text-[20px] justify-self-start" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>
-        <div className="text-[14px]">{overall.entries}</div>
-      </div>
+      {incomplete ? (
+        <div className="p-3 grid gap-2 border-b border-line2">
+          <span className="status-word text-[18px] justify-self-start" style={{ color: 'var(--amber)' }}>? Requires more information</span>
+          <div className="text-[13px]">The use-case answers are missing or “not sure yet”. Classification can be computed on the parts alone, but the product status is not complete until the end use, the end user and the aircraft question are answered.</div>
+          <button onClick={() => useStore.getState().patch({ intakeOpen: true })} className="btn btn-primary justify-self-start">Answer the questions</button>
+        </div>
+      ) : (
+        <div className="p-3 grid gap-1 border-b border-line2">
+          <span className="status-word text-[20px] justify-self-start" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>
+          <div className="text-[14px]">{overall.entries}</div>
+        </div>
+      )}
       <div className="px-3 py-2 grid">
         <div className="flex justify-between items-baseline pb-1">
           <span className="text-[13px] text-muted">{concern.length ? 'parts that need a look' : 'no part needs a look'}</span>

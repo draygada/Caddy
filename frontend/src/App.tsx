@@ -15,6 +15,8 @@ import { CommandBox } from './panels/CommandBox';
 import { TripwirePanel } from './panels/TripwirePanel';
 import { MissionNav } from './panels/MissionNav';
 import { ClassificationTab } from './panels/ClassificationTab';
+import { ProjectsHome } from './panels/ProjectsHome';
+import { IntakeDialog, NeedsInfoBanner } from './panels/IntakeDialog';
 import { runCommand } from './commands';
 import { useTripwireStore } from './tripwire-store';
 
@@ -78,12 +80,16 @@ export default function App() {
   const openTimeline = useStore((s) => s.openTimeline);
   const workspace = useStore((s) => s.workspace);
   const setWorkspace = useStore((s) => s.setWorkspace);
+  const project = useStore((s) => s.project);
   const compact = useCompactWorkspace();
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('model');
   const o = useMemo(() => service.evaluate({ parts, attrs, span, declared }, pack), [parts, attrs, span, declared, pack]);
   useKeyboard();
 
   const active: WorkspaceId = sourcingOpen ? 'sourcing' : workspace;
+  if (!project) return <div data-theme={theme} className="h-full min-w-0 bg-bg text-ink">
+    <ProjectsHome />
+  </div>;
   const goHome = () => { useStore.getState().closeAll(); useTripwireStore.getState().closePanel(); setWorkspace('design'); };
 
   const designSurface = !compact ? (
@@ -128,7 +134,9 @@ export default function App() {
           <span>service not reachable · replaying the cached baseline · last outcome 2026-09-05 09:12</span>
         </div>
       )}
+      {active !== 'sourcing' && <NeedsInfoBanner compact />}
       {surface}
+      <IntakeDialog />
       {reasoningOpen && <Reasoning o={o} />}
       {timelineOpen && <Timeline />}
       {helpOpen && <HelpOverlay />}

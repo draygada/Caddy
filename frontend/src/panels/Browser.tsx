@@ -1,4 +1,4 @@
-import { useState, type DragEvent, type ReactNode } from 'react';
+import { useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { useStore, BODY_LABEL } from '../store';
 import { DEFAULT_PART, GENERIC_NAME, SLOTS, type PartId, type Slot } from '../lib/catalog';
 import { UNITS } from '../lib/units';
@@ -34,15 +34,26 @@ function Row({ depth, icon, name, open, onToggle, hiddenId, active, dim, radio, 
 function Swatch({ slot }: { slot: Slot }) {
   const tint = useStore((s) => s.tint[slot]);
   const setTint = useStore((s) => s.setTint);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<{ left: number; top: number } | null>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  // The popover is a fixed overlay so the panel's scroll container cannot clip it.
+  const toggle = () => {
+    if (open) { setOpen(null); return; }
+    const r = btn.current?.getBoundingClientRect();
+    if (!r) return;
+    setOpen({ left: Math.max(8, r.right - 116), top: r.bottom + 4 });
+  };
   return (
-    <span className="relative" onClick={(e) => e.stopPropagation()}>
-      <button aria-label="appearance" title="Appearance · tint" onClick={() => setOpen((v) => !v)} className="tree-btn"><span className="w-[10px] h-[10px] rounded-[2px] border" style={{ background: tint || 'var(--m2)', borderColor: 'var(--line)' }} /></button>
+    <span onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+      <button ref={btn} aria-label="appearance" title="Appearance · tint" aria-expanded={!!open} onClick={toggle} className="tree-btn"><span className="w-[10px] h-[10px] rounded-[2px] border" style={{ background: tint || 'var(--m2)', borderColor: 'var(--line)' }} /></button>
       {open && (
-        <div className="absolute right-0 top-5 z-[15] grid grid-cols-4 gap-1 p-1 bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)]" onMouseLeave={() => setOpen(false)}>
-          {SWATCHES.map((c) => <button key={c} aria-label={c} onClick={() => { setTint(slot, c); setOpen(false); }} className="w-5 h-5 rounded-[3px] border" style={{ background: c, borderColor: tint === c ? 'var(--ink)' : 'transparent' }} />)}
-          <button onClick={() => { setTint(slot, null); setOpen(false); }} className="col-span-4 btn btn-xs mt-1">none</button>
-        </div>
+        <>
+          <div className="fixed inset-0 z-[49]" onMouseDown={(e) => { e.stopPropagation(); setOpen(null); }} />
+          <div role="menu" aria-label="tint" className="fixed z-[50] w-[116px] grid grid-cols-4 gap-1 p-1 bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)]" style={{ left: open.left, top: open.top }} onMouseDown={(e) => e.stopPropagation()}>
+            {SWATCHES.map((c) => <button key={c} aria-label={c} onClick={() => { setTint(slot, c); setOpen(null); }} className="w-5 h-5 rounded-[3px] border cursor-pointer" style={{ background: c, borderColor: tint === c ? 'var(--ink)' : 'transparent' }} />)}
+            <button onClick={() => { setTint(slot, null); setOpen(null); }} className="col-span-4 btn btn-xs mt-1">none</button>
+          </div>
+        </>
       )}
     </span>
   );

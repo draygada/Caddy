@@ -56,14 +56,25 @@ export interface RoundSelection { offerId: string; attestor: string; seq: number
 export interface Declaration { personStatus: 'US person' | 'foreign person'; sharing: string; reference: string; attestor: string }
 /** Declared facts about the use case and the end user, asked before the search runs. Declared, badged, never inferred. */
 export interface Intake {
-  endUse: 'civil survey and mapping' | 'agriculture' | 'public safety' | 'infrastructure inspection' | 'defense-adjacent research' | 'other';
-  endUser: 'commercial operator' | 'university' | 'government agency (civil)' | 'military or defense prime' | 'unknown';
+  endUse: 'civil survey and mapping' | 'agriculture' | 'public safety' | 'infrastructure inspection' | 'defense-adjacent research' | 'other' | 'not sure yet';
+  endUser: 'commercial operator' | 'university' | 'government agency (civil)' | 'military or defense prime' | 'not sure yet';
+  shipTo: ShipTo;
+  qty: number;
+  mode: Mode;
   civilProduct: boolean;
   bvlos: boolean;
-  usedOn: 'none' | 'in-production unlisted aircraft' | 'listed military aircraft';
+  usedOn: 'none' | 'in-production unlisted aircraft' | 'listed military aircraft' | 'not sure yet';
   notes: string;
 }
-export const INTAKE_DEFAULT: Intake = { endUse: 'civil survey and mapping', endUser: 'commercial operator', civilProduct: true, bvlos: false, usedOn: 'none', notes: '' };
+export const INTAKE_DEFAULT: Intake = { endUse: 'civil survey and mapping', endUser: 'commercial operator', shipTo: 'US', qty: 1, mode: 'air', civilProduct: true, bvlos: false, usedOn: 'none', notes: '' };
+/** True when a required answer is still "not sure yet": classification and sourcing then ask for more information. */
+export const intakeIncomplete = (i: Intake | null) => !i || i.endUse === 'not sure yet' || i.endUser === 'not sure yet' || i.usedOn === 'not sure yet';
+
+/** A project is a design plus the declared use-case answers. The sample project ships with its answers filled in. */
+export interface Project { id: string; name: string; description: string; intake: Intake | null; createdAt: string; openedAt: string; /** the design as last left; drives the card preview */ snapshot?: Snapshot }
+export const SAMPLE_PROJECTS: Project[] = [
+  { id: 'kestrel', name: 'Kestrel', description: 'Fixed-wing survey drone · 7 slots · the demo design', intake: { ...INTAKE_DEFAULT }, createdAt: '2026-09-04 18:10', openedAt: '2026-09-05 09:12' },
+];
 export type OrderState = 'DRAFT' | 'DISPATCH_PENDING' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'EXCEPTION' | 'DISPATCH_UNKNOWN' | 'CLOSED';
 export interface Order { key: string; packetHash: string; state: OrderState; receipt: string | null; attempts: number; trail: string[] }
 export interface Round {
@@ -154,6 +165,13 @@ export interface WorkbenchState extends Snapshot {
   injectException: boolean;
   workspace: WorkspaceId;
   setWorkspace: (w: WorkspaceId) => void;
+  projects: Project[];
+  project: Project | null;
+  intakeOpen: boolean;
+  openProject: (id: string) => void;
+  createProject: (name: string, description: string, intake: Intake | null) => void;
+  setProjectIntake: (intake: Intake | null) => void;
+  closeProject: () => void;
   /** rule pack the engine evaluates under (committed) */
   pack: PackId;
   determination: { chip: 'CACHED' | 'LIVE'; memoHash: string; entries: string[]; basis: string; conflict: string | null; at: string } | null;
@@ -324,6 +342,38 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     lane: 'all', copied: null, viewMode: 'model', grid: true, navMode: 'orbit', visualStyle: 'edges', hidden: {},
     round: null, sourcingOpen: false, injectException: false,
     workspace: 'design',
+    projects: SAMPLE_PROJECTS.map((p) => ({ ...p })),
+    project: null,
+    intakeOpen: false,
+    openProject: (id) => {
+      const s = get();
+      const p = s.projects.find((x) => x.id === id);
+      if (!p) return;
+      const opened = { ...p, openedAt: now() };
+      set({ ...baseline(), ...(p.snapshot ?? {}), round: null, sourcingOpen: false, workspace: 'design', project: opened, projects: s.projects.map((x) => (x.id === id ? opened : x)) });
+    },
+    createProject: (name, description, intake) => {
+      const s = get();
+      const id = 'p' + Date.now().toString(36);
+      // a new design starts with the bracket and empty slots
+      const emptyParts = Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts;
+      const snapshot: Snapshot = { ...baselineSnapshot(), parts: emptyParts, attrs: attrsFor(emptyParts) };
+      const p: Project = { id, name: name.trim() || 'Untitled project', description: description.trim(), intake, createdAt: now(), openedAt: now(), snapshot };
+      set({ ...baseline(), ...snapshot, round: null, sourcingOpen: false, workspace: 'design', project: p, projects: [p, ...s.projects], intakeOpen: false });
+      append({ kind: 'design_opened', text: p.name + ' · new project' + (intake ? ' · use case declared' : ' · use case skipped for now'), entry: intake ? intake.endUse + ' · ' + intake.endUser + ' · ship-to ' + intake.shipTo : 'this application requires more information before classification and sourcing complete', intent: description });
+    },
+    setProjectIntake: (intake) => {
+      const s = get();
+      if (!s.project) return;
+      const p = { ...s.project, intake };
+      set({ project: p, projects: s.projects.map((x) => (x.id === p.id ? p : x)), intakeOpen: false });
+      if (intake) append({ kind: 'flag_declared', text: 'use case declared · ' + intake.endUse + ' · ' + intake.endUser + ' · ship-to ' + intake.shipTo + (intake.civilProduct ? ' · civil product' : '') + (intake.bvlos ? ' · BVLOS' : '') + (intake.usedOn !== 'none' ? ' · used on ' + intake.usedOn : ''), entry: 'declared facts · badged, never inferred', intent: intake.notes });
+    },
+    closeProject: () => set((s) => {
+      // keep the design as left, so the project card preview shows it
+      const saved = s.project ? { ...s.project, snapshot: pickSnapshot(s) } : null;
+      return { project: null, projects: saved ? s.projects.map((x) => (x.id === saved.id ? saved : x)) : s.projects, intakeOpen: false, reasoningOpen: false, timelineOpen: false, sourcingOpen: false, cmdOpen: false };
+    }),
     setWorkspace: (w) => set({ workspace: w, sourcingOpen: w === 'sourcing', sourcesOpen: false, recordOpen: false, reasoningOpen: false, timelineOpen: false, marking: null, cmdOpen: false }),
     pack: 'v2', determination: null, apiWarm: false, apiNote: null, tamperedSeq: null, recordOpen: false, sourcesOpen: false,
     sources: { doc: null, slot: null, network: [], proposals: [], showHidden: false, candidates: [], candidateNode: null, llmNote: null },
@@ -866,5 +916,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
   };
 });
 
+/** Preview snapshot for a project card that has not stored one yet (the sample project shows the baseline design). */
+export const baselineSnapshotFor = (_projectId: string): Snapshot => baselineSnapshot();
 export const fieldKey = (slot: Slot, field: FieldSpec) => slot + '.' + field.key;
 export const fieldsFor = (slot: Slot) => FIELDS[slot];

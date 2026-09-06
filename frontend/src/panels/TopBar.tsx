@@ -1,4 +1,4 @@
-import { useStore } from '../store';
+import { useStore, intakeIncomplete } from '../store';
 import { useTripwireStore } from '../tripwire-store';
 
 interface TopBarProps {
@@ -11,6 +11,9 @@ export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
   const toggleTheme = useStore((s) => s.toggleTheme);
   const toggleHelp = useStore((s) => s.toggleHelp);
   const patch = useStore((s) => s.patch);
+  const project = useStore((s) => s.project);
+  const closeProject = useStore((s) => s.closeProject);
+  const projectName = project?.name ?? 'Kestrel';
   const closeTripwire = useTripwireStore((s) => s.closePanel);
   const goHome = () => {
     if (onHome) {
@@ -26,7 +29,11 @@ export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
         <img src="/logo.png" alt="" width={34} height={34} className="block w-[34px] h-[34px]" />
         <span className="font-bold tracking-[.01em]">Caddy</span>
       </button>
-      <span className="hidden sm:inline text-muted text-[13px]">Kestrel</span>
+      <button onClick={closeProject} className="hidden sm:inline btn btn-xs text-ink" title="All projects">Projects</button>
+      <span className="hidden sm:inline text-muted text-[13px]">{projectName}</span>
+      {project && (intakeIncomplete(project.intake)
+        ? <button onClick={() => patch({ intakeOpen: true })} className="chip" style={{ color: 'var(--amber)', borderColor: 'var(--amber)', cursor: 'pointer' }}>requires more information</button>
+        : <button onClick={() => patch({ intakeOpen: true })} className="chip" style={{ cursor: 'pointer' }} title="edit the use case">use case declared</button>)}
       <div className="flex-1" />
       <div className="flex gap-[6px]">
         {onOpenTripwire && <button onClick={onOpenTripwire} className="btn hidden">Tripwire</button>}

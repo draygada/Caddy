@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useStore, designHashOf, ROUND_RAIL, INTAKE_DEFAULT, type Intake, type Round } from '../store';
+import { useStore, designHashOf, ROUND_RAIL, INTAKE_DEFAULT, intakeIncomplete, type Intake, type Round } from '../store';
 import type { Outcome } from '../lib/rules';
 import { GENERIC_NAME, type Slot } from '../lib/catalog';
 import { THUMBS, AF_THUMB } from '../lib/geometry';
@@ -47,10 +47,10 @@ function consequences(ro: ResolvedOffer, line: Line, round: Round, o: Outcome): 
 export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boolean }) {
   const s = useStore();
   const r = s.round;
-  const [shipTo, setShipTo] = useState<ShipTo>('US');
-  const [qty, setQty] = useState(1);
-  const [mode, setMode] = useState<Mode>('air');
-  const [intake, setIntake] = useState<Intake>(INTAKE_DEFAULT);
+  // the use-case answers come from the project; sourcing never asks for them itself
+  const intake: Intake = s.project?.intake ?? INTAKE_DEFAULT;
+  const incomplete = intakeIncomplete(s.project?.intake ?? null);
+  const shipTo: ShipTo = intake.shipTo, qty = intake.qty, mode: Mode = intake.mode;
   const [stage, setStage] = useState<number>(-1); // -1 idle · 0..3 running · 4 done
   const [k, setK] = useState<number | null>(null);
   const [pick, setPick] = useState<string | null>(null);
@@ -102,23 +102,30 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
         {header}
         <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start justify-center" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))' }}>
           <div className="panel">
-            <div className="panel-head"><div className="panel-title">Before the search runs</div><span className="text-[12px] text-muted">declared facts · badged, never inferred</span></div>
+            <div className="panel-head"><div className="panel-title">{incomplete ? 'This application requires more information' : 'Ready to source'}</div><span className="text-[12px] text-muted">use case · declared on the project</span></div>
             <div className="p-3 grid gap-3 text-[13px]">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="grid gap-1 text-muted">what is the product for?<select value={intake.endUse} onChange={(e) => setIntake({ ...intake, endUse: e.target.value as Intake['endUse'] })} className="field text-ink" disabled={running}>{['civil survey and mapping', 'agriculture', 'public safety', 'infrastructure inspection', 'defense-adjacent research', 'other'].map((x) => <option key={x}>{x}</option>)}</select></label>
-                <label className="grid gap-1 text-muted">who is the end user?<select value={intake.endUser} onChange={(e) => setIntake({ ...intake, endUser: e.target.value as Intake['endUser'] })} className="field text-ink" disabled={running}>{['commercial operator', 'university', 'government agency (civil)', 'military or defense prime', 'unknown'].map((x) => <option key={x}>{x}</option>)}</select></label>
-                <label className="grid gap-1 text-muted">where does it ship?<select value={shipTo} onChange={(e) => setShipTo(e.target.value as ShipTo)} className="field text-ink" disabled={running}>{SHIP_TO.map((x) => <option key={x.code} value={x.code}>{x.label}</option>)}</select></label>
-                <label className="grid gap-1 text-muted">is the pod used on an aircraft?<select value={intake.usedOn} onChange={(e) => setIntake({ ...intake, usedOn: e.target.value as Intake['usedOn'] })} className="field text-ink" disabled={running}>{['none', 'in-production unlisted aircraft', 'listed military aircraft'].map((x) => <option key={x}>{x}</option>)}</select></label>
-                <label className="grid gap-1 text-muted">units<input type="number" min={1} max={500} value={qty} onChange={(e) => setQty(Math.max(1, Math.min(500, +e.target.value || 1)))} className="field font-mono text-ink" disabled={running} /></label>
-                <label className="grid gap-1 text-muted">transport<select value={mode} onChange={(e) => setMode(e.target.value as Mode)} className="field text-ink" disabled={running}><option value="air">air</option><option value="ocean">ocean</option></select></label>
-              </div>
-              <div className="flex gap-4 flex-wrap">
-                <label className="flex items-center gap-2"><input type="checkbox" checked={intake.civilProduct} onChange={(e) => setIntake({ ...intake, civilProduct: e.target.checked })} disabled={running} /> declared a civil product <span className="chip chip-sm">declared</span></label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={intake.bvlos} onChange={(e) => setIntake({ ...intake, bvlos: e.target.checked })} disabled={running} /> beyond visual line of sight</label>
-              </div>
-              <input aria-label="notes" placeholder="anything else about the use case · one line, goes on the round" value={intake.notes} onChange={(e) => setIntake({ ...intake, notes: e.target.value })} className="field" disabled={running} />
-              <div className="text-[12px] text-muted">These answers are declared facts. They print on the round and beside every pick; they do not change what the rule engine computed for the design.</div>
-              <button onClick={start} disabled={s.viewSeq != null || running} className="btn btn-primary btn-lg justify-self-start disabled:opacity-50">Run the search · source this design</button>
+              {incomplete ? (
+                <>
+                  <div>{s.project?.intake ? 'Some use-case answers are still “not sure yet”.' : 'The use-case questions were skipped when this project was created.'} Sourcing reads the ship-to, quantity, transport mode and end use from them, so it cannot run until they are answered.</div>
+                  <button onClick={() => s.patch({ intakeOpen: true })} className="btn btn-primary btn-lg justify-self-start">Answer the questions</button>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <span className="text-muted">product for</span><span>{intake.endUse}</span>
+                    <span className="text-muted">end user</span><span>{intake.endUser}</span>
+                    <span className="text-muted">ships to</span><span>{SHIP_TO.find((x) => x.code === shipTo)?.label}</span>
+                    <span className="text-muted">used on an aircraft</span><span>{intake.usedOn}</span>
+                    <span className="text-muted">units · transport</span><span className="font-mono">{qty} · {mode}</span>
+                    <span className="text-muted">declared</span><span>{[intake.civilProduct ? 'civil product' : null, intake.bvlos ? 'BVLOS' : null].filter(Boolean).join(' · ') || 'none'}</span>
+                  </div>
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <button onClick={start} disabled={s.viewSeq != null || running} className="btn btn-primary btn-lg disabled:opacity-50">Run the search · source this design</button>
+                    <button onClick={() => s.patch({ intakeOpen: true })} className="btn" disabled={running}>Edit the use case</button>
+                  </div>
+                  <div className="text-[12px] text-muted">These answers are declared facts. They print on the round and beside every pick; they do not change what the rule engine computed for the design.</div>
+                </>
+              )}
             </div>
           </div>
           <div className="panel">
