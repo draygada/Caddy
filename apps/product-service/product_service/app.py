@@ -5,15 +5,19 @@ from __future__ import annotations
 import argparse
 from copy import deepcopy
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import math
 import mimetypes
 import os
 from pathlib import Path
 import re
 from typing import Any, Callable, Mapping
+from urllib.error import HTTPError, URLError
 from urllib.parse import unquote, urlsplit
+from urllib.request import Request, urlopen
 
 from compliance_bridge import (
     ComplianceBridgeError,
@@ -33,6 +37,8 @@ BOUNDED_CLAIM = "CADdyDaddy binds a selected CAD entity to its immutable product
 POSITIONING = "We're closing the loop from idea to execution for high-stakes industries."
 REQUEST_KEYS = {"entity_id", "node_id", "product_thread_id", "forge_record_id", "occurrence_path", "forge_record_revision_id", "forge_revision_id"}
 MAX_REQUEST_BODY_BYTES = 65536
+MAX_CAD_REQUEST_BODY_BYTES = 32 * 1024 * 1024
+MAX_CAD_RESPONSE_BODY_BYTES = 64 * 1024 * 1024
 SNAPSHOT_SCHEMA = "caddydaddy.core-snapshot/1"
 SNAPSHOT_FILENAME = "candidate-snapshot.v1.json"
 _HEX40 = re.compile(r"^[0-9a-f]{40}$")
@@ -336,13 +342,602 @@ class ProductServer(ThreadingHTTPServer):
     daemon_threads = True
 
 
+CANDIDATE02_POST_ROUTES = (
+    "/api/classification",
+    "/api/sourcing/rounds",
+    "/api/sourcing/adjudications",
+    "/api/sourcing/selections",
+    "/api/sourcing/packages",
+    "/api/sourcing/dispatches",
+    "/api/provenance/inspect",
+    "/api/provenance/verify",
+    "/api/provenance/accept",
+    "/api/cad/recompute",
+    "/api/cad/import",
+    "/api/cad/export",
+)
+
+CAD_UPSTREAM_ROUTES = {
+    "/api/cad/recompute": "/v1/recompute",
+    "/api/cad/import": "/v1/exchange",
+    "/api/cad/export": "/v1/exchange",
+}
+
+
+class CadAdapterError(ValueError):
+    def __init__(self, code: str, message: str, status: int = 422) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.status = status
+
+
+def _candidate02_error(code: str, message: str, *, domain: str = "candidate-0.2") -> dict[str, Any]:
+    return {
+        "schema_version": "caddydaddy.service-error/1",
+        "status": "BLOCKED",
+        "domain": domain,
+        "diagnostic": {"code": code, "message": message},
+    }
+
+
+def _iso_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+class Candidate02Routes:
+    """Mount Candidate 0.2 adapters on the dependency-light HTTP runtime.
+
+    The committed modules expose optional FastAPI router factories, but this
+    product service intentionally remains a BaseHTTPRequestHandler deployment.
+    Their exact route declarations are mounted here against the same adapters;
+    no second implementation of classification, sourcing, or provenance exists.
+    """
+
+    def __init__(
+        self,
+        candidate_identity: Mapping[str, str],
+        *,
+        classification_action: Callable[[Any], tuple[int, dict[str, Any]]] | None = None,
+        sourcing_runtime: Any | None = None,
+        provenance_runtime: Any | None = None,
+        cad_transport: Callable[[str, dict[str, Any]], tuple[int, dict[str, Any]]] | None = None,
+        cad_service_url: str | None = None,
+    ) -> None:
+        required = {"candidate_id", "revision_id", "snapshot_sha256"}
+        if set(candidate_identity) != required or not all(isinstance(candidate_identity[key], str) and candidate_identity[key] for key in required):
+            raise ValueError("CANDIDATE_IDENTITY_INVALID")
+        self.candidate_identity = dict(candidate_identity)
+        self.cad_service_url = (cad_service_url if cad_service_url is not None else os.environ.get("CADDYDADDY_CAD_SERVICE_URL", "")).rstrip("/")
+        self._cad_transport = cad_transport or self._http_cad_transport
+        self._kernel_documents: dict[str, dict[str, Any]] = {}
+        self._cad_body_artifacts: dict[str, dict[str, str]] = {}
+        unavailable: dict[str, str] = {}
+
+        if classification_action is None:
+            try:
+                from .classification_api import ClassificationAdapter
+
+                classification_action = ClassificationAdapter().classify
+            except Exception:
+                unavailable["/api/classification"] = "Classification adapter is unavailable in this product-service artifact."
+        if sourcing_runtime is None:
+            try:
+                from .sourcing_api import SourcingRuntime
+
+                sourcing_runtime = SourcingRuntime(self.candidate_identity)
+            except Exception:
+                unavailable["/api/sourcing"] = "Sourcing adapter is unavailable in this product-service artifact."
+        if provenance_runtime is None:
+            try:
+                from .provenance_api import ProvenanceRuntime
+
+                provenance_runtime = ProvenanceRuntime(self.candidate_identity)
+            except Exception:
+                unavailable["/api/provenance"] = "Provenance adapter is unavailable in this product-service artifact."
+
+        self._actions: dict[str, Callable[[Any], tuple[int, dict[str, Any]]]] = {
+            "/api/classification": classification_action or self._unavailable(unavailable["/api/classification"], "classification"),
+            "/api/sourcing/rounds": getattr(sourcing_runtime, "create_round", self._unavailable(unavailable.get("/api/sourcing", "Sourcing adapter is unavailable."), "sourcing")),
+            "/api/sourcing/adjudications": getattr(sourcing_runtime, "adjudicate_offer", self._unavailable(unavailable.get("/api/sourcing", "Sourcing adapter is unavailable."), "sourcing")),
+            "/api/sourcing/selections": getattr(sourcing_runtime, "select_offer", self._unavailable(unavailable.get("/api/sourcing", "Sourcing adapter is unavailable."), "sourcing")),
+            "/api/sourcing/packages": getattr(sourcing_runtime, "build_package", self._unavailable(unavailable.get("/api/sourcing", "Sourcing adapter is unavailable."), "sourcing")),
+            "/api/sourcing/dispatches": getattr(sourcing_runtime, "stage_dispatch", self._unavailable(unavailable.get("/api/sourcing", "Sourcing adapter is unavailable."), "sourcing")),
+            "/api/provenance/inspect": getattr(provenance_runtime, "inspect_source", self._unavailable(unavailable.get("/api/provenance", "Provenance adapter is unavailable."), "provenance")),
+            "/api/provenance/verify": getattr(provenance_runtime, "verify_span", self._unavailable(unavailable.get("/api/provenance", "Provenance adapter is unavailable."), "provenance")),
+            "/api/provenance/accept": getattr(provenance_runtime, "accept_verified_change", self._unavailable(unavailable.get("/api/provenance", "Provenance adapter is unavailable."), "provenance")),
+            "/api/cad/recompute": self._cad_recompute,
+            "/api/cad/import": self._cad_import,
+            "/api/cad/export": self._cad_export,
+        }
+
+    @classmethod
+    def from_runtime(cls, runtime: CandidateRuntime) -> "Candidate02Routes":
+        public = runtime.candidate()
+        candidate = public.get("candidate", {})
+        document = public.get("document", {})
+        return cls({
+            "candidate_id": f"candidate:{candidate.get('version', 'unknown')}",
+            "revision_id": str(document.get("revisionId", "revision:unknown")),
+            "snapshot_sha256": str(candidate.get("payloadHash", "")),
+        })
+
+    @property
+    def post_paths(self) -> frozenset[str]:
+        return frozenset(self._actions)
+
+    @staticmethod
+    def _unavailable(message: str, domain: str) -> Callable[[Any], tuple[int, dict[str, Any]]]:
+        return lambda _payload: (503, _candidate02_error("ADAPTER_UNAVAILABLE", message, domain=domain))
+
+    def dispatch(self, path: str, payload: Any) -> tuple[int, dict[str, Any]]:
+        action = self._actions.get(path)
+        if action is None:
+            return 404, _candidate02_error("ROUTE_NOT_FOUND", "Candidate 0.2 route does not exist.")
+        try:
+            return action(payload)
+        except CadAdapterError as error:
+            return error.status, _candidate02_error(error.code, error.message, domain="cad")
+        except Exception:
+            return 500, _candidate02_error("ROUTE_EXECUTION_FAILED", "The service adapter failed closed without returning a result.")
+
+    def _http_cad_transport(self, path: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        if not self.cad_service_url:
+            return 503, _candidate02_error(
+                "CAD_SERVICE_NOT_CONFIGURED",
+                "Set CADDYDADDY_CAD_SERVICE_URL on the product service to the separately deployed OpenCascade service base URL.",
+                domain="cad",
+            )
+        parsed = urlsplit(self.cad_service_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username or parsed.password or parsed.query or parsed.fragment:
+            return 503, _candidate02_error("CAD_SERVICE_URL_INVALID", "CADDYDADDY_CAD_SERVICE_URL must be an HTTP(S) origin or base path without credentials, query, or fragment.", domain="cad")
+        body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        request = Request(
+            f"{self.cad_service_url}{path}",
+            data=body,
+            method="POST",
+            headers={"Accept": "application/json", "Content-Type": "application/json", "Content-Length": str(len(body))},
+        )
+        try:
+            response = urlopen(request, timeout=30)
+            status = response.status
+            raw = response.read(MAX_CAD_RESPONSE_BODY_BYTES + 1)
+        except HTTPError as error:
+            status = error.code
+            raw = error.read(MAX_CAD_RESPONSE_BODY_BYTES + 1)
+        except (URLError, TimeoutError, OSError):
+            return 502, _candidate02_error("CAD_SERVICE_UNREACHABLE", "The configured CAD service could not be reached; the browser must preserve its last valid revision.", domain="cad")
+        if len(raw) > MAX_CAD_RESPONSE_BODY_BYTES:
+            return 502, _candidate02_error("CAD_RESPONSE_TOO_LARGE", "The CAD service response exceeded the bounded proxy limit.", domain="cad")
+        try:
+            decoded = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return 502, _candidate02_error("CAD_RESPONSE_INVALID", "The CAD service returned a non-JSON response.", domain="cad")
+        if not isinstance(decoded, dict):
+            return 502, _candidate02_error("CAD_RESPONSE_INVALID", "The CAD service returned a non-object response.", domain="cad")
+        return status, decoded
+
+    def _cad_recompute(self, request: Any) -> tuple[int, dict[str, Any]]:
+        if not isinstance(request, Mapping) or not isinstance(request.get("document"), Mapping) or not isinstance(request.get("operation"), Mapping):
+            raise CadAdapterError("CAD_REQUEST_INVALID", "Recompute requires document, operation, and expectedRevisionId.", 400)
+        expected = request.get("expectedRevisionId")
+        document = deepcopy(dict(request["document"]))
+        operation = dict(request["operation"])
+        if not isinstance(expected, str) or document.get("revisionId") != expected:
+            raise CadAdapterError("CAD_STALE", "The submitted document does not match expectedRevisionId.", 409)
+        if str(operation.get("kind", "")).startswith("assembly."):
+            return self._cad_assembly(document, expected)
+
+        candidate = self._kernel_document(document, expected)
+        upstream: dict[str, Any] = {"candidate_document": candidate}
+        if expected != "revision:new":
+            base = self._kernel_documents.get(expected)
+            if base is None:
+                raise CadAdapterError("CAD_STALE", "The product-service process has no authoritative base document for this revision; restore or recompute from a current revision.", 409)
+            upstream.update({"base_document": base, "expected_base_revision_id": expected})
+        status, body = self._cad_transport(CAD_UPSTREAM_ROUTES["/api/cad/recompute"], upstream)
+        if not 200 <= status < 300:
+            return status, body
+        response = self._frontend_recompute(document, body)
+        revision = response["revisionId"]
+        self._kernel_documents[revision] = candidate
+        self._cad_body_artifacts[revision] = {
+            str(item["body_id"]): str(item["brep_base64"])
+            for item in body.get("bodies", [])
+            if isinstance(item, Mapping) and isinstance(item.get("body_id"), str) and isinstance(item.get("brep_base64"), str)
+        }
+        return 200, response
+
+    def _cad_import(self, request: Any) -> tuple[int, dict[str, Any]]:
+        if not isinstance(request, Mapping):
+            raise CadAdapterError("CAD_IMPORT_INVALID", "Import request must be an object.", 400)
+        format_name = str(request.get("format", "")).upper()
+        file_name = request.get("fileName")
+        content = request.get("dataBase64")
+        expected = request.get("expectedRevisionId")
+        if format_name not in {"STEP", "IGES", "STL"} or not all(isinstance(value, str) and value for value in (file_name, content, expected)):
+            raise CadAdapterError("CAD_IMPORT_INVALID", "Import requires STEP, IGES, or STL bytes plus file and revision identity.", 400)
+        status, body = self._cad_transport(CAD_UPSTREAM_ROUTES["/api/cad/import"], {
+            "request_id": f"import:{hashlib.sha256(content.encode('ascii', errors='ignore')).hexdigest()}",
+            "direction": "IMPORT",
+            "format": format_name,
+            "content_base64": content,
+        })
+        if not 200 <= status < 300:
+            return status, body
+        required = ("content_sha256", "bounds_mm", "diagnostics")
+        if not isinstance(body, Mapping) or any(key not in body for key in required):
+            raise CadAdapterError("CAD_RESPONSE_INVALID", "CAD import response omitted verified exchange evidence.", 502)
+        revision = f"cad-import:{body['content_sha256']}"
+        body_id = f"body:import:{str(body['content_sha256'])[:16]}"
+        browser_document = {
+            "schemaVersion": "caddydaddy.cad-document/1",
+            "id": f"document:import:{str(body['content_sha256'])[:16]}",
+            "name": file_name,
+            "revisionId": revision,
+            "units": {"length": "mm", "angle": "deg"},
+            "parameters": [],
+            "sketches": [],
+            "operations": [],
+            "bodies": [{"id": body_id, "name": file_name, "featureIds": [], "material": None, "visible": True, "state": "valid"}],
+            "assembly": {"instances": [], "mates": []},
+        }
+        mesh = self._bounds_mesh(body.get("bounds_mm"), body_id, revision)
+        diagnostics = self._frontend_diagnostics(body.get("diagnostics", []))
+        diagnostics.append({"id": "cad:import-preview", "severity": "warning", "code": "IMPORT_PREVIEW_BOUNDS_PROXY", "message": "The semantic preview is a verified-bounds proxy; exchange succeeded in OCCT but exact tessellation was not returned by the exchange endpoint.", "operationId": None, "entityIds": [body_id]})
+        brep = body.get("brep_base64")
+        self._cad_body_artifacts[revision] = {body_id: brep} if isinstance(brep, str) and brep else {}
+        return 200, {
+            "document": browser_document,
+            "revisionId": revision,
+            "documentHash": body["content_sha256"],
+            "dependencyGraph": self._dependency_graph(browser_document),
+            "mesh": mesh,
+            "diagnostics": diagnostics,
+            "kernel": {"name": "OpenCascade", "version": "7.9.3", "mode": "live", "computedAt": _iso_now(), "artifactHash": body["content_sha256"]},
+        }
+
+    def _cad_export(self, request: Any) -> tuple[int, dict[str, Any]]:
+        if not isinstance(request, Mapping) or not isinstance(request.get("document"), Mapping):
+            raise CadAdapterError("CAD_EXPORT_INVALID", "Export requires a current document.", 400)
+        revision = request.get("revisionId")
+        format_name = str(request.get("format", "")).upper()
+        document = request["document"]
+        if not isinstance(revision, str) or document.get("revisionId") != revision or format_name not in {"STEP", "IGES", "STL"}:
+            raise CadAdapterError("CAD_EXPORT_INVALID", "Export format and revision must match the current document.", 400)
+        artifacts = self._cad_body_artifacts.get(revision, {})
+        if len(artifacts) != 1:
+            raise CadAdapterError("CAD_EXPORT_BODY_SELECTION_REQUIRED", "Candidate 0.2 exports exactly one revision-bound body; zero-body and multi-body export need an explicit body or assembly selection.", 422)
+        body_id, brep = next(iter(artifacts.items()))
+        status, body = self._cad_transport(CAD_UPSTREAM_ROUTES["/api/cad/export"], {
+            "request_id": f"export:{revision}:{body_id}:{format_name}",
+            "direction": "EXPORT",
+            "format": format_name,
+            "content_base64": brep,
+            "source_revision_id": revision,
+        })
+        if not 200 <= status < 300:
+            return status, body
+        data = body.get("content_base64") if isinstance(body, Mapping) else None
+        content_hash = body.get("content_sha256") if isinstance(body, Mapping) else None
+        if not isinstance(data, str) or not isinstance(content_hash, str):
+            raise CadAdapterError("CAD_RESPONSE_INVALID", "CAD export response omitted verified artifact bytes.", 502)
+        extension = {"STEP": "step", "IGES": "iges", "STL": "stl"}[format_name]
+        mime = {"STEP": "model/step", "IGES": "model/iges", "STL": "model/stl"}[format_name]
+        stem = re.sub(r"[^A-Za-z0-9._-]+", "-", str(document.get("name", "caddydaddy"))).strip("-.") or "caddydaddy"
+        return 200, {"fileName": f"{stem}.{extension}", "format": format_name, "mimeType": mime, "dataBase64": data, "revisionId": revision, "documentHash": content_hash}
+
+    def _cad_assembly(self, document: dict[str, Any], expected: str) -> tuple[int, dict[str, Any]]:
+        artifacts = self._cad_body_artifacts.get(expected)
+        if artifacts is None:
+            raise CadAdapterError("CAD_STALE", "Assembly solving requires revision-bound B-rep artifacts in the current product-service process.", 409)
+        assembly = document.get("assembly")
+        if not isinstance(assembly, Mapping) or not isinstance(assembly.get("instances"), list) or not assembly["instances"]:
+            raise CadAdapterError("CAD_ASSEMBLY_INVALID", "Assembly solve requires at least one instance.", 422)
+        instances = []
+        for instance in assembly["instances"]:
+            body_id = instance.get("bodyId") if isinstance(instance, Mapping) else None
+            brep = artifacts.get(body_id)
+            rotation = instance.get("transform", {}).get("rotationDegrees", []) if isinstance(instance, Mapping) else []
+            translation = instance.get("transform", {}).get("translation", []) if isinstance(instance, Mapping) else []
+            if not isinstance(brep, str) or len(rotation) != 3 or len(translation) != 3 or any(abs(float(value)) > 1e-9 for value in rotation[:2]):
+                raise CadAdapterError("CAD_ASSEMBLY_INPUT_UNAVAILABLE", "Every instance needs a current body B-rep; Candidate 0.2 supports translation plus Z-axis rotation.", 422)
+            instances.append({"instance_id": instance["id"], "body_id": body_id, "source_revision_id": expected, "brep_base64": brep, "transform": {"translation": {"x": translation[0], "y": translation[1], "z": translation[2]}, "rotation_axis": {"z": 1}, "rotation_degrees": rotation[2]}})
+        mate_kinds = {"fixed": "FIXED", "coincident": "POINT_COINCIDENT", "concentric": "AXIS_CONCENTRIC_PREALIGNED", "distance": "DISTANCE"}
+        mates = []
+        for mate in assembly.get("mates", []):
+            kind = mate_kinds.get(mate.get("kind")) if isinstance(mate, Mapping) else None
+            if kind is None:
+                raise CadAdapterError("CAD_MATE_UNSUPPORTED", "Candidate 0.2 does not adapt angle mates to the bounded OCCT solver.", 422)
+            mates.append({"mate_id": mate["id"], "kind": kind, "moving_instance_id": mate["instanceBId"], "target_instance_id": mate["instanceAId"], "distance_mm": mate.get("offset", 0)})
+        status, body = self._cad_transport("/v1/assemblies/solve", {"assembly_id": document.get("id", "assembly:candidate-0.2"), "instances": instances, "mates": mates})
+        if not 200 <= status < 300:
+            return status, body
+        assembly_body = body.get("assembly_body") if isinstance(body, Mapping) else None
+        revision = body.get("assembly_revision_id") if isinstance(body, Mapping) else None
+        geometry_hash = body.get("geometry_hash") if isinstance(body, Mapping) else None
+        if not isinstance(assembly_body, Mapping) or not isinstance(revision, str) or not isinstance(geometry_hash, str):
+            raise CadAdapterError("CAD_RESPONSE_INVALID", "Assembly service response omitted revision-bound geometry.", 502)
+        document["revisionId"] = revision
+        self._cad_body_artifacts[revision] = dict(artifacts)
+        return 200, {
+            "document": document,
+            "revisionId": revision,
+            "documentHash": geometry_hash,
+            "dependencyGraph": self._dependency_graph(document),
+            "mesh": self._mesh_from_bodies([assembly_body], revision),
+            "diagnostics": self._frontend_diagnostics(body.get("diagnostics", [])),
+            "kernel": {"name": "OpenCascade", "version": "7.9.3", "mode": "live", "computedAt": _iso_now(), "artifactHash": geometry_hash},
+        }
+
+    def _kernel_document(self, document: Mapping[str, Any], expected: str) -> dict[str, Any]:
+        if document.get("schemaVersion") != "caddydaddy.cad-document/1" or document.get("units") != {"length": "mm", "angle": "deg"}:
+            raise CadAdapterError("CAD_DOCUMENT_UNSUPPORTED", "Candidate 0.2 live kernel accepts the browser CAD document in millimetres and degrees.")
+        sketches = document.get("sketches")
+        operations = document.get("operations")
+        if not isinstance(sketches, list) or not isinstance(operations, list):
+            raise CadAdapterError("CAD_DOCUMENT_INVALID", "CAD document omitted sketches or operations.", 400)
+        kernel_sketches = [self._kernel_sketch(sketch) for sketch in sketches]
+        sketch_features: dict[str, str] = {}
+        entity_sketch: dict[str, str] = {}
+        for sketch in sketches:
+            if isinstance(sketch, Mapping):
+                for entity in sketch.get("entities", []):
+                    if isinstance(entity, Mapping) and isinstance(entity.get("id"), str):
+                        entity_sketch[entity["id"]] = str(sketch.get("id"))
+        for operation in operations:
+            if isinstance(operation, Mapping) and operation.get("kind") == "sketch.create":
+                sketch = operation.get("sketch", {})
+                if isinstance(sketch, Mapping) and isinstance(sketch.get("id"), str):
+                    sketch_features[sketch["id"]] = str(operation.get("id"))
+        bodies = document.get("bodies", [])
+        body_for_feature = {
+            str(feature_id): str(body.get("id"))
+            for body in bodies if isinstance(body, Mapping)
+            for feature_id in body.get("featureIds", [])
+        }
+        body_producer: dict[str, str] = {}
+        features: list[dict[str, Any]] = []
+        known_features: set[str] = set()
+
+        def dependency(reference: Any) -> str | None:
+            ref = str(reference)
+            if ref in known_features:
+                return ref
+            if ref in sketch_features:
+                return sketch_features[ref]
+            if ref in entity_sketch:
+                return sketch_features.get(entity_sketch[ref])
+            return body_producer.get(ref)
+
+        for operation in operations:
+            if not isinstance(operation, Mapping) or not isinstance(operation.get("id"), str):
+                raise CadAdapterError("CAD_OPERATION_INVALID", "Every CAD operation requires a stable ID.", 400)
+            operation_id = operation["id"]
+            kind = operation.get("kind")
+            if kind == "sketch.create":
+                sketch_id = operation.get("sketch", {}).get("id") if isinstance(operation.get("sketch"), Mapping) else None
+                if not isinstance(sketch_id, str):
+                    raise CadAdapterError("CAD_SKETCH_INVALID", "Sketch operation omitted its sketch identity.")
+                feature = {"feature_id": operation_id, "kind": "SKETCH", "depends_on": [], "parameters": {"sketch_id": sketch_id}, "enabled": not bool(operation.get("suppressed"))}
+            elif kind in {"parameter.set", "assembly.instance.add", "assembly.mate.add"}:
+                continue
+            elif isinstance(kind, str) and kind.startswith("feature."):
+                refs = [*operation.get("inputIds", []), *operation.get("targetBodyIds", [])]
+                dependencies = [item for item in dict.fromkeys(dependency(ref) for ref in refs) if item]
+                output_body = body_for_feature.get(operation_id) or (operation.get("targetBodyIds") or [None])[0] or f"body:{operation_id}"
+                raw = operation.get("parameters", {})
+                if not isinstance(raw, Mapping):
+                    raise CadAdapterError("CAD_FEATURE_PARAMETERS_INVALID", "Feature parameters must be an object.")
+                number = next((float(value) for value in raw.values() if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))), 1.0)
+                if kind in {"feature.extrude", "feature.revolve"}:
+                    source = next((dependency(ref) for ref in operation.get("inputIds", []) if dependency(ref) in sketch_features.values()), None)
+                    source = source or next(reversed(sketch_features.values()), None)
+                    if source is None:
+                        raise CadAdapterError("CAD_SKETCH_REFERENCE_MISSING", f"{kind} requires a committed sketch reference.")
+                    kernel_kind = "EXTRUDE" if kind == "feature.extrude" else "REVOLVE"
+                    parameters = {"sketch_feature_id": source, "distance_mm": number, "direction": {"z": 1}} if kernel_kind == "EXTRUDE" else {"sketch_feature_id": source, "angle_degrees": number, "axis_direction": {"y": 1}}
+                    dependencies = list(dict.fromkeys([*dependencies, source]))
+                elif kind.startswith("feature.boolean."):
+                    targets = [str(ref) for ref in refs if str(ref) in body_producer or any(str(body.get("id")) == str(ref) for body in bodies if isinstance(body, Mapping))]
+                    if len(targets) < 2:
+                        raise CadAdapterError("CAD_BOOLEAN_INPUT_MISSING", "Boolean operations require two body references.")
+                    kernel_kind = "BOOLEAN"
+                    parameters = {"left_body_id": targets[0], "right_body_id": targets[1], "mode": {"feature.boolean.union": "UNION", "feature.boolean.subtract": "CUT", "feature.boolean.intersect": "INTERSECT"}[kind]}
+                else:
+                    targets = [str(ref) for ref in operation.get("targetBodyIds", []) if isinstance(ref, str)]
+                    if not targets:
+                        targets = [str(ref) for ref in operation.get("inputIds", []) if str(ref) in body_producer]
+                    if not targets:
+                        raise CadAdapterError("CAD_BODY_REFERENCE_MISSING", f"{kind} requires a current target body.")
+                    target = targets[0]
+                    if kind == "feature.hole":
+                        kernel_kind = "HOLE"
+                        parameters = {"target_body_id": target, "diameter_mm": max(number * 2, 0.001), "depth_mm": max(float(raw.get("depth", number * 2)), 0.001), "center": {"x": 0, "y": 0, "z": 0}, "direction": {"z": 1}}
+                    elif kind == "feature.fillet":
+                        kernel_kind = "FILLET"
+                        parameters = {"target_body_id": target, "radius_mm": number, "edge_selector": "EDGE_INDICES", "edge_indices": [0]}
+                    elif kind == "feature.chamfer":
+                        kernel_kind = "CHAMFER"
+                        parameters = {"target_body_id": target, "distance_mm": number, "edge_selector": "EDGE_INDICES", "edge_indices": [0]}
+                    else:
+                        raise CadAdapterError("CAD_FEATURE_UNSUPPORTED", f"Candidate 0.2 adapter does not support {kind}.")
+                    producer = body_producer.get(target)
+                    if producer:
+                        dependencies = list(dict.fromkeys([*dependencies, producer]))
+                feature = {"feature_id": operation_id, "kind": kernel_kind, "depends_on": dependencies, "output_body_id": output_body, "parameters": parameters, "enabled": not bool(operation.get("suppressed"))}
+                body_producer[str(output_body)] = operation_id
+            else:
+                raise CadAdapterError("CAD_OPERATION_UNSUPPORTED", f"Candidate 0.2 adapter does not support {kind}.")
+            features.append(feature)
+            known_features.add(operation_id)
+        if not features:
+            raise CadAdapterError("CAD_EMPTY_FEATURE_GRAPH", "Commit a sketch or feature before requesting live kernel recompute.")
+        parameters = document.get("parameters", [])
+        return {
+            "schema_version": "caddydaddy.cad-document/1",
+            "document_id": document.get("id"),
+            "parent_revision_id": None if expected == "revision:new" else expected,
+            "units": "mm",
+            "sketches": kernel_sketches,
+            "features": features,
+            "metadata": {"browser_name": str(document.get("name", "Untitled assembly")), "parameters_json": json.dumps(parameters, sort_keys=True, separators=(",", ":"))},
+        }
+
+    @staticmethod
+    def _kernel_sketch(sketch: Any) -> dict[str, Any]:
+        if not isinstance(sketch, Mapping) or not isinstance(sketch.get("id"), str):
+            raise CadAdapterError("CAD_SKETCH_INVALID", "Every sketch requires a stable ID.")
+        plane = sketch.get("plane")
+        if not isinstance(plane, Mapping) or plane.get("kind") != "origin" or plane.get("plane") not in {"XY", "XZ", "YZ"}:
+            raise CadAdapterError("CAD_SKETCH_PLANE_UNSUPPORTED", "Candidate 0.2 live recompute supports XY, XZ, and YZ origin planes; face attachment needs topological naming.")
+        entities: list[dict[str, Any]] = []
+        for entity in sketch.get("entities", []):
+            if not isinstance(entity, Mapping) or not isinstance(entity.get("id"), str):
+                raise CadAdapterError("CAD_SKETCH_ENTITY_INVALID", "Sketch entities require stable IDs.")
+            entity_id = entity["id"]
+            kind = entity.get("kind")
+            if kind == "line":
+                entities.append({"kind": "LINE", "entity_id": entity_id, "start": entity.get("start"), "end": entity.get("end")})
+            elif kind == "circle":
+                entities.append({"kind": "CIRCLE", "entity_id": entity_id, "center": entity.get("center"), "radius": entity.get("radius")})
+            elif kind == "rectangle":
+                origin = entity.get("origin", {})
+                x, y = float(origin.get("x", 0)), float(origin.get("y", 0))
+                width, height = float(entity.get("width", 0)), float(entity.get("height", 0))
+                points = ((x, y), (x + width, y), (x + width, y + height), (x, y + height))
+                for index, (start, end) in enumerate(zip(points, points[1:] + points[:1])):
+                    entities.append({"kind": "LINE", "entity_id": f"{entity_id}:edge:{index}", "start": {"x": start[0], "y": start[1]}, "end": {"x": end[0], "y": end[1]}})
+            elif kind == "arc":
+                center = entity.get("center", {})
+                radius = float(entity.get("radius", 0))
+                angles = [math.radians(float(entity.get("startAngle", 0))), math.radians((float(entity.get("startAngle", 0)) + float(entity.get("endAngle", 0))) / 2), math.radians(float(entity.get("endAngle", 0)))]
+                points = [{"x": float(center.get("x", 0)) + radius * math.cos(angle), "y": float(center.get("y", 0)) + radius * math.sin(angle)} for angle in angles]
+                entities.append({"kind": "ARC", "entity_id": entity_id, "start": points[0], "mid": points[1], "end": points[2]})
+            elif kind == "spline":
+                points = entity.get("points", [])
+                if not isinstance(points, list) or len(points) < 2:
+                    raise CadAdapterError("CAD_SPLINE_INVALID", "A spline needs at least two points.")
+                pairs = list(zip(points, points[1:]))
+                if entity.get("closed"):
+                    pairs.append((points[-1], points[0]))
+                for index, (start, end) in enumerate(pairs):
+                    entities.append({"kind": "LINE", "entity_id": f"{entity_id}:segment:{index}", "start": start, "end": end})
+            else:
+                raise CadAdapterError("CAD_SKETCH_ENTITY_UNSUPPORTED", f"Candidate 0.2 adapter does not support sketch entity {kind}.")
+        if not entities:
+            raise CadAdapterError("CAD_SKETCH_EMPTY", "A live sketch requires geometry.")
+        constraints = []
+        constraint_kinds = {"horizontal": "HORIZONTAL", "vertical": "VERTICAL", "parallel": "PARALLEL", "perpendicular": "PERPENDICULAR", "equal": "EQUAL_LENGTH", "fixed": "FIXED", "coincident": "COINCIDENT"}
+        for item in sketch.get("constraints", []):
+            kind = constraint_kinds.get(item.get("kind")) if isinstance(item, Mapping) else None
+            if kind is None:
+                raise CadAdapterError("CAD_CONSTRAINT_UNSUPPORTED", f"Candidate 0.2 kernel does not solve {item.get('kind') if isinstance(item, Mapping) else 'unknown'} constraints.")
+            entity_ids = [str(value) for value in item.get("entityIds", [])]
+            record: dict[str, Any] = {"constraint_id": item.get("id"), "kind": kind, "entity_ids": entity_ids}
+            if kind == "COINCIDENT" and len(entity_ids) >= 2:
+                record.update({"entity_ids": [], "point_refs": [f"{entity_ids[0]}.end", f"{entity_ids[1]}.start"]})
+            constraints.append(record)
+        dimension_kinds = {"distance": "DISTANCE", "horizontal-distance": "DISTANCE", "vertical-distance": "DISTANCE", "radius": "RADIUS", "diameter": "RADIUS", "angle": "ANGLE"}
+        for item in sketch.get("dimensions", []):
+            if not isinstance(item, Mapping) or item.get("kind") not in dimension_kinds:
+                raise CadAdapterError("CAD_DIMENSION_UNSUPPORTED", "Sketch dimension is not supported by Candidate 0.2.")
+            value = float(item.get("value", 0)) / 2 if item.get("kind") == "diameter" else float(item.get("value", 0))
+            constraints.append({"constraint_id": item.get("id"), "kind": dimension_kinds[item["kind"]], "entity_ids": item.get("entityIds", []), "value": value})
+        return {"sketch_id": sketch["id"], "plane": plane["plane"], "loops": [{"loop_id": f"{sketch['id']}:loop:0", "entities": entities}], "constraints": constraints}
+
+    def _frontend_recompute(self, document: dict[str, Any], body: Mapping[str, Any]) -> dict[str, Any]:
+        revision = body.get("revision_id")
+        document_hash = body.get("document_hash")
+        geometry_hash = body.get("geometry_hash")
+        kernel_bodies = body.get("bodies")
+        if not isinstance(revision, str) or not isinstance(document_hash, str) or not isinstance(geometry_hash, str) or not isinstance(kernel_bodies, list):
+            raise CadAdapterError("CAD_RESPONSE_INVALID", "CAD recompute response omitted revision, hash, or bodies.", 502)
+        document["revisionId"] = revision
+        browser_bodies = document.setdefault("bodies", [])
+        known = {item.get("id"): item for item in browser_bodies if isinstance(item, dict)}
+        for kernel_body in kernel_bodies:
+            if not isinstance(kernel_body, Mapping) or not isinstance(kernel_body.get("body_id"), str):
+                raise CadAdapterError("CAD_RESPONSE_INVALID", "CAD recompute returned a malformed body.", 502)
+            body_id = kernel_body["body_id"]
+            if body_id in known:
+                known[body_id]["state"] = "valid"
+            else:
+                browser_bodies.append({"id": body_id, "name": body_id, "featureIds": [kernel_body.get("producing_feature_id")], "material": None, "visible": True, "state": "valid"})
+        kernel = body.get("kernel", {})
+        return {
+            "document": document,
+            "revisionId": revision,
+            "documentHash": document_hash,
+            "dependencyGraph": self._dependency_graph(document),
+            "mesh": self._mesh_from_bodies(kernel_bodies, revision),
+            "diagnostics": self._frontend_diagnostics(body.get("diagnostics", [])),
+            "kernel": {"name": str(kernel.get("name", "OpenCascade")), "version": str(kernel.get("version", "unknown")), "mode": "live", "computedAt": _iso_now(), "artifactHash": geometry_hash},
+        }
+
+    @staticmethod
+    def _dependency_graph(document: Mapping[str, Any]) -> dict[str, Any]:
+        nodes = []
+        for key, kind in (("sketches", "sketch"), ("operations", "feature"), ("bodies", "body"), ("parameters", "parameter")):
+            for item in document.get(key, []):
+                if isinstance(item, Mapping) and isinstance(item.get("id"), str):
+                    nodes.append({"id": item["id"], "label": str(item.get("name", item["id"])), "kind": kind, "state": "suppressed" if item.get("suppressed") else "clean"})
+        assembly = document.get("assembly", {})
+        for key, kind in (("instances", "instance"), ("mates", "mate")):
+            for item in assembly.get(key, []) if isinstance(assembly, Mapping) else []:
+                if isinstance(item, Mapping) and isinstance(item.get("id"), str):
+                    nodes.append({"id": item["id"], "label": str(item.get("name", item["id"])), "kind": kind, "state": "clean"})
+        node_ids = {node["id"] for node in nodes}
+        edges = []
+        for operation in document.get("operations", []):
+            if isinstance(operation, Mapping) and operation.get("id") in node_ids:
+                edges.extend({"from": str(ref), "to": operation["id"], "relation": "depends-on"} for ref in operation.get("dependsOn", []) if str(ref) in node_ids)
+        return {"nodes": nodes, "edges": edges}
+
+    @staticmethod
+    def _frontend_diagnostics(diagnostics: Any) -> list[dict[str, Any]]:
+        if not isinstance(diagnostics, list):
+            return []
+        return [{"id": f"cad:diagnostic:{index}", "severity": str(item.get("severity", "WARNING")).lower(), "code": str(item.get("code", "CAD_DIAGNOSTIC")), "message": str(item.get("message", "CAD service diagnostic")), "operationId": item.get("feature_id"), "entityIds": []} for index, item in enumerate(diagnostics) if isinstance(item, Mapping)]
+
+    @staticmethod
+    def _mesh_from_bodies(bodies: list[Any], revision: str) -> dict[str, Any]:
+        vertices: list[list[float]] = []
+        triangles: list[list[int]] = []
+        groups = []
+        colors = ("#477a68", "#b07543", "#436c91", "#86704f")
+        for body_index, body in enumerate(bodies):
+            if not isinstance(body, Mapping) or not isinstance(body.get("mesh"), Mapping):
+                continue
+            mesh = body["mesh"]
+            positions = mesh.get("positions", [])
+            indices = mesh.get("indices", [])
+            offset = len(vertices)
+            start = len(triangles)
+            vertices.extend([list(map(float, positions[index:index + 3])) for index in range(0, len(positions), 3) if len(positions[index:index + 3]) == 3])
+            triangles.extend([[int(indices[index]) + offset, int(indices[index + 1]) + offset, int(indices[index + 2]) + offset] for index in range(0, len(indices), 3) if len(indices[index:index + 3]) == 3])
+            groups.append({"bodyId": str(body.get("body_id", f"body:{body_index}")), "startTriangle": start, "triangleCount": len(triangles) - start, "color": colors[body_index % len(colors)]})
+        return {"revisionId": revision, "vertices": vertices, "triangles": triangles, "groups": groups}
+
+    @staticmethod
+    def _bounds_mesh(bounds: Any, body_id: str, revision: str) -> dict[str, Any]:
+        if not isinstance(bounds, list) or len(bounds) != 6:
+            raise CadAdapterError("CAD_RESPONSE_INVALID", "CAD import response omitted six-value bounds.", 502)
+        x0, y0, z0, x1, y1, z1 = map(float, bounds)
+        vertices = [[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0], [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]]
+        triangles = [[0, 1, 2], [0, 2, 3], [4, 6, 5], [4, 7, 6], [0, 4, 5], [0, 5, 1], [1, 5, 6], [1, 6, 2], [2, 6, 7], [2, 7, 3], [3, 7, 4], [3, 4, 0]]
+        return {"revisionId": revision, "vertices": vertices, "triangles": triangles, "groups": [{"bodyId": body_id, "startTriangle": 0, "triangleCount": len(triangles), "color": "#477a68"}]}
+
+
 def create_handler(
     runtime: CandidateRuntime | None = None,
     static_root: Path | None = None,
+    candidate02_routes: Candidate02Routes | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     """Bind the product runtime to one reusable local/Vercel HTTP handler."""
 
     active_runtime = runtime or CandidateRuntime()
+    active_candidate02 = candidate02_routes or Candidate02Routes.from_runtime(active_runtime)
     default_assets = REPOSITORY_ROOT / "public"
     if not default_assets.is_dir():
         default_assets = REPOSITORY_ROOT / "apps" / "browser-workbench" / "dist"
@@ -358,6 +953,9 @@ def create_handler(
                 self._json(200, active_runtime.candidate())
                 return
             if path == "/api/compliance-at-design-click":
+                self._method_not_allowed("POST")
+                return
+            if path in active_candidate02.post_paths:
                 self._method_not_allowed("POST")
                 return
             if path == "/api" or path.startswith("/api/"):
@@ -393,7 +991,7 @@ def create_handler(
             if path in {"/api/health", "/healthz", "/api/candidate"}:
                 self._method_not_allowed("GET")
                 return
-            if path != "/api/compliance-at-design-click":
+            if path != "/api/compliance-at-design-click" and path not in active_candidate02.post_paths:
                 self._json(404, {"status": "BLOCKED", "diagnostic": {"code": "ROUTE_NOT_FOUND"}})
                 return
             if self.headers.get_content_type() != "application/json":
@@ -413,8 +1011,9 @@ def create_handler(
             except ValueError:
                 self._json(*CandidateRuntime._blocked(400, "REQUEST_BODY_INVALID", "A bounded JSON request is required."))
                 return
-            if length > MAX_REQUEST_BODY_BYTES:
-                self._json(*CandidateRuntime._blocked(413, "REQUEST_BODY_TOO_LARGE", "The JSON request exceeds 65536 bytes."))
+            request_limit = MAX_CAD_REQUEST_BODY_BYTES if path.startswith("/api/cad/") else MAX_REQUEST_BODY_BYTES
+            if length > request_limit:
+                self._json(*CandidateRuntime._blocked(413, "REQUEST_BODY_TOO_LARGE", f"The JSON request exceeds {request_limit} bytes."))
                 return
             try:
                 body = self.rfile.read(length)
@@ -424,7 +1023,10 @@ def create_handler(
             except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
                 self._json(*CandidateRuntime._blocked(400, "REQUEST_BODY_INVALID", "A bounded JSON request is required."))
                 return
-            self._json(*active_runtime.evaluate_request(request))
+            if path == "/api/compliance-at-design-click":
+                self._json(*active_runtime.evaluate_request(request))
+            else:
+                self._json(*active_candidate02.dispatch(path, request))
 
         def do_DELETE(self) -> None:
             self._method_not_allowed("GET, POST")

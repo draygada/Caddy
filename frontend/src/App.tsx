@@ -23,6 +23,7 @@ import {
   type WorkspaceId,
 } from './panels/MissionNav';
 import { CoreAssemblyWorkspace } from './panels/CoreAssemblyWorkspace';
+import { AuthoringWorkspace } from './panels/AuthoringWorkspace';
 import { ClassificationWorkspace } from './panels/ClassificationWorkspace';
 import { CollaborationWorkspace } from './panels/CollaborationWorkspace';
 import { runCommand } from './commands';
@@ -68,6 +69,19 @@ function useKeyboard() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+}
+
+function CadCoreWorkspace() {
+  return (
+    <div className="grid gap-2">
+      <AuthoringWorkspace />
+      <details className="rounded-r border border-line2 bg-surface p-3">
+        <summary className="cursor-pointer text-[13px] font-semibold">Legacy snapshot inspection · immutable Candidate 0.1</summary>
+        <p className="mt-2 mb-3 text-[12px] text-muted">Read-only recovery evidence from the prior packaged two-body graph. It is not the primary authoring model and cannot recompute.</p>
+        <CoreAssemblyWorkspace />
+      </details>
+    </div>
+  );
 }
 
 export default function App() {
@@ -170,7 +184,7 @@ export default function App() {
 
   const workspaceSurface = (() => {
     switch (workspace) {
-      case 'core': return <CoreAssemblyWorkspace />;
+      case 'core': return <CadCoreWorkspace />;
       case 'classification': return <ClassificationWorkspace />;
       case 'collaboration': return <CollaborationWorkspace />;
       default: return designSurface;
