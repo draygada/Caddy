@@ -91,6 +91,53 @@ class FixtureRepo:
         git(self.root, "commit", "-m", "Update owned governance")
         return git(self.root, "rev-parse", "HEAD")
 
+    def commit_unified_tripwire_delta(self) -> str:
+        git(self.root, "switch", "-c", "external-tripwire", self.source)
+        write(self.root / "external-source.txt", "external delta\n")
+        git(self.root, "add", "external-source.txt")
+        git(self.root, "commit", "-m", "Create external Tripwire delta")
+        source_head = git(self.root, "rev-parse", "HEAD")
+
+        git(self.root, "switch", "integration")
+        write(self.root / "features" / "tripwire" / "delta.txt", "imported delta\n")
+        git(self.root, "add", "features/tripwire/delta.txt")
+        git(self.root, "commit", "-m", "Import Tripwire delta under prefix")
+        content_commit = git(self.root, "rev-parse", "HEAD")
+        current_prefix_tree = git(self.root, "rev-parse", "HEAD:features/tripwire")
+        git(self.root, "merge", "--no-ff", "-s", "ours", "external-tripwire", "-m", "Preserve source ancestry")
+        ancestry_merge = git(self.root, "rev-parse", "HEAD")
+
+        unified = {
+            "schema_version": "caddydaddy.import-provenance/2",
+            "base_manifest": "docs/imports/tripwire-898f6167.json",
+            "prefix": "features/tripwire",
+            "original_import": {
+                "source_commit": self.source,
+                "source_tree": self.source_tree,
+                "import_commit": self.source,
+            },
+            "current_prefix_tree": current_prefix_tree,
+            "applied_deltas": [
+                {
+                    "source_head": source_head,
+                    "commit": content_commit,
+                }
+            ],
+            "ancestry_merges": [
+                {
+                    "source_head": source_head,
+                    "merge_commit": ancestry_merge,
+                }
+            ],
+        }
+        write(
+            self.root / "docs" / "imports" / "tripwire-unified-20260905.json",
+            json.dumps(unified, indent=2) + "\n",
+        )
+        git(self.root, "add", "docs/imports/tripwire-unified-20260905.json")
+        git(self.root, "commit", "-m", "Receipt unified Tripwire import")
+        return git(self.root, "rev-parse", "HEAD")
+
     def close(self) -> None:
         self.temporary.cleanup()
 
@@ -190,6 +237,22 @@ class ReleaseEvidenceTest(unittest.TestCase):
         completed = run(*wrong_branch, cwd=self.fixture.root, check=False)
         self.assertNotEqual(completed.returncode, 0)
         self.assertIn("refs/heads/not-the-candidate-branch", completed.stderr)
+
+    def test_generator_accepts_receipted_prefixed_deltas_and_source_ancestry(self) -> None:
+        candidate = self.fixture.commit_unified_tripwire_delta()
+        output = self.fixture.root / ".release-evidence" / "receipt.json"
+        completed = run(*self.generator_command(candidate, output), cwd=self.fixture.root)
+        self.assertIn("RECEIPT_GENERATION_PASS", completed.stdout)
+
+        receipt = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(
+            receipt["tripwire_import"]["provenance_manifest_path"],
+            "docs/imports/tripwire-unified-20260905.json",
+        )
+        self.assertEqual(
+            receipt["tripwire_import"]["candidate_prefix_tree"],
+            git(self.fixture.root, "rev-parse", "HEAD:features/tripwire"),
+        )
 
     def test_hygiene_accepts_clean_authored_diff_and_preserved_source_whitespace(self) -> None:
         candidate = self.fixture.commit_owned("candidate\n")

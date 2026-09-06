@@ -24,6 +24,7 @@ TEMPLATE_PATH = (
     / "candidate-integration-release-receipt.v1.template.json"
 )
 PROVENANCE_PATH = "docs/imports/tripwire-898f6167.json"
+UNIFIED_PROVENANCE_PATH = "docs/imports/tripwire-unified-20260905.json"
 TRIPWIRE_PREFIX = "features/tripwire"
 OID_PATTERNS = {"sha1": re.compile(r"^[0-9a-f]{40}$"), "sha256": re.compile(r"^[0-9a-f]{64}$")}
 
@@ -127,20 +128,87 @@ def verify_tripwire(repo: Path, candidate: str) -> dict[str, object]:
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
         raise ReceiptError(f"invalid Tripwire provenance manifest: {exc}") from exc
 
-    expected_tree = source_root_tree["oid"]
+    source_tree_oid = source_root_tree["oid"]
+    expected_tree = source_tree_oid
+    provenance_path = PROVENANCE_PATH
+    provenance_bytes = manifest_bytes
+    unified_result = git(repo, "show", f"{candidate}:{UNIFIED_PROVENANCE_PATH}", check=False)
+    if unified_result.returncode == 0:
+        provenance_bytes = unified_result.stdout
+        provenance_path = UNIFIED_PROVENANCE_PATH
+        try:
+            unified = json.loads(provenance_bytes)
+            if unified["schema_version"] != "caddydaddy.import-provenance/2":
+                raise ReceiptError("unexpected unified Tripwire provenance schema")
+            if unified["base_manifest"] != PROVENANCE_PATH:
+                raise ReceiptError("unified Tripwire provenance does not bind the base manifest")
+            if unified["prefix"] != TRIPWIRE_PREFIX:
+                raise ReceiptError(f"unexpected unified Tripwire import prefix: {unified['prefix']}")
+            original = unified["original_import"]
+            if original != {
+                "source_commit": source_commit["oid"],
+                "source_tree": source_root_tree["oid"],
+                "import_commit": imported["commit"],
+            }:
+                raise ReceiptError("unified Tripwire provenance does not bind the original import")
+            expected_tree = unified["current_prefix_tree"]
+            deltas = unified["applied_deltas"]
+            ancestry_merges = unified["ancestry_merges"]
+            if not isinstance(deltas, list) or not isinstance(ancestry_merges, list):
+                raise ReceiptError("unified Tripwire provenance lists are invalid")
+        except (json.JSONDecodeError, KeyError, TypeError) as exc:
+            raise ReceiptError(f"invalid unified Tripwire provenance manifest: {exc}") from exc
+
+        merged_sources: set[str] = set()
+        for entry in ancestry_merges:
+            try:
+                source_head = entry["source_head"]
+                merge_commit = entry["merge_commit"]
+            except (KeyError, TypeError) as exc:
+                raise ReceiptError(f"invalid Tripwire ancestry merge record: {exc}") from exc
+            parents = git_text(repo, "rev-list", "--parents", "-n", "1", merge_commit).split()[1:]
+            if source_head not in parents:
+                raise ReceiptError(
+                    f"Tripwire source {source_head} is not a parent of recorded merge {merge_commit}"
+                )
+            if git(repo, "merge-base", "--is-ancestor", merge_commit, candidate, check=False).returncode != 0:
+                raise ReceiptError(f"recorded Tripwire ancestry merge is not in candidate: {merge_commit}")
+            merged_sources.add(source_head)
+
+        for entry in deltas:
+            try:
+                source_head = entry["source_head"]
+                content_commit = entry["commit"]
+            except (KeyError, TypeError) as exc:
+                raise ReceiptError(f"invalid Tripwire content delta record: {exc}") from exc
+            if source_head not in merged_sources:
+                raise ReceiptError(f"Tripwire delta source lacks an ancestry merge: {source_head}")
+            if git(repo, "merge-base", "--is-ancestor", content_commit, candidate, check=False).returncode != 0:
+                raise ReceiptError(f"recorded Tripwire content commit is not in candidate: {content_commit}")
+            changed_paths = git_text(
+                repo, "diff-tree", "--no-commit-id", "--name-only", "-r", content_commit
+            ).splitlines()
+            if not changed_paths or any(
+                path != TRIPWIRE_PREFIX and not path.startswith(f"{TRIPWIRE_PREFIX}/")
+                for path in changed_paths
+            ):
+                raise ReceiptError(f"Tripwire content commit escaped its prefix: {content_commit}")
+
     candidate_tree = git_text(repo, "rev-parse", f"{candidate}:{TRIPWIRE_PREFIX}")
-    if candidate_tree != expected_tree or imported["prefix_tree"] != expected_tree:
+    if candidate_tree != expected_tree:
         raise ReceiptError(
-            f"Tripwire prefix drift: candidate={candidate_tree}, recorded_root_tree={expected_tree}"
+            f"Tripwire prefix drift: candidate={candidate_tree}, recorded_prefix_tree={expected_tree}"
         )
+    if provenance_path == PROVENANCE_PATH and imported["prefix_tree"] != expected_tree:
+        raise ReceiptError("original Tripwire import tree does not match its source tree")
     if imported["prefix"] != TRIPWIRE_PREFIX:
         raise ReceiptError(f"unexpected Tripwire import prefix: {imported['prefix']}")
 
     source_oid = source_commit["oid"]
-    if git_text(repo, "rev-parse", f"{source_oid}^{{tree}}") != expected_tree:
+    if git_text(repo, "rev-parse", f"{source_oid}^{{tree}}") != source_tree_oid:
         raise ReceiptError("recorded Tripwire source commit does not own the recorded root tree")
     source_content = git(repo, "cat-file", "commit", source_oid).stdout
-    tree_content = git(repo, "cat-file", "tree", expected_tree).stdout
+    tree_content = git(repo, "cat-file", "tree", source_tree_oid).stdout
     if sha256_bytes(source_content) != source_commit["content_sha256"]:
         raise ReceiptError("Tripwire source commit content SHA-256 mismatch")
     if sha256_bytes(tree_content) != source_root_tree["content_sha256"]:
@@ -149,14 +217,14 @@ def verify_tripwire(repo: Path, candidate: str) -> dict[str, object]:
         raise ReceiptError("recorded Tripwire import commit is not an ancestor of candidate")
 
     return {
-        "provenance_manifest_path": PROVENANCE_PATH,
-        "provenance_manifest_sha256": sha256_bytes(manifest_bytes),
+        "provenance_manifest_path": provenance_path,
+        "provenance_manifest_sha256": sha256_bytes(provenance_bytes),
         "source_commit": {
             "oid": source_oid,
             "content_sha256": source_commit["content_sha256"],
         },
         "source_root_tree": {
-            "oid": expected_tree,
+            "oid": source_tree_oid,
             "content_sha256": source_root_tree["content_sha256"],
         },
         "import_commit": imported["commit"],
