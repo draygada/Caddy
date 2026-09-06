@@ -4,7 +4,7 @@ import type { Outcome } from '../lib/rules';
 import { GENERIC_NAME, type Slot } from '../lib/catalog';
 import { THUMBS, AF_THUMB } from '../lib/geometry';
 import { CHECKLIST, CLAIM_COST, CLAIM_OFFER, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
-import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type OperationsEnvelope, type ServiceOffer, type SourcingDispatchEnvelope, type SourcingPackageEnvelope, type SourcingRoundEnvelope } from '../lib/operations-client';
+import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type LiveSourcingOffer, type OperationsEnvelope, type ServiceOffer, type SourcingDispatchEnvelope, type SourcingPackageEnvelope, type SourcingRoundEnvelope } from '../lib/operations-client';
 import { OrderClient, OrderServiceError, type OrderEnvelope, type RecordingOutcome } from '../lib/order-client';
 
 const usd = (v: number | null | undefined) => (v == null ? 'rate not verified' : v.toLocaleString(undefined, { style: 'currency', currency: 'USD' }));
@@ -28,6 +28,18 @@ function ownerNames(offer: ServiceOffer): string {
 function ServiceSourcing() {
   const [quantity, setQuantity] = useState(2);
   const [mode, setMode] = useState<'air' | 'ocean'>('air');
+  const [inputMode, setInputMode] = useState<'live-bounded' | 'offline-demo'>('live-bounded');
+  const [seller, setSeller] = useState('Operator-provided supplier');
+  const [manufacturer, setManufacturer] = useState('Operator-provided manufacturer');
+  const [origin, setOrigin] = useState('US');
+  const [unitPrice, setUnitPrice] = useState('100.00');
+  const [leadDays, setLeadDays] = useState(7);
+  const [screeningStatus, setScreeningStatus] = useState<'NO_CANDIDATE_MATCH' | 'POTENTIAL_MATCH' | 'UNKNOWN'>('UNKNOWN');
+  const [screeningSource, setScreeningSource] = useState('Operator-provided screening record');
+  const [screeningText, setScreeningText] = useState('Screening scope and result not yet supplied.');
+  const [screeningComplete, setScreeningComplete] = useState(false);
+  const [ownershipComplete, setOwnershipComplete] = useState(false);
+  const [screeningAttestor, setScreeningAttestor] = useState('operator:browser-demo');
   const [client, setClient] = useState<OperationsClient | null>(null);
   const [round, setRound] = useState<SourcingRoundEnvelope | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
@@ -85,19 +97,64 @@ function ServiceSourcing() {
   const receipt = visibleOrderEvidence?.receipt;
   const now = () => new Date().toISOString();
   const actor = 'operator:browser-demo';
+  const createRound = (api: OperationsClient) => {
+    if (inputMode === 'offline-demo') return api.createSourcingRound({ part_key: 'flight-controller', quantity, mode, input_mode: 'offline-demo' });
+    const evidence = {
+      status: screeningStatus,
+      source_name: screeningSource,
+      source_text: screeningText,
+      checked_at: now(),
+      attestor: screeningAttestor,
+      complete: screeningComplete,
+    } as const;
+    const offer: LiveSourcingOffer = {
+      offer_id: `offer:user:${seller.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'supplier'}`,
+      part_key: 'flight-controller',
+      seller,
+      manufacturer,
+      origin: origin.toUpperCase(),
+      ship_from: origin.toUpperCase(),
+      unit_price_usd: unitPrice,
+      lead_days: leadDays,
+      declared_hts: '8542.31',
+      declared_eccn: 'not-independently-verified',
+      screening_evidence: { seller: evidence, manufacturer: evidence, ownership_complete: ownershipComplete },
+    };
+    return api.createSourcingRound({ part_key: 'flight-controller', quantity, mode, input_mode: 'live-bounded', offers: [offer] });
+  };
 
   return (
     <section className="panel min-w-0 lg:col-span-2" aria-label="Service-backed sourcing">
       <div className="panel-head flex-wrap gap-2">
-        <div className="panel-title">Service-backed sourcing <span className="sub">· bounded flight-controller round</span></div>
+        <div className="panel-title">Service-backed sourcing <span className="sub">· client-carried continuity</span></div>
         <span className="chip">{evidence ? evidence.status : 'not run'}</span>
       </div>
       <div className="p-3 grid gap-3 text-[13px]">
         <div className="flex flex-wrap items-end gap-2">
+          <label className="grid gap-1 text-muted">input lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setRound(null); setSelectedOffer(null); setPkg(null); setDispatch(null); }} className="field text-ink"><option value="live-bounded">Live bounded input</option><option value="offline-demo">Offline demo · 2-key fixture</option></select></label>
           <label className="grid gap-1 text-muted">quantity<input type="number" min={1} max={10000} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(10000, Number(event.target.value) || 1)))} className="field w-28 font-mono text-ink" /></label>
           <label className="grid gap-1 text-muted">mode<select value={mode} onChange={(event) => setMode(event.target.value as 'air' | 'ocean')} className="field text-ink"><option value="air">air</option><option value="ocean">ocean</option></select></label>
-          <button className="btn btn-primary" disabled={busy !== null} onClick={() => run('round', async (api) => { const value = await api.createSourcingRound({ part_key: 'flight-controller', quantity, mode }); setRound(value); setSelectedOffer(value.round.selected_offer_id); setPkg(null); setDispatch(null); })}>{busy === 'round' ? 'Creating…' : 'Create service round'}</button>
+          <button className="btn btn-primary" disabled={busy !== null} onClick={() => run('round', async (api) => { const value = await createRound(api); setRound(value); setSelectedOffer(value.round.selected_offer_id); setPkg(null); setDispatch(null); })}>{busy === 'round' ? 'Creating…' : inputMode === 'offline-demo' ? 'Run Offline demo' : 'Create live bounded round'}</button>
         </div>
+        {inputMode === 'live-bounded' && (
+          <div className="border border-line2 rounded-r p-3 grid gap-2" aria-label="Live bounded sourcing input">
+            <div className="flex flex-wrap justify-between gap-2"><b>Live offer + screening evidence</b><span className="text-[12px] text-muted">user-provided · hashed · revalidated each request · never full-list clearance</span></div>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2">
+              <label className="grid gap-1 text-muted">seller<input value={seller} onChange={(event) => setSeller(event.target.value)} className="field text-ink" /></label>
+              <label className="grid gap-1 text-muted">manufacturer<input value={manufacturer} onChange={(event) => setManufacturer(event.target.value)} className="field text-ink" /></label>
+              <label className="grid gap-1 text-muted">origin / ship-from<input value={origin} maxLength={2} onChange={(event) => setOrigin(event.target.value)} className="field font-mono text-ink uppercase" /></label>
+              <label className="grid gap-1 text-muted">unit price USD<input value={unitPrice} inputMode="decimal" onChange={(event) => setUnitPrice(event.target.value)} className="field font-mono text-ink" /></label>
+              <label className="grid gap-1 text-muted">lead days<input type="number" min={0} max={3650} value={leadDays} onChange={(event) => setLeadDays(Math.max(0, Math.min(3650, Number(event.target.value) || 0)))} className="field font-mono text-ink" /></label>
+              <label className="grid gap-1 text-muted">screening result<select value={screeningStatus} onChange={(event) => setScreeningStatus(event.target.value as typeof screeningStatus)} className="field text-ink"><option value="UNKNOWN">UNKNOWN · HOLD</option><option value="POTENTIAL_MATCH">POTENTIAL MATCH · BLOCK</option><option value="NO_CANDIDATE_MATCH">NO CANDIDATE MATCH · bounded attestation</option></select></label>
+            </div>
+            <label className="grid gap-1 text-muted">screening source / list version<input value={screeningSource} onChange={(event) => setScreeningSource(event.target.value)} className="field text-ink" /></label>
+            <label className="grid gap-1 text-muted">screening evidence text<textarea value={screeningText} onChange={(event) => setScreeningText(event.target.value)} rows={3} className="field text-ink resize-y" /></label>
+            <label className="grid gap-1 text-muted">attestor<input value={screeningAttestor} onChange={(event) => setScreeningAttestor(event.target.value)} className="field font-mono text-ink" /></label>
+            <div className="flex flex-wrap gap-4 text-[12px]"><label className="flex items-center gap-2"><input type="checkbox" checked={screeningComplete} onChange={(event) => setScreeningComplete(event.target.checked)} /> screening evidence complete for the declared scope</label><label className="flex items-center gap-2"><input type="checkbox" checked={ownershipComplete} onChange={(event) => setOwnershipComplete(event.target.checked)} /> ownership inputs complete</label></div>
+            {(!screeningComplete || !ownershipComplete || screeningStatus === 'UNKNOWN') && <div className="text-amber text-[12px]">HOLD is mandatory until screening and ownership evidence are explicitly complete. Completeness still does not imply full-list coverage or clearance.</div>}
+          </div>
+        )}
+        {inputMode === 'offline-demo' && <div className="border border-amber rounded-r p-2 text-[12px] text-amber"><b>Offline demo.</b> Synthetic two-key screening corpus, three fixture offers, one active match. Never substitute this lane for a live list or transaction review.</div>}
         {client && <div className="font-mono text-[12px] break-all text-muted">candidate {client.candidate.candidate_id} · {client.candidate.revision_id} · snapshot {client.candidate.snapshot_sha256}</div>}
         {error && <div role="alert" className="border border-red rounded-r p-2 text-red"><b>Service evidence not replaced.</b> {error}{evidence ? ' · Last valid result remains below.' : ''}</div>}
         {round && (
@@ -110,7 +167,7 @@ function ServiceSourcing() {
                 <div className="text-[12px] text-muted">ownership walk · {ownerNames(offer)}</div>
                 <div className="text-[12px] text-muted">{offer.landed_cost.rows.map((row) => `${row.layer} $${row.amount_usd}`).join(' · ')}</div>
                 <div className="flex flex-wrap gap-2">
-                  <button className="btn btn-primary disabled:opacity-40" disabled={offer.screening_disposition !== 'eligible-fixture' || busy !== null} onClick={() => run('select', async (api) => { const value = await api.selectSourcingOffer(round.round.round_id, offer.offer_id); setSelectedOffer(value.selected_offer.offer_id); })}>{selectedOffer === offer.offer_id ? 'Selected' : 'Select eligible offer'}</button>
+                  <button className="btn btn-primary disabled:opacity-40" disabled={!['eligible-fixture', 'eligible-bounded'].includes(offer.screening_disposition) || busy !== null} onClick={() => run('select', async (api) => { const value = await api.selectSourcingOffer(round.round.round_id, offer.offer_id); setSelectedOffer(value.selected_offer.offer_id); })}>{selectedOffer === offer.offer_id ? 'Selected' : 'Select eligible offer'}</button>
                   <button className="btn" disabled={busy !== null} onClick={() => run('hold', async (api) => { await api.adjudicateSourcingOffer({ round_id: round.round.round_id, offer_id: offer.offer_id, decision: 'HOLD', attestor: 'reviewer:browser-session', rationale: 'Retain the offer and original screening state for bounded comparison.' }); })}>Record HOLD</button>
                 </div>
               </article>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { DOCS, type SourceDocId } from '../lib/sources';
 import { SLOT_LABEL, type Slot } from '../lib/catalog';
-import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type OperationsEnvelope, type ProvenanceAcceptEnvelope, type ProvenanceInspectEnvelope, type ProvenanceVerifyEnvelope } from '../lib/operations-client';
+import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, utf8ByteSpan, type OperationsEnvelope, type ProvenanceAcceptEnvelope, type ProvenanceInspectEnvelope, type ProvenanceVerifyEnvelope, type UserProvidedSource } from '../lib/operations-client';
 
 const DOC_IDS: SourceDocId[] = ['gx220-vendor-page', 'hg5700-brochure', 'lepton-datasheet'];
 
@@ -20,7 +20,16 @@ function sourceServiceError(error: unknown): string {
 }
 
 function ServiceProvenance() {
+  const [inputMode, setInputMode] = useState<'live-bounded' | 'offline-demo'>('live-bounded');
   const [documentId, setDocumentId] = useState<ServiceDocumentId>('gx220-vendor-page');
+  const [liveId, setLiveId] = useState('operator-source-001');
+  const [liveTitle, setLiveTitle] = useState('Operator-provided source');
+  const [liveHost, setLiveHost] = useState('local-input');
+  const [liveText, setLiveText] = useState('Rated endurance 4 hours under the stated test conditions.');
+  const [liveQuote, setLiveQuote] = useState('4 hours');
+  const [liveField, setLiveField] = useState('endurance');
+  const [liveValue, setLiveValue] = useState(4);
+  const [liveUnit, setLiveUnit] = useState('hours');
   const [client, setClient] = useState<OperationsClient | null>(null);
   const [inspected, setInspected] = useState<ProvenanceInspectEnvelope | null>(null);
   const [verified, setVerified] = useState<ProvenanceVerifyEnvelope | null>(null);
@@ -28,6 +37,8 @@ function ServiceProvenance() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const preset = SERVICE_PRESETS[documentId];
+  const expectedDocumentId = inputMode === 'offline-demo' ? documentId : liveId;
+  const claim = inputMode === 'offline-demo' ? preset : { quote: liveQuote, field: liveField, value: liveValue, unit: liveUnit };
 
   const currentClient = async () => {
     if (client) return client;
@@ -43,30 +54,50 @@ function ServiceProvenance() {
   };
   const evidence: OperationsEnvelope | null = accepted ?? verified ?? inspected ?? client?.getLastValid('provenance') ?? null;
   const inspect = () => run('inspect', async (api) => {
-    const value = await api.inspectSource(documentId);
+    const source: UserProvidedSource = { document_id: liveId, title: liveTitle, host: liveHost, retrieved_at: new Date().toISOString(), provided_by: 'operator:browser-demo', text: liveText };
+    const value = await api.inspectSource(inputMode === 'offline-demo' ? documentId : source);
     setInspected(value);
     setVerified(null);
     setAccepted(null);
   });
   const verify = () => run('verify', async (api) => {
-    if (!inspected || inspected.document.document_id !== documentId) throw new OperationsServiceError('INSPECTION_REQUIRED', 'Inspect this exact document before verifying a span.');
-    const start = inspected.document.text_with_quarantine.indexOf(preset.quote);
-    if (start < 0) throw new OperationsServiceError('QUOTE_NOT_FOUND', 'The preset quote is not present in the inspected bytes.');
-    const value = await api.verifySourceSpan({ document_id: documentId, source_sha256: inspected.document.sha256, start, end: start + preset.quote.length, quote: preset.quote, field: preset.field, value: preset.value, unit: preset.unit });
+    if (!inspected || inspected.document.document_id !== expectedDocumentId) throw new OperationsServiceError('INSPECTION_REQUIRED', 'Inspect this exact document before verifying a span.');
+    const span = utf8ByteSpan(inspected.document.text_with_quarantine, claim.quote);
+    if (!span) throw new OperationsServiceError('QUOTE_NOT_FOUND', 'The exact quote is absent or quarantined in the inspected bytes.');
+    const value = await api.verifySourceSpan({ document_id: expectedDocumentId, source_sha256: inspected.document.sha256, start: span.start, end: span.end, quote: claim.quote, field: claim.field, value: claim.value, unit: claim.unit });
     setVerified(value);
     setAccepted(null);
   });
 
   return (
     <section className="panel min-w-0 lg:col-span-2" aria-label="Service-backed source provenance">
-      <div className="panel-head flex-wrap gap-2"><div className="panel-title">Service-backed source provenance <span className="sub">· exact committed bytes</span></div><span className="chip">{evidence ? evidence.status : 'not run'}</span></div>
+      <div className="panel-head flex-wrap gap-2"><div className="panel-title">Source provenance <span className="sub">· exact client-carried bytes</span></div><span className="chip">{evidence ? evidence.status : 'not run'}</span></div>
       <div className="p-3 grid gap-3 text-[13px]">
         <div className="flex flex-wrap items-end gap-2">
-          <label className="grid gap-1 text-muted">committed document<select value={documentId} onChange={(event) => { setDocumentId(event.target.value as ServiceDocumentId); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink">{Object.keys(SERVICE_PRESETS).map((id) => <option key={id}>{id}</option>)}</select></label>
+          <label className="grid gap-1 text-muted">source lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink"><option value="live-bounded">Live bounded input</option><option value="offline-demo">Offline demo fixtures</option></select></label>
+          {inputMode === 'offline-demo' && <label className="grid gap-1 text-muted">Offline demo document<select value={documentId} onChange={(event) => { setDocumentId(event.target.value as ServiceDocumentId); setInspected(null); setVerified(null); setAccepted(null); }} className="field text-ink">{Object.keys(SERVICE_PRESETS).map((id) => <option key={id}>{id}</option>)}</select></label>}
           <button className="btn btn-primary" disabled={busy !== null} onClick={inspect}>{busy === 'inspect' ? 'Inspecting…' : 'Inspect + verify source hash'}</button>
-          <button className="btn disabled:opacity-40" disabled={!inspected || busy !== null} onClick={verify}>{busy === 'verify' ? 'Rereading…' : `Verify exact span · ${preset.quote}`}</button>
+          <button className="btn disabled:opacity-40" disabled={!inspected || busy !== null} onClick={verify}>{busy === 'verify' ? 'Rereading…' : `Verify exact span · ${claim.quote}`}</button>
           <button className="btn disabled:opacity-40" disabled={!verified || busy !== null} onClick={() => run('accept', async (api) => setAccepted(await api.acceptVerifiedChange(verified!.verification.receipt_sha256, verified!.verification.field)))}>Accept for local review</button>
         </div>
+        {inputMode === 'live-bounded' && (
+          <div className="border border-line2 rounded-r p-3 grid gap-2" aria-label="Live bounded source input">
+            <div className="flex flex-wrap justify-between gap-2"><b>User-provided source bytes</b><span className="text-[12px] text-muted">no fetch · no authority/freshness claim · instruction-like content quarantines</span></div>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2">
+              <label className="grid gap-1 text-muted">document ID<input value={liveId} onChange={(event) => setLiveId(event.target.value)} className="field font-mono text-ink" /></label>
+              <label className="grid gap-1 text-muted">title<input value={liveTitle} onChange={(event) => setLiveTitle(event.target.value)} className="field text-ink" /></label>
+              <label className="grid gap-1 text-muted">source locator<input value={liveHost} onChange={(event) => setLiveHost(event.target.value)} className="field text-ink" /></label>
+            </div>
+            <label className="grid gap-1 text-muted">source text<textarea value={liveText} onChange={(event) => setLiveText(event.target.value)} rows={4} className="field text-ink resize-y" /></label>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2">
+              <label className="grid gap-1 text-muted">exact numeric quote<input value={liveQuote} onChange={(event) => setLiveQuote(event.target.value)} className="field font-mono text-ink" /></label>
+              <label className="grid gap-1 text-muted">target field<input value={liveField} onChange={(event) => setLiveField(event.target.value)} className="field font-mono text-ink" /></label>
+              <label className="grid gap-1 text-muted">numeric value<input type="number" value={liveValue} onChange={(event) => setLiveValue(Number(event.target.value))} className="field font-mono text-ink" /></label>
+              <label className="grid gap-1 text-muted">unit<input value={liveUnit} onChange={(event) => setLiveUnit(event.target.value)} className="field font-mono text-ink" /></label>
+            </div>
+          </div>
+        )}
+        {inputMode === 'offline-demo' && <div className="border border-amber rounded-r p-2 text-[12px] text-amber"><b>Offline demo.</b> These four committed fixtures demonstrate byte checking and quarantine only; they are not a broad or current source corpus.</div>}
         {client && <div className="font-mono text-[12px] break-all text-muted">candidate {client.candidate.candidate_id} · {client.candidate.revision_id} · snapshot {client.candidate.snapshot_sha256}</div>}
         {error && <div role="alert" className="border border-red rounded-r p-2 text-red"><b>Service evidence not replaced.</b> {error}{evidence ? ' · Last valid result remains below.' : ''}</div>}
         {inspected && (

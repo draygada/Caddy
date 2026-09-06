@@ -6,6 +6,13 @@ export interface OperationsCandidateIdentity {
 
 export type OperationsDomain = 'sourcing' | 'provenance';
 
+export interface ClientCarriedState {
+  schema_version: string;
+  candidate: OperationsCandidateIdentity;
+  seal_sha256: string;
+  [key: string]: unknown;
+}
+
 export interface OperationsEnvelope {
   schema_version: string;
   status: string;
@@ -14,6 +21,7 @@ export interface OperationsEnvelope {
   corpus: { corpus_sha256: string; [key: string]: unknown };
   claim_ceiling: string;
   limitations: string[];
+  state?: ClientCarriedState;
   diagnostic?: { code: string; message: string };
 }
 
@@ -36,7 +44,7 @@ export interface ServiceOffer {
   lead_days: number;
   declared_hts: string;
   declared_eccn: string;
-  screening_disposition: 'eligible-fixture' | 'review-required' | 'review-blocked';
+  screening_disposition: 'eligible-fixture' | 'eligible-bounded' | 'review-required' | 'review-blocked';
   ownership_walk: { seller: OwnershipNode; manufacturer: OwnershipNode | null };
   landed_cost: {
     rows: Array<{ layer: string; amount_usd: string; source: string }>;
@@ -53,6 +61,7 @@ export interface ServiceSourcingRound {
     part_key: string;
     quantity: number;
     mode: 'air' | 'ocean';
+    input_mode: 'offline-demo' | 'live-bounded';
     corpus_sha256: string;
   };
   offers: ServiceOffer[];
@@ -113,6 +122,8 @@ export interface ProvenanceDocument {
   title: string;
   host: string;
   retrieved_at: string;
+  provided_by?: string;
+  input_mode?: 'offline-demo' | 'live-bounded';
   sha256: string;
   bytes: number;
   text_with_quarantine: string;
@@ -137,6 +148,44 @@ export interface SourceVerification {
   byte_reread_verified: true;
   poison_intersection: false;
   receipt_sha256: string;
+  input_mode?: 'offline-demo' | 'live-bounded';
+  quote_hex?: string;
+}
+
+export interface LiveScreeningEvidence {
+  status: 'NO_CANDIDATE_MATCH' | 'POTENTIAL_MATCH' | 'UNKNOWN';
+  source_name: string;
+  source_text: string;
+  checked_at: string;
+  attestor: string;
+  complete: boolean;
+}
+
+export interface LiveSourcingOffer {
+  offer_id: string;
+  part_key: string;
+  seller: string;
+  manufacturer: string;
+  origin: string;
+  ship_from: string;
+  unit_price_usd: string;
+  lead_days: number;
+  declared_hts: string;
+  declared_eccn: string;
+  screening_evidence: {
+    seller: LiveScreeningEvidence;
+    manufacturer: LiveScreeningEvidence;
+    ownership_complete: boolean;
+  };
+}
+
+export interface UserProvidedSource {
+  document_id: string;
+  title: string;
+  host: string;
+  retrieved_at: string;
+  provided_by: string;
+  text: string;
 }
 
 export interface ProvenanceVerifyEnvelope extends OperationsEnvelope {
@@ -212,12 +261,34 @@ function requireOffer(value: unknown): asserts value is ServiceOffer {
   if (!isRecord(value)) throw new OperationsServiceError('SOURCING_OFFER_INVALID', 'An offer is malformed.');
   requireString(value.offer_id, 'SOURCING_OFFER_INVALID');
   requireString(value.seller, 'SOURCING_OFFER_INVALID');
-  if (!['eligible-fixture', 'review-required', 'review-blocked'].includes(String(value.screening_disposition))) {
+  if (!['eligible-fixture', 'eligible-bounded', 'review-required', 'review-blocked'].includes(String(value.screening_disposition))) {
     throw new OperationsServiceError('SOURCING_OFFER_INVALID', 'An offer has an unknown screening disposition.');
   }
   if (!isRecord(value.ownership_walk) || !isRecord(value.landed_cost)) throw new OperationsServiceError('SOURCING_OFFER_INVALID', 'An offer omitted ownership or cost evidence.');
   requireString(value.landed_cost.total_usd, 'SOURCING_OFFER_INVALID');
   if (!Array.isArray(value.landed_cost.rows)) throw new OperationsServiceError('SOURCING_OFFER_INVALID', 'An offer omitted its landed-cost ladder.');
+}
+
+function validateCarriedState(value: OperationsEnvelope, expected: OperationsCandidateIdentity, domain: OperationsDomain): void {
+  if (value.state === undefined) return;
+  if (!isRecord(value.state) || value.state.schema_version !== `caddydaddy.${domain}-state/1` || !isRecord(value.state.candidate)) {
+    throw new OperationsServiceError('RESPONSE_STATE_INVALID', 'The service returned an invalid client-carried state envelope.');
+  }
+  const candidate = {
+    candidate_id: requireString(value.state.candidate.candidate_id, 'RESPONSE_STATE_INVALID'),
+    revision_id: requireString(value.state.candidate.revision_id, 'RESPONSE_STATE_INVALID'),
+    snapshot_sha256: requireHash(value.state.candidate.snapshot_sha256, 'RESPONSE_STATE_INVALID'),
+  };
+  if (!sameCandidate(candidate, expected)) throw new OperationsServiceError('RESPONSE_STATE_STALE', 'The carried state belongs to another candidate.');
+  requireHash(value.state.seal_sha256, 'RESPONSE_STATE_INVALID');
+}
+
+export function utf8ByteSpan(text: string, quote: string): { start: number; end: number } | null {
+  const characterStart = text.indexOf(quote);
+  if (characterStart < 0) return null;
+  const encoder = new TextEncoder();
+  const start = encoder.encode(text.slice(0, characterStart)).byteLength;
+  return { start, end: start + encoder.encode(quote).byteLength };
 }
 
 function validateRound(value: OperationsEnvelope): asserts value is SourcingRoundEnvelope {
@@ -317,6 +388,7 @@ export async function loadOperationsCandidateIdentity(fetchImpl: typeof fetch = 
 
 export class OperationsClient {
   private readonly lastValid: Partial<Record<OperationsDomain, OperationsEnvelope>> = {};
+  private readonly carriedState: Partial<Record<OperationsDomain, ClientCarriedState>> = {};
 
   constructor(readonly candidate: OperationsCandidateIdentity, private readonly fetchImpl: typeof fetch = fetch) {
     requireString(candidate.candidate_id, 'CANDIDATE_INVALID');
@@ -328,13 +400,17 @@ export class OperationsClient {
     return this.lastValid[domain] ?? null;
   }
 
-  private async post<T extends OperationsEnvelope>(domain: OperationsDomain, path: string, payload: Record<string, unknown>, validate: (value: OperationsEnvelope) => asserts value is T): Promise<T> {
+  getCarriedState(domain: OperationsDomain): ClientCarriedState | null {
+    return this.carriedState[domain] ?? null;
+  }
+
+  private async post<T extends OperationsEnvelope>(domain: OperationsDomain, path: string, payload: Record<string, unknown>, validate: (value: OperationsEnvelope) => asserts value is T, continueState = true): Promise<T> {
     let response: Response;
     try {
       response = await this.fetchImpl(path, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidate: this.candidate, ...payload }),
+        body: JSON.stringify({ candidate: this.candidate, ...(continueState && this.carriedState[domain] ? { state: this.carriedState[domain] } : {}), ...payload }),
       });
     } catch {
       throw new OperationsServiceError('SERVICE_UNREACHABLE', `${domain} service is unreachable.`);
@@ -352,12 +428,15 @@ export class OperationsClient {
       throw new OperationsServiceError(code, message, response.status);
     }
     validate(value);
+    validateCarriedState(value, this.candidate, domain);
+    if (value.state) this.carriedState[domain] = value.state;
+    else if (!continueState) delete this.carriedState[domain];
     this.lastValid[domain] = value;
     return value;
   }
 
-  createSourcingRound(input: { part_key: string; quantity: number; mode: 'air' | 'ocean' }): Promise<SourcingRoundEnvelope> {
-    return this.post('sourcing', '/api/sourcing/rounds', input, validateRound);
+  createSourcingRound(input: { part_key: string; quantity: number; mode: 'air' | 'ocean'; input_mode?: 'offline-demo' | 'live-bounded'; offers?: LiveSourcingOffer[] }): Promise<SourcingRoundEnvelope> {
+    return this.post('sourcing', '/api/sourcing/rounds', input, validateRound, false);
   }
 
   selectSourcingOffer(roundId: string, offerId: string): Promise<SourcingSelectionEnvelope> {
@@ -376,8 +455,9 @@ export class OperationsClient {
     return this.post('sourcing', '/api/sourcing/dispatches', { round_id: roundId, manifest_sha256: manifestSha256, idempotency_key: idempotencyKey }, validateDispatch);
   }
 
-  inspectSource(documentId: string): Promise<ProvenanceInspectEnvelope> {
-    return this.post('provenance', '/api/provenance/inspect', { document_id: documentId }, validateInspect);
+  inspectSource(input: string | UserProvidedSource): Promise<ProvenanceInspectEnvelope> {
+    const payload = typeof input === 'string' ? { document_id: input } : { source: input };
+    return this.post('provenance', '/api/provenance/inspect', payload, validateInspect, false);
   }
 
   verifySourceSpan(input: { document_id: string; source_sha256: string; start: number; end: number; quote: string; field: string; value: number; unit: string }): Promise<ProvenanceVerifyEnvelope> {
