@@ -61,10 +61,11 @@ from .models import (
     RecomputeRequest,
     RecomputeResponse,
     Sketch,
-    SketchConstraint,
     TransformSpec,
     Vector3,
 )
+from .solver import AssemblySolveError, SketchSolveError, solve_assembly_mates, solve_sketch
+from .topology import catalog_topology, compare_topology, initial_topology_report
 
 
 class CadError(Exception):
@@ -177,76 +178,6 @@ def _point_tuple(entity: LineEntity | ArcEntity | CircleEntity, endpoint: str) -
     raise CadError("CONSTRAINT_REFERENCE_INVALID", f"Entity {entity.entity_id!r} has no point {endpoint!r}")
 
 
-def _entity_vector(entity: LineEntity) -> tuple[float, float]:
-    return entity.end.x - entity.start.x, entity.end.y - entity.start.y
-
-
-def _validate_constraint(constraint: SketchConstraint, entities: dict[str, Any], tolerance: float = 1e-6) -> None:
-    kind = constraint.kind.upper()
-
-    def entity(index: int) -> Any:
-        try:
-            return entities[constraint.entity_ids[index]]
-        except (IndexError, KeyError) as exc:
-            raise CadError("CONSTRAINT_REFERENCE_INVALID", f"Constraint {constraint.constraint_id!r} has an unknown entity") from exc
-
-    def point(index: int) -> tuple[float, float]:
-        try:
-            entity_id, endpoint = constraint.point_refs[index].rsplit(".", 1)
-            return _point_tuple(entities[entity_id], endpoint)
-        except (IndexError, KeyError, ValueError) as exc:
-            raise CadError("CONSTRAINT_REFERENCE_INVALID", f"Constraint {constraint.constraint_id!r} has an invalid point reference") from exc
-
-    satisfied = True
-    if kind == "COINCIDENT":
-        a, b = point(0), point(1)
-        satisfied = math.dist(a, b) <= tolerance
-    elif kind in {"HORIZONTAL", "VERTICAL"}:
-        item = entity(0)
-        if not isinstance(item, LineEntity):
-            raise CadError("CONSTRAINT_REFERENCE_INVALID", f"{kind} requires a line")
-        dx, dy = _entity_vector(item)
-        satisfied = abs(dy if kind == "HORIZONTAL" else dx) <= tolerance
-    elif kind == "DISTANCE":
-        if constraint.value is None:
-            raise CadError("CONSTRAINT_VALUE_MISSING", "DISTANCE requires value")
-        satisfied = abs(math.dist(point(0), point(1)) - constraint.value) <= tolerance
-    elif kind == "EQUAL_LENGTH":
-        a, b = entity(0), entity(1)
-        if not isinstance(a, LineEntity) or not isinstance(b, LineEntity):
-            raise CadError("CONSTRAINT_REFERENCE_INVALID", "EQUAL_LENGTH requires two lines")
-        satisfied = abs(math.hypot(*_entity_vector(a)) - math.hypot(*_entity_vector(b))) <= tolerance
-    elif kind == "RADIUS":
-        item = entity(0)
-        if constraint.value is None or not isinstance(item, CircleEntity):
-            raise CadError("CONSTRAINT_REFERENCE_INVALID", "RADIUS requires a circle and value")
-        satisfied = abs(item.radius - constraint.value) <= tolerance
-    elif kind in {"PARALLEL", "PERPENDICULAR", "ANGLE"}:
-        a, b = entity(0), entity(1)
-        if not isinstance(a, LineEntity) or not isinstance(b, LineEntity):
-            raise CadError("CONSTRAINT_REFERENCE_INVALID", f"{kind} requires two lines")
-        av, bv = _entity_vector(a), _entity_vector(b)
-        al, bl = math.hypot(*av), math.hypot(*bv)
-        if al <= tolerance or bl <= tolerance:
-            raise CadError("SKETCH_DEGENERATE", "Constraint references a zero-length line")
-        dot = (av[0] * bv[0] + av[1] * bv[1]) / (al * bl)
-        if kind == "PARALLEL":
-            satisfied = abs(abs(dot) - 1.0) <= tolerance
-        elif kind == "PERPENDICULAR":
-            satisfied = abs(dot) <= tolerance
-        else:
-            if constraint.value is None:
-                raise CadError("CONSTRAINT_VALUE_MISSING", "ANGLE requires degrees")
-            observed = math.degrees(math.acos(max(-1.0, min(1.0, dot))))
-            satisfied = abs(observed - constraint.value) <= tolerance
-    elif kind == "FIXED":
-        satisfied = True
-    else:
-        raise CadError("CONSTRAINT_KIND_UNSUPPORTED", f"Unsupported sketch constraint {constraint.kind!r}")
-    if not satisfied:
-        raise CadError("CONSTRAINT_UNSATISFIED", f"Constraint {constraint.constraint_id!r} is not satisfied by authored coordinates")
-
-
 def _wire(sketch: Sketch, loop: Any) -> TopoDS_Shape:
     if len(loop.entities) == 1 and isinstance(loop.entities[0], CircleEntity):
         circle = loop.entities[0]
@@ -276,8 +207,6 @@ def _face(sketch: Sketch) -> TopoDS_Shape:
             if entity.entity_id in entities:
                 raise CadError("DUPLICATE_ID", f"Duplicate sketch entity {entity.entity_id!r}")
             entities[entity.entity_id] = entity
-    for constraint in sketch.constraints:
-        _validate_constraint(constraint, entities)
     wires = [_wire(sketch, loop) for loop in sketch.loops]
     maker = BRepBuilderAPI_MakeFace(wires[0], True)
     for inner in wires[1:]:
@@ -311,11 +240,21 @@ def _body(bodies: dict[str, ShapeRecord], body_id: Any, feature_id: str) -> Shap
     return bodies[body_id]
 
 
-def _selected_edges(shape: TopoDS_Shape, parameters: dict[str, Any], feature_id: str) -> list[TopoDS_Shape]:
-    edges = _subshapes(shape, TopAbs_EDGE)
+def _selected_edges(record: ShapeRecord, parameters: dict[str, Any], feature_id: str) -> list[TopoDS_Shape]:
+    edges = _subshapes(record.shape, TopAbs_EDGE)
     selector = parameters.get("edge_selector", "ALL")
     if selector == "ALL":
         return edges
+    if selector == "SEMANTIC_IDS":
+        requested = parameters.get("edge_ids")
+        if not isinstance(requested, list) or not requested or not all(isinstance(item, str) for item in requested):
+            raise CadError("EDGE_SELECTOR_INVALID", "edge_ids must be a non-empty string list", feature_id=feature_id)
+        semantic = [item for item in catalog_topology(record.shape, record.producing_feature_id) if item.kind == "EDGE"]
+        by_id = {item.semantic_id: edge for item, edge in zip(semantic, edges)}
+        missing = sorted(set(requested) - set(by_id))
+        if missing:
+            raise CadError("EDGE_SELECTOR_STALE", f"Semantic edge IDs do not exist in the current revision: {missing}", feature_id=feature_id)
+        return [by_id[item] for item in sorted(set(requested))]
     if selector != "EDGE_INDICES":
         raise CadError("EDGE_SELECTOR_UNSUPPORTED", f"Unsupported edge selector {selector!r}", feature_id=feature_id)
     indices = parameters.get("edge_indices")
@@ -412,8 +351,9 @@ def _execute(feature: Feature, sketches: dict[str, Sketch], feature_shapes: dict
             raise CadError("KERNEL_OPERATION_FAILED", "OCCT hole cut failed", feature_id=fid)
         shape = algorithm.Shape()
     elif kind in {"FILLET", "CHAMFER"}:
-        source = _body(bodies, p.get("target_body_id"), fid).shape
-        edges = _selected_edges(source, p, fid)
+        source_record = _body(bodies, p.get("target_body_id"), fid)
+        source = source_record.shape
+        edges = _selected_edges(source_record, p, fid)
         if kind == "FILLET":
             maker = BRepFilletAPI_MakeFillet(source)
             amount = _positive(p, "radius_mm", fid)
@@ -499,7 +439,43 @@ def _body_result(body_id: str, record: ShapeRecord, linear: float, angular: floa
         area_mm2=area,
         volume_mm3=volume,
         mesh=_mesh(record.shape, linear, angular),
+        semantic_topology=catalog_topology(record.shape, record.producing_feature_id),
     )
+
+
+def _execute_document(document: CadDocument) -> tuple[dict[str, ShapeRecord], dict[str, str], list[Any], list[Diagnostic]]:
+    _validate_graph(document.features)
+    source_sketches = {sketch.sketch_id: sketch for sketch in document.sketches}
+    if len(source_sketches) != len(document.sketches):
+        raise CadError("DUPLICATE_ID", "Sketch IDs must be unique")
+    sketches: dict[str, Sketch] = {}
+    reports: list[Any] = []
+    diagnostics: list[Diagnostic] = []
+    for sketch_id in sorted(source_sketches):
+        try:
+            solved, report = solve_sketch(source_sketches[sketch_id])
+        except SketchSolveError as exc:
+            raise CadError("CONSTRAINT_UNSATISFIED", str(exc)) from exc
+        sketches[sketch_id] = solved
+        reports.append(report)
+        if report.status == "UNDER_CONSTRAINED":
+            diagnostics.append(Diagnostic(code="SKETCH_UNDERCONSTRAINED", severity="WARNING", message=f"Sketch {sketch_id!r} solved with approximately {report.degrees_of_freedom} remaining degrees of freedom"))
+        else:
+            diagnostics.append(Diagnostic(code="SKETCH_CONSTRAINTS_SOLVED", severity="INFO", message=f"Sketch {sketch_id!r} satisfied all supported constraints in {report.iterations} bounded iterations"))
+    feature_shapes: dict[str, TopoDS_Shape] = {}
+    bodies: dict[str, ShapeRecord] = {}
+    statuses: dict[str, str] = {}
+    for feature in document.features:
+        if not feature.enabled:
+            statuses[feature.feature_id] = "DISABLED"
+            continue
+        shape = _execute(feature, sketches, feature_shapes, bodies)
+        if shape is not None:
+            feature_shapes[feature.feature_id] = shape
+        statuses[feature.feature_id] = "SUCCEEDED"
+    if not bodies:
+        raise CadError("GEOMETRY_EMPTY", "Document produced no bodies")
+    return bodies, statuses, reports, diagnostics
 
 
 def recompute(request: RecomputeRequest) -> RecomputeResponse:
@@ -513,27 +489,19 @@ def recompute(request: RecomputeRequest) -> RecomputeResponse:
         computed_base = revision_id(request.base_document)
         if request.expected_base_revision_id != computed_base or candidate.parent_revision_id != computed_base:
             raise CadError("STALE_BASE_REVISION", "Expected base or candidate parent does not match the supplied base document")
-    _validate_graph(candidate.features)
-    sketches = {sketch.sketch_id: sketch for sketch in candidate.sketches}
-    if len(sketches) != len(candidate.sketches):
-        raise CadError("DUPLICATE_ID", "Sketch IDs must be unique")
-    feature_shapes: dict[str, TopoDS_Shape] = {}
-    bodies: dict[str, ShapeRecord] = {}
-    statuses: dict[str, str] = {}
-    for feature in candidate.features:
-        if not feature.enabled:
-            statuses[feature.feature_id] = "DISABLED"
-            continue
-        shape = _execute(feature, sketches, feature_shapes, bodies)
-        if shape is not None:
-            feature_shapes[feature.feature_id] = shape
-        statuses[feature.feature_id] = "SUCCEEDED"
-    if not bodies:
-        raise CadError("GEOMETRY_EMPTY", "Document produced no bodies")
+    bodies, statuses, constraint_reports, diagnostics = _execute_document(candidate)
     body_results = [_body_result(body_id, bodies[body_id], request.linear_deflection_mm, request.angular_deflection_deg) for body_id in sorted(bodies)]
     doc_hash = document_hash(candidate)
     geometry_hash = _hash({"document_hash": doc_hash, "bodies": [{"body_id": body.body_id, "brep_sha256": body.brep_sha256} for body in body_results]})
-    diagnostics = [Diagnostic(code="CONSTRAINTS_VALIDATE_ONLY", severity="INFO", message="Sketch constraints were validated against authored coordinates; no constraint solve was performed")]
+    current_topology = {body.body_id: body.semantic_topology for body in body_results}
+    if request.base_document is None:
+        topology_identity = [initial_topology_report(body_id, current_topology[body_id]) for body_id in sorted(current_topology)]
+    else:
+        base_bodies, _base_statuses, _base_reports, _base_diagnostics = _execute_document(request.base_document)
+        base_topology = {body_id: catalog_topology(record.shape, record.producing_feature_id) for body_id, record in base_bodies.items()}
+        topology_identity = [compare_topology(body_id, base_topology.get(body_id, []), current_topology[body_id]) for body_id in sorted(current_topology)]
+    for report in topology_identity:
+        diagnostics.extend(report.diagnostics)
     return RecomputeResponse(
         document_id=candidate.document_id,
         revision_id="cad-rev:" + doc_hash,
@@ -544,6 +512,8 @@ def recompute(request: RecomputeRequest) -> RecomputeResponse:
         operation_status=statuses,
         bodies=body_results,
         diagnostics=diagnostics,
+        constraint_reports=constraint_reports,
+        topology_identity=topology_identity,
     )
 
 
@@ -583,38 +553,11 @@ def assemble(request: AssemblyRequest) -> AssemblyResponse:
     if len(instances) != len(request.instances):
         raise CadError("DUPLICATE_ID", "Assembly instance IDs must be unique")
     shapes = {item.instance_id: _deserialize_brep(base64.b64decode(item.brep_base64, validate=True)) for item in request.instances}
-    transforms = {item.instance_id: _transform(item.transform) for item in request.instances}
-    constrained = {request.instances[0].instance_id}
-    for mate in request.mates:
-        kind = mate.kind.upper()
-        if mate.moving_instance_id not in instances:
-            raise CadError("MATE_REFERENCE_MISSING", f"Unknown moving instance {mate.moving_instance_id!r}")
-        if mate.target_instance_id is not None and mate.target_instance_id not in instances:
-            raise CadError("MATE_REFERENCE_MISSING", f"Unknown target instance {mate.target_instance_id!r}")
-        moving = transforms[mate.moving_instance_id]
-        target = transforms[mate.target_instance_id] if mate.target_instance_id else gp_Trsf()
-        if kind == "FIXED":
-            constrained.add(mate.moving_instance_id)
-            continue
-        moving_point = _world_point(moving, mate.moving_point)
-        target_point = _world_point(target, mate.target_point)
-        if kind == "POINT_COINCIDENT":
-            desired = target_point
-        elif kind == "DISTANCE":
-            direction = _world_dir(target, mate.target_axis)
-            desired = target_point.Translated(gp_Vec(direction.X() * mate.distance_mm, direction.Y() * mate.distance_mm, direction.Z() * mate.distance_mm))
-        elif kind == "AXIS_CONCENTRIC":
-            moving_axis = _world_dir(moving, mate.moving_axis)
-            target_axis = _world_dir(target, mate.target_axis)
-            cross = moving_axis.Crossed(target_axis)
-            if cross.Magnitude() > 1e-7:
-                raise CadError("MATE_SOLVE_UNSUPPORTED_ORIENTATION", "Concentric mate requires already-parallel axes in candidate v1")
-            desired = target_point
-        else:
-            raise CadError("MATE_KIND_UNSUPPORTED", f"Unsupported assembly mate {mate.kind!r}")
-        delta = _translation_delta(desired.X() - moving_point.X(), desired.Y() - moving_point.Y(), desired.Z() - moving_point.Z())
-        transforms[mate.moving_instance_id] = delta.Multiplied(moving)
-        constrained.add(mate.moving_instance_id)
+    initial_transforms = {item.instance_id: _transform(item.transform) for item in request.instances}
+    try:
+        transforms, mate_reports, diagnostics = solve_assembly_mates(request, initial_transforms)
+    except AssemblySolveError as exc:
+        raise CadError(exc.code, str(exc)) from exc
     transformed: dict[str, TopoDS_Shape] = {}
     instance_results: list[InstanceResult] = []
     for instance_id in sorted(instances):
@@ -627,7 +570,6 @@ def assemble(request: AssemblyRequest) -> AssemblyResponse:
     compound = _compound(transformed.values())
     assembly_hash = _hash({"request": request.model_dump(mode="json"), "matrices": {key: _matrix(transforms[key]) for key in sorted(transforms)}})
     record = ShapeRecord(compound, "assembly:compose")
-    diagnostics = [Diagnostic(code="ASSEMBLY_UNDERCONSTRAINED", severity="WARNING", message=f"Instance {instance_id!r} has only its authored transform") for instance_id in sorted(set(instances) - constrained)]
     return AssemblyResponse(
         assembly_id=request.assembly_id,
         assembly_revision_id="assembly-rev:" + assembly_hash,
@@ -635,6 +577,7 @@ def assemble(request: AssemblyRequest) -> AssemblyResponse:
         instances=instance_results,
         assembly_body=_body_result("assembly-body:" + request.assembly_id, record, request.linear_deflection_mm, request.angular_deflection_deg),
         diagnostics=diagnostics,
+        mate_reports=mate_reports,
     )
 
 
@@ -752,8 +695,9 @@ def capabilities() -> dict[str, Any]:
         "schema_version": "caddydaddy.cad-capabilities/1",
         "kernel": {"name": "OpenCascade", "version": "7.9.3", "binding": f"cadquery-ocp-novtk/{OCP.__version__}"},
         "features": ["SKETCH", "EXTRUDE", "REVOLVE", "BOOLEAN", "HOLE", "FILLET", "CHAMFER", "TRANSFORM"],
-        "constraints": {"mode": "VALIDATE_ONLY", "types": ["COINCIDENT", "HORIZONTAL", "VERTICAL", "DISTANCE", "EQUAL_LENGTH", "RADIUS", "PARALLEL", "PERPENDICULAR", "ANGLE", "FIXED"]},
-        "mates": ["FIXED", "POINT_COINCIDENT", "DISTANCE", "AXIS_CONCENTRIC_PREALIGNED"],
+        "constraints": {"mode": "VALIDATE_ONLY", "authoring_mode": "DETERMINISTIC_BOUNDED_SOLVE", "reports": ["RESIDUALS", "RANK", "DEGREES_OF_FREEDOM", "UNDER_CONSTRAINED", "OVER_CONSTRAINED"], "types": ["COINCIDENT", "HORIZONTAL", "VERTICAL", "DISTANCE", "EQUAL", "EQUAL_LENGTH", "RADIUS", "PARALLEL", "PERPENDICULAR", "ANGLE", "FIXED"]},
+        "topology_identity": {"mode": "SEMANTIC_BEST_EFFORT", "basis": ["FEATURE_PROVENANCE", "GEOMETRIC_SIGNATURE"], "diagnostics": ["PRESERVED", "REMAPPED", "LOST", "NEW"], "perfect_persistent_naming": False},
+        "mates": {"solver": "DETERMINISTIC_BOUNDED_RIGID", "types": ["FIXED", "POINT_COINCIDENT", "DISTANCE", "AXIS_CONCENTRIC"], "general_nonlinear_solver": False},
         "exchange": {"exact": ["STEP_AP242", "IGES_5_3"], "mesh_only": ["STL"], "unsupported": ["NATIVE_ASSEMBLY", "DRAWING", "CAM", "GCODE"]},
         "state": "STATELESS",
     }

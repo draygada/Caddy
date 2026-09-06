@@ -155,6 +155,65 @@ class Diagnostic(StrictModel):
     severity: Literal["INFO", "WARNING", "ERROR"]
     message: str
     feature_id: str | None = None
+    constraint_id: str | None = None
+    mate_id: str | None = None
+    body_id: str | None = None
+
+
+class ConstraintResidual(StrictModel):
+    constraint_id: str
+    kind: str
+    residual: float
+    tolerance: float
+    unit: Literal["mm", "degrees", "ratio"]
+    satisfied: bool
+
+
+class SketchSolveReport(StrictModel):
+    sketch_id: str
+    status: Literal["SOLVED", "UNDER_CONSTRAINED", "OVER_CONSTRAINED"]
+    iterations: int = Field(ge=0)
+    variable_count: int = Field(ge=0)
+    independent_equation_count: int = Field(ge=0)
+    degrees_of_freedom: int = Field(ge=0)
+    max_normalized_residual: float = Field(ge=0)
+    residuals: list[ConstraintResidual]
+
+
+class SemanticTopologyEntity(StrictModel):
+    semantic_id: str
+    kind: Literal["VERTEX", "EDGE", "FACE", "SOLID"]
+    producing_feature_id: str
+    geometric_signature_sha256: str
+    centroid_mm: list[float]
+    bounds_mm: list[float]
+    measure: float
+
+
+class TopologyRemap(StrictModel):
+    previous_semantic_id: str
+    current_semantic_id: str
+    confidence: Literal["EXACT_SIGNATURE", "GEOMETRIC_BEST_EFFORT"]
+    normalized_distance: float = Field(ge=0)
+
+
+class TopologyIdentityReport(StrictModel):
+    body_id: str
+    preserved_ids: list[str]
+    remapped: list[TopologyRemap]
+    lost_ids: list[str]
+    new_ids: list[str]
+    diagnostics: list[Diagnostic]
+
+
+class MateSolveReport(StrictModel):
+    mate_id: str
+    kind: str
+    status: Literal["SATISFIED", "CONFLICT"]
+    iterations: int = Field(ge=0)
+    linear_residual_mm: float = Field(ge=0)
+    angular_residual_deg: float = Field(ge=0)
+    satisfied: bool
 
 
 class Mesh(StrictModel):
@@ -175,6 +234,7 @@ class BodyResult(StrictModel):
     area_mm2: float
     volume_mm3: float
     mesh: Mesh
+    semantic_topology: list[SemanticTopologyEntity] = Field(default_factory=list)
 
 
 class RecomputeResponse(StrictModel):
@@ -186,10 +246,12 @@ class RecomputeResponse(StrictModel):
     document_hash: str
     geometry_hash: str
     kernel: dict[str, str]
-    constraint_mode: Literal["VALIDATE_ONLY"] = "VALIDATE_ONLY"
+    constraint_mode: Literal["VALIDATE_ONLY", "BOUNDED_SOLVE"] = "BOUNDED_SOLVE"
     operation_status: dict[str, Literal["SUCCEEDED", "DISABLED"]]
     bodies: list[BodyResult]
     diagnostics: list[Diagnostic]
+    constraint_reports: list[SketchSolveReport] = Field(default_factory=list)
+    topology_identity: list[TopologyIdentityReport] = Field(default_factory=list)
 
 
 class InstanceResult(StrictModel):
@@ -208,6 +270,7 @@ class AssemblyResponse(StrictModel):
     instances: list[InstanceResult]
     assembly_body: BodyResult
     diagnostics: list[Diagnostic]
+    mate_reports: list[MateSolveReport] = Field(default_factory=list)
 
 
 class ExchangeResponse(StrictModel):
