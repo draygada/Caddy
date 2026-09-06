@@ -1,4 +1,5 @@
 import type {
+  CadDiagnostic,
   CadDependencyGraph,
   CadDocument,
   CadExportRequest,
@@ -10,16 +11,19 @@ import type {
   CadRecomputeResponse,
   CadTransferFormat,
 } from './types';
+import { BrowserCadError, exportCadInBrowser, importCadInBrowser, recomputeCadInBrowser } from './browser-kernel';
 
 export class CadApiError extends Error {
   code: 'CAD_API_UNAVAILABLE' | 'CAD_API_REJECTED' | 'CAD_RESPONSE_INVALID' | 'CAD_STALE';
   status: number | null;
+  diagnostics: CadDiagnostic[];
 
-  constructor(code: CadApiError['code'], message: string, status: number | null = null) {
+  constructor(code: CadApiError['code'], message: string, status: number | null = null, diagnostics: CadDiagnostic[] = []) {
     super(message);
     this.name = 'CadApiError';
     this.code = code;
     this.status = status;
+    this.diagnostics = diagnostics;
   }
 }
 
@@ -95,11 +99,21 @@ async function postJson(path: string, payload: unknown, fetchImpl: typeof fetch)
 }
 
 export async function recomputeCad(request: CadRecomputeRequest, fetchImpl: typeof fetch = fetch): Promise<CadRecomputeResponse> {
-  return parseCadRecomputeResponse(await postJson('/api/cad/recompute', request, fetchImpl));
+  try {
+    return parseCadRecomputeResponse(await postJson('/api/cad/recompute', request, fetchImpl));
+  } catch (error) {
+    if (!canUseBrowserFallback(error)) throw error;
+    return runBrowser(() => recomputeCadInBrowser(request));
+  }
 }
 
 export async function importCad(request: CadImportRequest, fetchImpl: typeof fetch = fetch): Promise<CadRecomputeResponse> {
-  return parseCadRecomputeResponse(await postJson('/api/cad/import', request, fetchImpl));
+  try {
+    return parseCadRecomputeResponse(await postJson('/api/cad/import', request, fetchImpl));
+  } catch (error) {
+    if (!canUseBrowserFallback(error)) throw error;
+    return runBrowser(() => importCadInBrowser(request));
+  }
 }
 
 const FORMATS = new Set<CadTransferFormat>(['STEP', 'IGES', 'STL']);
@@ -112,5 +126,24 @@ export function parseCadExportResponse(value: unknown): CadExportResponse {
 }
 
 export async function exportCad(request: CadExportRequest, fetchImpl: typeof fetch = fetch): Promise<CadExportResponse> {
-  return parseCadExportResponse(await postJson('/api/cad/export', request, fetchImpl));
+  try {
+    return parseCadExportResponse(await postJson('/api/cad/export', request, fetchImpl));
+  } catch (error) {
+    if (!canUseBrowserFallback(error)) throw error;
+    return runBrowser(() => exportCadInBrowser(request));
+  }
+}
+
+function canUseBrowserFallback(error: unknown): boolean {
+  if (typeof window === 'undefined' || !globalThis.crypto?.subtle || !(error instanceof CadApiError)) return false;
+  return error.code === 'CAD_API_UNAVAILABLE' || (error.code === 'CAD_API_REJECTED' && [404, 405, 501, 502, 503, 504].includes(error.status ?? 0));
+}
+
+async function runBrowser<T>(operation: () => Promise<T>): Promise<T> {
+  try { return await operation(); }
+  catch (error) {
+    if (!(error instanceof BrowserCadError)) throw error;
+    if (error.code === 'BROWSER_CAD_STALE') throw new CadApiError('CAD_STALE', error.message, 409, error.diagnostics);
+    throw new CadApiError('CAD_API_REJECTED', error.message, null, error.diagnostics);
+  }
 }

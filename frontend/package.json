@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@jscad/modeling": "2.13.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "zustand": "5.0.15"

@@ -169,6 +169,7 @@ export interface CadDocument {
     instances: CadAssemblyInstance[];
     mates: CadAssemblyMate[];
   };
+  importedMeshes?: CadImportedMesh[];
 }
 
 export interface CadDependencyNode {
@@ -190,6 +191,29 @@ export interface CadMesh {
   groups: Array<{ bodyId: string; startTriangle: number; triangleCount: number; color: string }>;
 }
 
+export interface CadImportedMesh {
+  bodyId: string;
+  fileName: string;
+  format: 'STL';
+  sourceHash: string;
+  vertices: Array<[number, number, number]>;
+  triangles: Array<[number, number, number]>;
+}
+
+export interface CadBodyGeometrySummary {
+  bodyId: string;
+  instanceId: string | null;
+  bounds: { min: [number, number, number]; max: [number, number, number] };
+  volume: number;
+  topology: { faces: number; edges: number; vertices: number };
+}
+
+export interface CadGeometrySummary {
+  bodies: CadBodyGeometrySummary[];
+  bounds: { min: [number, number, number]; max: [number, number, number] } | null;
+  totalVolume: number;
+}
+
 export interface CadDiagnostic {
   id: string;
   severity: 'info' | 'warning' | 'error';
@@ -203,6 +227,7 @@ export interface CadKernelReceipt {
   name: string;
   version: string;
   mode: 'live' | 'recovery-fixture';
+  engineMode?: 'CONNECTED_OCCT' | 'BROWSER_JSCAD_BOUNDED';
   computedAt: string;
   artifactHash: string;
 }
@@ -218,7 +243,9 @@ export interface CadRecomputeResponse {
   revisionId: string;
   documentHash: string;
   dependencyGraph: CadDependencyGraph;
+  dependencyGraphHash?: string;
   mesh: CadMesh;
+  geometry?: CadGeometrySummary;
   diagnostics: CadDiagnostic[];
   kernel: CadKernelReceipt;
 }

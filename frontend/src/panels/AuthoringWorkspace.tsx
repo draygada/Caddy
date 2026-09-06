@@ -62,7 +62,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   const [sketch, setSketch] = useState<CadSketch>(initialSketch);
   const [featureKind, setFeatureKind] = useState<CadFeatureKind>('feature.extrude');
   const [featureName, setFeatureName] = useState('Extrude 1');
-  const [featureInputs, setFeatureInputs] = useState('');
+  const [featureInputs, setFeatureInputs] = useState(sketch.id);
   const [featureTargets, setFeatureTargets] = useState('');
   const [featureValue, setFeatureValue] = useState(10);
   const [outputBodyName, setOutputBodyName] = useState('Body 1');
@@ -90,7 +90,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
       dispatch({ type: 'succeeded', requestId, response });
       setFormError(null);
     } catch (error) {
-      dispatch({ type: 'failed', requestId, error: error instanceof Error ? error.message : 'CAD recompute failed.', stale: error instanceof CadApiError && error.code === 'CAD_STALE' });
+      dispatch({ type: 'failed', requestId, error: error instanceof Error ? error.message : 'CAD recompute failed.', stale: error instanceof CadApiError && error.code === 'CAD_STALE', diagnostics: error instanceof CadApiError ? error.diagnostics : undefined });
     }
   }
 
@@ -178,20 +178,22 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   }
 
   const statusColor = state.status === 'failed' || state.status === 'stale' ? '#a33d2f' : state.status === 'running' || state.status === 'queued' ? '#9b6200' : '#176b45';
+  const engineMode = state.kernel?.engineMode ?? (state.kernel?.mode === 'live' ? 'CONNECTED_OCCT' : 'AUTO_CONNECTED_OCCT_OR_BROWSER_JSCAD_BOUNDED');
+  const engineLabel = engineMode === 'CONNECTED_OCCT' ? 'Connected Candidate 0.2 service · stateless kernel adapter' : `engineMode ${engineMode}`;
 
   return (
     <section aria-labelledby="cad-authoring-title" style={{ height: '100%', minHeight: 0, overflow: 'auto', background: '#edf0ec', color: 'var(--ink, #17201d)' }}>
       <header style={{ padding: '12px 14px', borderBottom: '1px solid #bfc9c2', background: 'linear-gradient(115deg, #f5f0e5 0%, #e7eee8 55%, #e1e8eb 100%)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <div style={{ ...mono, fontSize: 10, color: '#176b45', textTransform: 'uppercase', letterSpacing: '.1em', fontWeight: 850 }}>Connected Candidate 0.2 service · stateless kernel adapter</div>
+            <div style={{ ...mono, fontSize: 10, color: '#176b45', textTransform: 'uppercase', letterSpacing: '.1em', fontWeight: 850 }}>{engineLabel}</div>
             <h2 id="cad-authoring-title" style={{ margin: '4px 0 2px', fontSize: 23 }}>CAD authoring workshop</h2>
             <div style={{ fontSize: 11, color: '#5d6861' }}>{state.document.name} · draft {shortId(state.document.revisionId)} · rendered {shortId(state.lastValidDocument.revisionId)}</div>
           </div>
           <div role="status" aria-live="polite" style={{ ...mono, padding: '7px 9px', border: `1px solid ${statusColor}`, borderRadius: 5, color: statusColor, background: '#fff', fontSize: 10, fontWeight: 850, textTransform: 'uppercase' }}>{state.status} · {state.kernel ? `${state.kernel.name} ${state.kernel.version}` : 'kernel not yet proven'}</div>
         </div>
         <div role="note" style={{ marginTop: 9, padding: '8px 10px', borderLeft: '4px solid #9b6200', background: '#fff9eb', fontSize: 11, lineHeight: 1.4 }}>
-          Operations are editable intent until <span style={mono}>/api/cad/recompute</span> returns a revision-bound document, graph, mesh, diagnostics, and kernel receipt. Failed or stale work never replaces the last valid viewport.
+          The approved connected OCCT service is preferred when available. Otherwise the MIT JSCAD browser fallback performs bounded solid modeling and real STL exchange without uploading OCCT/OCP. Failed, stale, or unsupported work never replaces the last valid viewport.
         </div>
       </header>
 
@@ -220,15 +222,16 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
         </main>
 
         <aside style={{ display: 'grid', gap: 9 }}>
-          <SketchEditor sketch={sketch} onChange={setSketch} onCommit={() => safely(() => createSketchOperation(sketch))} />
+          <SketchEditor sketch={sketch} onChange={setSketch} onCommit={() => { setFeatureInputs(sketch.id); safely(() => createSketchOperation(sketch)); }} />
           <section aria-labelledby="feature-builder-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
             <h3 id="feature-builder-title" style={{ margin: 0, fontSize: 13 }}>Feature builder</h3>
             <select aria-label="Feature type" value={featureKind} onChange={(event) => { const kind = event.target.value as CadFeatureKind; setFeatureKind(kind); setFeatureName(featureLabel(kind)); }} style={field}>
-              {FEATURE_KINDS.map((kind) => <option key={kind} value={kind}>{featureLabel(kind)}</option>)}
+              {FEATURE_KINDS.map((kind) => <option key={kind} value={kind}>{featureLabel(kind)}{kind === 'feature.fillet' || kind === 'feature.chamfer' ? ' · connected OCCT only' : ''}</option>)}
             </select>
             <input aria-label="Feature name" value={featureName} onChange={(event) => setFeatureName(event.target.value)} style={field} />
             <input aria-label="Feature input references" placeholder="Sketch/entity/body IDs, comma separated" value={featureInputs} onChange={(event) => setFeatureInputs(event.target.value)} style={field} />
             <input aria-label="Target body references" placeholder="Target body IDs, comma separated" value={featureTargets} onChange={(event) => setFeatureTargets(event.target.value)} style={field} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}><button type="button" disabled={!state.selectedId} onClick={() => state.selectedId && setFeatureInputs(state.selectedId)} style={button}>Use selected as input</button><button type="button" disabled={!state.selectedId} onClick={() => state.selectedId && setFeatureTargets(state.selectedId)} style={button}>Use selected as target</button></div>
             <label style={{ fontSize: 10 }}>Distance / angle / radius<input aria-label="Feature numeric value" type="number" value={featureValue} onChange={(event) => setFeatureValue(Number(event.target.value))} style={{ ...field, marginTop: 3 }} /></label>
             <input aria-label="Output body name" placeholder="New body name; blank modifies targets" value={outputBodyName} onChange={(event) => setOutputBodyName(event.target.value)} style={field} />
             <button type="button" onClick={() => safely(() => createFeatureOperation({ kind: featureKind, name: featureName, inputIds: ids(featureInputs), targetBodyIds: ids(featureTargets), outputBodyName, parameters: featureParameters(featureKind, featureValue) }))} style={actionButton}>Queue {featureLabel(featureKind)}</button>
@@ -297,7 +300,7 @@ function SketchEditor({ sketch, onChange, onCommit }: { sketch: CadSketch; onCha
       <button type="button" onClick={() => onChange({ ...sketch, dimensions: [...sketch.dimensions, { id: cadId('dimension'), kind: dimensionKind, entityIds: ids(referenceIds), value: 10, expression: null, unit: dimensionKind === 'angle' ? 'deg' : 'mm' }] })} style={button}>Add dimension</button>
       <button type="button" onClick={() => onChange({ ...sketch, constraints: [...sketch.constraints, { id: cadId('constraint'), kind: constraintKind, entityIds: ids(referenceIds) }] })} style={button}>Add constraint</button>
     </div>
-    <div style={{ ...mono, fontSize: 9, color: '#66736b' }}>{sketch.dimensions.length} dimensions · {sketch.constraints.length} constraints · solver pending kernel</div>
+    <div style={{ ...mono, fontSize: 9, color: '#66736b' }}>{sketch.dimensions.length} dimensions · {sketch.constraints.length} constraints · connected OCCT may solve; browser fallback records but does not solve</div>
     <button type="button" onClick={onCommit} style={actionButton}>Queue sketch for recompute</button>
   </section>;
 }
@@ -309,7 +312,7 @@ function EntityRow({ entity, onChange, onRemove, index }: { entity: SketchEntity
 
 function SemanticMesh({ mesh, document }: { mesh: ReturnType<typeof createCadAuthoringState>['lastValidMesh']; document: CadDocument }) {
   const projected = useMemo(() => mesh?.vertices.map(([x, y, z]) => [120 + x * 3 + z, 105 - y * 3 - z * .5] as const) ?? [], [mesh]);
-  return <section aria-labelledby="mesh-title" style={{ ...card, overflow: 'hidden' }}><div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', borderBottom: '1px solid #d9dfdb' }}><h3 id="mesh-title" style={{ margin: 0, fontSize: 13 }}>Last valid semantic mesh</h3><span style={{ ...mono, fontSize: 9 }}>{mesh ? `${mesh.triangles.length} triangles` : 'no connected-service mesh'}</span></div><svg role="img" aria-labelledby="semantic-mesh-title semantic-mesh-desc" viewBox="0 0 240 210" style={{ display: 'block', width: '100%', minHeight: 270, background: 'radial-gradient(circle at 50% 44%, #f8fbf8, #dce4df)' }}><title id="semantic-mesh-title">Revision-bound CAD mesh fallback</title><desc id="semantic-mesh-desc">Accessible two-dimensional projection of {document.bodies.length} bodies from revision {document.revisionId}.</desc><path d="M0 175 H240 M25 0 V210" stroke="#c6d0ca" strokeWidth=".5" />{mesh?.triangles.map((triangle, index) => { const points = triangle.map((vertex) => projected[vertex]).filter(Boolean).map((point) => point.join(',')).join(' '); return <polygon key={`${triangle.join('-')}:${index}`} points={points} fill={mesh.groups.find((group) => index >= group.startTriangle && index < group.startTriangle + group.triangleCount)?.color ?? '#7fa896'} fillOpacity=".52" stroke="#294d42" strokeWidth=".65" />; })}{!mesh && <text x="120" y="92" textAnchor="middle" fill="#526159" fontSize="8">No authoritative mesh yet</text>}{!mesh && <text x="120" y="108" textAnchor="middle" fill="#6c776f" fontSize="6">Author a feature, then connect /api/cad/recompute</text>}</svg><div style={{ padding: 8, fontSize: 10, color: '#66736b' }}>Semantic SVG fallback remains keyboard- and screen-reader-readable. No WebGL or successful kernel execution is implied.</div></section>;
+  return <section aria-labelledby="mesh-title" style={{ ...card, overflow: 'hidden' }}><div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', borderBottom: '1px solid #d9dfdb' }}><h3 id="mesh-title" style={{ margin: 0, fontSize: 13 }}>Last valid semantic mesh</h3><span style={{ ...mono, fontSize: 9 }}>{mesh ? `${mesh.triangles.length} triangles` : 'no successful kernel mesh'}</span></div><svg role="img" aria-labelledby="semantic-mesh-title semantic-mesh-desc" viewBox="0 0 240 210" style={{ display: 'block', width: '100%', minHeight: 270, background: 'radial-gradient(circle at 50% 44%, #f8fbf8, #dce4df)' }}><title id="semantic-mesh-title">Revision-bound CAD mesh projection</title><desc id="semantic-mesh-desc">Accessible two-dimensional projection of {document.bodies.length} bodies from revision {document.revisionId}.</desc><path d="M0 175 H240 M25 0 V210" stroke="#c6d0ca" strokeWidth=".5" />{mesh?.triangles.map((triangle, index) => { const points = triangle.map((vertex) => projected[vertex]).filter(Boolean).map((point) => point.join(',')).join(' '); return <polygon key={`${triangle.join('-')}:${index}`} points={points} fill={mesh.groups.find((group) => index >= group.startTriangle && index < group.startTriangle + group.triangleCount)?.color ?? '#7fa896'} fillOpacity=".52" stroke="#294d42" strokeWidth=".65" />; })}{!mesh && <text x="120" y="92" textAnchor="middle" fill="#526159" fontSize="8">No validated mesh yet</text>}{!mesh && <text x="120" y="108" textAnchor="middle" fill="#6c776f" fontSize="6">Queue a supported sketch and feature</text>}</svg><div style={{ padding: 8, fontSize: 10, color: '#66736b' }}>This accessible SVG is a projection of the last successful connected-OCCT or bounded-browser mesh. It is not a B-rep claim.</div></section>;
 }
 
 function DependencyRail({ graph, history, diagnostics }: { graph: ReturnType<typeof createCadAuthoringState>['dependencyGraph']; history: ReturnType<typeof createCadAuthoringState>['history']; diagnostics: ReturnType<typeof createCadAuthoringState>['diagnostics'] }) {
@@ -317,7 +320,7 @@ function DependencyRail({ graph, history, diagnostics }: { graph: ReturnType<typ
 }
 
 function TransferPanel({ message, onImport, onExport }: { message: string | null; onImport: (file: File, format: CadTransferFormat) => void; onExport: (format: CadTransferFormat) => void }) {
-  return <section aria-labelledby="transfer-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}><h3 id="transfer-title" style={{ margin: 0, fontSize: 13 }}>Kernel exchange</h3><label style={{ ...button, textAlign: 'center' }}>Import STEP / IGES / STL<input aria-label="Import CAD file" type="file" accept=".step,.stp,.iges,.igs,.stl" style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, formatFromName(file.name)); }} /></label><div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>{(['STEP', 'IGES', 'STL'] as CadTransferFormat[]).map((format) => <button key={format} type="button" onClick={() => onExport(format)} style={button}>{format}</button>)}</div><p style={{ margin: 0, fontSize: 9, lineHeight: 1.4, color: '#66736b' }}>Exports are kernel exchange bytes, not editable feature-history round trips. A validated export is retained for the current manufacturing bundle.</p>{message && <div role="status" style={{ fontSize: 9, padding: 6, background: '#f2f5f2' }}>{message}</div>}</section>;
+  return <section aria-labelledby="transfer-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}><h3 id="transfer-title" style={{ margin: 0, fontSize: 13 }}>Kernel exchange</h3><label style={{ ...button, textAlign: 'center' }}>Import STEP / IGES / STL<input aria-label="Import CAD file" type="file" accept=".step,.stp,.iges,.igs,.stl" style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, formatFromName(file.name)); }} /></label><div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>{(['STEP', 'IGES', 'STL'] as CadTransferFormat[]).map((format) => <button key={format} type="button" onClick={() => onExport(format)} style={button}>{format}{format !== 'STL' ? ' · OCCT' : ''}</button>)}</div><p style={{ margin: 0, fontSize: 9, lineHeight: 1.4, color: '#66736b' }}>Browser fallback imports and exports real STL mesh bytes. STEP/IGES require connected, owner-approved OCCT and fail closed when it is unavailable. No exchange format preserves editable feature history.</p>{message && <div role="status" style={{ fontSize: 9, padding: 6, background: '#f2f5f2' }}>{message}</div>}</section>;
 }
 
 function OutputPanel({ busy, nativeEnvelope, bundle, message, error, retainedFormats, onNativeSave, onNativeLoad, onGenerate }: {
