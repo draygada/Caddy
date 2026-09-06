@@ -7,12 +7,10 @@ const vercel = JSON.parse(vercelSource) as {
 
 describe('Candidate 0.2 backend target', () => {
   it('pins same-origin API traffic to the public Candidate 0.2 product service', () => {
-    expect(vercel.rewrites).toEqual([
-      {
-        source: '/api/:path*',
-        destination: 'https://caddydaddy-product-service.vercel.app/api/:path*',
-      },
-    ]);
+    expect(vercel.rewrites).toContainEqual({
+      source: '/api/:path*',
+      destination: 'https://caddydaddy-product-service.vercel.app/api/:path*',
+    });
   });
 
   it('rejects every Candidate 0.1 backend destination', () => {

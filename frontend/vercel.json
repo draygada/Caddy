@@ -16,6 +16,10 @@
   ],
   "rewrites": [
     {
+      "source": "/now",
+      "destination": "/api/now"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://caddydaddy-product-service.vercel.app/api/:path*"
     }
