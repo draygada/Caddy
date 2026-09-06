@@ -92,9 +92,10 @@ export function CoreAssemblyWorkspace() {
   const entities = useMemo(() => load ? listCoreEntities(load.candidate) : [], [load]);
   const selected = entities.find((entity) => entity.entityId === selectedEntityId) ?? null;
   const request = load && selected ? getTripwireBinding(load.candidate, selected.entityId) : null;
-  const candidate = load?.candidate ?? null;
+  const resolvedLoad = load;
+  const candidate = resolvedLoad?.candidate ?? null;
 
-  if (!candidate) {
+  if (!resolvedLoad || !candidate) {
     return (
       <section aria-labelledby="core-workspace-title" className="panel min-h-[360px] grid place-items-center p-6">
         <div className="max-w-xl text-center grid gap-4">
@@ -125,7 +126,7 @@ export function CoreAssemblyWorkspace() {
     entities: entities.filter((entity) => entity.nodeId === node.nodeId),
   }));
   const diagnostics = candidate.states.current.diagnostics;
-  const modeLabel = load.source === 'api' ? 'API contract' : 'Cached fixture';
+  const modeLabel = resolvedLoad.source === 'api' ? 'API contract' : 'Cached fixture';
 
   return (
     <section aria-labelledby="core-workspace-title" className="grid gap-3 min-w-0">
@@ -143,10 +144,10 @@ export function CoreAssemblyWorkspace() {
         </div>
       </header>
 
-      <div role="status" aria-live="polite" className="panel px-4 py-3 border-l-4" style={{ borderLeftColor: load.source === 'api' ? 'var(--ok)' : 'var(--warn)' }}>
+      <div role="status" aria-live="polite" className="panel px-4 py-3 border-l-4" style={{ borderLeftColor: resolvedLoad.source === 'api' ? 'var(--ok)' : 'var(--warn)' }}>
         <div className="font-semibold text-[13px]">Precomputed immutable snapshot</div>
         <div className="mt-1 text-[12px] text-muted">Live recompute is unavailable. The kernel succeeded at build time; this deployed workspace is read-only and does not execute OCCT.</div>
-        {load.warning && <div className="mt-2 text-[12px]" role="alert">{load.warning}</div>}
+        {resolvedLoad.warning && <div className="mt-2 text-[12px]" role="alert">{resolvedLoad.warning}</div>}
         {error && <div className="mt-2 text-[12px]" role="alert">Refresh failed: {error} The currently displayed snapshot was preserved.</div>}
       </div>
 
@@ -248,7 +249,7 @@ export function CoreAssemblyWorkspace() {
               <Fact label="Engine manifest" value={candidate.kernelProvenance.engineManifestHash} />
               <Fact label="Source commit" value={candidate.snapshotProvenance.source.commit} />
               <Fact label="Source tree" value={candidate.snapshotProvenance.source.tree} />
-              <Fact label="Loaded" value={load.loadedAt} />
+              <Fact label="Loaded" value={resolvedLoad.loadedAt} />
             </dl>
           </div>
         </div>
