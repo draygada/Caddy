@@ -98,3 +98,34 @@ def test_rank_puts_green_first_by_screening_then_landed_cost():
     ]
     out = rank(evs)
     assert [e["mpn"] for e in out["ranked"]] == ["a", "b"] and [e["mpn"] for e in out["needs_input"]] == ["g"] and [e["mpn"] for e in out["rejected"]] == ["r"]
+
+
+def _lepton_specs():
+    return [_spec("frame_rate_hz", "8.7", "Hz", "Frame rate: 8.7 Hz effective."), _spec("resolution_w", "160", "elements", "160 x 120 pixels"),
+            _spec("resolution_h", "120", "elements", "120 pixels")]
+
+
+def test_a_green_card_names_the_tree_rows_it_could_not_evaluate(service, f3_state):
+    """P-B: status stays green; the GREEN line says single-node and counts the deferred rows; the next line names them in dry-run order."""
+    from forge_search.evaluate import evaluate_candidate
+    rnd = _round(service, f3_state)
+    line = next(l for l in rnd["lines"] if l["node_id"] == "thermal_core")
+    ev = evaluate_candidate(service, rnd, line, POOL["slots"]["thermal_core"], _cand("thermal_core", "500-0771-01"), specs=_lepton_specs(), rules=_rules(), tripped=["6A003.b.4.b"])
+    deferred = ["USML-120.41(a)(2)-catch", "RELEASE-120.41(b)(2)-commodity-list", "RELEASE-120.41(b)(3)-production-equivalent", "ITAR-120.41-note2-missing-document"]
+    assert ev["status"] == "green" and ev["reasons"] == [] and [n["rule_id"] for n in ev["dry_run"]["not_evaluated"]] == deferred
+    i = ev["words"].index("GREEN: every single-node check concluded on a copy of the design and the round; 4 tree-dependent row(s) deferred to the engine seam")
+    assert ev["words"][i + 1] == "not evaluated on a single node (need the design tree; the engine seam evaluates them): " + ", ".join(deferred)
+    assert not any("every check concluded" in w for w in ev["words"])
+
+
+def test_a_green_card_with_no_tree_rows_keeps_the_original_sentence(service, f3_state):
+    """P-B: N == 0 keeps "every check concluded" and adds no deferred line."""
+    from forge_search.evaluate import evaluate_candidate
+    from forge_search.rules import atoms
+    rules = _rules()
+    rules["rows"] = [r for r in rules["rows"] if not any("any_descendant" in a or "ancestor" in a for a in atoms(r.get("when") or {}))]
+    rnd = _round(service, f3_state)
+    line = next(l for l in rnd["lines"] if l["node_id"] == "thermal_core")
+    ev = evaluate_candidate(service, rnd, line, POOL["slots"]["thermal_core"], _cand("thermal_core", "500-0771-01"), specs=_lepton_specs(), rules=rules, tripped=["6A003.b.4.b"])
+    assert ev["status"] == "green" and ev["dry_run"]["not_evaluated"] == []
+    assert "GREEN: every check concluded on a copy of the design and the round" in ev["words"] and not any(w.startswith("not evaluated on a single node") for w in ev["words"])

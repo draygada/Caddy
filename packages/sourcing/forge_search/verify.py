@@ -117,12 +117,15 @@ def _bound_groups(quote: str) -> list[tuple[list[Decimal], str]] | None:
     # quote; cap the gap length if a caller ever quotes a whole page.
     units = [(m.span(), unit) for m in UNIT.finditer(quote) if (unit := canonical_unit(m.group(1)))]
     groups: list[tuple[int, list[Decimal], str]] = []
-    # Digits glued to a letter are a rating, a revision or a part number ("IP67", "Rev1.9", "P45B"), never a figure;
-    # a hex literal is neither. Both are skipped whole, so no component of them binds a unit.
+    # Digits glued to a letter on either side are a rating, a revision, a part number or a confidence level ("IP67", "Rev1.9",
+    # "P45B", "1σ"), never a figure — unless the letter begins a recognised unit written flush ("0.3°/h"); a hex literal is neither.
+    # All are skipped whole, so no component of them binds a unit, forward or backward.
     skip: list[tuple[int, int]] = [m.span() for m in _HEX_LITERAL.finditer(quote)]
 
     def _glued(m: re.Match) -> bool:
-        return (m.start() > 0 and quote[m.start() - 1].isalpha()) or any(lo <= m.start() < hi for lo, hi in skip)
+        before = m.start() > 0 and quote[m.start() - 1].isalpha()
+        after = m.end() < len(quote) and quote[m.end()].isalpha() and not UNIT.match(quote, m.end())
+        return before or after or any(lo <= m.start() < hi for lo, hi in skip)
 
     for tup in TUPLE.finditer(quote):
         if _glued(tup):

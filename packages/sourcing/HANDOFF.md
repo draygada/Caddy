@@ -8,9 +8,9 @@ Since 2026-09-06 the lane also carries the search lane the research brief §6 na
 
 ## Custody
 
-- Branch: **`lane/sourcing-search`**, created on Charlie's instruction off `lane/sourcing` @ `890f955`; the lane is based on `main @ 92241b9ca7c9df37cc48e55b4ea388cb21686bb4`. Candidate commit `6e710f0ff918f6813bc889ddbc1c6c1a62726a13` (the final fix pass after the whole-branch review; supersedes `6fd70505b7ca…`, Task 6.1); this paperwork commit is its direct successor and changes no runtime source.
-- Worktree label `forge/sourcing`; writable `packages/sourcing/**`, `tests/sourcing/**`, `governance/receipts/sourcing.json` — all 95 changed paths are inside that allowlist (custody output at the foot of this file).
-- Registry: **not admitted**. The lane is proposed in `packages/sourcing/handoff/custody-lane-entry.proposed.json`; its write allowlist, worktree and worktree label are unchanged from the original proposal, and only the `branch` field was corrected to `lane/sourcing-search` so the check and the integrator both read the branch that exists. No shared file was edited from the lane: `governance/custody.v1.json` and `tools/check_custody.py` are untouched, and the custody run below used a patched copy of the tool over a merged registry in the coordinator's gitignored scratch directory.
+- Branch: **`lane/sourcing-rulings`**, created on Charlie's instruction off `main @ 715f24e6ddb2e64292c33d50a8559b06315eff13` (the merge of PR #2, `lane/sourcing-search`, itself cut off `lane/sourcing` @ `890f955` on `main @ 92241b9ca7c9df37cc48e55b4ea388cb21686bb4`). Candidate commit `1ba3aa0bc37b6f29cf7224d1ff4572434d049301` (the three merge-gate Minor findings closed; supersedes `6e51feace56e8e…`, Charlie's six rulings P-A…P-F and the two residuals R-1/R-2, which itself superseded `6e710f0ff918…`, the fix-pass candidate merged in PR #2); this paperwork commit is its direct successor and changes no runtime source.
+- Worktree label `forge/sourcing`; writable `packages/sourcing/**`, `tests/sourcing/**`, `governance/receipts/sourcing.json` — all 19 changed paths since `715f24e` are inside that allowlist (custody output at the foot of this file; the check's base is this branch's merge-base with `main`, because `main` now also carries PR #1's frontend, kernel and service paths, which are not this lane's).
+- Registry: **not admitted**. The lane is proposed in `packages/sourcing/handoff/custody-lane-entry.proposed.json`; its write allowlist, worktree and worktree label are unchanged from the original proposal, and only the `branch` field is kept at the branch that exists (`lane/sourcing-rulings` since this PR) so the check and the integrator both read it. No shared file was edited from the lane: `governance/custody.v1.json` and `tools/check_custody.py` are untouched, and the custody run below used a patched copy of the tool over a merged registry in the coordinator's gitignored scratch directory.
 - Authority: Charlie Haywood's in-session instructions, 2026-09-05/06 ("implement the sourcing back end", then the part-search lane on a separate branch). **Not pushed**; merge to `main` is not requested here.
 - Independence: the lane is based on `main`, not on `ship/caddydaddy-integration`, and imports nothing from `features/tripwire`, `packages/classification` or `packages/compliance-bridge`. It takes the engine's per-node evaluation as input data.
 
@@ -66,7 +66,7 @@ view = svc.round_view(r["round_id"])        # the browser renders this and compu
 | `GET /api/sourcing/now` | `{as_of, candidate, round_status, last_event, tests, features[], claim_ceiling}` | F-25. GET-only, writes nothing; `tests` is read back from `.cache/last_pytest.json`; every unknown prints `UNKNOWN` |
 | `POST /api/sourcing/rounds` | `{state \| design, ship_to, quantity, transport_mode, request_key, run}` → `{candidate, result, view}` | `run: true` also resolves, screens and costs |
 | `GET /api/sourcing/rounds/{id}` · `/timeline?last=N` | `round_view` · the event tail | the browser renders these and computes nothing |
-| `POST /api/sourcing/rounds/{id}/{verb}` | one verb per call: `resolve screen rescreen cost refine select adjudicate resolve_escalation gate declare package propose accept_proposal reject_proposal` | a lane refusal is **409**; a malformed or incomplete body is **422** |
+| `POST /api/sourcing/rounds/{id}/{verb}` | one verb per call: `resolve screen rescreen cost refine select adjudicate resolve_escalation gate declare package propose accept_proposal reject_proposal` | a lane refusal is **409** with the candidate envelope beside the refusal's words; a malformed or incomplete body is **422**. Both bodies are built on the path itself, so they are byte-identical whether you mount `app` or only `router` |
 | `POST /api/sourcing/packets` · `/packets/{id}/dispatch` · `/packets/{id}/close` | the synthetic order path | `dispatch` takes the idempotency key and a human attestor |
 | `POST /api/sourcing/rederive` · `/tamper` | the re-derive line · one-field tamper | `/tamper` is **unauthenticated demo tooling** — env-gate it at integration |
 | `GET /` | `static/round.html` | mounted on **`app`, not `router`** |
@@ -116,9 +116,9 @@ Search fixtures, with the shas `make manifest` prints:
 
 ## Tests
 
-`packages/sourcing/.venv/bin/python -m pytest tests/sourcing -q` → **163 passed in 0.77 s** on `6e710f0ff918` (the fix-pass candidate; 144 on `6fd70505b7ca` before it).
+`packages/sourcing/.venv/bin/python -m pytest tests/sourcing -q` → **174 passed in 1.01 s** on `1ba3aa0bc37b` (the merge-gate fix candidate; 173 on `6e51feace56e`, the rulings candidate, and 163 on `6e710f0ff918`, the fix-pass candidate merged in PR #2, before it).
 
-Families: **S1** (resolve every line; round binds the design state; unknown ownership is a flag not a block; depth tier printed; the motor's 301 line and the §848 amber; the cells' MPF minimum and Taiwan 10 %; domestic "no entry"; claim ceilings on every card; event order; idempotent open) · **S2** (the cheaper motor second and blocked with both lists named; selection records declined reason, status and classification state; reason defaults; refusals for a blocked offer, an unknown reason code, a missing attestor; re-selection appends a successor; round confirms when every line is selected; two adjudication roles bound to the snapshot; refuse an analyst escalation and an unknown role) · **S3** (supersession with the seq in the note; the gate as the engine cell; typed reference lifts the block and is never validated; the three-line declaration rule) · **S4** (re-derive covers both lanes; tamper on the declined reason breaks at that seq) · the three no-change edits · package · order · cost hash · claims vocabulary · boundary — plus **documents** (sniffing, hidden line kept and named, exact offsets, sha over utf-8 bytes, same-process determinism and the recorded pin) · **fetch** (allowlist and the blocked demo hosts, blocked hosts logged and never requested, offline cache, `fixture://` cannot escape the fixtures directory, a missing fixture is an error not an exception, the CSL path passes through) · **schemas / verifier** (the eight forced outcomes, the unit trap, adjacency, comma refusal, ambiguity by group, dimension tuples, the stored figure is the document's, no classification slot) · **model port** (scripted order then abstain, cache miss then replay with usage, budget reserve and breach, live model abstains without a key and never touches the network, recording model fills and replays) · **Call A** (accepts the frame rate and records the prompt hash, abstains on a schema-invalid response and on a model abstain, and the **poisoned page**'s three outcomes end at the rule or at REJECT) · **rules / dry-run** (decimal-string thresholds and the sha, fields from the rows that apply, fires / does not fire / cannot conclude, tree rows not evaluated) · **fit** (all four dimensions, unresolved fields, case-insensitive substrings) · **evaluate on copies** (green, grey on an unpublished field, grey on an unverified rate, red on the USML row and on the tripped row, no-specs grey, ranking; the round digest is unchanged) · **proposals** (recorded as agent events, the stored proposal is a copy and candidate urls are in the chain, escalation over the pool and a human acceptance, a source the pool never listed is ignored, budget exhaustion is an abstain not a crash, a budget breach after a read candidate is grey not green, accepted/rejected lifecycle refusals) · **claims over proposals** (the never-say grep over a round carrying proposals) · **refresh parsers** (HTS free/percent, CROSS number-subject-date, GLEIF rows with a url and no percentage) · **eval harness** (the six measurements without a percentage; cache misses counted and abstains bucketed) · **engine adapter** (the Wave-0 response becomes `open_round` input; the 848 row becomes the amber flag; a bad revision is refused; `cannot_evaluate` rows reach `unresolved`; an unresolved rule blocks the declaration and the words name the cause) · **API and page** (health/states/envelope, `/now` read-only and defaulting to UNKNOWN, a lane refusal is 409 with the shipped body, malformed body 422, missing key 422 naming the key, unknown state 422 naming the states, select and a refusal, propose records an agent event whatever the cache holds, re-derive and tamper, the page renders from the response and says nothing forbidden) · **docs** (the glossary names the search terms, the ADRs and README carry the decisions and the claim sentence, every emitted kind is in the schema proposal).
+Families: **S1** (resolve every line; round binds the design state; unknown ownership is a flag not a block; depth tier printed; the motor's 301 line and the §848 amber; the cells' MPF minimum and Taiwan 10 %; domestic "no entry"; claim ceilings on every card; event order; idempotent open) · **S2** (the cheaper motor second and blocked with both lists named; selection records declined reason, status and classification state; reason defaults; refusals for a blocked offer, an unknown reason code, a missing attestor; re-selection appends a successor; round confirms when every line is selected; two adjudication roles bound to the snapshot; refuse an analyst escalation and an unknown role) · **S3** (supersession with the seq in the note; the gate as the engine cell; typed reference lifts the block and is never validated; the three-line declaration rule) · **S4** (re-derive covers both lanes; tamper on the declined reason breaks at that seq) · the three no-change edits · package · order · cost hash · claims vocabulary · boundary — plus **documents** (sniffing, hidden line kept and named, exact offsets, sha over utf-8 bytes, same-process determinism and the recorded pin) · **fetch** (allowlist and the blocked demo hosts, blocked hosts logged and never requested, offline cache, `fixture://` cannot escape the fixtures directory, a missing fixture is an error not an exception, the CSL path passes through, a refreshed list's date is its manifest's or not verified) · **schemas / verifier** (the eight forced outcomes, the unit trap, adjacency, comma refusal, ambiguity by group, dimension tuples, the stored figure is the document's, a number glued to a non-unit letter never binds, no classification slot) · **model port** (scripted order then abstain, cache miss then replay with usage, budget reserve and breach, live model abstains without a key and never touches the network, recording model fills and replays) · **Call A** (accepts the frame rate and records the prompt hash, abstains on a schema-invalid response and on a model abstain, and the **poisoned page**'s three outcomes end at the rule or at REJECT) · **rules / dry-run** (decimal-string thresholds and the sha, fields from the rows that apply, fires / does not fire / cannot conclude, tree rows not evaluated, a true `not` guard suppresses the row and a false or missing one never does, a conjunctive `all` guard suppresses only when every one of its atoms holds where an `any` guard suppresses on any one) · **fit** (all four dimensions, unresolved fields, case-insensitive substrings) · **evaluate on copies** (green, grey on an unpublished field, grey on an unverified rate, red on the USML row and on the tripped row, no-specs grey, ranking, a green card names the tree rows it deferred; the round digest is unchanged) · **proposals** (recorded as agent events, the stored proposal is a copy and candidate urls are in the chain, escalation over the pool and a human acceptance, a source the pool never listed is ignored, budget exhaustion is an abstain not a crash, a budget breach after a read candidate is grey not green, accepted/rejected lifecycle refusals) · **claims over proposals** (the never-say grep over a round carrying proposals) · **refresh parsers** (HTS free/percent, CROSS number-subject-date, GLEIF rows with a url and no percentage) · **eval harness** (the six measurements without a percentage; cache misses counted and abstains bucketed) · **engine adapter** (the Wave-0 response becomes `open_round` input; the 848 row becomes the amber flag; a bad revision is refused; `cannot_evaluate` rows reach `unresolved`; an unresolved rule blocks the declaration and the words name the cause; the canonical check says matched or not_checked, never differs; the root product's determination rides in the part-node shape) · **API and page** (health/states/envelope, `/now` read-only and defaulting to UNKNOWN, a lane refusal is 409 with the shipped body, malformed body 422, missing key 422 naming the key, unknown state 422 naming the states, select and a refusal, propose records an agent event whatever the cache holds, re-derive and tamper, a 409 carries the candidate envelope, and the missing-key, malformed-body and non-integer-quantity 422s carry their shipped bodies, from the app and from a router-only mount alike, a non-integer refine quantity is 422, the page renders from the response and says nothing forbidden) · **docs** (the glossary names the search terms, the ADRs and README carry the decisions and the claim sentence, every emitted kind is in the schema proposal).
 
 **Every run is offline. No model call, no network call, no spend.**
 
@@ -135,8 +135,8 @@ Families: **S1** (resolve every line; round binds the design state; unknown owne
 9. **`rules.DRAFT.json` has no 7A002.a.2 branch** (rate range ≥ 500 °/s), so a ≥ 500 °/s gyro comes out "no draft row; cannot conclude". A rule-table gap for Charlie (D-6).
 10. **ICM-42688-P is grey by design.** The S2 verifier confirmed DS-000347 v1.9 publishes no bias stability and no angle random walk, so the row cannot fire and the candidate cannot go green.
 11. **The escalation agent is never confident by design.** Origin is a declaration, not a datasheet number, so no span can settle it; the agent proposes sources and a human resolves.
-12. **The CSL loader stamps a fixed retrieved-at.** `forge_sourcing/fixtures.py::_load_csl` hardcodes `2026-09-04T00:00:00Z` in all three branches, including the unknown-hash branch, so a freshly refreshed full list would print the snapshot date rather than its own. `refresh_csl.py` records the real timestamp in `.cache/csl/manifest.json` and nothing reads it back. Human-run refresh path only, not load-bearing for any committed output; pending Charlie's ruling (read the refresh manifest, or print "not verified").
-13. **Four tree-dependent rows are `not_evaluated` on every single-node dry-run.** `USML-120.41(a)(2)-catch`, `RELEASE-120.41(b)(2)`, `RELEASE-120.41(b)(3)` and `ITAR-120.41-note2` need a tree the single-node dry-run does not have, and `evaluate.py`'s status ladder does not read `dr["not_evaluated"]` — so a GREEN card's line still reads "every check concluded on a copy". Reading `not_evaluated` into the grey condition would grey every card in this slice; the recommended fix (pending Charlie's ruling) is a words line naming the rows deferred to the engine seam and a softened GREEN sentence.
+12. **The CSL loader's date is honest per branch.** `forge_sourcing/fixtures.py::_load_csl` stamps `2026-09-04T00:00:00Z` for the committed subset and for the known full snapshot (`FULL_CSL_SHA`); an unknown-hash file — what `refresh_csl.py` writes — takes its `retrieved_at` (and `revision`, if one is recorded) from the sidecar `.cache/csl/manifest.json` row whose sha256 is the file's, else prints `not verified` (Charlie's ruling P-A, commit `6e51feac`; item 8 below). Human-run refresh path only; not load-bearing for any committed output.
+13. **Four tree-dependent rows are `not_evaluated` on every single-node dry-run.** `USML-120.41(a)(2)-catch`, `RELEASE-120.41(b)(2)`, `RELEASE-120.41(b)(3)` and `ITAR-120.41-note2` need a tree the single-node dry-run does not have. Status is not greyed (that would grey every card in this slice); a GREEN card now reads `GREEN: every single-node check concluded on a copy of the design and the round; 4 tree-dependent row(s) deferred to the engine seam` and names the four rule ids on the next line, in dry-run order (Charlie's ruling P-B, option b, commit `6e51feac`; item 8 below).
 
 ## Where the code diverges from the plan (reviewed, committed, and why)
 
@@ -161,6 +161,20 @@ Every item below is a reviewed change to the plan's verbatim code, made in a num
    - **M1–M5.** `design_revision` is checked with `fullmatch` (a trailing newline no longer passes); the `unresolved` dedupe is keyed on the rule id, the row's citation and the cause node id (all three, not `rule_id` alone), row shape unchanged; a NUL in a `fixture://` name is `BLOCKED`; the escalation budget catch prints `abstained: budget: …`; a non-integer `quantity` / `seq` and an unknown propose `kind` are 422s with the error named.
    - **P-G (plan-mandated; the reviewer confirmed it contradicts no plan text).** The page prints every proposal's `claim_ceiling` under its card, abstained proposals included.
    - Also: the never-say test now scans an adapter-built round (both engine fixtures, through gate and declare); design states are copied (`forge_sourcing.fixtures.design_state`) in the API, the eval harness and the test fixtures; `propose.py`'s docstring says what the model sees (the published paragraph, not the threshold atoms).
+8. **Charlie's rulings, 2026-09-06 ("apply all six as recommended") plus two residuals — commit `6e51feace56e8e55a8eb5a7d545f97c22459033f`, as amended by item 9's commit `1ba3aa0bc37b6f29cf7224d1ff4572434d049301` (P-C and P-F; the amendments are marked below).** Every item has a covering test; 174 passed, every earlier test green.
+   - **P-A — honest CSL date** (`forge_sourcing/fixtures.py`). The subset and the known full snapshot keep `2026-09-04T00:00:00Z`; an unknown-hash file reads the `refresh_csl.py` sidecar (`manifest.json` beside the CSV) and uses the `retrieved_at` of the row whose sha256 equals the loaded bytes, else prints `not verified`; `revision` is the row's if recorded, else `full-<sha8>`. The round view still prints `csl@<sha8>` and renders.
+   - **P-B — a GREEN card names the tree rows it could not evaluate** (`forge_search/evaluate.py`). Status unchanged; when `dry_run` deferred N > 0 rows the line reads `GREEN: every single-node check concluded on a copy of the design and the round; N tree-dependent row(s) deferred to the engine seam` and the next line is `not evaluated on a single node (need the design tree; the engine seam evaluates them): <rule ids in dry-run order>`; N == 0 keeps the original sentence.
+   - **P-C — a row's `not` guard is honoured, fail-closed** (`forge_search/rules.py`, `forge_search/dryrun.py`). `atoms()` now walks `not` clauses too (thresholds under a guard are stringified, guard fields are asked for); `guards()` returns a row's `not` guards (**amended at `1ba3aa0b`**: one conjunction per operand, not a flat atom list — item 9); `dry_run` evaluates them through the same `_atom` evaluator and a guard that is TRUE puts the row in `not_fired` with `detail: suppressed by <atom text>`, whatever its other atoms say (a held guard beats a tree atom); a guard that is FALSE or whose fact is MISSING lets the row proceed exactly as before. `flip_gone` reads a suppressed row as "no fire".
+   - **P-D — the canonical check never lies** (`forge_sourcing_api/engine_adapter.py`). `canonical_sha256_check` is `matched` when the lane's canonical hash equals `design_revision`, else `not_checked` — never `differs` — and `canonical_sha256_note` says why, verbatim.
+   - **P-E — the root product's determination is carried** (`forge_sourcing_api/engine_adapter.py`). Additive `product.evaluation = _evaluation(determinations[root])`, exactly the part-node shape (`engine_state: absent` when the engine printed nothing); no reader in `forge_sourcing/` or `forge_search/` iterates `product`'s keys (`depth_tier` reads `declared`, `order.py` reads `node_id`); the returned design hashes with no float.
+   - **P-F — a 409 carries the candidate envelope** (`forge_sourcing_api/app.py`). `run()` returns `JSONResponse(409, {"detail": {refused, code, detail}, "candidate": candidate()})` from its own refusal path — not an app-level exception handler, which would not travel with `router` into the product service (a router-only mount is covered by a test) — and `open_round` reads its view through `run(go, view_of=lambda res: res["round_id"])`; the `detail` object is byte-identical to the shipped shape; 422 bodies are unchanged. **Amended at `1ba3aa0b`** (item 9): the missing-key 422 was still an app-level handler and did not travel with the router.
+   - **R-1 — `refine` guards `quantity`** (`forge_sourcing_api/app.py`). `quantity` goes through `_int` as `open_round`'s does: a string, float or bool is a 422 `quantity must be an integer`, never a 500; an absent or null `quantity` still means "no change".
+   - **R-2 — a number glued to a non-unit letter never binds** (`forge_search/verify.py`). `_glued` also refuses a number immediately followed by an alphabetic character that does not begin a recognised unit at that position (`1σ`, `1st`, `2nd`); a symbolic unit written flush (`0.3°/h`) binds as before, and the flush wordy spellings that never bound (`4500mAh`, `5µg`) still do not. `_bound_groups("Bias stability: 0.01 °/HR (1σ)")` is one deg/h group, so the whole-line claim accepts `0.01` and refuses `1` as a plain `number_mismatch`.
+   - Assertions extended, and only these: `test_engine_adapter.py::test_camera_flag_response_becomes_open_round_input` requires `not_checked` where it allowed `("matched", "differs")`; `test_api.py::test_a_lane_refusal_is_still_409_with_the_shipped_body` keeps its exact `detail` equality and adds the envelope. `test_search_rules_dryrun.py:74` (IMU-NG undeclared → 7A002.a.1.b fires) is untouched and green.
+9. **The three merge-gate Minor findings, 2026-09-06 — commit `1ba3aa0bc37b6f29cf7224d1ff4572434d049301`.** Each has a covering test; 174 passed, every earlier test green, no assertion weakened and no pinned body changed.
+   - **The missing-key 422 travels with the router** (`forge_sourcing_api/app.py`). `Body.__missing__` raises `HTTPException(422, {"error": "missing key", "key": key})` and the app-level `MissingKey` handler (and its exception class) go. P-F moved the 409 onto the path itself but left this one at app level, so an integrator who mounts only `router` — the wiring this file documents — got a **500** where the app mount gave a 422. FastAPI's default handler renders exactly the shipped body: measured byte-for-byte against the pre-fix module, `{"detail":{"error":"missing key","key":"attestor"}}` on both mounts, and the malformed-body, non-integer-quantity and unknown-state 422s are identical on both too.
+   - **A conjunctive `not` guard is one guard** (`forge_search/rules.py`, `forge_search/dryrun.py`). `guards()` returns `list[list[dict]]` — one conjunction per `not` operand — and `dry_run` holds a guard only when **every** one of its atoms is true (`_guard`, fail-closed: a false, unpublished or tree-bound atom, and an empty guard, never hold). Before, an operand shaped `{"all": [A, B]}` was flattened into two independent guards and suppressed the row when EITHER held — fail-open against the DSL's "suppress when both hold". No such operand is in `rules.DRAFT.json` today (all six `not` clauses are bare lists of `declared` / `part_class_in` atoms, which still give one guard per atom and suppress on any one), but the pack is DRAFT. A conjunctive guard's `detail` joins its atom texts with " and ". Verified unchanged for the shipped pack: old vs new buckets and `detail` strings identical across 459 slot × declared combinations (17 slots × the 27 states of `spinning_mass` / `civil_automobile_or_railway` / `production_nonusml_equivalent` ∈ {true, false, undeclared}), and `load_rules`, `rules_sha256` (`ac95bcdd…`), `fields_for` and `rule_sentences` identical.
+   - **`make custody` finds its own base** (`Makefile`). `CUSTODY_BASE ?= $(shell git merge-base origin/main HEAD)`, used as `--base $(CUSTODY_BASE)`; the hardcoded `92241b9…` predates the lanes now merged into `main` and would list paths this lane never wrote. The target still reports `unknown lane: sourcing` against the repository registry until the row is admitted (comment above the target says so); the paste below is the patched scratch copy over the merged registry, as before.
 
 ## Shared-contract proposals (nothing edited from the lane)
 
@@ -178,15 +192,15 @@ Every item below is a reviewed change to the plan's verbatim code, made in a num
 6. **Wiring** — mount `forge_sourcing_api.app.router` at a prefix of its own (`FORGE_SOURCING_PREFIX`, e.g. `/api/sourcing-lane`): `apps/product-service/product_service/sourcing_api.py` (Benji, 2026-09-05) already owns `/api/sourcing/*` with a stateless, client-carried-state contract for one part, and `POST /api/sourcing/rounds` exists in both with different bodies and envelopes. On `diego-uiux-refinement` the frontend's Vite `/api` proxy targets the deployed Candidate 0.1 product service by default (`VITE_API_TARGET` overrides it locally), and the Vercel `frontend/api/[...path].ts` allowlist enumerates routes, so the lane's routes need adding there. The FB-04 integration owner mounts the router into the product service or `features/tripwire/backend/app.py` (one `include_router` line with that prefix) **or** runs `make serve` on 8000 during the demo with the page at `GET /`.
 7. **`rules.DRAFT.json` gaps 8–9 above** for Charlie's sign-off (D-6).
 8. **Corrections to the contract as the plan wrote it** — the integrator should code against these, not against the plan text:
-   - A **409 body is nested**: `{"detail": {"refused": <ExceptionName>, "code": <str|null>, "detail": <str>}}`. It carries **no `candidate`** envelope; every 2xx body does. (Whether a 409 should also carry the envelope is pending Charlie; the page was validated against the shipped shape.)
+   - A **409 body is nested**: `{"detail": {"refused": <ExceptionName>, "code": <str|null>, "detail": <str>}, "candidate": {…}}`. The `detail` object is the shipped shape unchanged; the `candidate` envelope rides beside it (Charlie's ruling P-F, 2026-09-06), so every response body, 409 included, carries the envelope. 422 bodies are unchanged and carry none.
    - `forge_search.model.propose` is **schema-agnostic** — it enforces JSON-parseability only. **Every caller validates**: Call A validates against `EXTRACT_SCHEMA`, Call B and the escalation agent against `SEARCH_SCHEMA`. A new caller that skips `validate()` skips the closed schema.
    - `GET /` lives on **`app`, not `router`**. An integrator who mounts only the router gets the verbs and **not** the page. There is no static-asset route; `round.html` is one self-contained file.
    - `POST /tamper` is **unauthenticated demo tooling**. Env-gate it at integration.
-   - `product.engine.canonical_sha256_check` is **always `differs`** — the lane's canonical JSON is not the engine's, so the lane never independently confirms `design_revision`. Either the enum gains a `not_checked` value or the field goes (pending Charlie).
-   - The **root product's engine determination is not carried onto the round**: `design_for_round` keeps per-node evaluations only. An additive `product["evaluation"]` was proposed and not built (pending Charlie).
+   - `product.engine.canonical_sha256_check` is `matched` or `not_checked`, **never `differs`** (Charlie's ruling P-D): the lane's canonical JSON is not the engine's, so an unequal hash is not a tamper signal, and `product.engine.canonical_sha256_note` says so verbatim ("the lane's canonical JSON is not the engine's; design_revision is carried, not recomputed").
+   - The **root product's engine determination is carried** as `product.evaluation`, in exactly the part-node evaluation shape (`engine_state: absent` when the engine printed nothing for the root) — additive (Charlie's ruling P-E); `open_round` copies `product` onto the round and nothing in the lane iterates its keys.
    - The page's ship-to selector offers **two of the four** ship-tos (`US-bench`, `TW-assembly`); the lane accepts `DE-assembly` and `CA-assembly` too.
    - The page prints the search-lane **ceiling sentence only through candidate cards**, so an abstained proposal (which has no cards) shows only the header's "the agent proposes; a human resolves". The proposal record carries a `claim_ceiling` field; rendering it under each proposal card is a one-line page fix (pending Charlie).
-   - `POST /rounds` expects an **integer** `quantity`; the page must send an int.
+   - `POST /rounds` and `POST /rounds/{id}/refine` expect an **integer** `quantity`; anything else is a 422 `quantity must be an integer` (R-1); the page must send an int.
 9. **The frontend seam, field by field**, for whoever wires `frontend/src/lib/service.ts`:
    - `openRound(shipTo, qty, mode, intake)` → `POST /rounds {state|design, ship_to, quantity, transport_mode, request_key, run: true}`, with `ShipTo 'US'|'TW'|'DE'|'CA'` → `US-bench|TW-assembly|DE-assembly|CA-assembly`.
    - `refineRound` → `refine` (and `rescreen` for the no-change edit).
@@ -226,13 +240,11 @@ Data: the CSL subset is public .gov data (data.trade.gov) copied verbatim from t
 - **`determinism_check.py` has never run on a second machine**, so cross-machine extraction determinism is unproven (the committed test is same-process by design).
 - **Digi-Key v4 terms unread** — nobody has read them, so the distributor-API route stays shut.
 - **Charlie's D-6 sign-off** on `rules.DRAFT.json`, and the two rule-table gaps (items 8–9 above).
-- The two adapter questions pending Charlie: `canonical_sha256_check` always `differs`, and whether the root product's engine determination should be carried onto the round.
 
 ### Known shortcomings carried (reviewed, deferred, all in the execution ledger)
 
-The eight items the whole-branch review carried here (verifier letter glue, the lifecycle truthiness guard, the NUL fixture name, the `unresolved` dedupe key, the bare packet subscript on close, the unscanned adapter round, the live `Call` on abstain, the escalation budget word) were all closed by the fix pass — see "Where the code diverges from the plan", item 7. What remains:
+The eight items the whole-branch review carried here (verifier letter glue, the lifecycle truthiness guard, the NUL fixture name, the `unresolved` dedupe key, the bare packet subscript on close, the unscanned adapter round, the live `Call` on abstain, the escalation budget word) were all closed by the fix pass — see "Where the code diverges from the plan", item 7 — and the `rules.atoms()` `not`-clause gap and the two adapter questions by Charlie's rulings, item 8. What remains:
 
-- **`rules.atoms()` drops a row's `not` clause when the row also carries `all` / `any`** (`forge_search/rules.py`), so the dry-run can fire rows their own guard should suppress (`3A001.a.2.a/.b/.c`, `7A002.a.1.b`, `9A610.x`, `USML-120.41(a)(2)-catch`). Every such `not` clause is a `declared` / `part_class_in` atom, so over-firing yields red or grey, never a false green. **Pending Charlie's ruling (P-C); deliberately not touched in the fix pass.**
 - **Design states are now copied.** `forge_sourcing.fixtures.design_state(states, name)` returns a deep copy (baseline, or `replace_nodes` laid over the baseline); the API's `_state`, `scripts/eval_search.py` and the test fixtures all go through it, so a round's lines no longer alias the fixture's node dicts (`new_round` copies `evaluation` by reference). A note for the integrator, not a defect.
 - **Concurrency.** The sync routes (`GET /health`, `/states`, `/now`, `/rounds/{id}`, `/timeline`, `GET /`, `POST /rederive`) run in Starlette's threadpool while the `async def` verbs (`POST /rounds`, `/rounds/{id}/{verb}`, `/packets…`, `/tamper`) run on the event loop; `SVC` is one in-memory object with no lock, so a read in the threadpool can interleave with a verb mid-mutation, and a live `propose` blocks the loop for the call's duration (20 s timeout). One process, one operator for the demo; a lock or a single worker at integration.
 
@@ -242,7 +254,7 @@ Thread persistence (the platform log replaces `Thread`); the Batches API; PDF-vi
 
 ## Rollback
 
-Nothing on `main` changed. Delete the branch (`git branch -D lane/sourcing-search`), remove the worktree, and remove `packages/sourcing/.cache`.
+Nothing on `main` changed. Delete the branch (`git branch -D lane/sourcing-rulings`; `main @ 715f24e` already carries PR #2), remove the worktree, and remove `packages/sourcing/.cache`.
 
 ## What the page said (Task 5.3 walk-through)
 
@@ -260,108 +272,32 @@ Observations for the integrator (not defects in the page's own logic): the ship-
 
 ## Custody check (verbatim)
 
-Run against the proposed lane row, because the registry does not carry this lane yet: the repository's `tools/check_custody.py` and `governance/custody.v1.json` were **not modified**; a copy of the tool with `REPO_ROOT` and `REGISTRY_PATH` rewritten was run over a merged registry (the repository's registry plus `packages/sourcing/handoff/custody-lane-entry.proposed.json`), both written under the coordinator's gitignored scratch directory.
+Run against the proposed lane row, because the registry does not carry this lane yet: the repository's `tools/check_custody.py` and `governance/custody.v1.json` were **not modified**; a copy of the tool with `REPO_ROOT` and `REGISTRY_PATH` rewritten was run over a merged registry (the repository's registry plus `packages/sourcing/handoff/custody-lane-entry.proposed.json`), both written under the coordinator's gitignored scratch directory. The base is `715f24e`, this branch's merge-base with `main`: the lane's original base `92241b9` now sits behind PR #1's frontend, kernel and service paths on `main`, so a diff from it would list paths this lane never wrote.
 
 ```
 lane=sourcing
-branch=lane/sourcing-search
-base=92241b9ca7c9df37cc48e55b4ea388cb21686bb4
+branch=lane/sourcing-rulings
+base=715f24e6ddb2e64292c33d50a8559b06315eff13
 head=HEAD
-changed_paths=95
+changed_paths=19
   governance/receipts/sourcing.json
-  packages/sourcing/.gitattributes
-  packages/sourcing/.gitignore
   packages/sourcing/CONTEXT.md
   packages/sourcing/HANDOFF.md
   packages/sourcing/Makefile
   packages/sourcing/README.md
-  packages/sourcing/data/csl_subset.csv
-  packages/sourcing/data/kestrel_round_input.json
-  packages/sourcing/data/llm_cache/.gitkeep
-  packages/sourcing/data/manifest.json
-  packages/sourcing/data/offers.json
-  packages/sourcing/data/ownership.json
-  packages/sourcing/data/search/documents.json
-  packages/sourcing/data/search/engine/evaluate-camera-flag.json
-  packages/sourcing/data/search/engine/evaluate-missing-evidence.json
-  packages/sourcing/data/search/engine/kestrel-baseline.design.json
-  packages/sourcing/data/search/fixtures/gx220_vendor_page.html
-  packages/sourcing/data/search/fixtures/icm42688p_test_excerpt.txt
-  packages/sourcing/data/search/fixtures/imu_ng_synthetic_sheet.txt
-  packages/sourcing/data/search/fixtures/lepton35_test_sheet.txt
-  packages/sourcing/data/search/fixtures/molicel_p45b_test_excerpt.txt
-  packages/sourcing/data/search/gold_swaps.json
-  packages/sourcing/data/search/pool.json
-  packages/sourcing/data/search/rules.DRAFT.json
-  packages/sourcing/data/tariff.json
-  packages/sourcing/docs/adr/0001-round-defaults-are-refinable-and-the-fixture-is-the-truth.md
-  packages/sourcing/docs/adr/0002-status-outranks-price-and-the-declined-offer-is-the-record.md
-  packages/sourcing/docs/adr/0003-hash-chain-in-the-lane-signing-in-the-log-synthetic-dispatch-exactly-once.md
-  packages/sourcing/docs/adr/0004-a-bounded-proposer-over-an-owned-pool.md
-  packages/sourcing/docs/adr/0005-pypdf-pinned-character-offsets-hidden-text-kept.md
-  packages/sourcing/forge_search/__init__.py
-  packages/sourcing/forge_search/documents.py
   packages/sourcing/forge_search/dryrun.py
   packages/sourcing/forge_search/evaluate.py
-  packages/sourcing/forge_search/extract.py
-  packages/sourcing/forge_search/fetch.py
-  packages/sourcing/forge_search/fit.py
-  packages/sourcing/forge_search/model.py
-  packages/sourcing/forge_search/prompts.py
-  packages/sourcing/forge_search/propose.py
   packages/sourcing/forge_search/rules.py
-  packages/sourcing/forge_search/schemas.py
   packages/sourcing/forge_search/verify.py
-  packages/sourcing/forge_sourcing/__init__.py
-  packages/sourcing/forge_sourcing/cost.py
   packages/sourcing/forge_sourcing/fixtures.py
-  packages/sourcing/forge_sourcing/gate.py
-  packages/sourcing/forge_sourcing/hashing.py
-  packages/sourcing/forge_sourcing/order.py
-  packages/sourcing/forge_sourcing/package.py
-  packages/sourcing/forge_sourcing/parties.py
-  packages/sourcing/forge_sourcing/round.py
-  packages/sourcing/forge_sourcing/screen.py
-  packages/sourcing/forge_sourcing/select.py
-  packages/sourcing/forge_sourcing/service.py
-  packages/sourcing/forge_sourcing/thread.py
-  packages/sourcing/forge_sourcing_api/__init__.py
   packages/sourcing/forge_sourcing_api/app.py
   packages/sourcing/forge_sourcing_api/engine_adapter.py
-  packages/sourcing/forge_sourcing_api/static/round.html
   packages/sourcing/handoff/custody-lane-entry.proposed.json
-  packages/sourcing/handoff/log-schema-kinds.proposed.json
-  packages/sourcing/pyproject.toml
-  packages/sourcing/scripts/build_manifest.py
-  packages/sourcing/scripts/determinism_check.py
-  packages/sourcing/scripts/eval_search.py
-  packages/sourcing/scripts/record_cache.py
-  packages/sourcing/scripts/refresh_cross.py
-  packages/sourcing/scripts/refresh_csl.py
-  packages/sourcing/scripts/refresh_hts.py
-  packages/sourcing/scripts/refresh_ownership.py
-  packages/sourcing/scripts/seed_documents.py
-  tests/sourcing/conftest.py
   tests/sourcing/test_api.py
-  tests/sourcing/test_boundary.py
-  tests/sourcing/test_claims_vocabulary.py
-  tests/sourcing/test_cost_hash.py
-  tests/sourcing/test_docs.py
   tests/sourcing/test_engine_adapter.py
-  tests/sourcing/test_eval_search.py
-  tests/sourcing/test_package_and_order.py
-  tests/sourcing/test_refresh_scripts.py
-  tests/sourcing/test_search_claims.py
-  tests/sourcing/test_search_documents.py
   tests/sourcing/test_search_evaluate.py
-  tests/sourcing/test_search_extract.py
   tests/sourcing/test_search_fetch.py
-  tests/sourcing/test_search_fit.py
-  tests/sourcing/test_search_fixtures.py
-  tests/sourcing/test_search_model.py
-  tests/sourcing/test_search_propose.py
   tests/sourcing/test_search_rules_dryrun.py
   tests/sourcing/test_search_verifier.py
-  tests/sourcing/test_sourcing_flips.py
 CUSTODY_PASS
 ```

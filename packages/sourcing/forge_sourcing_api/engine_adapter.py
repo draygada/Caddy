@@ -94,7 +94,9 @@ def design_for_round(design_doc: dict, response: dict, *, design_seq: int, quant
     return {"design_hash": design_hash, "design_seq": design_seq,
             "product": {"node_id": root["id"], "final_assembly_country": declared.get("final_assembly_country", "US"),
                         "declared": {"prime_flowdown": bool(declared.get("prime_flowdown", False))},
+                        "evaluation": _evaluation(determinations.get(root["id"])),           # P-E: the root's determination, in the part-node shape
                         "engine": {"rule_pack_sha": response.get("rule_pack_sha"), "rule_pack_status": response.get("rule_pack_status"), "ecfr_date": response.get("ecfr_date"),
                                    "stub": response.get("stub"), "fixture_mode": response.get("fixture_mode"), "artifact_status": response.get("artifact_status"),
-                                   "canonical_sha256_check": "matched" if sha256(doc) == design_hash else "differs"}},
+                                   "canonical_sha256_check": "matched" if sha256(doc) == design_hash else "not_checked",   # P-D: never "differs"
+                                   "canonical_sha256_note": "the lane's canonical JSON is not the engine's; design_revision is carried, not recomputed"}},
             "nodes": nodes}

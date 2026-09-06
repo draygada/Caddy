@@ -250,3 +250,21 @@ def test_a_number_glued_to_a_letter_is_not_a_figure_and_a_unit_glued_to_a_slash_
     for field, value in (("resolution_w", "160"), ("resolution_h", "120")):
         out = verify(text, _claim(text, text_sha256(text), field, value, "elements", "160x120 pixels"), field_units=TUPLE_UNITS)
         assert isinstance(out, Accepted) and out.spec.value == value, field
+
+
+def test_a_number_glued_to_a_non_unit_letter_never_binds_forward_or_backward():
+    """R-2: on the HG5700 line "(1σ)" is a confidence level, not a second deg/h figure, so the whole-line claim is ONE group and 0.01
+    is accepted rather than refused as ambiguous. A number flush against a recognised symbolic unit ("0.3°/h") binds as before, and
+    the flush wordy spellings that never bound ("4500mAh", "5µg") still do not."""
+    from forge_search.documents import text_sha256
+    from forge_search.verify import Accepted, Rejected, _bound_groups, parse_number_unit, verify
+    line = "Bias stability: 0.01 °/HR (1σ)"
+    text = line + "\n"
+    assert _bound_groups(line) == [([Decimal("0.01")], "deg/h")]
+    ok = verify(text, _claim(text, text_sha256(text), "gyro_bias_stability_1mo_deg_h", "0.01", "deg/h", line), field_units=UNITS)
+    assert isinstance(ok, Accepted) and ok.spec.value == "0.01"
+    one = verify(text, _claim(text, text_sha256(text), "gyro_bias_stability_1mo_deg_h", "1", "deg/h", line), field_units=UNITS)
+    assert isinstance(one, Rejected) and one.reason == "number_mismatch" and "ambiguous" not in one.detail and "0.01" in one.detail
+    assert parse_number_unit("1st stage: 0.3°/h") == (Decimal("0.3"), "deg/h") and parse_number_unit("2nd") is None
+    assert parse_number_unit("0.3°/h") == (Decimal("0.3"), "deg/h") and parse_number_unit("5 µg") == (Decimal("5"), "micro g")
+    assert parse_number_unit("4500mAh") is None and parse_number_unit("5µg") is None

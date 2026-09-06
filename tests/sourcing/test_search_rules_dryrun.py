@@ -82,3 +82,56 @@ def test_dry_run_molicel_does_not_trip_the_cell_row_and_tree_rows_are_not_evalua
     dr = dry_run(rules, part_class="cell", role="power", fields=_f(energy_density_wh_kg=("242", "Wh/kg")), declared={"origin": "TW"})
     assert dr["fired"] == [] and any(r["entry"] == "3A001.e.1.b" for r in dr["not_fired"])
     assert any(n["entry"] == "120.41(a)(2)" for n in dr["not_evaluated"])
+
+
+def test_a_true_not_guard_suppresses_the_row_and_a_false_or_missing_guard_never_does():
+    """P-C: 7A002.a.1.b carries `not: [declared spinning_mass == true]`. Declared true → suppressed, and the Note releases; declared
+    false, or not declared at all → the row proceeds exactly as before (fail-closed: a missing guard fact never suppresses). A held
+    guard beats a tree atom too: the 120.41(a)(2) catch-all on a fastener is suppressed, not deferred."""
+    from forge_search.dryrun import dry_run, flip_gone
+    rules = _rules()
+    fields = _f(gyro_rate_range_deg_s=("400", "deg/s"), gyro_arw_deg_sqrt_h=("0.0008", "deg/sqrt(h)"))
+    base = {"origin": "NO", "adaptive_antenna": False, "pps_decryption": False, "civil_gnss_service": False}
+    held = dry_run(rules, part_class="sensor", role="nav", fields=fields, declared={**base, "spinning_mass": True})
+    row = next(r for r in held["not_fired"] if r["rule_id"] == "CCL-7A002.a.1.b")
+    assert row["detail"] == "suppressed by declared.spinning_mass = True" and "7A002.a.1.b" not in [f["entry"] for f in held["fired"]]
+    assert "RELEASE-7A002.a.1.b-spinning-mass" in [r["rule_id"] for r in held["released"]]
+    gone = flip_gone(["7A002.a.1.b"], ["7A002.a.1.b", "XII(e)(12)(i)"], held, rules)
+    assert gone["gone"] is True and gone["reasons"] == ["7A002.a.1.b: no fire"]                     # a suppressed row is gone, not a cannot
+    for declared in ({**base, "spinning_mass": False}, base):
+        dr = dry_run(rules, part_class="sensor", role="nav", fields=fields, declared=declared)
+        assert "7A002.a.1.b" in [f["entry"] for f in dr["fired"]] and not any("detail" in r for r in dr["not_fired"]), declared
+    catch = dry_run(rules, part_class="fastener", role=None, fields={}, declared={})
+    assert next(r for r in catch["not_fired"] if r["rule_id"] == "USML-120.41(a)(2)-catch")["detail"] == "suppressed by part_class fastener"
+    deferred = [n["rule_id"] for n in catch["not_evaluated"]]
+    assert "USML-120.41(a)(2)-catch" not in deferred and "RELEASE-120.41(b)(2)-commodity-list" in deferred
+
+
+A = {"declared": "spinning_mass", "equals": True}
+B = {"declared": "civil_automobile_or_railway", "equals": True}
+
+
+def _synthetic(guard: dict | list) -> dict:
+    """One synthetic row that fires on frame_rate_hz > 9, carrying the given `not` clause. The DRAFT pack's six guards are all bare
+    lists of single atoms, so the conjunctive reading has no row to pin yet — and the pack is DRAFT."""
+    return {"sha256": "synthetic", "rows": [{"id": "CCL-SYNTH", "entry": "SYNTH.a", "text": "a synthetic row",
+                                             "when": {"all": [{"attr": "frame_rate_hz", "op": ">", "threshold": "9", "unit": "Hz"}], "not": guard}}]}
+
+
+def test_a_conjunctive_not_guard_suppresses_only_when_every_one_of_its_atoms_holds():
+    """A `not` operand keyed `all` reads as ONE guard — the DSL says suppress when BOTH hold — never as two independent guards,
+    which would suppress on either and be fail-open. An operand keyed `any` still suppresses on any one; an atom nobody declared
+    never lets a conjunctive guard hold (fail-closed, as for a single atom)."""
+    from forge_search.dryrun import dry_run
+    fields = _f(frame_rate_hz=("60", "Hz"))
+
+    def run(guard, declared):
+        return dry_run(_synthetic(guard), part_class="thermal_imager", role="sensor", fields=fields, declared=declared)
+
+    both = run({"all": [A, B]}, {"spinning_mass": True, "civil_automobile_or_railway": True})
+    assert both["fired"] == [] and both["not_fired"][0]["detail"] == "suppressed by declared.spinning_mass = True and declared.civil_automobile_or_railway = True"
+    for declared in ({"spinning_mass": True, "civil_automobile_or_railway": False}, {"spinning_mass": True}):
+        one = run({"all": [A, B]}, declared)                             # only A holds — the row fires; B false or never declared alike
+        assert [r["entry"] for r in one["fired"]] == ["SYNTH.a"] and one["not_fired"] == [], declared
+    either = run({"any": [A, B]}, {"spinning_mass": True})
+    assert either["fired"] == [] and either["not_fired"][0]["detail"] == "suppressed by declared.spinning_mass = True"

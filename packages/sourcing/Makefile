@@ -41,5 +41,8 @@ record-cache:       ## LIVE model calls under the $50 cap; human-run only; requi
 manifest:
 	$(PY) scripts/build_manifest.py
 
+CUSTODY_BASE ?= $(shell git merge-base origin/main HEAD)
+
+## reports `unknown lane: sourcing` until the registry row is admitted from handoff/custody-lane-entry.proposed.json
 custody:
-	cd $(REPO) && python3 tools/check_custody.py --lane sourcing --base 92241b9ca7c9df37cc48e55b4ea388cb21686bb4
+	cd $(REPO) && python3 tools/check_custody.py --lane sourcing --base $(CUSTODY_BASE)
