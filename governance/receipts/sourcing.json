@@ -1,33 +1,33 @@
 {
   "lane": "sourcing",
-  "branch": "lane/sourcing-search",
+  "branch": "lane/sourcing-rulings",
   "worktree": "/Users/charliehaywood/Downloads/CADdyDaddy-sourcing",
   "exclusive_write_paths": [
     "packages/sourcing/**",
     "tests/sourcing/**",
     "governance/receipts/sourcing.json"
   ],
-  "base_commit": "92241b9ca7c9df37cc48e55b4ea388cb21686bb4",
+  "base_commit": "715f24e6ddb2e64292c33d50a8559b06315eff13",
   "status": "ASSIGNED_LOCAL_CANDIDATE",
   "mutation_admitted": true,
   "writer": {
     "writer_id": "charlie-haywood/claude-code-session",
     "task_id": "sourcing-lane-2026-09-05",
     "model": "claude-fable-5-1",
-    "authority": "Charlie Haywood, in-session instructions 2026-09-05/06: implement the sourcing backend per the DNHacks engineering direction and feature specs, then the part-search lane of the 2026-09-05 agentic part-search research on a separate branch off lane/sourcing"
+    "authority": "Charlie Haywood, in-session instructions 2026-09-05/06: implement the sourcing backend per the DNHacks engineering direction and feature specs, then the part-search lane of the 2026-09-05 agentic part-search research on a separate branch off lane/sourcing; 2026-09-06: apply the six plan-mandated rulings P-A\u2026P-F as recommended, plus residuals R-1/R-2, on lane/sourcing-rulings off merged main"
   },
   "lease_acquired_at": "2026-09-06T00:20:00Z",
   "renew_by": null,
   "expires_at": null,
-  "candidate_commit": "6e710f0ff918f6813bc889ddbc1c6c1a62726a13",
-  "registry_status": "NOT_ADMITTED — proposal at packages/sourcing/handoff/custody-lane-entry.proposed.json",
+  "candidate_commit": "6e51feace56e8e55a8eb5a7d545f97c22459033f",
+  "registry_status": "NOT_ADMITTED \u2014 proposal at packages/sourcing/handoff/custody-lane-entry.proposed.json",
   "now_observation": {
     "schema_version": "1.0.0",
-    "observed_at": "2026-09-06T08:42:07Z",
+    "observed_at": "2026-09-06T12:41:53Z",
     "worktree_label": "forge/sourcing",
     "task": {
       "id": "sourcing-lane-2026-09-05",
-      "title": "Sourcing lane + search lane (byte-verified proposer on copies), live refresh scripts, HTTP adapter and page, engine adapter",
+      "title": "Sourcing lane + search lane (byte-verified proposer on copies), live refresh scripts, HTTP adapter and page, engine adapter; Charlie's 2026-09-06 rulings applied",
       "evidence_class": "MEASURED",
       "evidence_ref": "packages/sourcing/HANDOFF.md"
     },
@@ -48,18 +48,18 @@
     "lane_state": {
       "value": "IMPLEMENTED_LOCAL_UNADMITTED",
       "evidence_class": "MEASURED",
-      "evidence_ref": "git:6e710f0ff918f6813bc889ddbc1c6c1a62726a13"
+      "evidence_ref": "git:6e51feace56e8e55a8eb5a7d545f97c22459033f"
     },
     "current_action": {
-      "value": "final fix pass after the whole-branch review committed on the lane branch (attestor guards before mutation, proposal lifecycle, verifier letter glue, redirect and NUL guards, budgeted live mode); handoff and receipt refreshed; awaiting the scoped re-review, integrator admission and Charlie's live cache recording",
+      "value": "Charlie's six plan-mandated rulings (P-A honest CSL date, P-B GREEN names deferred tree rows, P-C not-guards honoured fail-closed, P-D canonical check matched|not_checked never differs, P-E root product's determination carried, P-F candidate envelope on 409) and two residuals (R-1 refine quantity 422, R-2 glued letters never bind) committed on lane/sourcing-rulings with covering tests (173 passed); handoff and receipt refreshed; awaiting review and merge; Charlie's live cache recording still owed",
       "evidence_class": "MEASURED",
       "evidence_ref": "packages/sourcing/HANDOFF.md"
     },
     "last_evidenced_change": {
       "kind": "commit",
-      "occurred_at": "2026-09-06T08:41:45Z",
+      "occurred_at": "2026-09-06T12:41:08Z",
       "evidence_class": "MEASURED",
-      "evidence_ref": "git:6e710f0ff918f6813bc889ddbc1c6c1a62726a13"
+      "evidence_ref": "git:6e51feace56e8e55a8eb5a7d545f97c22459033f"
     },
     "blockers": [
       {
@@ -94,7 +94,7 @@
         "state": "HOLD",
         "summary": "data/llm_cache is empty; the page prints 'abstained: cache miss' until one live run records it",
         "clearer": "Charlie (key holder)",
-        "next_unblock": "make seed, then TRIPWIRE_LLM=live ANTHROPIC_API_KEY=… make record-cache, then make eval (cache_misses 0), then commit data/llm_cache",
+        "next_unblock": "make seed, then TRIPWIRE_LLM=live ANTHROPIC_API_KEY=\u2026 make record-cache, then make eval (cache_misses 0), then commit data/llm_cache",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/data/llm_cache/"
       },
@@ -112,16 +112,16 @@
       {
         "name": "pytest tests/sourcing",
         "state": "PASSED",
-        "observed_at": "2026-09-06T08:42:07Z",
-        "candidate": "6e710f0ff918f6813bc889ddbc1c6c1a62726a13",
+        "observed_at": "2026-09-06T12:41:53Z",
+        "candidate": "6e51feace56e8e55a8eb5a7d545f97c22459033f",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/HANDOFF.md"
       },
       {
-        "name": "tools/check_custody.py --lane sourcing (patched copy, over the repository registry merged with the lane's proposal)",
+        "name": "tools/check_custody.py --lane sourcing (patched copy, over the repository registry merged with the lane's proposal; base = this branch's merge-base with main)",
         "state": "PASSED",
-        "observed_at": "2026-09-06T08:42:07Z",
-        "candidate": "6e710f0ff918f6813bc889ddbc1c6c1a62726a13",
+        "observed_at": "2026-09-06T12:41:53Z",
+        "candidate": "6e51feace56e8e55a8eb5a7d545f97c22459033f",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/HANDOFF.md"
       }
