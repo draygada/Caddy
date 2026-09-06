@@ -1,7 +1,7 @@
 import { useStore, intakeIncomplete } from '../store';
 import type { Outcome } from '../lib/rules';
 import { attentionOf, overallOf, slotStatus, STATUS_CLAIM_CEILING } from '../lib/viewmodel';
-import { GENERIC_NAME, SLOTS, type Node } from '../lib/catalog';
+import { CORE_SLOTS, GENERIC_NAME, SLOTS, type Node } from '../lib/catalog';
 
 const CLEAN = 'no match · limited scan';
 
@@ -14,7 +14,9 @@ export function StatusPanel({ o }: { o: Outcome }) {
   const openReasoning = useStore((s) => s.openReasoning);
   const setWorkspace = useStore((s) => s.setWorkspace);
   const incomplete = useStore((s) => intakeIncomplete(s.project?.intake ?? null));
-  const nodes: Node[] = ['airframe', ...SLOTS];
+  const components = useStore((s) => s.project?.components);
+  // the airframe, every component type in the project, and anything placed
+  const nodes: Node[] = ['airframe', ...SLOTS.filter((sl) => !!parts[sl] || (components ?? CORE_SLOTS).includes(sl))];
   const overall = overallOf(o);
   const attentionCount = attentionOf(o, unconfirmed).length;
   const statuses = nodes.map((n) => ({ n, st: slotStatus(o, unconfirmed, n) }));

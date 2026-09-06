@@ -67,6 +67,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   .btn-lg { min-height: 44px; padding: 0 12px; font-weight: 600; font-size: 14px; }
   .btn-xs { min-height: 24px; padding: 0 8px; font-size: 12px; color: var(--muted); }
   .btn-icon { min-width: 32px; padding: 0; font-family: var(--font-mono); }
+  .btn-primary.btn-xs { color: var(--accentfg); }
   .panel { background: var(--surface); border: 1px solid var(--line2); border-radius: 6px; overflow: hidden; }
   .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line2); }
   .panel-title { font-size: 13px; font-weight: 600; letter-spacing: .02em; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -83,6 +84,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   .nav-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 8px; border: 0; background: transparent; color: var(--ink); cursor: pointer; border-radius: 6px; font-size: 13px; gap: 6px; }
   .nav-btn:hover { background: var(--hover); }
   .nav-btn[aria-pressed="true"] { background: var(--accent); color: var(--accentfg); }
+  .project-card { border-color: var(--line2); transition: border-color .12s, box-shadow .12s, transform .12s; }
+  .project-card:hover { border-color: var(--focus); box-shadow: 0 6px 18px rgba(0, 0, 0, .10); transform: translateY(-1px); }
+  .project-card:hover .project-name { color: var(--accent); }
   .cube-arrow { fill: var(--cube); stroke: var(--cube); cursor: pointer; transition: fill .12s, stroke .12s; }
   .cube-arrow:hover { fill: var(--focus); stroke: var(--focus); }
   .status-word { font-family: var(--font-mono); font-weight: 700; padding: 0 4px; border-radius: 6px; white-space: nowrap; }

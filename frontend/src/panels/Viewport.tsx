@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type DragEvent, type MouseEvent as RMouseEvent, type WheelEvent } from 'react';
 import { useStore, isBodyId, nodeOfBody, BODY_LABEL, type BodyId, type Pos } from '../store';
-import { CATALOG, PLATE_T, PLATE_W, SLOTS, SLOT_LABEL, type PartId, type Slot } from '../lib/catalog';
+import { CATALOG, CORE_SLOTS, PLATE_T, PLATE_W, SLOTS, SLOT_LABEL, type PartId, type Slot } from '../lib/catalog';
 import { boxFaces, clipFaces, K, proj, renderSolid, solidBounds, type Face, type Projector, type Solid, type Vec3 } from '../lib/geometry';
 import { buildBodies } from '../lib/scene';
 import { fmtLen } from '../lib/units';
@@ -19,7 +19,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 /** ViewCube cells: each face split 3×3; centre = face view, edge strips = edge views, corners = corner views (26 directions). */
 interface CubeCell { pts: string; fill: string; dir: Vec3; key: string; label?: string; m?: string; d: number; kind: 'face' | 'edge' | 'corner'; cx: number; cy: number }
 /** One visible face: its outline and the grooves that split it 3×3 (drawn in the groove colour so the pads read as rounded tiles). */
-interface CubeFace { pts: string; fill: string; d: number; grooves: string[] }
+interface CubeFace { pts: string; fill: string; d: number; grooves: string[]; n: Vec3 }
 /** The little XYZ triad at the cube's front-bottom-left corner. */
 interface CubeTriad { o: number[]; x: number[]; y: number[]; z: number[]; yBehind: boolean }
 const FACE_DEFS: { n: Vec3; u: Vec3; v: Vec3; label: string }[] = [
@@ -31,7 +31,7 @@ const FACE_DEFS: { n: Vec3; u: Vec3; v: Vec3; label: string }[] = [
   { n: [-1, 0, 0], u: [0, 1, 0], v: [0, 0, 1], label: 'Left' },
 ];
 const CUTS = [-0.5, -0.28, 0.28, 0.5];
-function cubeCells(pr: Projector): { cells: CubeCell[]; faces: CubeFace[]; triad: CubeTriad } {
+function cubeCells(pr: Projector): { cells: CubeCell[]; faces: CubeFace[]; triad: CubeTriad; corners: [number, number][] } {
   const out: CubeCell[] = [];
   const faces: CubeFace[] = [];
   const add = (a: Vec3, b: Vec3, s: number): Vec3 => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
@@ -48,7 +48,7 @@ function cubeCells(pr: Projector): { cells: CubeCell[]; faces: CubeFace[]; triad
     const grooves = [
       P(at(-0.5, c1)) + ' ' + P(at(0.5, c1)), P(at(-0.5, c2)) + ' ' + P(at(0.5, c2)), P(at(c1, -0.5)) + ' ' + P(at(c1, 0.5)), P(at(c2, -0.5)) + ' ' + P(at(c2, 0.5)),
     ];
-    faces.push({ pts: outline, fill, d: dot, grooves });
+    faces.push({ pts: outline, fill, d: dot, grooves, n: f.n });
     for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
       const corners: Vec3[] = [[CUTS[i], CUTS[j]], [CUTS[i + 1], CUTS[j]], [CUTS[i + 1], CUTS[j + 1]], [CUTS[i], CUTS[j + 1]]].map(([a, b]) => add(add(add([0, 0, 0], f.n, 0.5), f.u, a), f.v, b));
       const mid = at((CUTS[i] + CUTS[i + 1]) / 2, (CUTS[j] + CUTS[j + 1]) / 2);
@@ -61,19 +61,30 @@ function cubeCells(pr: Projector): { cells: CubeCell[]; faces: CubeFace[]; triad
         const c = add([0, 0, 0], f.n, 0.5);
         const pc = pr.pt(c[0], c[1], c[2]);
         const pu = pr.pt(c[0] + f.u[0], c[1] + f.u[1], c[2] + f.u[2]), pv = pr.pt(c[0] + f.v[0], c[1] + f.v[1], c[2] + f.v[2]);
-        m = 'matrix(' + [pu[0] - pc[0], pu[1] - pc[1], -(pv[0] - pc[0]), -(pv[1] - pc[1]), pc[0], pc[1]].map((v) => v.toFixed(3)).join(' ') + ')';
+        let a = pu[0] - pc[0], b = pu[1] - pc[1], cc = -(pv[0] - pc[0]), dd = -(pv[1] - pc[1]);
+        // never mirror the text: a negative determinant flips the up axis; if it then reads right-to-left, turn it 180°
+        if (a * dd - b * cc < 0) { cc = -cc; dd = -dd; }
+        if (a < 0) { a = -a; b = -b; cc = -cc; dd = -dd; }
+        m = 'matrix(' + [a, b, cc, dd, pc[0], pc[1]].map((v) => v.toFixed(3)).join(' ') + ')';
       }
       // cells that share a direction (the three cells meeting at a corner, the two along an edge) share a key and highlight together
       out.push({ pts: corners.map(P).join(' '), fill, dir, key: dir.map((v) => Math.sign(v)).join(','), label: kind === 'face' ? f.label : undefined, m, d: dot, kind, cx, cy });
     }
   }
-  // triad from the front-bottom-left corner: X right, Y back into the scene, Z up
-  const o: Vec3 = [-0.5, 0.5, -0.5];
-  const triad: CubeTriad = {
-    o: pr.pt(o[0], o[1], o[2]), x: pr.pt(o[0] + 1.35, o[1], o[2]), y: pr.pt(o[0], o[1] - 1.25, o[2]), z: pr.pt(o[0], o[1], o[2] + 1.3),
-    yBehind: pr.view[1] > 0,
-  };
-  return { cells: out.sort((a, b) => a.d - b.d), faces: faces.sort((a, b) => a.d - b.d), triad };
+  // one disc per visible cube vertex (a vertex shows when any of its three faces does)
+  const shown = new Set(faces.map((f) => f.n));
+  const corners: [number, number][] = [];
+  for (const sx of [-0.5, 0.5]) for (const sy of [-0.5, 0.5]) for (const sz of [-0.5, 0.5]) {
+    const vis = FACE_DEFS.some((f) => shown.has(f.n) && f.n[0] * sx + f.n[1] * sy + f.n[2] * sz > 0);
+    if (vis) corners.push(pr.pt(sx, sy, sz));
+  }
+  // the triad is its own small gizmo at the bottom-left of the widget, oriented by the same camera
+  const o0 = pr.pt(0, 0, 0);
+  const dir = (x: number, y: number, z: number): [number, number] => { const p = pr.pt(x, y, z); return [p[0] - o0[0], p[1] - o0[1]]; };
+  const og: [number, number] = [40, 158];
+  const ax = (v: [number, number]) => [og[0] + v[0], og[1] + v[1]];
+  const triad: CubeTriad = { o: og, x: ax(dir(0.85, 0, 0)), y: ax(dir(0, 0.85, 0)), z: ax(dir(0, 0, 0.85)), yBehind: pr.view[1] > 0 };
+  return { cells: out.sort((a, b) => a.d - b.d), faces: faces.sort((a, b) => a.d - b.d), triad, corners };
 }
 
 interface Deco { stroke: string; sw: number; dash: string; hoverMix: boolean; selFace: boolean; tint?: string }
@@ -131,7 +142,9 @@ export function Viewport({ o: _o }: { o: Outcome }) {
 
   const L = s.span;
   const dims = s.preview?.dims ?? s.dims, geo = s.preview?.geo ?? s.geo, pos = s.preview?.pos ?? s.pos;
-  const visible = (b: BodyId) => !s.hidden[b] && (!s.isolated || s.isolated === b);
+  // a component body shows when it is placed, or when its type is in the project (dashed footprint); library types not in the project draw nothing
+  const inProject = (sl: Slot) => !!s.parts[sl] || (s.project?.components ?? CORE_SLOTS).includes(sl);
+  const visible = (b: BodyId) => !s.hidden[b] && (!s.isolated || s.isolated === b) && (b === 'plate' || b === 'flange' || inProject(b));
 
   const scene = useMemo(() => {
     const U = 100 * s.zoom;
@@ -346,26 +359,24 @@ export function Viewport({ o: _o }: { o: Outcome }) {
                 <polygon points="159.9,59.9 150.5,57.5 157.5,50.5" />
               </g>
               {/* cube tiles: pale faces with grey borders, white grooves edged in grey, white corner discs with a grey ring */}
-              {scene.cube.faces.map((cf, i) => <polygon key={'f' + i} points={cf.pts} fill={cf.fill} stroke="var(--cube-edge)" strokeWidth={3.4} strokeLinejoin="round" />)}
-              {scene.cube.faces.map((cf, i) => <polygon key={'fo' + i} points={cf.pts} fill="none" stroke="var(--cube-line)" strokeWidth={1.8} strokeLinejoin="round" />)}
-              {scene.cube.faces.flatMap((cf, i) => cf.grooves.map((ln, j) => <polyline key={'ge' + i + '-' + j} points={ln} fill="none" stroke="var(--cube-edge)" strokeWidth={3.6} strokeLinecap="round" />))}
-              {scene.cube.faces.flatMap((cf, i) => cf.grooves.map((ln, j) => <polyline key={'g' + i + '-' + j} points={ln} fill="none" stroke="var(--cube-line)" strokeWidth={2} strokeLinecap="round" />))}
-              {scene.cube.cells.filter((c) => c.kind === 'corner').map((c, i) => <circle key={'k' + i} cx={c.cx} cy={c.cy} r={4.8} fill="var(--cube-line)" stroke="var(--cube-edge)" strokeWidth={0.8} />)}
-              {/* the triad starts at the front-bottom-left corner and reads over the cube, like Fusion */}
+              {/* the triad is a small gizmo bottom-left, oriented by the camera, never over the cube */}
               {(() => {
                 const t = scene.cube.triad;
-                const lab = (e: number[]) => { const dx = e[0] - t.o[0], dy = e[1] - t.o[1]; const n = Math.hypot(dx, dy) || 1; return [e[0] + (dx / n) * 9, e[1] + (dy / n) * 9]; };
+                const lab = (e: number[]) => { const dx = e[0] - t.o[0], dy = e[1] - t.o[1]; const n = Math.hypot(dx, dy) || 1; return [e[0] + (dx / n) * 8, e[1] + (dy / n) * 8]; };
                 const ax = (e: number[], color: string, name: string, op: number) => { const [lx, ly] = lab(e); return (
                   <g key={name} opacity={op} style={{ pointerEvents: 'none' }}>
-                    <line x1={t.o[0]} y1={t.o[1]} x2={e[0]} y2={e[1]} stroke={color} strokeWidth={1.6} />
-                    <text x={lx} y={ly} fill={color} fontSize="14" fontWeight="700" fontFamily="Work Sans, system-ui, sans-serif" textAnchor="middle" dominantBaseline="middle">{name}</text>
+                    <line x1={t.o[0]} y1={t.o[1]} x2={e[0]} y2={e[1]} stroke={color} strokeWidth={1.6} strokeLinecap="round" />
+                    <text x={lx} y={ly} fill={color} fontSize="12" fontWeight="700" fontFamily="Work Sans, system-ui, sans-serif" textAnchor="middle" dominantBaseline="middle">{name}</text>
                   </g>); };
-                return <>{ax(t.y, '#40c057', 'Y', t.yBehind ? 0.45 : 0.7)}{ax(t.x, '#e03131', 'X', 0.95)}{ax(t.z, '#1c3fe0', 'Z', 0.95)}</>;
+                return <>{ax(t.y, '#40c057', 'Y', t.yBehind ? 0.5 : 0.8)}{ax(t.x, '#e03131', 'X', 0.95)}{ax(t.z, '#1c3fe0', 'Z', 0.95)}</>;
               })()}
+              {/* cube tiles: pale faces, a thin grey edge, light grooves between the 3×3 zones, one disc per visible vertex */}
+              {scene.cube.faces.map((cf, i) => <polygon key={'f' + i} points={cf.pts} fill={cf.fill} stroke="none" />)}
+              {scene.cube.faces.flatMap((cf, i) => cf.grooves.map((ln, j) => <polyline key={'g' + i + '-' + j} points={ln} fill="none" stroke="var(--cube-line)" strokeWidth={1.6} strokeLinecap="butt" />))}
+              {scene.cube.faces.map((cf, i) => <polygon key={'fo' + i} points={cf.pts} fill="none" stroke="var(--cube-edge)" strokeWidth={1} strokeLinejoin="round" />)}
+              {scene.cube.corners.map(([x, y], i) => <circle key={'k' + i} cx={x} cy={y} r={4.2} fill="var(--cube-line)" stroke="var(--cube-edge)" strokeWidth={0.9} />)}
               {/* hover highlight: every cell sharing the direction (three at a corner, two along an edge) */}
-              {scene.cube.cells.filter((c) => cubeHover === c.key).map((c, i) => c.kind === 'corner'
-                ? <circle key={'h' + i} cx={c.cx} cy={c.cy} r={4.6} fill="var(--focus)" fillOpacity={0.7} />
-                : <polygon key={'h' + i} points={c.pts} fill="var(--focus)" fillOpacity={0.45} stroke="none" />)}
+              {scene.cube.cells.filter((c) => cubeHover === c.key).map((c, i) => <polygon key={'h' + i} points={c.pts} fill="var(--focus)" fillOpacity={0.45} stroke="none" />)}
               {scene.cube.cells.filter((cf) => cf.label).map((cf) => <text key={'t' + cf.label} transform={cf.m} x="0" y="0.02" fill="var(--cube-ink)" fontSize="0.27" fontWeight="600" fontFamily="Work Sans, system-ui, sans-serif" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: 'none' }}>{cf.label}</text>)}
               {/* invisible hit areas on top */}
               {scene.cube.cells.map((c, i) => <polygon key={'c' + i} points={c.pts} fill="transparent" stroke="none" onMouseEnter={() => setCubeHover(c.key)} onMouseLeave={() => setCubeHover(null)} onClick={() => snap(c.dir)} className="cursor-pointer"><title>{c.label ? c.label + ' view' : c.kind === 'edge' ? 'edge view' : 'corner view'}</title></polygon>)}

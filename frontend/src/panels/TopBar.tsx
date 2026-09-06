@@ -33,6 +33,13 @@ export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
         : <button onClick={() => patch({ intakeOpen: true })} className="chip" style={{ cursor: 'pointer' }} title="edit the use case">use case declared</button>)}
       <div className="flex-1" />
       <div className="flex gap-[6px]">
+        {project && (
+          <button onClick={() => patch({ cmdOpen: true, marking: null })} className="btn hidden sm:inline-flex items-center gap-2 text-muted" title="search every command and operation" aria-label="Open command search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <span>Commands</span>
+            <kbd className="chip chip-sm">⌘ K</kbd>
+          </button>
+        )}
         {onOpenTripwire && <button onClick={onOpenTripwire} className="btn hidden">Tripwire</button>}
         <button onClick={toggleTheme} className="btn">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</button>
         <button onClick={toggleHelp} aria-label="Keyboard and mouse help" className="btn btn-icon">?</button>

@@ -43,6 +43,8 @@ function useKeyboard() {
         else st.closeAll();
         return;
       }
+      // ⌘K / Ctrl+K opens the command search from anywhere, like the original workbench
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); st.patch({ cmdOpen: !st.cmdOpen, marking: null }); return; }
       if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.metaKey || e.ctrlKey || e.altKey) return;
       const k = e.key.toLowerCase();
       if (e.key === '?') st.toggleHelp();

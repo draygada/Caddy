@@ -1,7 +1,7 @@
 // Flat-shaded axonometric projection of the Kestrel bracket and its slot
 // bodies. This is a derived preview drawn as SVG polygons; it is not geometry
 // truth and cannot commit or export anything.
-import { CATALOG, type Dims, type Node, type PartId, type Slot } from './catalog';
+import { CATALOG, DIMS0, type Dims, type Node, type PartId, type Slot } from './catalog';
 
 export type Vec3 = [number, number, number];
 export interface Face { pts: Vec3[]; n: Vec3; slot: string; fill?: string; late?: boolean; /** stable-within-solid face index */ fi?: number; /** body id for body-level selection (plate / flange / slot) */ body?: string; /** produced by a section cut */ cut?: boolean }
@@ -93,7 +93,10 @@ export function renderSolid<T extends object = Record<never, never>>(
   return out;
 }
 
-const FOOTPRINT: Record<string, [number, number]> = { battery: [0.9, 0.5], imu: [0.22, 0.22], fc: [0.7, 0.45], thermal: [0.36, 0.36], gnss: [0.22, 0.22], datalink: [0.4, 0.25], pod: [0.3, 0.3] };
+const FOOTPRINT: Record<string, [number, number]> = {
+  battery: [0.9, 0.5], imu: [0.22, 0.22], fc: [0.7, 0.45], thermal: [0.36, 0.36], gnss: [0.22, 0.22], datalink: [0.4, 0.25], pod: [0.3, 0.3],
+  camera: [0.2, 0.2], lidar: [0.18, 0.24], esc: [0.4, 0.24], motor: [0.3, 0.3], servo: [0.24, 0.12], airspeed: [0.3, 0.08], transponder: [0.24, 0.18], companion: [0.36, 0.24], antenna: [0.2, 0.2], parachute: [0.3, 0.3],
+};
 
 /** Dashed outline of the slot footprint when no part is placed. */
 export function emptySolid(slot: Slot, x: number, y: number, z: number, dims: Dims): Solid {
@@ -188,6 +191,47 @@ export function partSolid(pid: PartId, slot: Slot, x: number, y: number, z: numb
       faces = boxFaces(x, y, z, 0.3, 0.3, h * 0.3, slot).concat(cylFaces(x + 0.15, y + 0.15, z + h * 0.3, 0.12, h * 0.7, slot, 16), cylFaces(x + 0.15, y + 0.15, z + h, 0.05, 0.03, slot, 10));
       c = [x + 0.15, y + 0.15, z + h / 2]; break;
     }
+    // library presets
+    case 'imx477': {
+      faces = boxFaces(x, y, z, 0.2, 0.2, 0.02, slot, 'var(--m3)').concat(cylFaces(x + 0.1, y + 0.1, z + 0.02, 0.06, h, slot, 14), cylFaces(x + 0.1, y + 0.1, z + 0.02 + h, 0.04, 0.02, slot, 10));
+      c = [x + 0.1, y + 0.1, z + h / 2]; break;
+    }
+    case 'lw20': {
+      faces = boxFaces(x, y, z, 0.18, 0.24, h, slot).concat(cylFaces(x + 0.09, y + 0.07, z + h, 0.045, 0.02, slot, 10), cylFaces(x + 0.09, y + 0.17, z + h, 0.045, 0.02, slot, 10));
+      c = [x + 0.09, y + 0.12, z + h / 2]; break;
+    }
+    case 'alpha80': {
+      faces = boxFaces(x, y, z, 0.4, 0.24, h, slot, 'var(--m2)').concat(boxFaces(x + 0.03, y + 0.03, z + h, 0.34, 0.18, 0.015, slot, 'var(--m3)'), cylFaces(x + 0.4, y + 0.12, z + h * 0.4, 0.02, 0.12, slot, 8));
+      c = [x + 0.2, y + 0.12, z + h / 2]; break;
+    }
+    case 'at7215': {
+      faces = cylFaces(x + 0.15, y + 0.15, z, 0.15, h * 0.85, slot, 18).concat(cylFaces(x + 0.15, y + 0.15, z + h * 0.85, 0.04, h * 0.15, slot, 10), boxFaces(x + 0.02, y + 0.02, z, 0.26, 0.26, 0.015, slot, 'var(--m3)'));
+      c = [x + 0.15, y + 0.15, z + h / 2]; break;
+    }
+    case 'bls6120': {
+      faces = boxFaces(x, y, z, 0.24, 0.12, h * 0.8, slot).concat(cylFaces(x + 0.06, y + 0.06, z + h * 0.8, 0.03, h * 0.2, slot, 10), boxFaces(x - 0.03, y + 0.04, z + h * 0.5, 0.3, 0.04, 0.015, slot, 'var(--m3)'));
+      c = [x + 0.12, y + 0.06, z + h / 2]; break;
+    }
+    case 'ms4525': {
+      faces = boxFaces(x, y, z, 0.1, 0.08, h, slot).concat(boxFaces(x + 0.1, y + 0.03, z + h * 0.4, 0.2, 0.02, 0.02, slot, 'var(--m3)'));
+      c = [x + 0.1, y + 0.04, z + h / 2]; break;
+    }
+    case 'ping200': {
+      faces = boxFaces(x, y, z, 0.24, 0.18, h, slot).concat(cylFaces(x + 0.2, y + 0.09, z + h, 0.012, 0.22, slot, 8));
+      c = [x + 0.12, y + 0.09, z + h / 2]; break;
+    }
+    case 'orinnano': {
+      faces = boxFaces(x, y, z, 0.36, 0.24, 0.02, slot, 'var(--m3)').concat(boxFaces(x + 0.04, y + 0.04, z + 0.02, 0.24, 0.16, h * 0.4, slot), boxFaces(x + 0.06, y + 0.06, z + 0.02 + h * 0.4, 0.2, 0.12, h * 0.6, slot, 'var(--m2)'));
+      c = [x + 0.18, y + 0.12, z + h / 2]; break;
+    }
+    case 'ant2400': {
+      faces = boxFaces(x, y, z, 0.2, 0.2, h * 0.5, slot, 'var(--m3)').concat(boxFaces(x + 0.02, y + 0.02, z + h * 0.5, 0.16, 0.16, h * 0.5, slot));
+      c = [x + 0.1, y + 0.1, z + h / 2]; break;
+    }
+    case 'ifc60': {
+      faces = cylFaces(x + 0.15, y + 0.15, z, 0.15, h * 0.9, slot, 16).concat(cylFaces(x + 0.15, y + 0.15, z + h * 0.9, 0.16, h * 0.1, slot, 16));
+      c = [x + 0.15, y + 0.15, z + h / 2]; break;
+    }
   }
   if (fs !== 1) {
     const sc = (p: Vec3): Vec3 => [x + (p[0] - x) * fs, y + (p[1] - y) * fs, p[2]];
@@ -209,7 +253,7 @@ export function fitThumb(faces: (ProjectedFace & { stroke: string; dash: string 
   }));
 }
 
-const THUMB_DIMS: Dims = { battery: 0.35, imu: 0.1, fc: 0.03, thermal: 0.3, airframe: 0.8, gnss: 0.06, datalink: 0.12, pod: 0.3 };
+const THUMB_DIMS: Dims = { ...DIMS0 };
 const THUMB_PR = proj(Math.PI / 4, 0.6155, 1, 0, 0);
 
 export function thumbFaces(pid: PartId): ThumbFace[] {

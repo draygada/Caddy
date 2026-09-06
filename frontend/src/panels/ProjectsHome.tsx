@@ -68,10 +68,10 @@ export function ProjectsHome() {
 
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
             {projects.map((p) => (
-              <button key={p.id} onClick={() => openProject(p.id)} className="panel text-left p-0 grid gap-0 cursor-pointer hover:border-focus overflow-hidden" style={{ borderColor: 'var(--line2)' }}>
+              <button key={p.id} onClick={() => openProject(p.id)} className="project-card panel text-left p-0 grid gap-0 cursor-pointer overflow-hidden">
                 <DesignPreview snap={p.snapshot ?? baselineSnapshotFor(p.id)} className="w-full block border-b border-line2" />
                 <div className="p-4 grid gap-2">
-                <div className="flex justify-between gap-2 items-baseline"><span className="text-[16px] font-semibold">{p.name}</span><span className="text-[12px] text-muted">opened {p.openedAt.slice(5)}</span></div>
+                <div className="flex justify-between gap-2 items-baseline"><span className="project-name text-[16px] font-semibold">{p.name}</span><span className="text-[12px] text-muted">opened {p.openedAt.slice(5)}</span></div>
                 <div className="text-[13px] text-muted min-h-[18px]">{p.description || 'no description'}</div>
                 <div className="text-[12px] flex gap-2 items-center flex-wrap">
                   {intakeIncomplete(p.intake) ? <span className="chip chip-sm" style={{ color: 'var(--amber)', borderColor: 'var(--amber)' }}>requires more information</span> : <span className="chip chip-sm">use case declared</span>}
@@ -80,7 +80,6 @@ export function ProjectsHome() {
                 </div>
               </button>
             ))}
-            <button onClick={() => setCreating(true)} className="panel text-left p-4 grid place-items-center min-h-[120px] cursor-pointer border-dashed hover:border-focus text-muted">+ New project</button>
           </div>
         </div>
       </div>

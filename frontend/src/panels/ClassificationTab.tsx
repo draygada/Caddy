@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore, intakeIncomplete } from '../store';
-import { CATALOG, GENERIC_NAME, SLOTS, type Node, type Slot } from '../lib/catalog';
+import { CATALOG, CORE_SLOTS, GENERIC_NAME, SLOTS, type Node, type Slot } from '../lib/catalog';
 import { AF_THUMB, THUMBS, type ThumbFace } from '../lib/geometry';
 import type { Outcome, Rule } from '../lib/rules';
 import { destCellsOf, overallOf, slotStatus, STATUS_CLAIM_CEILING } from '../lib/viewmodel';
@@ -62,7 +62,8 @@ export function ClassificationTab({ o }: { o: Outcome }) {
   const [showClean, setShowClean] = useState(false);
   const overall = overallOf(o);
   const incomplete = intakeIncomplete(s.project?.intake ?? null);
-  const rows: PartRow[] = (['airframe', ...SLOTS] as Node[]).map((node) => {
+  const components = s.project?.components ?? CORE_SLOTS;
+  const rows: PartRow[] = (['airframe', ...SLOTS.filter((sl) => !!s.parts[sl] || (components as Slot[]).includes(sl))] as Node[]).map((node) => {
     const unconfirmed = node !== 'airframe' && !!s.unconfirmed[node as Slot];
     const level = levelOf(o, node, unconfirmed);
     const pid = node === 'airframe' ? null : s.parts[node as Slot];

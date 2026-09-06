@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
   BASELINE_PARTS, CATALOG, CMP_KEYS, DECLARED0, DEFAULT_POS, DIMS0, EXTRUDE_MAX, EXTRUDE_MIN, FIELDS, RULES_EVALUATED, SCENARIO, SEED_EVENTS, SEED_FEATURES,
-  SLOTS, SLOT_LABEL, SPAN_BASELINE, SPAN_MAX, SPAN_MIN,
+  CORE_SLOTS, GENERIC_NAME, SLOTS, SLOT_LABEL, SPAN_BASELINE, SPAN_MAX, SPAN_MIN,
   type CmpKey, type Declared, type Dims, type Feature, type FieldSpec, type Lane, type Node, type PartAttrs, type PartId, type Slot, type TimelineEvent,
 } from './lib/catalog';
 import { GEO0, type Geo, type Pos, type Positions, type Snapshot } from './lib/design';
@@ -33,7 +33,7 @@ export type VisualStyle = 'shaded' | 'edges' | 'wireframe';
 export type SelFilter = 'component' | 'body' | 'face';
 /** body ids: a slot, or one of the airframe's two bodies */
 export type BodyId = Slot | 'plate' | 'flange';
-export const BODY_LABEL: Record<BodyId, string> = { plate: 'Base plate', flange: 'Flange', battery: 'Battery pack', thermal: 'Thermal sensor', imu: 'IMU', fc: 'Flight controller', gnss: 'GNSS receiver', datalink: 'Datalink radio', pod: 'Sensor pod' };
+export const BODY_LABEL: Record<BodyId, string> = { plate: 'Base plate', flange: 'Flange', ...GENERIC_NAME };
 export const isBodyId = (s: string): s is BodyId => s in BODY_LABEL;
 export const nodeOfBody = (b: BodyId): Node => (b === 'plate' || b === 'flange' ? 'airframe' : b);
 
@@ -71,9 +71,15 @@ export const INTAKE_DEFAULT: Intake = { endUse: 'civil survey and mapping', endU
 export const intakeIncomplete = (i: Intake | null) => !i || i.endUse === 'not sure yet' || i.endUser === 'not sure yet' || i.usedOn === 'not sure yet';
 
 /** A project is a design plus the declared use-case answers. The sample project ships with its answers filled in. */
-export interface Project { id: string; name: string; description: string; intake: Intake | null; createdAt: string; openedAt: string; /** the design as last left; drives the card preview */ snapshot?: Snapshot }
+export interface Project {
+  id: string; name: string; description: string; intake: Intake | null; createdAt: string; openedAt: string;
+  /** the component types this project holds: the core seven plus whatever was added from the library */
+  components: Slot[];
+  /** the design as last left; drives the card preview */
+  snapshot?: Snapshot;
+}
 export const SAMPLE_PROJECTS: Project[] = [
-  { id: 'kestrel', name: 'Kestrel', description: 'Fixed-wing survey drone · 7 slots · the demo design', intake: { ...INTAKE_DEFAULT }, createdAt: '2026-09-04 18:10', openedAt: '2026-09-05 09:12' },
+  { id: 'kestrel', name: 'Kestrel', description: 'Fixed-wing survey drone · 7 slots · the demo design', intake: { ...INTAKE_DEFAULT }, createdAt: '2026-09-04 18:10', openedAt: '2026-09-05 09:12', components: [...CORE_SLOTS] },
 ];
 export type OrderState = 'DRAFT' | 'DISPATCH_PENDING' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'EXCEPTION' | 'DISPATCH_UNKNOWN' | 'CLOSED';
 export interface Order { key: string; packetHash: string; state: OrderState; receipt: string | null; attempts: number; trail: string[] }
@@ -172,6 +178,10 @@ export interface WorkbenchState extends Snapshot {
   createProject: (name: string, description: string, intake: Intake | null) => void;
   setProjectIntake: (intake: Intake | null) => void;
   closeProject: () => void;
+  /** add a component type from the library to the open project (it appears in the browser, ready to place) */
+  addComponent: (slot: Slot) => void;
+  /** remove an unplaced library component from the open project; core types stay */
+  removeComponent: (slot: Slot) => void;
   /** rule pack the engine evaluates under (committed) */
   pack: PackId;
   determination: { chip: 'CACHED' | 'LIVE'; memoHash: string; entries: string[]; basis: string; conflict: string | null; at: string } | null;
@@ -349,8 +359,23 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const s = get();
       const p = s.projects.find((x) => x.id === id);
       if (!p) return;
-      const opened = { ...p, openedAt: now() };
-      set({ ...baseline(), ...(p.snapshot ?? {}), round: null, sourcingOpen: false, workspace: 'design', project: opened, projects: s.projects.map((x) => (x.id === id ? opened : x)) });
+      const opened: Project = { ...p, openedAt: now(), components: p.components?.length ? p.components : [...CORE_SLOTS] };
+      // an older snapshot may predate library components: fill any missing slot with empty state
+      const snap = p.snapshot ? { ...p.snapshot, parts: { ...(Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts), ...p.snapshot.parts }, attrs: { ...(Object.fromEntries(SLOTS.map((sl) => [sl, {}])) as Attrs), ...p.snapshot.attrs }, pos: { ...posFor(p.snapshot.span), ...p.snapshot.pos }, dims: { ...DIMS0, ...p.snapshot.dims } } : {};
+      set({ ...baseline(), ...snap, round: null, sourcingOpen: false, workspace: 'design', project: opened, projects: s.projects.map((x) => (x.id === id ? opened : x)) });
+    },
+    addComponent: (slot) => {
+      const s = get();
+      if (!s.project || s.project.components.includes(slot)) return;
+      const p: Project = { ...s.project, components: [...s.project.components, slot] };
+      set({ project: p, projects: s.projects.map((x) => (x.id === p.id ? p : x)) });
+      append({ kind: 'component_added', text: GENERIC_NAME[slot] + ' added to the project', entry: 'from the component library · not placed yet', intent: 'expand the design' });
+    },
+    removeComponent: (slot) => {
+      const s = get();
+      if (!s.project || (CORE_SLOTS as Slot[]).includes(slot) || s.parts[slot]) return;
+      const p: Project = { ...s.project, components: s.project.components.filter((x) => x !== slot) };
+      set({ project: p, projects: s.projects.map((x) => (x.id === p.id ? p : x)) });
     },
     createProject: (name, description, intake) => {
       const s = get();
@@ -358,7 +383,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       // a new design starts with the bracket and empty slots
       const emptyParts = Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts;
       const snapshot: Snapshot = { ...baselineSnapshot(), parts: emptyParts, attrs: attrsFor(emptyParts) };
-      const p: Project = { id, name: name.trim() || 'Untitled project', description: description.trim(), intake, createdAt: now(), openedAt: now(), snapshot };
+      const p: Project = { id, name: name.trim() || 'Untitled project', description: description.trim(), intake, createdAt: now(), openedAt: now(), components: [...CORE_SLOTS], snapshot };
       set({ ...baseline(), ...snapshot, round: null, sourcingOpen: false, workspace: 'design', project: p, projects: [p, ...s.projects], intakeOpen: false });
       append({ kind: 'design_opened', text: p.name + ' · new project' + (intake ? ' · use case declared' : ' · use case skipped for now'), entry: intake ? intake.endUse + ' · ' + intake.endUser + ' · ship-to ' + intake.shipTo : 'this application requires more information before classification and sourcing complete', intent: description });
     },

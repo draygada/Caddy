@@ -50,7 +50,7 @@ export function outcome(d: Design, packId: PackId = 'v2'): Outcome {
   const decl = d.declared ?? DECLARED0;
   const pack = PACKS[packId];
   const rules: Rule[] = [], cannot: CannotFire[] = [], advisories: Advisory[] = [];
-  const cols = { airframe: ['NLR'], battery: ['NLR'], thermal: ['NLR'], imu: ['NLR'], fc: ['NLR'], gnss: ['NLR'], datalink: ['NLR'], pod: ['NLR'] } as Record<Node, ColSet[]>;
+  const cols = Object.fromEntries((['airframe', ...SLOTS] as Node[]).map((n) => [n, ['NLR']])) as Record<Node, ColSet[]>;
   const bat = d.attrs.battery, th = d.attrs.thermal, imu = d.attrs.imu, fc = d.attrs.fc, gnss = d.attrs.gnss, dl = d.attrs.datalink;
   const cruiseW = cruiseWatts(span);
   const wh = bat.pack_wh;
