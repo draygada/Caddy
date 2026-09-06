@@ -31,4 +31,3 @@ class DiagnosticError(ValueError):
 def require(condition: bool, code: str, message: str, path: Optional[str] = None, **details: Any) -> None:
     if not condition:
         raise DiagnosticError(code=code, message=message, path=path, details=details)
-

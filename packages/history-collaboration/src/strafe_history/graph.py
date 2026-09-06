@@ -129,4 +129,3 @@ def validate_hierarchy(
         for parent, children in children_work.items():
             require(children == sorted(children), "HIERARCHY_ORDER_INVALID", "siblings must be lexicographically ordered", parent_id=parent)
     return Hierarchy(root_id, parents, {node_id: tuple(children) for node_id, children in children_work.items()})
-

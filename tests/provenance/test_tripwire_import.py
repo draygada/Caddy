@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "docs" / "imports" / "tripwire-898f6167.json"
+UNIFIED_MANIFEST = ROOT / "docs" / "imports" / "tripwire-unified-20260905.json"
 BASE = "92241b9ca7c9df37cc48e55b4ea388cb21686bb4"
 SOURCE = "898f6167e4305a4f86f3ebe4a473278ffbd56530"
 SOURCE_TREE = "b8f32adddb0c9a894a41d15ead89b4cb1db91aed"
@@ -49,12 +50,13 @@ class ProvenanceTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        cls.unified = json.loads(UNIFIED_MANIFEST.read_text(encoding="utf-8"))
 
-    def test_unsquashed_exact_ancestry_and_prefix_tree(self) -> None:
+    def test_original_import_remains_exact_and_unified_tree_is_receipted(self) -> None:
         self.assertEqual(git_text("rev-parse", IMPORT + "^1"), BASE)
         self.assertEqual(git_text("rev-parse", IMPORT + "^2"), SOURCE)
         self.assertEqual(git_text("rev-parse", IMPORT + ":" + PREFIX), SOURCE_TREE)
-        self.assertEqual(git_text("rev-parse", "HEAD:" + PREFIX), SOURCE_TREE)
+        self.assertEqual(git_text("rev-parse", "HEAD:" + PREFIX), self.unified["current_prefix_tree"])
         for ancestor in (BASE, SOURCE, IMPORT):
             completed = subprocess.run(
                 ["git", "-C", str(ROOT), "merge-base", "--is-ancestor", ancestor, "HEAD"],
@@ -88,16 +90,26 @@ class ProvenanceTest(unittest.TestCase):
         self.assertEqual(record["sha256"], hashlib.sha256(source).hexdigest())
         self.assertEqual(record["git_blob_oid"], git_text("rev-parse", SOURCE + ":" + record["source_path"]))
 
-    def test_import_prefix_has_no_adaptation(self) -> None:
-        completed = subprocess.run(
-            ["git", "-C", str(ROOT), "diff", "--quiet", IMPORT, "--", PREFIX],
-            check=False,
-        )
-        self.assertEqual(completed.returncode, 0)
+    def test_followup_imports_are_prefix_scoped_and_all_sources_are_ancestors(self) -> None:
         self.assertEqual(git_text("ls-files", "--others", "--exclude-standard", "--", PREFIX), "")
         self.assertEqual(self.manifest["import"]["method"], "git-subtree-unsquashed")
         self.assertEqual(self.manifest["import"]["commit"], IMPORT)
         self.assertEqual(self.manifest["import"]["prefix_tree"], SOURCE_TREE)
+        self.assertEqual(self.unified["base_manifest"], "docs/imports/tripwire-898f6167.json")
+
+        for delta in self.unified["applied_deltas"]:
+            paths = git_text("diff-tree", "--no-commit-id", "--name-only", "-r", delta["commit"]).splitlines()
+            self.assertTrue(paths)
+            self.assertTrue(all(path.startswith(PREFIX + "/") for path in paths))
+
+        for merge in self.unified["ancestry_merges"]:
+            parents = git_text("show", "-s", "--format=%P", merge["merge_commit"]).split()
+            self.assertIn(merge["source_head"], parents)
+            completed = subprocess.run(
+                ["git", "-C", str(ROOT), "merge-base", "--is-ancestor", merge["source_head"], "HEAD"],
+                check=False,
+            )
+            self.assertEqual(completed.returncode, 0)
 
 
 if __name__ == "__main__":

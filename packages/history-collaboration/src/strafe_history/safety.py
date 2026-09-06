@@ -57,4 +57,3 @@ def validate_persistence_safety(value: Any, allowed_sensitive_keys: Iterable[str
                 visit(child, "{0}.{1}".format(path, key))
 
     visit(value, "$")
-

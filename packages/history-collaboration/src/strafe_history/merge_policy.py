@@ -151,4 +151,3 @@ def assess_merge(
         )
 
     return MergeAssessment(allowed=not conflicts, conflicts=tuple(conflicts), requires_rebase=stale)
-

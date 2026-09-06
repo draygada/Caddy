@@ -73,4 +73,3 @@ class ReviewLedger:
 
     def is_human_approved(self, proposal_id: str, revision_id: str) -> bool:
         return self.binding_decision(proposal_id, revision_id) == "APPROVE"
-

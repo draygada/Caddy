@@ -66,4 +66,3 @@ class MetadataStream:
             for event in self.log.read_all()
             if event.value["event_type"] in {"COMMENT_ADDED", "COMMENT_RESOLVED"}
         ]
-

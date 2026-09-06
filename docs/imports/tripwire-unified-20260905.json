@@ -1,0 +1,60 @@
+{
+  "schema_version": "caddydaddy.import-provenance/2",
+  "generated_at": "2026-09-06T00:14:00Z",
+  "authorization": "Merge all branches into one to finish the project; preserve the current product authority and namespace the attached Tripwire repository under features/tripwire.",
+  "base_manifest": "docs/imports/tripwire-898f6167.json",
+  "prefix": "features/tripwire",
+  "original_import": {
+    "source_commit": "898f6167e4305a4f86f3ebe4a473278ffbd56530",
+    "source_tree": "b8f32adddb0c9a894a41d15ead89b4cb1db91aed",
+    "import_commit": "7a41388ffb49786495efd46b5821d402912c36da"
+  },
+  "current_prefix_tree": "773c868372f8c88cdddfb6b1bb7d3ba82d55b73b",
+  "applied_deltas": [
+    {
+      "source": "tripwire-local/main",
+      "source_head": "6969c9f3f33ae30cb2d0f2b1aaf91e308be152fd",
+      "source_range": "898f6167e4305a4f86f3ebe4a473278ffbd56530..6969c9f3f33ae30cb2d0f2b1aaf91e308be152fd",
+      "commit": "993e4fcd6effc1c827ee4c5c44a46acba4e32f9b",
+      "mode": "prefixed-content"
+    },
+    {
+      "source": "tripwire-local/hackathon/fb00-mechanical",
+      "source_head": "ca358fa28d90c6c59c20eef92b7be5b05c523c09",
+      "source_range": "898f6167e4305a4f86f3ebe4a473278ffbd56530...ca358fa28d90c6c59c20eef92b7be5b05c523c09",
+      "commit": "0b722fc61d4b0775c3db155a7f325cbd4cc5c6a7",
+      "mode": "prefixed-content"
+    },
+    {
+      "source": "tripwire-local/hackathon/fb03-contract",
+      "source_head": "05cb545e3fca7e0df0084e6f1e624e777d701457",
+      "source_range": "898f6167e4305a4f86f3ebe4a473278ffbd56530...05cb545e3fca7e0df0084e6f1e624e777d701457",
+      "commit": "be7238ccfd12c6d41347ee6b96754c79976d424a",
+      "mode": "prefixed-content"
+    }
+  ],
+  "ancestry_merges": [
+    {
+      "source_head": "6969c9f3f33ae30cb2d0f2b1aaf91e308be152fd",
+      "merge_commit": "618dd8e8d106d5460ec38b0d5f21a9148d410c91"
+    },
+    {
+      "source_head": "ca358fa28d90c6c59c20eef92b7be5b05c523c09",
+      "merge_commit": "5e5114ccfbbe017b9aaf9c6c0f1495c2e366f3ef"
+    },
+    {
+      "source_head": "05cb545e3fca7e0df0084e6f1e624e777d701457",
+      "merge_commit": "4215bf130e41856987f20158a9ad8b20b405727c"
+    },
+    {
+      "source_head": "84fe6f1cd96d78619a2fa568b201837030499c0f",
+      "merge_commit": "1e232a839a34e02a0b61fa65ff004d598b952400"
+    }
+  ],
+  "supersession": {
+    "source_head": "84fe6f1cd96d78619a2fa568b201837030499c0f",
+    "status": "ANCESTRY_ONLY_SUPERSEDED",
+    "superseded_by": "05cb545e3fca7e0df0084e6f1e624e777d701457",
+    "reason": "The FB-03 contract branch contains the stronger governed inspection implementation and verification suite; importing both alternate UI trees would create a second runtime authority."
+  }
+}

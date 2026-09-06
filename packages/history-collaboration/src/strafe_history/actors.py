@@ -79,4 +79,3 @@ def require_human(actor: Dict[str, Any], action: str) -> Dict[str, Any]:
             details={"actor_id": checked["actor_id"], "actor_kind": checked["actor_kind"]},
         )
     return checked
-
