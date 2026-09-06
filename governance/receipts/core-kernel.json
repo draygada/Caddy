@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0.0",
+  "receipt_id": "forge-core-kernel-rescue-20260905T184039Z",
+  "lane": "core-kernel",
+  "status": "ACTIVE",
+  "mutation_admitted": true,
+  "custodian_task_id": "01a0718a-175f-7121-a584-21f1b826aece",
+  "writer": {
+    "kind": "codex-task",
+    "task_id": "01a06ca5-4f06-75c0-817e-f219707102d4",
+    "title": "Core-kernel WIP rescue builder"
+  },
+  "assigned_by_task_id": "01a06ca5-4f06-75c0-817e-f219707102d4",
+  "branch": "lane/core-kernel",
+  "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/core-kernel",
+  "base_commit": "75c706248595cd0202a4557cb49910dc7b079800",
+  "prepared_at": "2026-09-05T15:08:27Z",
+  "lease_acquired_at": "2026-09-05T18:40:39Z",
+  "renew_by": "2026-09-05T19:40:39Z",
+  "expires_at": "2026-09-05T21:40:39Z",
+  "exclusive_write_paths": [
+    "packages/core-kernel/**",
+    "tests/core-kernel/**",
+    "governance/receipts/core-kernel.json"
+  ],
+  "owned_responsibility": "geometry execution and geometry evidence only: solver adapter, OCCT adapter, recompute, topology lineage, diagnostics, import/export, golden geometry fixtures",
+  "forbidden_responsibility": [
+    "product-thread or revision semantics",
+    "browser interaction or presentation",
+    "shared/root contracts and dependency locks",
+    "main/release refs and deployment/provider state"
+  ],
+  "activation_rule": "The integration owner must atomically replace writer, lease_acquired_at, renew_by, expires_at, and mutation_admitted before any product mutation; stale or unassigned is blocking.",
+  "now_observation": {
+    "schema_version": "1.0.0",
+    "observed_at": "2026-09-05T18:40:39Z",
+    "worktree_label": "forge/core-kernel",
+    "task": {
+      "id": "01a06ca5-4f06-75c0-817e-f219707102d4",
+      "title": "Core-kernel WIP rescue builder",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "conversation:core-kernel-rescue-instruction@2026-09-05T18:40:39Z"
+    },
+    "actor": {
+      "owner": {
+          "id": "01a06ca5-4f06-75c0-817e-f219707102d4",
+          "title": "Core-kernel WIP rescue builder",
+          "evidence_class": "MEASURED",
+          "evidence_ref": "conversation:core-kernel-rescue-instruction@2026-09-05T18:40:39Z"
+      },
+      "model": {
+        "id": null,
+        "title": null,
+        "evidence_class": "UNKNOWN",
+        "evidence_ref": null
+      }
+    },
+    "lane_state": {
+      "value": "ACTIVE",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "receipt:forge-core-kernel-rescue-20260905T184039Z#status"
+    },
+    "current_action": {
+      "value": "Reconciling retired core-kernel WIP against committed PartDocument geometry contracts for a local salvage candidate.",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "conversation:core-kernel-rescue-instruction@2026-09-05T18:40:39Z"
+    },
+    "last_evidenced_change": {
+      "kind": "CUSTODY_REASSIGNED_FOR_WIP_RESCUE",
+      "occurred_at": "2026-09-05T18:40:39Z",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "conversation:core-kernel-rescue-instruction@2026-09-05T18:40:39Z"
+    },
+    "blockers": [],
+    "checks": [],
+    "release": {
+      "state": "NONE",
+      "candidate": null,
+      "evidence_class": "MEASURED",
+      "evidence_ref": "git:refs/tags@2026-09-05T15:14:51Z"
+    }
+  },
+  "handoff": "docs/handoff/core-kernel.md"
+}

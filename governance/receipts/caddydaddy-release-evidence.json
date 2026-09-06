@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0.0",
+  "receipt_id": "forge-caddydaddy-release-evidence-20260905T212526Z",
+  "lane": "caddydaddy-release-evidence",
+  "status": "ACTIVE",
+  "mutation_admitted": true,
+  "custodian_task_id": "caddydaddy-release-evidence-20260905",
+  "writer": {
+    "kind": "codex-task",
+    "task_id": "caddydaddy-release-evidence-20260905",
+    "title": "CADdyDaddy release-evidence governance builder"
+  },
+  "assigned_by_task_id": "conversation:caddydaddy-release-evidence-instruction",
+  "branch": "lane/caddydaddy-release-evidence",
+  "worktree": "/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/caddydaddy-release-evidence",
+  "base_commit": "7df1ae5c4ea5f39b659987990e44f31c04c9078b",
+  "prepared_at": "2026-09-05T21:25:26Z",
+  "lease_acquired_at": "2026-09-05T21:25:26Z",
+  "renew_by": "2026-09-05T22:25:26Z",
+  "expires_at": "2026-09-06T01:25:26Z",
+  "exclusive_write_paths": [
+    ".gitignore",
+    "docs/governance/candidate-integration-release-evidence.md",
+    "governance/custody.v1.json",
+    "governance/receipts/caddydaddy-release-evidence.json",
+    "governance/schemas/candidate-integration-release-receipt.v1.schema.json",
+    "governance/templates/candidate-integration-release-receipt.v1.template.json",
+    "tools/check_release_diff_hygiene.py",
+    "tools/generate_candidate_integration_release_receipt.py",
+    "tests/governance/test_release_evidence.py"
+  ],
+  "owned_responsibility": "Candidate integration custody receipts, release evidence generation, and authored-versus-imported diff hygiene only",
+  "forbidden_responsibility": [
+    "modification or normalization of features/tripwire/**",
+    "core, browser, or product-service implementation",
+    "merge, push, deploy, provider, domain, credential, external-send, or spending state",
+    "generation of a final receipt before final integration"
+  ],
+  "activation_rule": "Valid only for this exact branch, worktree, base, allowlist, and sole writer.",
+  "now_observation": {
+    "schema_version": "1.0.0",
+    "observed_at": "2026-09-05T21:25:26Z",
+    "worktree_label": "forge/caddydaddy-release-evidence",
+    "task": {
+      "id": "caddydaddy-release-evidence-20260905",
+      "title": "CADdyDaddy release-evidence governance builder",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "conversation:caddydaddy-release-evidence-instruction"
+    },
+    "actor": {
+      "owner": {
+        "id": "human:caddydaddy-release-evidence",
+        "title": "Human release-evidence instruction",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "conversation:caddydaddy-release-evidence-instruction"
+      },
+      "model": {
+        "id": null,
+        "title": null,
+        "evidence_class": "UNKNOWN",
+        "evidence_ref": null
+      }
+    },
+    "lane_state": {
+      "value": "ACTIVE",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "receipt:forge-caddydaddy-release-evidence-20260905T212526Z#status"
+    },
+    "current_action": {
+      "value": "Building candidate-bound release custody evidence and hygiene gates.",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "conversation:caddydaddy-release-evidence-instruction"
+    },
+    "last_evidenced_change": {
+      "kind": "CUSTODY_ACQUIRED",
+      "occurred_at": "2026-09-05T21:25:26Z",
+      "evidence_class": "MEASURED",
+      "evidence_ref": "receipt:forge-caddydaddy-release-evidence-20260905T212526Z"
+    },
+    "blockers": [
+      {
+        "id": "final-integration-not-yet-bound",
+        "state": "HOLD",
+        "summary": "No final integrated candidate hash exists for an exact external release receipt.",
+        "clearer": "final integrator",
+        "next_unblock": "Run the tracked generator only after final integration and all named checks pass.",
+        "evidence_class": "MEASURED",
+        "evidence_ref": "conversation:caddydaddy-release-evidence-instruction"
+      }
+    ],
+    "checks": [],
+    "release": {
+      "state": "NONE",
+      "candidate": null,
+      "evidence_class": "MEASURED",
+      "evidence_ref": "conversation:no-push-deploy-provider-domain-credentials"
+    }
+  },
+  "handoff": "docs/governance/candidate-integration-release-evidence.md"
+}
