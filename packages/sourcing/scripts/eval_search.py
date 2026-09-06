@@ -11,6 +11,7 @@ from pathlib import Path
 
 PKG = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PKG))
+from forge_search.evaluate import STATUS_ORDER  # noqa: E402
 from forge_search.model import Abstain  # noqa: E402
 from forge_search.propose import default_ports, propose_alternative, propose_escalation  # noqa: E402
 from forge_sourcing.fixtures import design_state as _state  # noqa: E402
@@ -46,10 +47,14 @@ def run_gold(gold: list[dict], make_service, ports_for, *, states: dict) -> dict
         except Exception as error:  # noqa: BLE001 - an attempt that produced no scorable output goes to errors.jsonl, never results
             errors.append({"id": row["id"], "error": f"{type(error).__name__}: {error}"})
             continue
-        cand = next((c for c in p["candidates"] if c["mpn"] == row["expect"].get("mpn")), None) if row["expect"].get("mpn") else None
-        observed = cand["status"] if cand else p["status"]
-        reasons = (cand["reasons"] if cand else p["reasons"]) + (cand["words"] if cand else p["words"])
         want = row["expect"]
+        # One candidate can carry several documents, and the proposer emits one card per (mpn, url). A gold row names a
+        # CANDIDATE, so the observation is the BEST card for that mpn — green when the proposal ranked it — never
+        # whichever card the model happened to name first; the phrase check reads every card for that mpn.
+        cards = [c for c in p["candidates"] if c["mpn"] == want["mpn"]] if want.get("mpn") else []
+        cand = min(cards, key=lambda c: STATUS_ORDER[c["status"]]) if cards else None
+        observed = "green" if cand and cand["mpn"] in p["ranked"] else cand["status"] if cand else p["status"]
+        reasons = [s for c in cards for s in c["reasons"] + c["words"]] if cards else p["reasons"] + p["words"]
         reason_hit = (want.get("reason_contains") is None) or any(want["reason_contains"] in s for s in reasons)
         confident_ok = ("confident" not in want) or (p["confident"] == want["confident"])
         ok = observed == want["status"] and reason_hit and confident_ok and (p["abstained"] is None)
