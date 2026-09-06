@@ -619,6 +619,7 @@ class Candidate02Routes:
         candidate_identity: Mapping[str, str],
         *,
         classification_action: Callable[[Any], tuple[int, dict[str, Any]]] | None = None,
+        classification_token_action: Callable[[Any, str | None], tuple[int, dict[str, Any]]] | None = None,
         sourcing_runtime: Any | None = None,
         provenance_runtime: Any | None = None,
         order_runtime: Any | None = None,
@@ -639,7 +640,12 @@ class Candidate02Routes:
             try:
                 from .classification_api import ClassificationAdapter
 
-                classification_action = ClassificationAdapter().classify
+                classification_adapter = ClassificationAdapter()
+                classification_action = classification_adapter.classify
+                classification_token_action = lambda payload, token: classification_adapter.classify(
+                    payload,
+                    presented_token=token,
+                )
             except Exception:
                 unavailable["/api/classification"] = "Classification adapter is unavailable in this product-service artifact."
         if sourcing_runtime is None:
@@ -697,6 +703,7 @@ class Candidate02Routes:
 
             return invoke
 
+        self._classification_token_action = classification_token_action
         self._actions: dict[str, Callable[[Any], tuple[int, dict[str, Any]]]] = {
             "/api/classification": classification_action or self._unavailable(unavailable["/api/classification"], "classification"),
             "/api/sourcing/rounds": getattr(sourcing_runtime, "create_round", self._unavailable(unavailable.get("/api/sourcing", "Sourcing adapter is unavailable."), "sourcing")),
@@ -740,11 +747,13 @@ class Candidate02Routes:
     def _unavailable(message: str, domain: str) -> Callable[[Any], tuple[int, dict[str, Any]]]:
         return lambda _payload: (503, _candidate02_error("ADAPTER_UNAVAILABLE", message, domain=domain))
 
-    def dispatch(self, path: str, payload: Any) -> tuple[int, dict[str, Any]]:
+    def dispatch(self, path: str, payload: Any, *, live_token: str | None = None) -> tuple[int, dict[str, Any]]:
         action = self._actions.get(path)
         if action is None:
             return 404, _candidate02_error("ROUTE_NOT_FOUND", "Candidate 0.2 route does not exist.")
         try:
+            if path == "/api/classification" and self._classification_token_action is not None:
+                return self._classification_token_action(payload, live_token)
             return action(payload)
         except CadAdapterError as error:
             return error.status, _candidate02_error(error.code, error.message, domain="cad")
@@ -1364,6 +1373,10 @@ def create_handler(
                 return
             if path == "/api/compliance-at-design-click":
                 self._json(*active_runtime.evaluate_request(request))
+            elif path == "/api/classification":
+                live_tokens = self.headers.get_all("X-CADdyDaddy-Live-Token", failobj=[])
+                live_token = live_tokens[0] if len(live_tokens) == 1 else None
+                self._json(*active_candidate02.dispatch(path, request, live_token=live_token))
             else:
                 self._json(*active_candidate02.dispatch(path, request))
 

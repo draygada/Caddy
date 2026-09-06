@@ -1,15 +1,16 @@
 // Every user-facing command in one registry: the S-key command box, the
 // right-click marking menu and the keyboard shortcuts all resolve here.
-import { useStore, nodeOfBody, type BodyId, type WorkbenchState } from './store';
+import { useStore, nodeOfBody, type BodyId, type WorkbenchState, type WorkspaceId } from './store';
 import { UNITS } from './lib/units';
 import { useTripwireStore } from './tripwire-store';
 
-export type CommandGroup = 'view' | 'create' | 'modify' | 'inspect' | 'select' | 'document' | 'review' | 'panels';
+export type CommandGroup = 'navigate' | 'view' | 'create' | 'modify' | 'inspect' | 'select' | 'document' | 'review' | 'panels';
 export interface Command {
   id: string;
   label: string;
   group: CommandGroup;
   keys?: string;
+  aliases?: readonly string[];
   /** Commands default to the Design workspace; global commands remain safe elsewhere. */
   scope?: 'design' | 'global';
   /** false hides the command in menus for the current state */
@@ -20,7 +21,28 @@ export interface Command {
 const needsBody = (_st: WorkbenchState, t: BodyId | null) => t != null;
 const needsSlot = (_st: WorkbenchState, t: BodyId | null) => t != null && t !== 'plate' && t !== 'flange';
 
+type WorkspaceNavigation = (workspace: WorkspaceId) => void;
+let workspaceNavigation: WorkspaceNavigation | null = null;
+
+/** Register the App's tab navigation so global commands switch tabs the same way the top bar does. */
+export function registerWorkspaceNavigation(navigate: WorkspaceNavigation) {
+  workspaceNavigation = navigate;
+  return () => {
+    if (workspaceNavigation === navigate) workspaceNavigation = null;
+  };
+}
+
+// the three tabs; a registered navigator (the App) wins, the store's setWorkspace is the fallback
+const navigate = (workspace: WorkspaceId) => () => { if (workspaceNavigation) workspaceNavigation(workspace); else useStore.getState().setWorkspace(workspace); };
+
+const NAVIGATION_COMMANDS: Command[] = [
+  { id: 'navigate.design', label: 'Design · workspace', aliases: ['CAD design', 'model viewport', 'home workspace'], group: 'navigate', scope: 'global', run: navigate('design') },
+  { id: 'navigate.classification', label: 'Classification · workspace', aliases: ['classify', 'compliance', 'export control', 'ordered route'], group: 'navigate', scope: 'global', run: navigate('classification') },
+  { id: 'navigate.sourcing', label: 'Sourcing · workspace', aliases: ['sourcing', 'supplier', 'offers', 'landed cost', 'order send-off', 'customs'], group: 'navigate', scope: 'global', run: navigate('sourcing') },
+];
+
 export const COMMANDS: Command[] = [
+  ...NAVIGATION_COMMANDS,
   { id: 'view.home', label: 'Home view', group: 'view', keys: 'F', run: (st) => st.setView('iso') },
   { id: 'view.fit', label: 'Fit to view', group: 'view', run: (st) => st.fit() },
   { id: 'view.authoring', label: 'CAD authoring · live kernel', group: 'view', run: (st) => st.patch({ viewMode: 'authoring' }) },
@@ -69,11 +91,11 @@ export const COMMANDS: Command[] = [
   { id: 'doc.live', label: 'Timeline · back to live', group: 'document', when: (st) => st.viewSeq != null, run: (st) => st.viewAt(null) },
   { id: 'doc.restore', label: 'Timeline · restore this state (supersede)', group: 'document', when: (st) => st.viewSeq != null, run: (st) => st.restoreHere() },
 
-  { id: 'review.tripwire', label: 'Tripwire · review a canonical Candidate 0.1 entity…', group: 'review', keys: 'T', scope: 'global', run: () => useTripwireStore.getState().openPanel() },
+  { id: 'review.tripwire', label: 'Tripwire · review a canonical Candidate 0.1 entity…', aliases: ['tripwire', 'guardrail', 'review readiness'], group: 'review', keys: 'T', scope: 'global', run: () => useTripwireStore.getState().openPanel() },
 
   { id: 'panels.timeline', label: 'Timeline drawer', group: 'panels', keys: 'L', run: (st) => st.toggleTimeline() },
-  { id: 'panels.help', label: 'Keyboard and mouse help', group: 'panels', keys: '?', scope: 'global', run: (st) => st.toggleHelp() },
-  { id: 'panels.theme', label: 'Toggle dark theme', group: 'panels', scope: 'global', run: (st) => st.toggleTheme() },
+  { id: 'panels.help', label: 'Keyboard and mouse help', aliases: ['help', 'shortcuts', 'controls'], group: 'panels', keys: '?', scope: 'global', run: (st) => st.toggleHelp() },
+  { id: 'panels.theme', label: 'Toggle dark theme', aliases: ['theme', 'appearance', 'dark mode', 'light mode'], group: 'panels', scope: 'global', run: (st) => st.toggleTheme() },
   { id: 'panels.rederive', label: 'Re-derive the log', group: 'panels', run: (st) => { st.rederiveLog(); st.openTimeline(); } },
 ];
 
@@ -81,22 +103,32 @@ export const commandById = (id: string) => COMMANDS.find((c) => c.id === id);
 
 export const commandAvailable = (command: Command, designMounted: boolean) => command.scope === 'global' || designMounted;
 
+export function searchCommands(commands: readonly Command[], query: string): Command[] {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [...commands];
+  return commands.filter((command) => {
+    const haystack = [command.id, command.label, command.group, command.keys, ...(command.aliases ?? [])].filter(Boolean).join(' ').toLowerCase();
+    return words.every((word) => haystack.includes(word));
+  });
+}
+
 /** The Design viewport is deliberately unmounted in other mission workspaces. */
 export function designWorkspaceMounted() {
   return typeof document === 'undefined' || Boolean(document.querySelector('[data-cad-workspace="design"]'));
 }
 
 /** Run a command against the live store, tracking recency for the command box. */
-export function runCommand(id: string, target?: BodyId | null) {
+export function runCommand(id: string, target?: BodyId | null): boolean {
   const st = useStore.getState();
   const c = commandById(id);
-  if (!c) return;
+  if (!c) return false;
   // Never let a shortcut silently mutate the off-screen Design store.
-  if (!commandAvailable(c, designWorkspaceMounted())) return;
+  if (!commandAvailable(c, designWorkspaceMounted())) return false;
   const t = target === undefined ? (st.selBody ?? (st.sel === 'airframe' ? 'plate' : st.sel)) : target;
-  if (c.when && !c.when(st, t)) return;
+  if (c.when && !c.when(st, t)) return false;
   c.run(st, t);
   useStore.setState((s) => ({ recent: [id, ...s.recent.filter((r) => r !== id)].slice(0, 6), cmdOpen: false, marking: null }));
+  return true;
 }
 
 /** Marking-menu wheel (8) and overflow list, in Fusion's order of frequency. */

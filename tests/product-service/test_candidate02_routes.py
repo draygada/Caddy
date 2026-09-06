@@ -68,6 +68,38 @@ def test_exact_candidate02_route_map_and_committed_adapter_bindings() -> None:
         assert body == {"route": name, "payload": {"sentinel": name}}
 
 
+def test_live_token_is_forwarded_only_to_the_classification_action() -> None:
+    observed = []
+    mounted = Candidate02Routes(
+        IDENTITY,
+        classification_action=lambda payload: (500, payload),
+        classification_token_action=lambda payload, token: (
+            observed.append((payload, token)) or (200, {"route": "classification"})
+        ),
+        sourcing_runtime=StubSourcing(),
+        provenance_runtime=StubProvenance(),
+        cad_transport=lambda _path, _payload: (503, {}),
+        cad_service_url="",
+    )
+
+    status, body = mounted.dispatch(
+        "/api/classification",
+        {"sentinel": "classification"},
+        live_token="private-token",
+    )
+    sourcing_status, sourcing_body = mounted.dispatch(
+        "/api/sourcing/rounds",
+        {"sentinel": "sourcing"},
+        live_token="must-not-be-forwarded",
+    )
+
+    assert status == 200 and body == {"route": "classification"}
+    assert observed == [({"sentinel": "classification"}, "private-token")]
+    assert sourcing_status == 200
+    assert sourcing_body == {"route": "rounds", "payload": {"sentinel": "sourcing"}}
+    assert "must-not-be-forwarded" not in str(sourcing_body)
+
+
 def test_unconfigured_cad_service_fails_honestly_without_network() -> None:
     status, body = routes().dispatch("/api/cad/recompute", {
         "document": browser_document(),

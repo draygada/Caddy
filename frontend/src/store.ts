@@ -187,8 +187,14 @@ export interface WorkbenchState extends Snapshot {
   recordOpen: boolean;
   sourcesOpen: boolean;
   sources: { doc: SourceDocId | null; slot: Slot | null; network: NetLine[]; proposals: Proposal[]; showHidden: boolean; candidates: Candidate[]; candidateNode: Node | null; llmNote: string | null };
-  /** attribute provenance after an extraction: slot.key → who wrote it and whether a human ticked "verified against datasheet" */
-  extracted: Record<string, { by: 'extractor' | 'supplier_doc'; verified: boolean }>;
+  /** Attribute provenance after extraction. Offline acceptance is memory-only and never implies an identified human review. */
+  extracted: Record<string, {
+    by: 'extractor' | 'supplier_doc';
+    acceptance: 'NONE' | 'UNAUTHENTICATED_BROWSER_SESSION';
+    reviewStatus: 'NOT_HUMAN_REVIEWED';
+    attestor: null;
+    durability: 'MEMORY_ONLY';
+  }>;
   escalations: Record<string, { reason: string; proposal: string; confident: boolean; state: 'proposed' | 'accepted' | 'rejected'; attestor: string | null }>;
   memos: Memo[];
   slotList: SlotListProposal | null;
@@ -199,8 +205,8 @@ export interface WorkbenchState extends Snapshot {
   requestDetermination: (o: Outcome) => void;
   tamper: (seq: number) => void;
   dropDocument: (id: SourceDocId, slot: Slot) => void;
-  applyExtraction: (slot: Slot, field: string, value: number, unit: string) => void;
-  markVerified: (slot: Slot, field: string) => void;
+  applyExtraction: (slot: Slot, proposal: Proposal) => void;
+  acknowledgeExtraction: (slot: Slot, field: string) => void;
   findAlternative: (node: Node, o: Outcome) => void;
   acceptCandidate: (node: Node, pid: PartId) => void;
   proposeEscalation: (lineId: string, reason: string) => void;
@@ -455,17 +461,24 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       set({ sources: { ...get().sources, doc: id, slot, network: netFor(doc), proposals: callA(doc), showHidden: false, llmNote: 'CACHED · response replayed from fixtures/llm_cache' }, sourcesOpen: true });
       append({ kind: 'extraction_proposed', lane: 'proposal', text: doc.title + ' · ' + callA(doc).length + ' unverified claims proposed', entry: 'Call A · CACHED · every claim goes through the verifier', intent: '' });
     },
-    applyExtraction: (slot, field, value, unit) => {
-      if (!editable()) return;
+    applyExtraction: (slot, proposal) => {
+      if (!editable() || !proposal.verdict.ok) return;
+      const { field, value, unit } = proposal.verdict.spec;
       const s = get();
       const before = service.evaluate(design(), s.pack);
       const attrs: Attrs = { ...s.attrs, [slot]: { ...s.attrs[slot], [field]: value } } as Attrs;
       const after = service.evaluate({ ...design(), attrs }, s.pack);
       const { changed, entry } = summary(before, after, slot);
-      set({ attrs, extracted: { ...s.extracted, [slot + '.' + field]: { by: 'extractor', verified: false } }, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: SLOT_LABEL[slot] + ' · ' + field + ' ← extractor' });
-      append({ kind: 'attr_changed', text: SLOT_LABEL[slot] + ' · ' + field + ' = ' + value + ' ' + unit + ' · extracted_by extractor', entry: entry + ' · L1 until a human ticks “verified against datasheet”', intent: '' });
+      set({ attrs, extracted: { ...s.extracted, [slot + '.' + field]: { by: 'extractor', acceptance: 'NONE', reviewStatus: 'NOT_HUMAN_REVIEWED', attestor: null, durability: 'MEMORY_ONLY' } }, lastDiff: { changed, reeval: RULES_EVALUATED }, lastKind: SLOT_LABEL[slot] + ' · ' + field + ' ← extractor' });
+      append({ kind: 'attr_changed', text: SLOT_LABEL[slot] + ' · ' + field + ' = ' + value + ' ' + unit + ' · extracted_by extractor', entry: entry + ' · accepted cached-fixture span applied · no human review, identity, or attestor recorded', intent: '' });
     },
-    markVerified: (slot, field) => set((s) => ({ extracted: { ...s.extracted, [slot + '.' + field]: { by: s.extracted[slot + '.' + field]?.by ?? 'extractor', verified: true } } })),
+    acknowledgeExtraction: (slot, field) => {
+      const key = slot + '.' + field;
+      const current = get().extracted[key];
+      if (!current) return;
+      set((s) => ({ extracted: { ...s.extracted, [key]: { ...current, acceptance: 'UNAUTHENTICATED_BROWSER_SESSION' } } }));
+      append({ kind: 'source_acceptance_acknowledged', lane: 'proposal', text: SLOT_LABEL[slot] + ' · ' + field + ' · browser-session acceptance acknowledged', entry: 'unauthenticated browser-session acceptance · memory only · no identity or attestor captured · not human review', intent: '' });
+    },
     findAlternative: (node, o) => {
       const cands = callB(node, design(), o);
       set({ sources: { ...get().sources, candidates: cands, candidateNode: node, network: cands.flatMap((c) => c.net), llmNote: 'CACHED · agent proposals re-checked by the rule engine · fetches allowlisted' }, sourcesOpen: true });

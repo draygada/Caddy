@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties } from 'react';
 import {
   CadApiError,
   applyCadIntent,
@@ -7,6 +7,7 @@ import {
   createCadAuthoringState,
   createCadDocument,
   createFeatureOperation,
+  createHardenedDroneFixture,
   createInstanceOperation,
   createMateOperation,
   createParameterOperation,
@@ -14,17 +15,20 @@ import {
   exportCad,
   importCad,
   recomputeCad,
+  HARDENED_DRONE_BENCHMARK,
   type CadAssemblyMate,
   type CadDocument,
   type CadExportResponse,
   type CadFeatureKind,
   type CadOperation,
+  type CadRecomputeResponse,
   type CadSketch,
   type CadTransferFormat,
   type SketchConstraintKind,
   type SketchDimensionKind,
   type SketchEntity,
 } from '../cad';
+import { exportCurrentCadInBrowser } from '../cad/browser-kernel';
 import {
   CAD_OUTPUT_LIMITATIONS,
   createNativeDocumentDraft,
@@ -37,31 +41,27 @@ import {
   type CadOutputArtifact,
   type CadOutputBundle,
 } from '../cad/output-client';
+import {
+  canonicalProductSha256,
+  getProductThreadSnapshot,
+  registerProductCadRevision,
+  registerProductOutputs,
+  type ProductCadRevision,
+  type RegisterProductOutputsInput,
+} from '../lib/product-thread';
+
+const card: CSSProperties = { border: '1px solid var(--line, #ccd3d8)', borderRadius: 8, background: 'var(--surface, #fff)' };
+const mono: CSSProperties = { fontFamily: 'Geist Mono, ui-monospace, monospace' };
+const field: CSSProperties = { width: '100%', minWidth: 0, padding: '7px 8px', border: '1px solid var(--line, #b9c2c9)', borderRadius: 5, background: 'var(--surface, #fff)', color: 'inherit', font: 'inherit' };
+const button: CSSProperties = { border: '1px solid var(--line, #aeb8c0)', borderRadius: 5, background: 'var(--surface, #fff)', color: 'inherit', padding: '7px 9px', fontSize: 11, fontWeight: 750, cursor: 'pointer' };
+const actionButton: CSSProperties = { ...button, background: '#173f35', borderColor: '#173f35', color: '#fff' };
 
 type AuthoringWorkspaceProps = { fetchImpl?: typeof fetch; initialDocument?: CadDocument };
 
-/** Small helpers so every control here is the same control as the rest of Caddy. */
-const fieldCls = 'field min-h-[32px] text-[13px] w-full';
-const noteCls = 'text-[12px] text-muted leading-snug';
-const statusTone = (status: string) => (status === 'failed' || status === 'stale' ? 'var(--red)' : status === 'running' || status === 'queued' ? 'var(--amber)' : 'var(--green)');
-const statusWord = (status: string) => (status === 'failed' ? 'failed' : status === 'stale' ? 'stale' : status === 'running' ? 'running' : status === 'queued' ? 'queued' : status === 'idle' ? 'idle' : 'valid');
-
-function Panel({ title, sub, trailing, children, id }: { title: string; sub?: string; trailing?: React.ReactNode; children: React.ReactNode; id: string }) {
-  return (
-    <section aria-labelledby={id} className="panel">
-      <div className="panel-head py-[8px]">
-        <div className="panel-title" id={id}>{title}{sub && <span className="sub"> · {sub}</span>}</div>
-        {trailing && <span className="text-[12px] text-muted whitespace-nowrap">{trailing}</span>}
-      </div>
-      <div className="p-3 grid gap-2">{children}</div>
-    </section>
-  );
-}
-
-function initialSketch(): CadSketch {
+export function createSketchDraft(sequence = 1): CadSketch {
   return {
     id: cadId('sketch'),
-    name: 'Sketch 1',
+    name: `Sketch ${sequence}`,
     plane: { kind: 'origin', plane: 'XY' },
     entities: [{ id: cadId('entity'), kind: 'rectangle', construction: false, origin: { x: -20, y: -12 }, width: 40, height: 24 }],
     dimensions: [],
@@ -70,21 +70,124 @@ function initialSketch(): CadSketch {
   };
 }
 
+export interface CadFeatureFormDraft {
+  name: string;
+  inputReferences: string;
+  targetReferences: string;
+  numericValue: number;
+  outputBodyName: string;
+}
+
+export function featureFormForKind(kind: CadFeatureKind, selectedId: string | null, document: CadDocument, preferredSketchId: string): CadFeatureFormDraft {
+  const selectedSketch = document.sketches.find((item) => item.id === selectedId || item.entities.some((entity) => entity.id === selectedId));
+  const selectedBody = document.bodies.find((item) => item.id === selectedId);
+  const profileReference = selectedSketch && selectedId ? selectedId : preferredSketchId;
+  const label = featureLabel(kind);
+  if (kind === 'feature.extrude') return { name: 'Extrude', inputReferences: profileReference, targetReferences: '', numericValue: 10, outputBodyName: 'Extrude result' };
+  if (kind === 'feature.revolve') return { name: 'Revolve', inputReferences: profileReference, targetReferences: '', numericValue: 360, outputBodyName: 'Revolve result' };
+  if (kind === 'feature.hole') return { name: 'Hole', inputReferences: profileReference, targetReferences: selectedBody?.id ?? '', numericValue: 5, outputBodyName: '' };
+  if (kind === 'feature.fillet' || kind === 'feature.chamfer') {
+    return { name: label, inputReferences: selectedBody?.id ?? '', targetReferences: selectedBody?.id ?? '', numericValue: 2, outputBodyName: '' };
+  }
+  return { name: label, inputReferences: '', targetReferences: selectedBody?.id ?? '', numericValue: 10, outputBodyName: `${label[0].toUpperCase()}${label.slice(1)} result` };
+}
+
+export function claimCadSubmission(inFlight: Set<string>, key: string): (() => void) | null {
+  if (inFlight.has(key)) return null;
+  inFlight.add(key);
+  return () => { inFlight.delete(key); };
+}
+
+export interface AuthoringWorkspaceSession {
+  state: ReturnType<typeof createCadAuthoringState>;
+  nativeEnvelope: CadNativeEnvelope | null;
+  sealedSnapshotArtifact: CadOutputArtifact | null;
+  outputBundle: CadOutputBundle | null;
+  outputMessage: string | null;
+  outputError: string | null;
+  kernelArtifacts: CadExportResponse[];
+  preferredSketchId: string;
+}
+
+let authoringWorkspaceSession: AuthoringWorkspaceSession | null = null;
+
+export function rememberAuthoringWorkspaceSession(session: AuthoringWorkspaceSession): void {
+  authoringWorkspaceSession = session;
+}
+
+export function restoreAuthoringWorkspaceSession(): AuthoringWorkspaceSession | null {
+  return authoringWorkspaceSession;
+}
+
+export function resetAuthoringWorkspaceSessionForTests(): void {
+  authoringWorkspaceSession = null;
+}
+
+export function productCadRevisionRegistration(response: CadRecomputeResponse, operationId: string | null): Parameters<typeof registerProductCadRevision>[0] {
+  return {
+    documentId: response.document.id,
+    revisionId: response.revisionId,
+    documentSha256: canonicalProductSha256(response.documentHash, 'Accepted CAD document SHA-256'),
+    geometrySha256: canonicalProductSha256(response.kernel.artifactHash, 'Accepted CAD geometry SHA-256'),
+    actorId: 'operator:browser',
+    operationId,
+    acceptedAt: response.kernel.computedAt,
+  };
+}
+
+export function productOutputRegistration(bundle: CadOutputBundle, acceptedCad: ProductCadRevision): RegisterProductOutputsInput {
+  if (bundle.document_identity.source_authoring_revision_id !== acceptedCad.revisionId) {
+    throw new Error('Generated outputs do not identify the current authoring revision.');
+  }
+  const artifacts = bundle.artifacts.map((artifact) => ({
+    artifactId: `cad-output:${bundle.package.package_id}:${artifact.path}`,
+    kind: artifact.kind,
+    sha256: canonicalProductSha256(artifact.sha256, `CAD output ${artifact.path} SHA-256`),
+  }));
+  const manifestArtifact = bundle.artifacts.find((artifact) => artifact.path === 'manifest.json');
+  const isKnownBomPath = (path: string) => path === 'bom.csv' || path === 'bom/bom.csv';
+  const bomArtifacts = bundle.artifacts.filter((artifact) => isKnownBomPath(artifact.path));
+  const packageBomDescriptors = bundle.package.artifacts.filter((artifact) => isKnownBomPath(artifact.path));
+  const bomArtifact = bomArtifacts.length === 1 ? bomArtifacts[0] : undefined;
+  const packageBomDescriptor = packageBomDescriptors.length === 1 ? packageBomDescriptors[0] : undefined;
+  const manifestSha256 = manifestArtifact && canonicalProductSha256(manifestArtifact.sha256, 'CAD output manifest SHA-256');
+  const packageManifestSha256 = canonicalProductSha256(bundle.package.manifest_file_sha256, 'CAD package manifest SHA-256');
+  const bomCsvArtifactSha256 = bomArtifact && canonicalProductSha256(bomArtifact.sha256, 'CAD output BOM CSV artifact SHA-256');
+  const packageBomCsvArtifactSha256 = packageBomDescriptor && canonicalProductSha256(packageBomDescriptor.sha256, 'CAD package BOM CSV artifact SHA-256');
+  if (
+    !manifestSha256
+    || manifestSha256 !== packageManifestSha256
+    || !bomArtifact
+    || !packageBomDescriptor
+    || bomArtifact.path !== packageBomDescriptor.path
+    || !bomCsvArtifactSha256
+    || bomCsvArtifactSha256 !== packageBomCsvArtifactSha256
+  ) {
+    throw new Error('Generated outputs are missing exact manifest or BOM identities.');
+  }
+  return {
+    sourceDocumentId: acceptedCad.documentId,
+    sourceRevisionId: acceptedCad.revisionId,
+    sourceDocumentSha256: canonicalProductSha256(acceptedCad.documentSha256, 'Accepted CAD document SHA-256'),
+    sourceGeometrySha256: canonicalProductSha256(acceptedCad.geometrySha256, 'Accepted CAD geometry SHA-256'),
+    outputDocumentId: bundle.document_identity.document_id,
+    outputRevisionId: bundle.document_identity.revision_id,
+    outputDocumentSha256: canonicalProductSha256(bundle.document_identity.document_hash, 'CAD output document SHA-256'),
+    artifactManifestSha256: manifestSha256,
+    bomCsvArtifactSha256,
+    artifacts,
+    actorId: 'operator:browser',
+  };
+}
+
 export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: AuthoringWorkspaceProps) {
-  const [state, dispatch] = useReducer(cadAuthoringReducer, initialDocument ?? createCadDocument(), createCadAuthoringState);
-  // the workspace lives inside the viewport pane, so the three columns only appear when there is room for them
-  const hostRef = useRef<HTMLElement>(null);
-  const [wide, setWide] = useState(true);
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    const measure = () => setWide(host.clientWidth >= 1000);
-    measure();
-    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
-    ro?.observe(host);
-    return () => ro?.disconnect();
-  }, []);
-  const [sketch, setSketch] = useState<CadSketch>(initialSketch);
+  const restoredSession = useRef(initialDocument ? null : restoreAuthoringWorkspaceSession()).current;
+  const [state, dispatch] = useReducer(
+    cadAuthoringReducer,
+    initialDocument ?? restoredSession?.state.lastValidDocument ?? createCadDocument(),
+    (document) => restoredSession?.state ?? createCadAuthoringState(document),
+  );
+  const [sketch, setSketch] = useState<CadSketch>(() => createSketchDraft((restoredSession?.state.lastValidDocument.sketches.length ?? 0) + 1));
   const [featureKind, setFeatureKind] = useState<CadFeatureKind>('feature.extrude');
   const [featureName, setFeatureName] = useState('Extrude 1');
   const [featureInputs, setFeatureInputs] = useState(sketch.id);
@@ -98,43 +201,110 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   const [mate, setMate] = useState<Pick<CadAssemblyMate, 'name' | 'kind' | 'instanceAId' | 'instanceBId' | 'offset'>>({ name: 'Mate 1', kind: 'coincident', instanceAId: '', instanceBId: '', offset: 0 });
   const [transferMessage, setTransferMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [nativeEnvelope, setNativeEnvelope] = useState<CadNativeEnvelope | null>(null);
-  const [sealedSnapshotArtifact, setSealedSnapshotArtifact] = useState<CadOutputArtifact | null>(null);
-  const [outputBundle, setOutputBundle] = useState<CadOutputBundle | null>(null);
-  const [outputMessage, setOutputMessage] = useState<string | null>(null);
-  const [outputError, setOutputError] = useState<string | null>(null);
+  const [nativeEnvelope, setNativeEnvelope] = useState<CadNativeEnvelope | null>(() => restoredSession?.nativeEnvelope ?? null);
+  const [sealedSnapshotArtifact, setSealedSnapshotArtifact] = useState<CadOutputArtifact | null>(() => restoredSession?.sealedSnapshotArtifact ?? null);
+  const [outputBundle, setOutputBundle] = useState<CadOutputBundle | null>(() => restoredSession?.outputBundle ?? null);
+  const [outputMessage, setOutputMessage] = useState<string | null>(() => restoredSession?.outputMessage ?? null);
+  const [outputError, setOutputError] = useState<string | null>(() => restoredSession?.outputError ?? null);
   const [outputBusy, setOutputBusy] = useState(false);
-  const [kernelArtifacts, setKernelArtifacts] = useState<CadExportResponse[]>([]);
+  const [benchmarkBusy, setBenchmarkBusy] = useState(false);
+  const [kernelArtifacts, setKernelArtifacts] = useState<CadExportResponse[]>(() => restoredSession?.kernelArtifacts ?? []);
+  const [preferredSketchId, setPreferredSketchId] = useState(() => restoredSession?.preferredSketchId ?? sketch.id);
+  const inFlightSubmissions = useRef(new Set<string>());
 
-  async function submitOperation(operation: CadOperation) {
+  useEffect(() => {
+    if (initialDocument) return;
+    rememberAuthoringWorkspaceSession({
+      state,
+      nativeEnvelope,
+      sealedSnapshotArtifact,
+      outputBundle,
+      outputMessage,
+      outputError,
+      kernelArtifacts,
+      preferredSketchId,
+    });
+  }, [initialDocument, state, nativeEnvelope, sealedSnapshotArtifact, outputBundle, outputMessage, outputError, kernelArtifacts, preferredSketchId]);
+
+  function invalidateOutputsForAcceptedRevision() {
+    setNativeEnvelope(null);
+    setSealedSnapshotArtifact(null);
+    setOutputBundle(null);
+    setOutputError(null);
+    setOutputMessage('CAD revision changed. Seal a new output package before sourcing or order progression can resume.');
+  }
+
+  async function registerAcceptedCad(response: CadRecomputeResponse, operationId: string | null) {
+    invalidateOutputsForAcceptedRevision();
+    await registerProductCadRevision(productCadRevisionRegistration(response, operationId));
+  }
+
+  async function submitOperation(operation: CadOperation): Promise<boolean> {
+    const release = claimCadSubmission(inFlightSubmissions.current, 'workspace-write');
+    if (!release) {
+      setFormError('A CAD write is already running. Duplicate or stale submission was ignored.');
+      return false;
+    }
     const requestId = cadId('request');
-    const draft = applyCadIntent(state.document, operation);
+    const acceptedBase = state.lastValidDocument;
+    const draft = applyCadIntent(acceptedBase, operation);
     const executionPreference = state.kernel?.engineMode === 'BROWSER_JSCAD_BOUNDED' ? 'BROWSER_JSCAD_BOUNDED' : 'AUTO';
     dispatch({ type: 'stage', operation, requestId });
     dispatch({ type: 'started', requestId });
     try {
-      const response = await recomputeCad({ document: draft, operation, expectedRevisionId: state.lastValidDocument.revisionId }, fetchImpl, executionPreference);
+      const response = await recomputeCad({ document: draft, operation, expectedRevisionId: acceptedBase.revisionId }, fetchImpl, executionPreference);
       dispatch({ type: 'succeeded', requestId, response });
-      setFormError(null);
+      try {
+        await registerAcceptedCad(response, operation.id);
+        setFormError(null);
+      } catch (error) {
+        setFormError(error instanceof Error ? `CAD was accepted, but shared-thread registration failed closed: ${error.message}` : 'CAD was accepted, but shared-thread registration failed closed.');
+      }
+      return true;
     } catch (error) {
       dispatch({ type: 'failed', requestId, error: error instanceof Error ? error.message : 'CAD recompute failed.', stale: error instanceof CadApiError && error.code === 'CAD_STALE', diagnostics: error instanceof CadApiError ? error.diagnostics : undefined });
+      return false;
+    } finally {
+      release();
     }
   }
 
-  function safely(build: () => CadOperation) {
+  async function safely(build: () => CadOperation): Promise<boolean> {
     try {
-      void submitOperation(build());
       setFormError(null);
+      return await submitOperation(build());
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'The operation is invalid.');
+      return false;
     }
+  }
+
+  async function handleSketchCommit() {
+    const committedSketch = sketch;
+    if (!await safely(() => createSketchOperation(committedSketch))) return;
+    setFeatureInputs(committedSketch.id);
+    setPreferredSketchId(committedSketch.id);
+    dispatch({ type: 'select', id: committedSketch.id });
+    setSketch(createSketchDraft(state.lastValidDocument.sketches.length + 2));
+  }
+
+  function handleFeatureKindChange(kind: CadFeatureKind) {
+    const next = featureFormForKind(kind, state.selectedId, state.lastValidDocument, preferredSketchId);
+    setFeatureKind(kind);
+    setFeatureName(next.name);
+    setFeatureInputs(next.inputReferences);
+    setFeatureTargets(next.targetReferences);
+    setFeatureValue(next.numericValue);
+    setOutputBodyName(next.outputBodyName);
+    setFormError(null);
   }
 
   async function handleImport(file: File, format: CadTransferFormat) {
-    setTransferMessage(`Reading ${file.name}…`);
+    setTransferMessage(`Reading ${file.name}...`);
     try {
       const response = await importCad({ format, fileName: file.name, dataBase64: await fileToBase64(file), expectedRevisionId: state.lastValidDocument.revisionId }, fetchImpl);
       dispatch({ type: 'replace-from-import', response });
+      await registerAcceptedCad(response, null);
       setTransferMessage(`Imported ${file.name} as authoritative revision ${response.revisionId}.`);
     } catch (error) {
       setTransferMessage(error instanceof Error ? error.message : 'Import failed; the last valid document is unchanged.');
@@ -142,9 +312,12 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   }
 
   async function handleExport(format: CadTransferFormat) {
-    setTransferMessage(`Requesting ${format} export…`);
+    setTransferMessage(`Requesting ${format} export...`);
     try {
-      const result = await exportCad({ document: state.lastValidDocument, format, revisionId: state.lastValidDocument.revisionId }, fetchImpl);
+      const currentDocument = state.lastValidDocument;
+      const result = state.kernel?.engineMode === 'BROWSER_JSCAD_BOUNDED'
+        ? await exportCurrentCadInBrowser(currentDocument, format)
+        : await exportCad({ document: currentDocument, format, revisionId: currentDocument.revisionId }, fetchImpl);
       downloadExport(result);
       setKernelArtifacts((current) => [...current.filter((item) => item.format !== result.format), result]);
       setTransferMessage(`Exported ${result.fileName} from ${result.revisionId}.`);
@@ -155,7 +328,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
 
   async function handleNativeSeal() {
     setOutputBusy(true);
-    setOutputMessage('Validating and sealing CADdyDaddy snapshot (.caddy.json)…');
+    setOutputMessage('Validating and sealing CADdyDaddy snapshot (.caddy.json)...');
     try {
       if (!state.lastValidMesh) throw new Error('Run one successful kernel recompute before sealing a CADdyDaddy snapshot.');
       const envelope = await sealNativeDocument(await createNativeDocumentDraft(state.lastValidDocument, state.lastValidMesh), fetchImpl);
@@ -171,7 +344,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
 
   async function handleArtifactDownload(artifact: CadOutputArtifact) {
     setOutputBusy(true);
-    setOutputMessage(`Validating ${artifact.path} before download…`);
+    setOutputMessage(`Validating ${artifact.path} before download...`);
     try {
       await downloadCadOutputArtifact(artifact);
       setOutputError(null);
@@ -184,10 +357,12 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
 
   async function handleNativeLoad(file: File) {
     setOutputBusy(true);
-    setOutputMessage(`Validating ${file.name}…`);
+    setOutputMessage(`Validating ${file.name}...`);
     try {
       const envelope = await loadNativeDocument(await fileToBase64(file), fetchImpl);
-      dispatch({ type: 'replace-from-import', response: restoreNativeAuthoring(envelope.document) });
+      const restored = restoreNativeAuthoring(envelope.document);
+      dispatch({ type: 'replace-from-import', response: restored });
+      await registerAcceptedCad(restored, null);
       setNativeEnvelope(envelope);
       setSealedSnapshotArtifact(envelope.artifact);
       setOutputBundle(null);
@@ -202,47 +377,103 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
 
   async function handleGenerateOutputs() {
     setOutputBusy(true);
-    setOutputMessage('Sealing CADdyDaddy snapshot and deriving output package…');
+    setOutputMessage('Sealing CADdyDaddy snapshot and deriving output package...');
     try {
       if (!state.lastValidMesh) throw new Error('Run one successful kernel recompute before generating outputs.');
-      const envelope = await sealNativeDocument(await createNativeDocumentDraft(state.lastValidDocument, state.lastValidMesh), fetchImpl);
-      const currentArtifacts = kernelArtifacts.filter((artifact) => artifact.revisionId === state.lastValidDocument.revisionId);
-      const bundle = await generateCadOutputs({ document: envelope.document, mesh: state.lastValidMesh, kernelArtifacts: currentArtifacts }, fetchImpl);
+      if (state.status === 'failed' || state.status === 'stale') throw new Error('Restore or recompute the CAD document before sealing outputs; failed or stale fallback state cannot be registered as current.');
+      const currentDocument = state.lastValidDocument;
+      const currentMesh = state.lastValidMesh;
+      const acceptedCad = getProductThreadSnapshot().currentCadRevision;
+      if (!acceptedCad || acceptedCad.documentId !== currentDocument.id || acceptedCad.revisionId !== currentDocument.revisionId) {
+        throw new Error('The shared product thread does not contain this exact accepted CAD revision. Recompute before sealing outputs.');
+      }
+      const envelope = await sealNativeDocument(await createNativeDocumentDraft(currentDocument, currentMesh), fetchImpl);
+      let currentArtifacts = kernelArtifacts.filter((artifact) => artifact.revisionId === currentDocument.revisionId);
+      if (!currentArtifacts.some((artifact) => artifact.format === 'STL')) {
+        const stl = state.kernel?.engineMode === 'BROWSER_JSCAD_BOUNDED'
+          ? await exportCurrentCadInBrowser(currentDocument, 'STL')
+          : await exportCad({ document: currentDocument, format: 'STL', revisionId: currentDocument.revisionId }, fetchImpl);
+        currentArtifacts = [...currentArtifacts, stl];
+      }
+      const bundle = await generateCadOutputs({ document: envelope.document, mesh: currentMesh, kernelArtifacts: currentArtifacts }, fetchImpl);
+      await registerProductOutputs({
+        ...productOutputRegistration(bundle, acceptedCad),
+      });
       setNativeEnvelope(envelope);
       setSealedSnapshotArtifact(envelope.artifact);
       setOutputBundle(bundle);
+      setKernelArtifacts((current) => [...current.filter((artifact) => artifact.revisionId !== currentDocument.revisionId || artifact.format !== 'STL'), ...currentArtifacts.filter((artifact) => artifact.format === 'STL')]);
       setOutputError(null);
-      setOutputMessage(`Validated ${bundle.artifacts.length} artifacts available for explicit download · package ${shortId(bundle.package.package_id)}.`);
+      setOutputMessage(`Validated ${bundle.artifacts.length} artifacts, including current-revision STL, available for explicit download · package ${shortId(bundle.package.package_id)}.`);
     } catch (error) {
       setOutputError(error instanceof Error ? error.message : 'Output generation failed closed.');
       setOutputMessage('Last valid output bundle preserved. No replacement artifacts were admitted.');
     } finally { setOutputBusy(false); }
   }
 
+  async function handleLoadHardenedDrone(frameSpanMm: number = HARDENED_DRONE_BENCHMARK.defaultFrameSpanMm) {
+    const release = claimCadSubmission(inFlightSubmissions.current, 'workspace-write');
+    if (!release) {
+      setFormError('A CAD write is already running. The benchmark load was ignored.');
+      return;
+    }
+    setBenchmarkBusy(true);
+    setFormError(null);
+    setTransferMessage(`Recomputing the public QX-0 benchmark at ${frameSpanMm} mm...`);
+    try {
+      const fixture = createHardenedDroneFixture({ frameSpanMm });
+      const response = await recomputeCad({
+        document: fixture.document,
+        operation: fixture.operation,
+        expectedRevisionId: fixture.document.revisionId,
+      }, fetchImpl, 'BROWSER_JSCAD_BOUNDED');
+      dispatch({ type: 'replace-from-import', response });
+      await registerAcceptedCad(response, fixture.operation.id);
+      const firstSketchId = response.document.sketches[0]?.id ?? sketch.id;
+      setSketch(createSketchDraft(response.document.sketches.length + 1));
+      setPreferredSketchId(firstSketchId);
+      setFeatureInputs(firstSketchId);
+      setInstanceBody(response.document.bodies[0]?.id ?? '');
+      setKernelArtifacts([]);
+      setTransferMessage(`Loaded QX-0 at ${frameSpanMm} mm: ${response.document.bodies.length} CAD definitions, ${response.document.assembly.instances.length} physical instances, ${response.mesh.triangles.length} triangles, revision ${shortId(response.revisionId)}.`);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'QX-0 benchmark recompute failed closed.');
+      setTransferMessage('QX-0 was not admitted. The prior last-valid CAD revision remains available.');
+    } finally {
+      setBenchmarkBusy(false);
+      release();
+    }
+  }
+
+  const statusColor = state.status === 'failed' || state.status === 'stale' ? '#a33d2f' : state.status === 'running' || state.status === 'queued' ? '#9b6200' : '#176b45';
   const engineMode = state.kernel?.engineMode ?? (state.kernel?.mode === 'live' ? 'CONNECTED_OCCT' : 'AUTO_CONNECTED_OCCT_OR_BROWSER_JSCAD_BOUNDED');
-  const engineLabel = engineMode === 'CONNECTED_OCCT' ? 'Connected Candidate 0.2 service · stateless kernel adapter' : engineMode === 'BROWSER_JSCAD_BOUNDED' ? 'browser kernel · bounded JSCAD fallback' : 'kernel · connected service when reachable, browser fallback otherwise';
-  const kernelWord = state.kernel ? `${state.kernel.name} ${state.kernel.version}` : 'kernel not yet proven';
+  const engineLabel = engineMode === 'CONNECTED_OCCT' ? 'Connected Candidate 0.2 service · stateless kernel adapter' : `engineMode ${engineMode}`;
 
   return (
-    <section ref={hostRef} data-cad-authoring-workspace aria-labelledby="cad-authoring-title" className="cad-authoring-workspace h-full min-h-0 overflow-auto bg-bg text-ink">
-      <div className="flex items-center justify-between gap-3 flex-wrap px-3 py-2 border-b border-line2 bg-surface">
-        <div className="flex items-baseline gap-3 flex-wrap min-w-0">
-          <span id="cad-authoring-title" className="text-[13px] font-semibold">CAD authoring</span>
-          <span className="text-[13px] text-muted">{state.document.name} · draft {shortId(state.document.revisionId)} · rendered {shortId(state.lastValidDocument.revisionId)}</span>
-          <span className="text-[12px] text-muted" title={engineMode}>{engineLabel}</span>
+    <section data-cad-authoring-workspace aria-labelledby="cad-authoring-title" className="cad-authoring-workspace" style={{ height: '100%', minHeight: 0, overflow: 'auto', background: '#edf0ec', color: 'var(--ink, #17201d)' }}>
+      <header style={{ padding: '12px 14px', borderBottom: '1px solid #bfc9c2', background: 'linear-gradient(115deg, #f5f0e5 0%, #e7eee8 55%, #e1e8eb 100%)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div style={{ ...mono, fontSize: 10, color: '#176b45', textTransform: 'uppercase', letterSpacing: '.1em', fontWeight: 850 }}>{engineLabel}</div>
+            <h2 id="cad-authoring-title" style={{ margin: '4px 0 2px', fontSize: 23 }}>CAD authoring workshop</h2>
+            <div style={{ fontSize: 11, color: '#5d6861' }}>{state.document.name} · draft {shortId(state.document.revisionId)} · rendered {shortId(state.lastValidDocument.revisionId)}</div>
+          </div>
+          <div role="status" aria-live="polite" style={{ ...mono, padding: '7px 9px', border: `1px solid ${statusColor}`, borderRadius: 5, color: statusColor, background: '#fff', fontSize: 10, fontWeight: 850, textTransform: 'uppercase' }}>{state.status} · {state.kernel ? `${state.kernel.name} ${state.kernel.version}` : 'kernel not yet proven'}</div>
         </div>
-        <span role="status" aria-live="polite" className="status-word text-[13px]" style={{ color: statusTone(state.status) }}>{statusWord(state.status)} · {kernelWord}</span>
-      </div>
-
-      {(state.error || formError) && (
-        <div role="alert" className="mx-3 mt-2 px-3 py-2 rounded-r border text-[13px] flex items-center justify-between gap-2 flex-wrap" style={{ borderColor: 'var(--red)', color: 'var(--red)' }}>
-          <span>{formError ?? state.error}</span>
-          <button type="button" onClick={() => dispatch({ type: 'recover-last-valid' })} className="btn btn-xs">Restore last valid</button>
+        <div role="note" style={{ marginTop: 9, padding: '8px 10px', borderLeft: '4px solid #9b6200', background: '#fff9eb', fontSize: 11, lineHeight: 1.4 }}>
+          The approved connected OCCT service is preferred when available. Otherwise the MIT JSCAD browser fallback performs bounded solid modeling and real STL exchange without uploading OCCT/OCP. Failed, stale, or unsupported work never replaces the last valid viewport.
         </div>
-      )}
+        <div aria-label="QX-0 hardened drone benchmark" style={{ marginTop: 8, padding: '8px 10px', border: '1px solid #9db0a5', borderRadius: 6, background: '#edf5ef', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 7 }}>
+          <div style={{ flex: '1 1 260px', minWidth: 0 }}><b style={{ fontSize: 11 }}>QX-0 hardened CAD case</b><div style={{ fontSize: 9, color: '#53635a', marginTop: 2 }}>12 BOM definitions · 25 inert instances · 24 recorded mates · public synthetic geometry only. Generic dimensions and non-fixed mates remain non-solving in browser mode.</div></div>
+          <button type="button" disabled={benchmarkBusy} onClick={() => { void handleLoadHardenedDrone(); }} style={{ ...actionButton, opacity: benchmarkBusy ? .55 : 1 }}>{benchmarkBusy ? 'Recomputing QX-0...' : 'Load QX-0 · 260 mm'}</button>
+          <button type="button" disabled={benchmarkBusy} onClick={() => { void handleLoadHardenedDrone(HARDENED_DRONE_BENCHMARK.expandedFrameSpanMm); }} style={{ ...button, opacity: benchmarkBusy ? .55 : 1 }}>Run span ablation · 300 mm</button>
+        </div>
+      </header>
 
-      <div className="cad-authoring-layout" style={{ display: 'grid', gap: 8, padding: 8, alignItems: 'start', ...(wide ? { gridTemplateColumns: 'minmax(220px, .72fr) minmax(360px, 1.45fr) minmax(280px, .95fr)' } : { gridTemplateColumns: 'minmax(0, 1fr)' }) }}>
-        <aside className="cad-authoring-column" style={{ display: 'grid', gap: 8, minWidth: 0 }}>
+      {(state.error || formError) && <div role="alert" style={{ margin: '10px 12px 0', padding: 9, background: '#fff0ed', border: '1px solid #dca39a', borderRadius: 6, color: '#7d281e', fontSize: 11 }}>{formError ?? state.error} <button type="button" onClick={() => dispatch({ type: 'recover-last-valid' })} style={{ ...button, marginLeft: 8 }}>Restore last valid</button></div>}
+
+      <div className="cad-authoring-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, .72fr) minmax(360px, 1.45fr) minmax(280px, .95fr)', gap: 10, padding: 10, alignItems: 'start' }}>
+        <aside className="cad-authoring-column" style={{ display: 'grid', gap: 9, minWidth: 0 }}>
           <ProjectTree document={state.document} selectedId={state.selectedId} onSelect={(id) => dispatch({ type: 'select', id })} />
           <TransferPanel message={transferMessage} onImport={handleImport} onExport={handleExport} />
           <OutputPanel
@@ -260,57 +491,54 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
           />
         </aside>
 
-        <main className="cad-authoring-column" style={{ display: 'grid', gap: 8, minWidth: 0 }}>
+        <main className="cad-authoring-column" style={{ display: 'grid', gap: 9, minWidth: 0 }}>
           <SemanticMesh mesh={state.lastValidMesh} document={state.lastValidDocument} />
           <DependencyRail graph={state.dependencyGraph} history={state.history} diagnostics={state.diagnostics} />
-          <div className={noteCls}>The connected OCCT service is used when it is reachable. Otherwise the browser kernel does bounded solid modelling and real STL exchange. Failed, stale or unsupported work never replaces the last valid model.</div>
         </main>
 
-        <aside className="cad-authoring-column" style={{ display: 'grid', gap: 8, minWidth: 0 }}>
-          <SketchEditor sketch={sketch} onChange={setSketch} onCommit={() => { setFeatureInputs(sketch.id); safely(() => createSketchOperation(sketch)); }} />
-          <Panel id="feature-builder-title" title="Feature">
-            <select aria-label="Feature type" value={featureKind} onChange={(event) => { const kind = event.target.value as CadFeatureKind; setFeatureKind(kind); setFeatureName(featureLabel(kind)); }} className={fieldCls}>
-              {FEATURE_KINDS.map((kind) => <option key={kind} value={kind}>{featureLabel(kind)}{kind === 'feature.fillet' || kind === 'feature.chamfer' ? ' · connected service only' : ''}</option>)}
+        <aside className="cad-authoring-column" style={{ display: 'grid', gap: 9, minWidth: 0 }}>
+          <SketchEditor sketch={sketch} busy={state.status === 'queued' || state.status === 'running'} onChange={setSketch} onCommit={() => { void handleSketchCommit(); }} />
+          <section aria-labelledby="feature-builder-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
+            <h3 id="feature-builder-title" style={{ margin: 0, fontSize: 13 }}>Feature builder</h3>
+            <select aria-label="Feature type" value={featureKind} onChange={(event) => handleFeatureKindChange(event.target.value as CadFeatureKind)} style={field}>
+              {FEATURE_KINDS.map((kind) => <option key={kind} value={kind}>{featureLabel(kind)}{kind === 'feature.fillet' || kind === 'feature.chamfer' ? ' · connected OCCT only' : ''}</option>)}
             </select>
-            <input aria-label="Feature name" value={featureName} onChange={(event) => setFeatureName(event.target.value)} className={fieldCls} />
-            <input aria-label="Feature input references" placeholder="sketch, entity or body ids, comma separated" value={featureInputs} onChange={(event) => setFeatureInputs(event.target.value)} className={fieldCls} />
-            <input aria-label="Target body references" placeholder="target body ids, comma separated" value={featureTargets} onChange={(event) => setFeatureTargets(event.target.value)} className={fieldCls} />
-            <div className="flex gap-2">
-              <button type="button" disabled={!state.selectedId} onClick={() => state.selectedId && setFeatureInputs(state.selectedId)} className="btn btn-xs disabled:opacity-50">Use selection as input</button>
-              <button type="button" disabled={!state.selectedId} onClick={() => state.selectedId && setFeatureTargets(state.selectedId)} className="btn btn-xs disabled:opacity-50">Use selection as target</button>
-            </div>
-            <label className="grid gap-1 text-[12px] text-muted">distance, angle or radius
-              <input aria-label="Feature numeric value" type="number" value={featureValue} onChange={(event) => setFeatureValue(Number(event.target.value))} className={fieldCls + ' font-mono'} />
-            </label>
-            <input aria-label="Output body name" placeholder="new body name; blank modifies the targets" value={outputBodyName} onChange={(event) => setOutputBodyName(event.target.value)} className={fieldCls} />
-            <button type="button" onClick={() => safely(() => createFeatureOperation({ kind: featureKind, name: featureName, inputIds: ids(featureInputs), targetBodyIds: ids(featureTargets), outputBodyName, parameters: featureParameters(featureKind, featureValue) }))} className="btn btn-primary">Queue {featureLabel(featureKind)}</button>
-          </Panel>
+            <input aria-label="Feature name" value={featureName} onChange={(event) => setFeatureName(event.target.value)} style={field} />
+            <input aria-label="Feature input references" placeholder="Sketch/entity/body IDs, comma separated" value={featureInputs} onChange={(event) => setFeatureInputs(event.target.value)} style={field} />
+            <input aria-label="Target body references" placeholder="Target body IDs, comma separated" value={featureTargets} onChange={(event) => setFeatureTargets(event.target.value)} style={field} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}><button type="button" disabled={!state.selectedId} onClick={() => state.selectedId && setFeatureInputs(state.selectedId)} style={button}>Use selected as input</button><button type="button" disabled={!state.selectedId} onClick={() => state.selectedId && setFeatureTargets(state.selectedId)} style={button}>Use selected as target</button></div>
+            <label style={{ fontSize: 10 }}>Distance / angle / radius<input aria-label="Feature numeric value" type="number" value={featureValue} onChange={(event) => setFeatureValue(Number(event.target.value))} style={{ ...field, marginTop: 3 }} /></label>
+            <input aria-label="Output body name" placeholder="New body name; blank modifies targets" value={outputBodyName} onChange={(event) => setOutputBodyName(event.target.value)} style={field} />
+            <button type="button" onClick={() => { void safely(() => createFeatureOperation({ kind: featureKind, name: featureName, inputIds: ids(featureInputs), targetBodyIds: ids(featureTargets), outputBodyName, parameters: featureParameters(featureKind, featureValue) })); }} style={actionButton}>Queue {featureLabel(featureKind)}</button>
+          </section>
 
-          <Panel id="parameters-title" title="Parameters" trailing={state.document.parameters.length + ' defined'}>
-            {state.document.parameters.map((parameter) => <div key={parameter.id} className="font-mono text-[12px]">{parameter.name} = {parameter.expression}</div>)}
-            <div className="grid grid-cols-2 gap-2">
-              <input aria-label="Parameter name" value={parameterName} onChange={(event) => setParameterName(event.target.value)} className={fieldCls} />
-              <input aria-label="Parameter expression" value={parameterExpression} onChange={(event) => setParameterExpression(event.target.value)} className={fieldCls + ' font-mono'} />
+          <section aria-labelledby="parameters-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
+            <h3 id="parameters-title" style={{ margin: 0, fontSize: 13 }}>Parameters</h3>
+            {state.document.parameters.map((parameter) => <div key={parameter.id} style={{ ...mono, fontSize: 10 }}>{parameter.name} = {parameter.expression}</div>)}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+              <input aria-label="Parameter name" value={parameterName} onChange={(event) => setParameterName(event.target.value)} style={field} />
+              <input aria-label="Parameter expression" value={parameterExpression} onChange={(event) => setParameterExpression(event.target.value)} style={field} />
             </div>
-            <button type="button" onClick={() => safely(() => createParameterOperation({ id: state.document.parameters.find((item) => item.name === parameterName)?.id ?? cadId('parameter'), name: parameterName, expression: parameterExpression, unit: 'mm', resolvedValue: null }))} className="btn">Stage parameter</button>
-          </Panel>
+            <button type="button" onClick={() => { void safely(() => createParameterOperation({ id: state.document.parameters.find((item) => item.name === parameterName)?.id ?? cadId('parameter'), name: parameterName, expression: parameterExpression, unit: 'mm', resolvedValue: null })); }} style={button}>Stage parameter edit</button>
+          </section>
 
-          <Panel id="assembly-title" title="Assembly" sub="instances and mates">
-            <input aria-label="Instance name" value={instanceName} onChange={(event) => setInstanceName(event.target.value)} className={fieldCls} />
-            <select aria-label="Instance body" value={instanceBody} onChange={(event) => setInstanceBody(event.target.value)} className={fieldCls}>
-              <option value="">choose a body</option>{state.document.bodies.map((body) => <option key={body.id} value={body.id}>{body.name}</option>)}
+          <section aria-labelledby="assembly-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
+            <h3 id="assembly-title" style={{ margin: 0, fontSize: 13 }}>Assembly instances & mates</h3>
+            <input aria-label="Instance name" value={instanceName} onChange={(event) => setInstanceName(event.target.value)} style={field} />
+            <select aria-label="Instance body" value={instanceBody} onChange={(event) => setInstanceBody(event.target.value)} style={field}>
+              <option value="">Choose body</option>{state.document.bodies.map((body) => <option key={body.id} value={body.id}>{body.name}</option>)}
             </select>
-            <button type="button" disabled={!instanceBody} onClick={() => safely(() => createInstanceOperation({ id: cadId('instance'), name: instanceName, bodyId: instanceBody, grounded: state.document.assembly.instances.length === 0, transform: { translation: [0, 0, 0], rotationDegrees: [0, 0, 0] } }))} className="btn disabled:opacity-50">Insert instance</button>
-            <div className="border-t border-line2 pt-2 grid gap-2">
-              <input aria-label="Mate name" value={mate.name} onChange={(event) => setMate({ ...mate, name: event.target.value })} className={fieldCls} />
-              <select aria-label="Mate type" value={mate.kind} onChange={(event) => setMate({ ...mate, kind: event.target.value as CadAssemblyMate['kind'] })} className={fieldCls}>{MATE_KINDS.map((kind) => <option key={kind}>{kind}</option>)}</select>
-              <div className="grid grid-cols-2 gap-2">
-                <select aria-label="First mate instance" value={mate.instanceAId} onChange={(event) => setMate({ ...mate, instanceAId: event.target.value })} className={fieldCls}><option value="">instance A</option>{state.document.assembly.instances.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-                <select aria-label="Second mate instance" value={mate.instanceBId} onChange={(event) => setMate({ ...mate, instanceBId: event.target.value })} className={fieldCls}><option value="">instance B</option>{state.document.assembly.instances.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+            <button type="button" disabled={!instanceBody} onClick={() => { void safely(() => createInstanceOperation({ id: cadId('instance'), name: instanceName, bodyId: instanceBody, grounded: state.document.assembly.instances.length === 0, transform: { translation: [0, 0, 0], rotationDegrees: [0, 0, 0] } })); }} style={button}>Insert instance</button>
+            <div style={{ borderTop: '1px solid #d9dfdb', paddingTop: 7, display: 'grid', gap: 5 }}>
+              <input aria-label="Mate name" value={mate.name} onChange={(event) => setMate({ ...mate, name: event.target.value })} style={field} />
+              <select aria-label="Mate type" value={mate.kind} onChange={(event) => setMate({ ...mate, kind: event.target.value as CadAssemblyMate['kind'] })} style={field}>{MATE_KINDS.map((kind) => <option key={kind}>{kind}</option>)}</select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                <select aria-label="First mate instance" value={mate.instanceAId} onChange={(event) => setMate({ ...mate, instanceAId: event.target.value })} style={field}><option value="">Instance A</option>{state.document.assembly.instances.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+                <select aria-label="Second mate instance" value={mate.instanceBId} onChange={(event) => setMate({ ...mate, instanceBId: event.target.value })} style={field}><option value="">Instance B</option>{state.document.assembly.instances.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
               </div>
-              <button type="button" onClick={() => safely(() => createMateOperation({ id: cadId('mate'), name: mate.name, kind: mate.kind, instanceAId: mate.instanceAId, instanceBId: mate.instanceBId, referenceA: 'origin', referenceB: 'origin', offset: mate.offset, unit: mate.kind === 'angle' ? 'deg' : 'mm' }))} className="btn">Stage mate</button>
+              <button type="button" onClick={() => { void safely(() => createMateOperation({ id: cadId('mate'), name: mate.name, kind: mate.kind, instanceAId: mate.instanceAId, instanceBId: mate.instanceBId, referenceA: 'origin', referenceB: 'origin', offset: mate.offset, unit: mate.kind === 'angle' ? 'deg' : 'mm' })); }} style={button}>Stage mate</button>
             </div>
-          </Panel>
+          </section>
         </aside>
       </div>
     </section>
@@ -322,118 +550,52 @@ const MATE_KINDS: CadAssemblyMate['kind'][] = ['fixed', 'coincident', 'concentri
 
 function ProjectTree({ document, selectedId, onSelect }: { document: CadDocument; selectedId: string | null; onSelect: (id: string) => void }) {
   const sections = [
-    { label: 'Sketches', rows: document.sketches.map((item) => ({ id: item.id, label: item.name, meta: `${item.entities.length} entities · ${item.solverState}` })) },
+    { label: 'Sketches', rows: document.sketches.flatMap((item) => [{ id: item.id, label: item.name, meta: `${item.entities.length} entities · ${item.solverState}` }, ...item.entities.map((entity, index) => ({ id: entity.id, label: `${item.name} / ${index + 1}. ${entity.kind}`, meta: 'selectable feature input' }))]) },
     { label: 'Bodies', rows: document.bodies.map((item) => ({ id: item.id, label: item.name, meta: `${item.featureIds.length} features · ${item.state}` })) },
     { label: 'Instances', rows: document.assembly.instances.map((item) => ({ id: item.id, label: item.name, meta: item.grounded ? 'grounded' : 'free' })) },
     { label: 'Mates', rows: document.assembly.mates.map((item) => ({ id: item.id, label: item.name, meta: item.kind })) },
   ];
-  return (
-    <section aria-labelledby="project-tree-title" className="panel">
-      <div className="panel-head py-[8px]"><div className="panel-title" id="project-tree-title">Model tree</div></div>
-      <div role="tree" className="py-1">
-        {sections.map((section) => (
-          <div key={section.label}>
-            <div className="tree-row" style={{ cursor: 'default', gridTemplateColumns: 'minmax(0,1fr) auto', paddingLeft: 10 }}><span className="tree-name font-semibold">{section.label}</span><span className="text-[12px] text-muted">{section.rows.length}</span></div>
-            {section.rows.length === 0 && <div className="text-[12px] text-muted" style={{ paddingLeft: 26, minHeight: 22 }}>none yet</div>}
-            {section.rows.map((row) => (
-              <button key={row.id} type="button" role="treeitem" aria-selected={selectedId === row.id} onClick={() => onSelect(row.id)} className="tree-row" data-active={selectedId === row.id ? 'true' : 'false'} style={{ gridTemplateColumns: 'minmax(0,1fr) auto', paddingLeft: 26 }}>
-                <span className="tree-name">{row.label}</span>
-                <span className="text-[12px] text-muted whitespace-nowrap">{row.meta}</span>
-              </button>
-            ))}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
+  return <section aria-labelledby="project-tree-title" style={{ ...card, padding: 10 }}><h3 id="project-tree-title" style={{ margin: '0 0 8px', fontSize: 13 }}>Model tree</h3>{sections.map((section) => <div key={section.label} style={{ marginTop: 8 }}><div style={{ ...mono, fontSize: 9, fontWeight: 850, textTransform: 'uppercase', color: '#66736b' }}>{section.label} · {section.rows.length}</div>{section.rows.length === 0 && <div style={{ fontSize: 10, color: '#7c867f', padding: '4px 0' }}>None authored</div>}{section.rows.map((row) => <button key={row.id} type="button" onClick={() => onSelect(row.id)} style={{ ...button, width: '100%', textAlign: 'left', marginTop: 4, background: selectedId === row.id ? '#e6f0e9' : '#fff' }}><span>{row.label}</span><span style={{ display: 'block', ...mono, marginTop: 2, fontSize: 8, color: '#68746c' }}>{row.meta}</span></button>)}</div>)}</section>;
 }
 
-function SketchEditor({ sketch, onChange, onCommit }: { sketch: CadSketch; onChange: (sketch: CadSketch) => void; onCommit: () => void }) {
+function SketchEditor({ sketch, busy, onChange, onCommit }: { sketch: CadSketch; busy: boolean; onChange: (sketch: CadSketch) => void; onCommit: () => void }) {
   const [dimensionKind, setDimensionKind] = useState<SketchDimensionKind>('distance');
   const [constraintKind, setConstraintKind] = useState<SketchConstraintKind>('coincident');
   const [referenceIds, setReferenceIds] = useState('');
-  return (
-    <Panel id="sketch-editor-title" title="Sketch" trailing={`${sketch.dimensions.length} dimensions · ${sketch.constraints.length} constraints`}>
-      <div className="grid grid-cols-[1fr_96px] gap-2">
-        <input aria-label="Sketch name" value={sketch.name} onChange={(event) => onChange({ ...sketch, name: event.target.value })} className={fieldCls} />
-        <select aria-label="Sketch plane" value={sketch.plane.kind === 'origin' ? sketch.plane.plane : 'FACE'} onChange={(event) => onChange({ ...sketch, plane: event.target.value === 'FACE' ? { kind: 'face', entityId: '' } : { kind: 'origin', plane: event.target.value as 'XY' | 'XZ' | 'YZ' } })} className={fieldCls}><option>XY</option><option>XZ</option><option>YZ</option><option value="FACE">Face</option></select>
-      </div>
-      {sketch.plane.kind === 'face' && <input aria-label="Sketch face entity reference" placeholder="face entity id" value={sketch.plane.entityId} onChange={(event) => onChange({ ...sketch, plane: { kind: 'face', entityId: event.target.value } })} className={fieldCls} />}
-      <div aria-label="Add sketch entity" className="flex gap-1 flex-wrap">{(['line', 'circle', 'rectangle', 'arc', 'spline'] as SketchEntity['kind'][]).map((kind) => <button key={kind} type="button" onClick={() => onChange({ ...sketch, entities: [...sketch.entities, defaultEntity(kind)] })} className="btn btn-xs">{kind}</button>)}</div>
-      <div className="grid gap-1">{sketch.entities.map((entity, index) => <EntityRow key={entity.id} entity={entity} onChange={(next) => onChange({ ...sketch, entities: sketch.entities.map((item) => item.id === next.id ? next : item) })} onRemove={() => onChange({ ...sketch, entities: sketch.entities.filter((item) => item.id !== entity.id) })} index={index} />)}</div>
-      <div className="border-t border-line2 pt-2 grid grid-cols-2 gap-2">
-        <select aria-label="Dimension kind" value={dimensionKind} onChange={(event) => setDimensionKind(event.target.value as SketchDimensionKind)} className={fieldCls}>{(['distance', 'horizontal-distance', 'vertical-distance', 'radius', 'diameter', 'angle'] as SketchDimensionKind[]).map((kind) => <option key={kind}>{kind}</option>)}</select>
-        <select aria-label="Constraint kind" value={constraintKind} onChange={(event) => setConstraintKind(event.target.value as SketchConstraintKind)} className={fieldCls}>{(['coincident', 'horizontal', 'vertical', 'parallel', 'perpendicular', 'tangent', 'equal', 'concentric', 'fixed'] as SketchConstraintKind[]).map((kind) => <option key={kind}>{kind}</option>)}</select>
-        <input aria-label="Sketch relation entity references" placeholder="entity ids, comma separated" value={referenceIds} onChange={(event) => setReferenceIds(event.target.value)} className={fieldCls + ' col-span-2'} />
-        <button type="button" onClick={() => onChange({ ...sketch, dimensions: [...sketch.dimensions, { id: cadId('dimension'), kind: dimensionKind, entityIds: ids(referenceIds), value: 10, expression: null, unit: dimensionKind === 'angle' ? 'deg' : 'mm' }] })} className="btn btn-xs">Add dimension</button>
-        <button type="button" onClick={() => onChange({ ...sketch, constraints: [...sketch.constraints, { id: cadId('constraint'), kind: constraintKind, entityIds: ids(referenceIds) }] })} className="btn btn-xs">Add constraint</button>
-      </div>
-      <div className={noteCls}>the connected service solves the sketch; the browser kernel records it without solving</div>
-      <button type="button" onClick={onCommit} className="btn btn-primary">Queue sketch for recompute</button>
-    </Panel>
-  );
+  return <section aria-labelledby="sketch-editor-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
+    <h3 id="sketch-editor-title" style={{ margin: 0, fontSize: 13 }}>Sketch authoring</h3>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 5 }}><input aria-label="Sketch name" value={sketch.name} onChange={(event) => onChange({ ...sketch, name: event.target.value })} style={field} /><select aria-label="Sketch plane" value={sketch.plane.kind === 'origin' ? sketch.plane.plane : 'FACE'} onChange={(event) => onChange({ ...sketch, plane: event.target.value === 'FACE' ? { kind: 'face', entityId: '' } : { kind: 'origin', plane: event.target.value as 'XY' | 'XZ' | 'YZ' } })} style={field}><option>XY</option><option>XZ</option><option>YZ</option><option value="FACE">Face</option></select></div>
+    {sketch.plane.kind === 'face' && <input aria-label="Sketch face entity reference" placeholder="Face entity ID" value={sketch.plane.entityId} onChange={(event) => onChange({ ...sketch, plane: { kind: 'face', entityId: event.target.value } })} style={field} />}
+    <div aria-label="Add sketch entity" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{(['line', 'circle', 'rectangle', 'arc', 'spline'] as SketchEntity['kind'][]).map((kind) => <button key={kind} type="button" onClick={() => onChange({ ...sketch, entities: [...sketch.entities, defaultEntity(kind)] })} style={button}>+ {kind}</button>)}</div>
+    <div style={{ display: 'grid', gap: 4 }}>{sketch.entities.map((entity, index) => <EntityRow key={entity.id} entity={entity} onChange={(next) => onChange({ ...sketch, entities: sketch.entities.map((item) => item.id === next.id ? next : item) })} onRemove={() => onChange({ ...sketch, entities: sketch.entities.filter((item) => item.id !== entity.id) })} index={index} />)}</div>
+    <div style={{ borderTop: '1px solid #d9dfdb', paddingTop: 6, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+      <select aria-label="Dimension kind" value={dimensionKind} onChange={(event) => setDimensionKind(event.target.value as SketchDimensionKind)} style={field}>{(['distance', 'horizontal-distance', 'vertical-distance', 'radius', 'diameter', 'angle'] as SketchDimensionKind[]).map((kind) => <option key={kind}>{kind}</option>)}</select>
+      <select aria-label="Constraint kind" value={constraintKind} onChange={(event) => setConstraintKind(event.target.value as SketchConstraintKind)} style={field}>{(['coincident', 'horizontal', 'vertical', 'parallel', 'perpendicular', 'tangent', 'equal', 'concentric', 'fixed'] as SketchConstraintKind[]).map((kind) => <option key={kind}>{kind}</option>)}</select>
+      <input aria-label="Sketch relation entity references" placeholder="Entity IDs, comma separated" value={referenceIds} onChange={(event) => setReferenceIds(event.target.value)} style={{ ...field, gridColumn: '1 / -1' }} />
+      <button type="button" onClick={() => onChange({ ...sketch, dimensions: [...sketch.dimensions, { id: cadId('dimension'), kind: dimensionKind, entityIds: ids(referenceIds), value: 10, expression: null, unit: dimensionKind === 'angle' ? 'deg' : 'mm' }] })} style={button}>Add dimension</button>
+      <button type="button" onClick={() => onChange({ ...sketch, constraints: [...sketch.constraints, { id: cadId('constraint'), kind: constraintKind, entityIds: ids(referenceIds) }] })} style={button}>Add constraint</button>
+    </div>
+    <div style={{ ...mono, fontSize: 9, color: '#66736b' }}>{sketch.dimensions.length} dimensions · {sketch.constraints.length} constraints · connected OCCT may solve; browser fallback records but does not solve</div>
+    <button type="button" disabled={busy} onClick={onCommit} style={{ ...actionButton, opacity: busy ? .55 : 1 }}>{busy ? 'Sketch recompute running...' : 'Queue sketch for recompute'}</button>
+  </section>;
 }
 
 function EntityRow({ entity, onChange, onRemove, index }: { entity: SketchEntity; onChange: (entity: SketchEntity) => void; onRemove: () => void; index: number }) {
   const values = entityNumbers(entity);
-  return (
-    <div className="grid grid-cols-[76px_1fr_auto] gap-2 items-center">
-      <span className="text-[12px] text-muted whitespace-nowrap">{index + 1} · {entity.kind}</span>
-      <input aria-label={`${entity.kind} geometry values`} value={values.join(', ')} onChange={(event) => onChange(updateEntityNumbers(entity, event.target.value.split(',').map(Number)))} className="field min-h-[28px] text-[12px] font-mono w-full" />
-      <button type="button" aria-label={`Remove ${entity.kind}`} onClick={onRemove} className="btn btn-xs">×</button>
-    </div>
-  );
+  return <div style={{ display: 'grid', gridTemplateColumns: '62px 1fr auto', gap: 4, alignItems: 'center', background: '#f2f5f2', padding: 5, borderRadius: 5 }}><span style={{ ...mono, fontSize: 9 }}>{index + 1}. {entity.kind}</span><input aria-label={`${entity.kind} geometry values`} value={values.join(', ')} onChange={(event) => onChange(updateEntityNumbers(entity, event.target.value.split(',').map(Number)))} style={{ ...field, padding: '5px 6px', fontSize: 9 }} /><button type="button" aria-label={`Remove ${entity.kind}`} onClick={onRemove} style={{ ...button, padding: '4px 6px' }}>x</button></div>;
 }
 
 function SemanticMesh({ mesh, document }: { mesh: ReturnType<typeof createCadAuthoringState>['lastValidMesh']; document: CadDocument }) {
   const projected = useMemo(() => mesh?.vertices.map(([x, y, z]) => [120 + x * 3 + z, 105 - y * 3 - z * .5] as const) ?? [], [mesh]);
-  return (
-    <section aria-labelledby="mesh-title" className="panel">
-      <div className="panel-head py-[8px]"><div className="panel-title" id="mesh-title">Last valid mesh</div><span className="text-[12px] text-muted">{mesh ? `${mesh.triangles.length} triangles` : 'no kernel mesh yet'}</span></div>
-      <svg role="img" aria-labelledby="semantic-mesh-title semantic-mesh-desc" viewBox="0 0 240 210" className="block w-full min-h-[270px] bg-surface2">
-        <title id="semantic-mesh-title">Revision-bound CAD mesh projection</title>
-        <desc id="semantic-mesh-desc">Two-dimensional projection of {document.bodies.length} bodies from revision {document.revisionId}.</desc>
-        {Array.from({ length: 13 }, (_, i) => <line key={'gx' + i} x1={i * 20} y1={0} x2={i * 20} y2={210} stroke="var(--line2)" strokeWidth=".5" />)}
-        {Array.from({ length: 11 }, (_, i) => <line key={'gy' + i} x1={0} y1={i * 21} x2={240} y2={i * 21} stroke="var(--line2)" strokeWidth=".5" />)}
-        {mesh?.triangles.map((triangle, index) => { const points = triangle.map((vertex) => projected[vertex]).filter(Boolean).map((point) => point.join(',')).join(' '); return <polygon key={`${triangle.join('-')}:${index}`} points={points} fill={mesh.groups.find((group) => index >= group.startTriangle && index < group.startTriangle + group.triangleCount)?.color ?? 'var(--m2)'} fillOpacity=".7" stroke="var(--ink)" strokeWidth=".4" strokeLinejoin="round" />; })}
-        {!mesh && <text x="120" y="98" textAnchor="middle" fill="var(--muted)" fontSize="9" fontFamily="Work Sans, system-ui, sans-serif">no validated mesh yet</text>}
-        {!mesh && <text x="120" y="112" textAnchor="middle" fill="var(--muted)" fontSize="7" fontFamily="Work Sans, system-ui, sans-serif">queue a sketch and a feature</text>}
-      </svg>
-      <div className={'px-3 py-2 border-t border-line2 ' + noteCls}>a projection of the last successful kernel mesh, not a B-rep claim</div>
-    </section>
-  );
+  return <section aria-labelledby="mesh-title" style={{ ...card, overflow: 'hidden' }}><div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', borderBottom: '1px solid #d9dfdb' }}><h3 id="mesh-title" style={{ margin: 0, fontSize: 13 }}>Last valid semantic mesh</h3><span style={{ ...mono, fontSize: 9 }}>{mesh ? `${mesh.triangles.length} triangles` : 'no successful kernel mesh'}</span></div><svg role="img" aria-labelledby="semantic-mesh-title semantic-mesh-desc" viewBox="0 0 240 210" style={{ display: 'block', width: '100%', minHeight: 270, background: 'radial-gradient(circle at 50% 44%, #f8fbf8, #dce4df)' }}><title id="semantic-mesh-title">Revision-bound CAD mesh projection</title><desc id="semantic-mesh-desc">Accessible two-dimensional projection of {document.bodies.length} bodies from revision {document.revisionId}.</desc><path d="M0 175 H240 M25 0 V210" stroke="#c6d0ca" strokeWidth=".5" />{mesh?.triangles.map((triangle, index) => { const points = triangle.map((vertex) => projected[vertex]).filter(Boolean).map((point) => point.join(',')).join(' '); return <polygon key={`${triangle.join('-')}:${index}`} points={points} fill={mesh.groups.find((group) => index >= group.startTriangle && index < group.startTriangle + group.triangleCount)?.color ?? '#7fa896'} fillOpacity=".52" stroke="#294d42" strokeWidth=".65" />; })}{!mesh && <text x="120" y="92" textAnchor="middle" fill="#526159" fontSize="8">No validated mesh yet</text>}{!mesh && <text x="120" y="108" textAnchor="middle" fill="#6c776f" fontSize="6">Queue a supported sketch and feature</text>}</svg><div style={{ padding: 8, fontSize: 10, color: '#66736b' }}>This accessible SVG is a projection of the last successful connected-OCCT or bounded-browser mesh. It is not a B-rep claim.</div></section>;
 }
 
 function DependencyRail({ graph, history, diagnostics }: { graph: ReturnType<typeof createCadAuthoringState>['dependencyGraph']; history: ReturnType<typeof createCadAuthoringState>['history']; diagnostics: ReturnType<typeof createCadAuthoringState>['diagnostics'] }) {
-  return (
-    <Panel id="dependency-title" title="Dependencies and revisions" trailing={`${graph.nodes.length} nodes · ${graph.edges.length} edges`}>
-      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
-        {graph.nodes.map((node) => <div key={node.id} className="border border-line2 rounded-r px-2 py-1 text-[13px]"><div className="font-semibold">{node.label}</div><div className="text-[12px] text-muted">{node.kind} · {node.state}</div></div>)}
-        {graph.nodes.length === 0 && <div className={noteCls}>the dependency graph arrives with the first recompute or import</div>}
-      </div>
-      <details open>
-        <summary className="text-[12px] text-muted cursor-pointer select-none">operation history · {history.length}</summary>
-        <ol className="m-0 mt-1 pl-5 text-[13px] grid gap-[2px]">{history.slice().reverse().map((item) => <li key={item.id}><span className="font-semibold">{item.status}</span> · {item.label} · <span className="font-mono text-[12px] text-muted">{shortId(item.revisionId)}</span></li>)}</ol>
-      </details>
-      {diagnostics.length > 0 && (
-        <details>
-          <summary className="text-[12px] text-muted cursor-pointer select-none">kernel diagnostics · {diagnostics.length}</summary>
-          {diagnostics.map((item) => <div key={item.id} className="mt-1 text-[13px]" style={{ color: item.severity === 'error' ? 'var(--red)' : 'var(--amber)' }}><span className="font-mono">{item.code}</span> · {item.message}</div>)}
-        </details>
-      )}
-    </Panel>
-  );
+  return <section aria-labelledby="dependency-title" style={{ ...card, padding: 10 }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><h3 id="dependency-title" style={{ margin: 0, fontSize: 13 }}>Dependency & revision rail</h3><span style={{ ...mono, fontSize: 9 }}>{graph.nodes.length} nodes · {graph.edges.length} edges</span></div><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 6, marginTop: 8 }}>{graph.nodes.map((node) => <div key={node.id} style={{ padding: 7, border: '1px solid #d7ddd9', borderRadius: 5, fontSize: 10 }}><b>{node.label}</b><span style={{ ...mono, display: 'block', marginTop: 3, fontSize: 8 }}>{node.kind} · {node.state}</span></div>)}{graph.nodes.length === 0 && <div style={{ fontSize: 10, color: '#6c776f' }}>Dependency graph arrives only with an authoritative recompute or import response.</div>}</div><details style={{ marginTop: 9 }} open><summary style={{ cursor: 'pointer', fontSize: 11, fontWeight: 800 }}>Operation history ({history.length})</summary><ol style={{ margin: '6px 0 0', paddingLeft: 20, fontSize: 9 }}>{history.slice().reverse().map((item) => <li key={item.id} style={{ padding: '3px 0' }}><b>{item.status}</b> · {item.label} · <span style={mono}>{shortId(item.revisionId)}</span></li>)}</ol></details>{diagnostics.length > 0 && <details style={{ marginTop: 8 }}><summary style={{ cursor: 'pointer', fontSize: 11, fontWeight: 800 }}>Kernel diagnostics ({diagnostics.length})</summary>{diagnostics.map((item) => <div key={item.id} style={{ marginTop: 5, padding: 6, background: item.severity === 'error' ? '#fff0ed' : '#fff9eb', fontSize: 9 }}><b>{item.code}</b> · {item.message}</div>)}</details>}</section>;
 }
 
 function TransferPanel({ message, onImport, onExport }: { message: string | null; onImport: (file: File, format: CadTransferFormat) => void; onExport: (format: CadTransferFormat) => void }) {
-  return (
-    <Panel id="transfer-title" title="Exchange" sub="STEP, IGES, STL">
-      <label className="btn text-center cursor-pointer flex items-center justify-center">Import STEP / IGES / STL<input aria-label="Import CAD file" type="file" accept=".step,.stp,.iges,.igs,.stl" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, formatFromName(file.name)); }} /></label>
-      <div className="flex gap-2 flex-wrap">{(['STEP', 'IGES', 'STL'] as CadTransferFormat[]).map((format) => <button key={format} type="button" onClick={() => onExport(format)} className="btn btn-xs" title={format === 'STL' ? 'browser kernel or connected service' : 'connected service only'}>Export {format}</button>)}</div>
-      <div className={noteCls}>STL works in the browser. STEP and IGES need the connected service and fail closed without it. No exchange format keeps editable feature history.</div>
-      {message && <div role="status" className="text-[12px] px-2 py-1 rounded-r bg-surface2">{message}</div>}
-    </Panel>
-  );
+  return <section aria-labelledby="transfer-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}><h3 id="transfer-title" style={{ margin: 0, fontSize: 13 }}>Kernel exchange</h3><label style={{ ...button, textAlign: 'center' }}>Import STEP / IGES / STL<input aria-label="Import CAD file" type="file" accept=".step,.stp,.iges,.igs,.stl" style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, formatFromName(file.name)); }} /></label><div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>{(['STEP', 'IGES', 'STL'] as CadTransferFormat[]).map((format) => <button key={format} type="button" onClick={() => onExport(format)} style={button}>{format}{format !== 'STL' ? ' · OCCT' : ''}</button>)}</div><p style={{ margin: 0, fontSize: 9, lineHeight: 1.4, color: '#66736b' }}>Browser fallback imports and exports real STL mesh bytes. STEP/IGES require connected, owner-approved OCCT and fail closed when it is unavailable. No exchange format preserves editable feature history.</p>{message && <div role="status" style={{ fontSize: 9, padding: 6, background: '#f2f5f2' }}>{message}</div>}</section>;
 }
 
 export function OutputPanel({ busy, nativeEnvelope, sealedSnapshotArtifact, bundle, message, error, retainedFormats, onNativeSeal, onNativeLoad, onGenerate, onDownload }: {
@@ -449,30 +611,23 @@ export function OutputPanel({ busy, nativeEnvelope, sealedSnapshotArtifact, bund
   onGenerate: () => void;
   onDownload: (artifact: CadOutputArtifact) => void;
 }) {
-  return (
-    <Panel id="outputs-title" title="Snapshot and outputs" trailing={bundle ? 'last valid package' : 'not generated'}>
-      <div className={noteCls} title="CADdyDaddy snapshot (.caddy.json) & manufacturing outputs">CADdyDaddy snapshot (.caddy.json) & manufacturing outputs</div>
-      <div className="grid grid-cols-2 gap-2">
-        <button type="button" disabled={busy} onClick={onNativeSeal} className="btn btn-xs disabled:opacity-50">Seal snapshot</button>
-        <label className={'btn btn-xs text-center cursor-pointer flex items-center justify-center' + (busy ? ' opacity-50' : '')}>Load snapshot<input aria-label="Load CADdyDaddy snapshot (.caddy.json)" type="file" accept=".json,.caddy.json,application/json" disabled={busy} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) onNativeLoad(file); event.currentTarget.value = ''; }} /></label>
-      </div>
-      <button type="button" disabled={!sealedSnapshotArtifact} onClick={() => sealedSnapshotArtifact && onDownload(sealedSnapshotArtifact)} aria-label="Download sealed CADdyDaddy snapshot (.caddy.json)" className="btn btn-xs" style={{ opacity: sealedSnapshotArtifact ? 1 : .5 }}>Download sealed snapshot</button>
-      <button type="button" disabled={busy} onClick={onGenerate} className="btn btn-primary disabled:opacity-50">{busy ? 'Validating outputs…' : 'Generate drawing and BOM package'}</button>
-      <div className={noteCls}>Retained STEP / IGES / STL exchange · {retainedFormats.length ? retainedFormats.join(' / ') : 'none'} · snapshot {nativeEnvelope ? shortId(nativeEnvelope.document.document_hash) : 'not sealed'}</div>
-      {error && <div role="alert" className="text-[12px] px-2 py-1 rounded-r border" style={{ borderColor: 'var(--red)', color: 'var(--red)' }}>{error}</div>}
-      {message && <div role="status" aria-live="polite" className="text-[12px] px-2 py-1 rounded-r bg-surface2">{message}</div>}
-      {bundle && (
-        <div className="grid gap-1">
-          <div className="font-mono text-[12px] text-muted break-all">package {bundle.package.package_id}<br />manifest {bundle.package.manifest_file_sha256}</div>
-          {bundle.artifacts.map((artifact) => <div className="cad-output-download" key={artifact.path}><button className="btn btn-xs w-full flex justify-between gap-2 text-left disabled:opacity-50" type="button" disabled={busy} onClick={() => onDownload(artifact)} aria-label={`Download ${artifact.path}`}><span>{artifact.path}</span><span className="font-mono text-muted">{artifact.size_bytes} B · {shortId(artifact.sha256)}</span></button></div>)}
-        </div>
-      )}
-      <details>
-        <summary className="text-[12px] text-muted cursor-pointer select-none">output boundaries</summary>
-        <ul className="m-0 mt-1 pl-5 text-[12px] text-muted leading-snug">{CAD_OUTPUT_LIMITATIONS.map((item) => <li key={item}>{item.replaceAll('_', ' ').toLowerCase()}</li>)}</ul>
-      </details>
-    </Panel>
-  );
+  return <section aria-labelledby="outputs-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}><h3 id="outputs-title" style={{ margin: 0, fontSize: 13 }}>CADdyDaddy snapshot (.caddy.json) & manufacturing outputs</h3><span style={{ ...mono, fontSize: 8 }}>{bundle ? 'last valid' : 'not generated'}</span></div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+      <button type="button" disabled={busy} onClick={onNativeSeal} style={button}>Seal current snapshot</button>
+      <label style={{ ...button, textAlign: 'center', opacity: busy ? .55 : 1 }}>Load CADdyDaddy snapshot<input aria-label="Load CADdyDaddy snapshot (.caddy.json)" type="file" accept=".json,.caddy.json,application/json" disabled={busy} style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onNativeLoad(file); event.currentTarget.value = ''; }} /></label>
+    </div>
+    <button type="button" disabled={!sealedSnapshotArtifact} onClick={() => sealedSnapshotArtifact && onDownload(sealedSnapshotArtifact)} aria-label="Download sealed CADdyDaddy snapshot (.caddy.json)" style={{ ...button, opacity: sealedSnapshotArtifact ? 1 : .55 }}>Download sealed snapshot (.caddy.json)</button>
+    <button type="button" disabled={busy} onClick={onGenerate} style={{ ...actionButton, opacity: busy ? .55 : 1 }}>{busy ? 'Validating outputs...' : 'Generate drawing + BOM + STL package'}</button>
+    <div style={{ ...mono, fontSize: 8, color: '#66736b' }}>Retained STEP / IGES / STL exchange · {retainedFormats.length ? retainedFormats.join(' / ') : 'none'} · CADdyDaddy snapshot {nativeEnvelope ? shortId(nativeEnvelope.document.document_hash) : 'not sealed'}</div>
+    {error && <div role="alert" style={{ padding: 7, border: '1px solid #dca39a', background: '#fff0ed', color: '#7d281e', fontSize: 9 }}>{error}</div>}
+    {message && <div role="status" aria-live="polite" style={{ padding: 7, background: '#f2f5f2', fontSize: 9, lineHeight: 1.35 }}>{message}</div>}
+    {bundle && <div style={{ display: 'grid', gap: 4 }}>
+      <div style={{ ...mono, fontSize: 8, overflowWrap: 'anywhere' }}>package · {bundle.package.package_id}<br />manifest · {bundle.package.manifest_file_sha256}</div>
+      <div style={{ display: 'grid', gap: 3 }}>{bundle.artifacts.map((artifact) => <button className="cad-output-download" key={artifact.path} type="button" disabled={busy} onClick={() => onDownload(artifact)} aria-label={`Download ${artifact.path}`} style={{ ...button, display: 'flex', justifyContent: 'space-between', gap: 6, textAlign: 'left', opacity: busy ? .55 : 1 }}><span>Download · {artifact.path}</span><span style={{ ...mono, fontSize: 8 }}>{artifact.size_bytes} B · {shortId(artifact.sha256)}</span></button>)}</div>
+    </div>}
+    <details><summary style={{ cursor: 'pointer', fontSize: 9, fontWeight: 800 }}>Output boundaries</summary><ul style={{ margin: '5px 0 0', paddingLeft: 17, fontSize: 8, lineHeight: 1.45 }}>{CAD_OUTPUT_LIMITATIONS.map((item) => <li key={item}>{item.replaceAll('_', ' ').toLowerCase()}</li>)}</ul></details>
+  </section>;
 }
 
 function ids(value: string): string[] { return value.split(',').map((item) => item.trim()).filter(Boolean); }

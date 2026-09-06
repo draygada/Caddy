@@ -6,13 +6,11 @@ const vercel = JSON.parse(vercelSource) as {
 };
 
 describe('Candidate 0.2 backend target', () => {
-  it('pins same-origin API traffic to the public Candidate 0.2 product service', () => {
-    expect(vercel.rewrites).toEqual([
-      {
-        source: '/api/:path*',
-        destination: 'https://caddydaddy-product-service.vercel.app/api/:path*',
-      },
-    ]);
+  it('keeps product-service selection in the server-side proxy environment', () => {
+    expect(vercel.rewrites).toEqual([{ source: '/now', destination: '/api/now' }]);
+    expect(vercel.rewrites).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ source: '/api/:path*' }),
+    ]));
   });
 
   it('rejects every Candidate 0.1 backend destination', () => {

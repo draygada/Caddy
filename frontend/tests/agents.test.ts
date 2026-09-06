@@ -20,6 +20,31 @@ describe('the verifier (F-07)', () => {
     const attrs = attrsOf(parts); attrs.imu = { ...attrs.imu, bias: 0.3 };
     expect(outcome({ parts, attrs, span: 1.8, declared: DECLARED0 }).keys).toContain('7A002.a.1.a');
   });
+  it('applies an accepted poisoned-fixture span as extractor data and records only explicit unauthenticated session acceptance', () => {
+    const accepted = callA(DOCS['gx220-vendor-page']).find((proposal) => proposal.label.includes('told the truth'))!;
+    const st = useStore.getState(); st.reset();
+    st.applyExtraction('imu', accepted);
+    let current = useStore.getState();
+    expect(current.attrs.imu.bias).toBe(0.3);
+    expect(current.extracted['imu.bias']).toEqual({ by: 'extractor', acceptance: 'NONE', reviewStatus: 'NOT_HUMAN_REVIEWED', attestor: null, durability: 'MEMORY_ONLY' });
+    expect(current.events[0].entry).toContain('no human review, identity, or attestor recorded');
+
+    current.acknowledgeExtraction('imu', 'bias');
+    current = useStore.getState();
+    expect(current.extracted['imu.bias']).toMatchObject({ acceptance: 'UNAUTHENTICATED_BROWSER_SESSION', reviewStatus: 'NOT_HUMAN_REVIEWED', attestor: null, durability: 'MEMORY_ONLY' });
+    expect(current.events[0]).toMatchObject({ kind: 'source_acceptance_acknowledged', lane: 'proposal' });
+    expect(current.events[0].entry).toBe('unauthenticated browser-session acceptance · memory only · no identity or attestor captured · not human review');
+  });
+  it('refuses the poisoned fixture wrong-span proposal before it can mutate the design or create acceptance evidence', () => {
+    const wrongSpan = callA(DOCS['gx220-vendor-page']).find((proposal) => proposal.label.includes('wrong offsets'))!;
+    expect(wrongSpan.verdict).toMatchObject({ ok: false, reason: 'span_not_found' });
+    const st = useStore.getState(); st.reset();
+    const beforeBias = useStore.getState().attrs.imu.bias;
+    st.applyExtraction('imu', wrongSpan);
+    const current = useStore.getState();
+    expect(current.attrs.imu.bias).toBe(beforeBias);
+    expect(current.extracted['imu.bias']).toBeUndefined();
+  });
   it('schemas reject classification keys', () => {
     const doc = DOCS['hg5700-brochure'];
     const v = verify(doc, { field: 'bias', value: 0.01, unit: '°/h', quote: '0.01 °/h', start: 0, end: 9, doc_sha256: doc.sha, classification: 'EAR99' });

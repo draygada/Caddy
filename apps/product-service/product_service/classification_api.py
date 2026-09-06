@@ -1,21 +1,24 @@
 """Fail-closed service adapter for the preserved Forge classification engine.
 
-The default adapter is deliberately local and deterministic. It can use only
-``ScriptedModel`` or ``CacheModel`` unless an integrator explicitly constructs an
-adapter with ``allow_external_model=True``. No environment variable, API key, or
-installed provider SDK can silently opt the default route into external calls.
+The default adapter is deliberately local and deterministic. The production route
+can activate the pinned Anthropic adapter only when every server-side gate is
+present and the request presents the separately configured access token. Tests may
+still inject an external model explicitly; installed provider code or a lone API
+key can never opt the default route into external calls.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import hmac
 import json
+import os
 from typing import Any
 
 from forge_classification import ModelUnavailable, ReferencePack, default_pack, run
 from forge_classification.contracts import load_schema
-from forge_classification.model import BudgetExhausted, CacheModel, ModelClient, ScriptedModel
+from forge_classification.model import BudgetExhausted, CacheModel, LiveAnthropicModel, ModelClient, ScriptedModel
 from forge_classification.verifier import Accepted, verify_citation
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
@@ -23,6 +26,17 @@ from jsonschema.exceptions import ValidationError
 
 ENDPOINT_PATH = "/api/classification"
 ERROR_SCHEMA_VERSION = "caddydaddy.classification-error/1"
+LIVE_ACCESS_HEADER = "X-CADdyDaddy-Live-Token"
+LIVE_MODEL_ALLOWLIST = frozenset({"claude-sonnet-5", "claude-opus-5"})
+LIVE_ENV_NAMES = (
+    "REAL_LLM_AUTHORIZED",
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_MODEL",
+    "CADDYDADDY_LIVE_LLM_ACCESS_TOKEN",
+    "CADDYDADDY_LIVE_LLM_CALLS_CAP",
+    "CADDYDADDY_LIVE_LLM_COST_CAP_MICROUSD",
+    "CADDYDADDY_LIVE_LLM_ESTIMATED_CALL_COST_MICROUSD",
+)
 _ITEM_KINDS = frozenset({"commodity", "software", "technology"})
 _REQUEST_KEYS = frozenset({"product_or_part", "facts", "item_kind", "budget"})
 _BUDGET_KEYS = frozenset({"calls_cap", "cost_cap_microusd", "estimated_cost_microusd"})
@@ -37,6 +51,10 @@ class OutputRejected(RuntimeError):
     """The engine result cannot cross the service boundary."""
 
 
+class LiveConfigurationRejected(RuntimeError):
+    """The live lane was requested but its server configuration is incomplete."""
+
+
 @dataclass(frozen=True, slots=True)
 class ClassificationRequest:
     product_or_part: dict[str, Any] | str
@@ -45,6 +63,16 @@ class ClassificationRequest:
     calls_cap: int
     cost_cap_microusd: int
     estimated_cost_microusd: int
+
+
+@dataclass(frozen=True, slots=True)
+class LiveClassificationConfig:
+    model: str
+    api_key: str = field(repr=False)
+    access_token: str = field(repr=False)
+    calls_cap: int
+    cost_cap_microusd: int
+    estimated_call_cost_microusd: int
 
 
 def _bounded_integer(value: Any, *, name: str, default: int, maximum: int) -> int:
@@ -121,6 +149,60 @@ def _default_scripted_model() -> ScriptedModel:
     return ScriptedModel({"usml_propose": [dict(empty), dict(empty)]})
 
 
+def _default_live_model(model: str, api_key: str) -> ModelClient:
+    return LiveAnthropicModel(model=model, api_key=api_key)
+
+
+def _required_secret(environment: Mapping[str, str], name: str) -> str:
+    value = environment.get(name)
+    if not isinstance(value, str) or not value.strip():
+        raise LiveConfigurationRejected("live classification configuration is incomplete")
+    return value
+
+
+def _required_live_integer(environment: Mapping[str, str], name: str, *, maximum: int) -> int:
+    raw = environment.get(name)
+    if not isinstance(raw, str) or not raw.isascii() or not raw.isdecimal():
+        raise LiveConfigurationRejected("live classification configuration is incomplete")
+    value = int(raw)
+    if value < 1 or value > maximum:
+        raise LiveConfigurationRejected("live classification configuration is incomplete")
+    return value
+
+
+def _live_configuration(environment: Mapping[str, str]) -> LiveClassificationConfig | None:
+    if environment.get("REAL_LLM_AUTHORIZED") != "true":
+        return None
+    model = environment.get("ANTHROPIC_MODEL")
+    if model not in LIVE_MODEL_ALLOWLIST:
+        raise LiveConfigurationRejected("live classification configuration is incomplete")
+    cost_cap = _required_live_integer(
+        environment,
+        "CADDYDADDY_LIVE_LLM_COST_CAP_MICROUSD",
+        maximum=100_000_000,
+    )
+    estimated_call_cost = _required_live_integer(
+        environment,
+        "CADDYDADDY_LIVE_LLM_ESTIMATED_CALL_COST_MICROUSD",
+        maximum=10_000_000,
+    )
+    if estimated_call_cost > cost_cap:
+        raise LiveConfigurationRejected("live classification configuration is incomplete")
+    return LiveClassificationConfig(
+        model=model,
+        api_key=_required_secret(environment, "ANTHROPIC_API_KEY"),
+        access_token=_required_secret(environment, "CADDYDADDY_LIVE_LLM_ACCESS_TOKEN"),
+        calls_cap=_required_live_integer(environment, "CADDYDADDY_LIVE_LLM_CALLS_CAP", maximum=64),
+        cost_cap_microusd=cost_cap,
+        estimated_call_cost_microusd=estimated_call_cost,
+    )
+
+
+def _access_token_matches(expected: str, presented: str | None) -> bool:
+    candidate = presented if isinstance(presented, str) else ""
+    return hmac.compare_digest(expected.encode("utf-8"), candidate.encode("utf-8"))
+
+
 def _blocked(code: str, message: str) -> dict[str, Any]:
     return {
         "schema_version": ERROR_SCHEMA_VERSION,
@@ -144,12 +226,16 @@ class ClassificationAdapter:
         self,
         *,
         model_factory: Callable[[], ModelClient] | None = None,
+        live_model_factory: Callable[[str, str], ModelClient] = _default_live_model,
         pack_factory: Callable[[], ReferencePack] = default_pack,
         allow_external_model: bool = False,
+        environment: Mapping[str, str] | None = None,
     ) -> None:
-        self._model_factory = model_factory or _default_scripted_model
+        self._model_factory = model_factory
+        self._live_model_factory = live_model_factory
         self._pack_factory = pack_factory
         self._allow_external_model = allow_external_model
+        self._environment = environment if environment is not None else os.environ
         self._validator = Draft202012Validator(load_schema("determination"))
         self._pack: ReferencePack | None = None
 
@@ -158,18 +244,45 @@ class ClassificationAdapter:
             self._pack = self._pack_factory()
         return self._pack
 
-    def classify(self, payload: Any) -> tuple[int, dict[str, Any]]:
+    def classify(self, payload: Any, *, presented_token: str | None = None) -> tuple[int, dict[str, Any]]:
         """Return ``(http_status, body)`` without ever returning a partial determination."""
+        live_config: LiveClassificationConfig | None = None
+        if self._model_factory is None:
+            try:
+                live_config = _live_configuration(self._environment)
+            except LiveConfigurationRejected:
+                return 503, _blocked(
+                    "CLASSIFICATION_LIVE_CONFIGURATION_INVALID",
+                    "live classification is not safely configured",
+                )
+            if live_config is not None and not _access_token_matches(live_config.access_token, presented_token):
+                return 401, _blocked("CLASSIFICATION_LIVE_ACCESS_DENIED", "live classification access denied")
+
         try:
             request = _parse_request(payload)
         except RequestRejected as error:
             return 400, _blocked("CLASSIFICATION_REQUEST_INVALID", str(error))
 
+        model_factory = self._model_factory
+        external_model_allowed = self._allow_external_model
+        calls_cap = request.calls_cap
+        cost_cap_microusd = request.cost_cap_microusd
+        estimated_cost_microusd = request.estimated_cost_microusd
+        if live_config is None and model_factory is None:
+            model_factory = _default_scripted_model
+        elif live_config is not None:
+            model_factory = lambda: self._live_model_factory(live_config.model, live_config.api_key)
+            external_model_allowed = True
+            calls_cap = min(request.calls_cap, live_config.calls_cap)
+            cost_cap_microusd = min(request.cost_cap_microusd, live_config.cost_cap_microusd)
+            estimated_cost_microusd = live_config.estimated_call_cost_microusd
+
         try:
-            model = self._model_factory()
+            assert model_factory is not None
+            model = model_factory()
         except Exception:  # noqa: BLE001 - provider construction details must not cross the boundary
             return 503, _blocked("CLASSIFICATION_MODEL_UNAVAILABLE", "classification model could not be initialized")
-        if not self._allow_external_model and not isinstance(model, _LOCAL_MODEL_TYPES):
+        if not external_model_allowed and not isinstance(model, _LOCAL_MODEL_TYPES):
             return 503, _blocked(
                 "CLASSIFICATION_EXTERNAL_MODEL_DISABLED",
                 "only scripted or cache-backed models are enabled for this adapter",
@@ -183,9 +296,9 @@ class ClassificationAdapter:
                 item_kind=request.item_kind,
                 facts=request.facts,
                 pack=pack,
-                calls_cap=request.calls_cap,
-                cost_cap_microusd=request.cost_cap_microusd,
-                estimated_cost_microusd=request.estimated_cost_microusd,
+                calls_cap=calls_cap,
+                cost_cap_microusd=cost_cap_microusd,
+                estimated_cost_microusd=estimated_cost_microusd,
             )
             serialized = json.loads(json.dumps(result, ensure_ascii=False, allow_nan=False, sort_keys=True))
             self._validator.validate(serialized)
@@ -223,10 +336,18 @@ def create_router(adapter: ClassificationAdapter | None = None):
                 status_code=400,
                 content=_blocked("CLASSIFICATION_REQUEST_INVALID", "request body must be valid JSON"),
             )
-        status, body = active.classify(payload)
+        status, body = active.classify(payload, presented_token=request.headers.get(LIVE_ACCESS_HEADER))
         return JSONResponse(status_code=status, content=body)
 
     return router
 
 
-__all__ = ["ClassificationAdapter", "ClassificationRequest", "ENDPOINT_PATH", "create_router"]
+__all__ = [
+    "ClassificationAdapter",
+    "ClassificationRequest",
+    "ENDPOINT_PATH",
+    "LIVE_ACCESS_HEADER",
+    "LIVE_ENV_NAMES",
+    "LIVE_MODEL_ALLOWLIST",
+    "create_router",
+]

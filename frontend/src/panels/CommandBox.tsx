@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../store';
-import { COMMANDS, commandAvailable, designWorkspaceMounted, runCommand, type Command } from '../commands';
+import { COMMANDS, commandAvailable, designWorkspaceMounted, runCommand, searchCommands, type Command } from '../commands';
 
-const GROUP_LABEL: Record<Command['group'], string> = { view: 'View', create: 'Create', modify: 'Modify', inspect: 'Inspect', select: 'Select', document: 'Document', review: 'Review', panels: 'Panels' };
+const GROUP_LABEL: Record<Command['group'], string> = { navigate: 'Navigate', view: 'View', create: 'Create', modify: 'Modify', inspect: 'Inspect', select: 'Select', document: 'Document', review: 'Review', panels: 'Panels' };
+
+type PaletteShortcutEvent = Pick<KeyboardEvent, 'metaKey' | 'ctrlKey' | 'key' | 'preventDefault'>;
+
+export function handleCommandPaletteKeydown(event: PaletteShortcutEvent): boolean {
+  if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return false;
+  event.preventDefault();
+  useStore.getState().patch({ cmdOpen: true });
+  return true;
+}
 
 /** S-key command box: every command, searchable, recent ones pinned when the query is empty. */
 export function CommandBox() {
@@ -16,12 +25,7 @@ export function CommandBox() {
   useEffect(() => { if (open) { setQ(''); setIdx(0); setTimeout(() => inputRef.current?.focus(), 0); } }, [open]);
   useEffect(() => {
     const syncWorkspace = () => setDesignMounted(designWorkspaceMounted());
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        useStore.getState().patch({ cmdOpen: true });
-      }
-    };
+    const onKey = (event: KeyboardEvent) => { handleCommandPaletteKeydown(event); };
     syncWorkspace();
     const observer = typeof MutationObserver === 'undefined' ? null : new MutationObserver(syncWorkspace);
     observer?.observe(document.body, { childList: true, subtree: true });
@@ -36,8 +40,7 @@ export function CommandBox() {
       const rec = recent.map((id) => visible.find((c) => c.id === id)).filter((c): c is Command => !!c);
       return [...rec.map((c) => ({ c, recent: true })), ...visible.filter((c) => !recent.includes(c.id)).map((c) => ({ c, recent: false }))];
     }
-    const words = needle.split(/\s+/);
-    return visible.filter((c) => words.every((w) => (c.label + ' ' + c.group + ' ' + (c.keys || '')).toLowerCase().includes(w))).map((c) => ({ c, recent: false }));
+    return searchCommands(visible, needle).map((c) => ({ c, recent: false }));
   }, [q, recent, st, target, designMounted]);
   if (!open) return (
     <button type="button" aria-label="Open command palette" aria-keyshortcuts="Meta+K Control+K S" onClick={() => st.patch({ cmdOpen: true })}

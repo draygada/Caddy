@@ -66,6 +66,10 @@ class UnitDiff:
     removed: list[str]
 
 
+class ReferencePackIntegrityError(ValueError):
+    """The default regulatory corpus no longer matches its pinned trust root."""
+
+
 # --- provision strings ---------------------------------------------------------------------
 
 def canonical_provision(raw: str) -> str | None:
@@ -337,6 +341,119 @@ def build_pack(raw_dir: Path) -> ReferencePack:
         itar_sd_xml=sd.read_text(encoding="utf-8") if sd.is_file() else None,
         ear_definitions_xml=defs.read_text(encoding="utf-8") if defs.is_file() else None,
     )
+
+
+def build_trusted_pack(
+    raw_dir: Path,
+    manifest_path: Path,
+    *,
+    expected_pack_sha256: str,
+) -> ReferencePack:
+    """Build the default pack only after authenticating every committed source.
+
+    Explicit callers that intentionally construct test or custom packs should use
+    ``build_pack`` or ``build_pack_from_xml`` instead. This path is deliberately
+    strict because its result is the runtime's default regulatory trust root.
+    """
+    raw_dir = Path(raw_dir)
+    manifest_path = Path(manifest_path)
+    try:
+        manifest_bytes = manifest_path.read_bytes()
+    except OSError as exc:
+        raise ReferencePackIntegrityError(
+            f"REFERENCE_PACK_MANIFEST_UNAVAILABLE: cannot read {manifest_path}: {exc}"
+        ) from exc
+    try:
+        manifest = json.loads(manifest_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferencePackIntegrityError(
+            f"REFERENCE_PACK_MANIFEST_INVALID: {manifest_path} is not valid UTF-8 JSON: {exc}"
+        ) from exc
+    if not isinstance(manifest, dict) or manifest.get("schema") != "forge-classification.reference-pack/1":
+        raise ReferencePackIntegrityError(
+            "REFERENCE_PACK_MANIFEST_INVALID: expected schema "
+            "'forge-classification.reference-pack/1'"
+        )
+    sources = manifest.get("sources")
+    if not isinstance(sources, dict):
+        raise ReferencePackIntegrityError(
+            "REFERENCE_PACK_MANIFEST_INVALID: 'sources' must be an object"
+        )
+    expected_names = set(_SOURCE_FILES)
+    actual_names = set(sources)
+    if actual_names != expected_names:
+        missing = sorted(expected_names - actual_names)
+        unexpected = sorted(actual_names - expected_names)
+        raise ReferencePackIntegrityError(
+            "REFERENCE_PACK_SOURCE_SET_MISMATCH: "
+            f"missing={missing}, unexpected={unexpected}"
+        )
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_pack_sha256):
+        raise ReferencePackIntegrityError(
+            "REFERENCE_PACK_EXPECTATION_INVALID: expected pack SHA-256 must be 64 lowercase hex characters"
+        )
+    manifest_pack_sha256 = manifest.get("pack_sha256")
+    if manifest_pack_sha256 is not None and manifest_pack_sha256 != expected_pack_sha256:
+        raise ReferencePackIntegrityError(
+            "REFERENCE_PACK_MANIFEST_HASH_MISMATCH: committed manifest pack SHA-256 "
+            f"{manifest_pack_sha256!r} does not match pinned {expected_pack_sha256}"
+        )
+
+    payloads: dict[str, bytes] = {}
+    for name in sorted(expected_names):
+        record = sources[name]
+        if not isinstance(record, dict):
+            raise ReferencePackIntegrityError(
+                f"REFERENCE_PACK_MANIFEST_INVALID: source record {name!r} must be an object"
+            )
+        expected_source_sha256 = record.get("sha256")
+        expected_bytes = record.get("bytes")
+        if not isinstance(expected_source_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_source_sha256):
+            raise ReferencePackIntegrityError(
+                f"REFERENCE_PACK_MANIFEST_INVALID: source {name!r} has no valid SHA-256"
+            )
+        if not isinstance(expected_bytes, int) or isinstance(expected_bytes, bool) or expected_bytes < 0:
+            raise ReferencePackIntegrityError(
+                f"REFERENCE_PACK_MANIFEST_INVALID: source {name!r} has no valid byte count"
+            )
+        source_path = raw_dir / name
+        try:
+            payload = source_path.read_bytes()
+        except OSError as exc:
+            raise ReferencePackIntegrityError(
+                f"REFERENCE_PACK_SOURCE_UNAVAILABLE: cannot read {source_path}: {exc}"
+            ) from exc
+        if len(payload) != expected_bytes:
+            raise ReferencePackIntegrityError(
+                f"REFERENCE_PACK_SOURCE_SIZE_MISMATCH: {name} expected {expected_bytes} bytes, "
+                f"found {len(payload)}"
+            )
+        actual_source_sha256 = sha256(payload)
+        if actual_source_sha256 != expected_source_sha256:
+            raise ReferencePackIntegrityError(
+                f"REFERENCE_PACK_SOURCE_HASH_MISMATCH: {name} expected {expected_source_sha256}, "
+                f"found {actual_source_sha256}"
+            )
+        payloads[name] = payload
+
+    try:
+        pack = build_pack_from_xml(
+            payloads["title-22-part-121.xml"].decode("utf-8"),
+            payloads["title-15-part-774.xml"].decode("utf-8"),
+            manifest=manifest,
+            itar_sd_xml=payloads["title-22-section-120.41.xml"].decode("utf-8"),
+            ear_definitions_xml=payloads["title-15-section-772.1.xml"].decode("utf-8"),
+        )
+    except UnicodeDecodeError as exc:
+        raise ReferencePackIntegrityError(
+            f"REFERENCE_PACK_SOURCE_ENCODING_INVALID: committed source is not UTF-8: {exc}"
+        ) from exc
+    if pack.sha256 != expected_pack_sha256:
+        raise ReferencePackIntegrityError(
+            "REFERENCE_PACK_HASH_MISMATCH: authenticated sources produced "
+            f"{pack.sha256}, expected pinned {expected_pack_sha256}"
+        )
+    return pack
 
 
 def diff(a: ReferencePack, b: ReferencePack) -> UnitDiff:

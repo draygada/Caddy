@@ -7,6 +7,7 @@ import { IntakeForm } from './IntakeForm';
 import { CHECKLIST, CLAIM_COST, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
 import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type LiveSourcingOffer, type OperationsEnvelope, type ServiceOffer, type SourcingDispatchEnvelope, type SourcingPackageEnvelope, type SourcingRoundEnvelope } from '../lib/operations-client';
 import { OrderClient, OrderServiceError, type OrderEnvelope, type RecordingOutcome } from '../lib/order-client';
+import { appendProductEvent, productArtifactGate, useProductThread, type ProductArtifactBinding, type ProductArtifactRef } from '../lib/product-thread';
 
 const usd = (v: number | null | undefined) => (v == null ? 'rate not verified' : v.toLocaleString(undefined, { style: 'currency', currency: 'USD' }));
 const FEDERAL_BUYER_CLASSES = ['radio', 'motor', 'thermal_imager', 'ic', 'board', 'cell', 'pack', 'gnss', 'esc'];
@@ -28,6 +29,8 @@ function ownerNames(offer: ServiceOffer): string {
 
 /** The connected service round: kept as a component, not mounted in the three-step tab. */
 export function ServiceSourcing() {
+  const productThread = useProductThread();
+  const artifactGate = productArtifactGate(productThread.artifactBinding);
   const [quantity, setQuantity] = useState(2);
   const [mode, setMode] = useState<'air' | 'ocean'>('air');
   const [inputMode, setInputMode] = useState<'live-bounded' | 'offline-demo'>('live-bounded');
@@ -60,6 +63,9 @@ export function ServiceSourcing() {
   const [acknowledgementRef, setAcknowledgementRef] = useState('evidence:operator-observed-recording');
   const [resolutionRef, setResolutionRef] = useState('');
   const [reconciledEffect, setReconciledEffect] = useState<'NOT_SENT' | 'SENT'>('NOT_SENT');
+  const [packageBinding, setPackageBinding] = useState<ProductArtifactBinding | null>(null);
+  const now = () => new Date().toISOString();
+  const actor = 'operator:browser-demo';
 
   const currentClient = async () => {
     if (client) return client;
@@ -87,6 +93,25 @@ export function ServiceSourcing() {
       const value = await action(await currentOrderClient());
       setOrderEvidence(value);
       setOrderRetry(null);
+      const artifacts: ProductArtifactRef[] = [{ artifactId: value.candidate.candidate_id, kind: 'operations-candidate-snapshot', sha256: value.candidate.artifact_sha256 }];
+      if (packageBinding) artifacts.push(
+        { artifactId: `cad:${packageBinding.revisionId}`, kind: 'cad-geometry', sha256: packageBinding.cadArtifactSha256 },
+        { artifactId: `cad-manifest:${packageBinding.revisionId}`, kind: 'cad-artifact-manifest', sha256: packageBinding.artifactManifestSha256 },
+        { artifactId: `bom-csv:${packageBinding.revisionId}`, kind: 'BOM_CSV_ARTIFACT_SHA256', sha256: packageBinding.bomCsvArtifactSha256 },
+      );
+      if (value.package?.manifest_sha256) artifacts.push({ artifactId: value.package.package_id, kind: 'order-package-manifest', sha256: value.package.manifest_sha256 });
+      if (value.receipt) artifacts.push({ artifactId: value.receipt.receipt_id, kind: 'order-receipt', sha256: value.receipt.receipt_sha256 });
+      if (value.audit_head_sha256) artifacts.push({ artifactId: 'order-audit-head', kind: 'order-audit-head', sha256: value.audit_head_sha256 });
+      await appendProductEvent({
+        sourceLane: value.receipt ? 'receipt' : 'order',
+        eventType: `order.${label}`,
+        summary: value.receipt ? `${value.receipt.state} · external effect ${value.receipt.external_effect} · ${value.receipt.detail_code}.` : `${value.status} · ${value.claim_ceiling}.`,
+        actorId: value.request?.actor_id ?? actor,
+        actorAttestation: 'SERVICE_REPORTED',
+        revisionId: packageBinding?.revisionId ?? value.candidate.revision,
+        artifacts,
+        payload: { status: value.status, receiptState: value.receipt?.state ?? null, externalEffect: value.receipt?.external_effect ?? 'NONE', eventCount: value.event_count ?? value.audit_events?.length ?? null },
+      });
     } catch (caught) {
       setOrderError(serviceError(caught));
       setOrderRetry({ label, action });
@@ -97,8 +122,6 @@ export function ServiceSourcing() {
   const evidence: OperationsEnvelope | null = dispatch ?? pkg ?? round ?? client?.getLastValid('sourcing') ?? null;
   const visibleOrderEvidence = orderEvidence ?? orderClient?.getLastValid() ?? null;
   const receipt = visibleOrderEvidence?.receipt;
-  const now = () => new Date().toISOString();
-  const actor = 'operator:browser-demo';
   const createRound = (api: OperationsClient) => {
     if (inputMode === 'offline-demo') return api.createSourcingRound({ part_key: 'flight-controller', quantity, mode, input_mode: 'offline-demo' });
     const evidence = {
@@ -132,11 +155,15 @@ export function ServiceSourcing() {
         <span className="chip">{evidence ? evidence.status : 'not run'}</span>
       </div>
       <div className="p-3 grid gap-3 text-[13px]">
+        <div role={artifactGate.ready ? 'status' : 'alert'} className={`border rounded-r p-2 text-[12px] ${artifactGate.ready ? 'border-line text-ink' : 'border-amber text-amber'}`}>
+          <b>{artifactGate.code}</b> · {artifactGate.detail} The service sourcing round may still be explored, but package and order actions stay blocked until this browser session receives the exact CAD output identities.
+          {productThread.artifactBinding && <div className="font-mono break-all mt-1">CAD {productThread.artifactBinding.revisionId} · geometry {productThread.artifactBinding.cadArtifactSha256} · manifest {productThread.artifactBinding.artifactManifestSha256} · BOM CSV artifact {productThread.artifactBinding.bomCsvArtifactSha256} · semantic BOM digest {productThread.artifactBinding.semanticBomDigest}</div>}
+        </div>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="grid gap-1 text-muted">input lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setRound(null); setSelectedOffer(null); setPkg(null); setDispatch(null); }} className="field text-ink"><option value="live-bounded">Connected Candidate 0.2 input</option><option value="offline-demo">Offline demo · 2-key fixture</option></select></label>
+          <label className="grid gap-1 text-muted">input lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setRound(null); setSelectedOffer(null); setPkg(null); setPackageBinding(null); setDispatch(null); }} className="field text-ink"><option value="live-bounded">Connected Candidate 0.2 input</option><option value="offline-demo">Offline demo · 2-key fixture</option></select></label>
           <label className="grid gap-1 text-muted">quantity<input type="number" min={1} max={10000} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(10000, Number(event.target.value) || 1)))} className="field w-28 font-mono text-ink" /></label>
           <label className="grid gap-1 text-muted">mode<select value={mode} onChange={(event) => setMode(event.target.value as 'air' | 'ocean')} className="field text-ink"><option value="air">air</option><option value="ocean">ocean</option></select></label>
-          <button className="btn btn-primary" disabled={busy !== null} onClick={() => run('round', async (api) => { const value = await createRound(api); setRound(value); setSelectedOffer(value.round.selected_offer_id); setPkg(null); setDispatch(null); })}>{busy === 'round' ? 'Creating…' : inputMode === 'offline-demo' ? 'Run Offline demo' : 'Create connected bounded round'}</button>
+          <button className="btn btn-primary" disabled={busy !== null} onClick={() => run('round', async (api) => { const value = await createRound(api); setRound(value); setSelectedOffer(value.round.selected_offer_id); setPkg(null); setPackageBinding(null); setDispatch(null); await appendProductEvent({ sourceLane: 'sourcing', eventType: 'sourcing.round_created', summary: `${value.round.round_id} · ${value.round.offers.length} offer(s) · ${value.round.request.input_mode}.`, actorId: actor, actorAttestation: 'OPERATOR_ACTION_RECORDED', revisionId: value.candidate.revision_id, artifacts: [{ artifactId: value.candidate.candidate_id, kind: 'operations-candidate-snapshot', sha256: value.candidate.snapshot_sha256 }], payload: { roundId: value.round.round_id, offerCount: value.round.offers.length, partKey: value.round.request.part_key, quantity: value.round.request.quantity, claimCeiling: value.claim_ceiling } }); })}>{busy === 'round' ? 'Creating…' : inputMode === 'offline-demo' ? 'Run Offline demo' : 'Create connected bounded round'}</button>
         </div>
         {inputMode === 'live-bounded' && (
           <div className="border border-line2 rounded-r p-3 grid gap-2" aria-label="Connected Candidate 0.2 sourcing input">
@@ -169,18 +196,18 @@ export function ServiceSourcing() {
                 <div className="text-[12px] text-muted">ownership walk · {ownerNames(offer)}</div>
                 <div className="text-[12px] text-muted">{offer.landed_cost.rows.map((row) => `${row.layer} $${row.amount_usd}`).join(' · ')} · modeled estimate from declared/fixture inputs; not a supplier quote or tariff determination</div>
                 <div className="flex flex-wrap gap-2">
-                  <button className="btn btn-primary disabled:opacity-40" disabled={!['eligible-fixture', 'eligible-bounded'].includes(offer.screening_disposition) || busy !== null} onClick={() => run('select', async (api) => { const value = await api.selectSourcingOffer(round.round.round_id, offer.offer_id); setSelectedOffer(value.selected_offer.offer_id); })}>{selectedOffer === offer.offer_id ? 'Selected' : 'Select eligible offer'}</button>
-                  <button className="btn" disabled={busy !== null} onClick={() => run('hold', async (api) => { await api.adjudicateSourcingOffer({ round_id: round.round.round_id, offer_id: offer.offer_id, decision: 'HOLD', attestor: 'reviewer:browser-session', rationale: 'Retain the offer and original screening state for bounded comparison.' }); })}>Record HOLD</button>
+                  <button className="btn btn-primary disabled:opacity-40" disabled={!['eligible-fixture', 'eligible-bounded'].includes(offer.screening_disposition) || busy !== null} onClick={() => run('select', async (api) => { const value = await api.selectSourcingOffer(round.round.round_id, offer.offer_id); setSelectedOffer(value.selected_offer.offer_id); await appendProductEvent({ sourceLane: 'sourcing', eventType: 'sourcing.offer_selected', summary: `${value.selected_offer.offer_id} · ${value.selected_offer.seller} · ${value.selected_offer.screening_disposition}.`, actorId: actor, actorAttestation: 'OPERATOR_ACTION_RECORDED', revisionId: value.candidate.revision_id, artifacts: [{ artifactId: value.candidate.candidate_id, kind: 'operations-candidate-snapshot', sha256: value.candidate.snapshot_sha256 }], payload: { roundId: value.round_id, offerId: value.selected_offer.offer_id, screeningDisposition: value.selected_offer.screening_disposition } }); })}>{selectedOffer === offer.offer_id ? 'Selected' : 'Select eligible offer'}</button>
+                  <button className="btn" disabled={busy !== null} onClick={() => run('hold', async (api) => { const value = await api.adjudicateSourcingOffer({ round_id: round.round.round_id, offer_id: offer.offer_id, decision: 'HOLD', attestor: 'reviewer:browser-session', rationale: 'Retain the offer and original screening state for bounded comparison.' }); await appendProductEvent({ sourceLane: 'sourcing', eventType: 'sourcing.offer_held', summary: `${value.offer.offer_id} retained on HOLD without changing screening.`, actorId: value.adjudication.attestor, actorAttestation: 'OPERATOR_ACTION_RECORDED', revisionId: value.candidate.revision_id, artifacts: [{ artifactId: value.candidate.candidate_id, kind: 'operations-candidate-snapshot', sha256: value.candidate.snapshot_sha256 }], payload: { roundId: value.round_id, offerId: value.offer.offer_id, decision: value.adjudication.decision, changesScreening: !value.adjudication.does_not_change_screening } }); })}>Record HOLD</button>
                 </div>
               </article>
             ))}
             <div className="flex flex-wrap gap-2">
-              <button className="btn btn-primary disabled:opacity-40" disabled={!selectedOffer || busy !== null} onClick={() => run('package', async (api) => { const value = await api.buildSourcingPackage(round.round.round_id); setPkg(value); setDispatch(null); setValidatedManifest(null); setOrderEvidence(null); setOrderError(null); setOrderKey(`recording-${value.package.manifest_sha256.slice(0, 16)}-${Date.now().toString(36)}`); })}>{busy === 'package' ? 'Sealing…' : 'Build + reread sealed package'}</button>
-              <button className="btn disabled:opacity-40" disabled={!pkg || busy !== null} onClick={() => run('dispatch', async (api) => setDispatch(await api.stageSourcingDispatch(round.round.round_id, pkg!.package.manifest_sha256, `browser-${pkg!.package.manifest_sha256}`)))}>{dispatch ? 'Retry same idempotency key' : 'Stage dispatch · zero send'}</button>
+              <button className="btn btn-primary disabled:opacity-40" disabled={!selectedOffer || busy !== null || !artifactGate.ready} onClick={() => run('package', async (api) => { const binding = productThread.artifactBinding; if (!binding) throw new OperationsServiceError('BLOCKED_MISSING_CAD_ARTIFACTS', artifactGate.detail); const value = await api.buildSourcingPackage(round.round.round_id); setPkg(value); setPackageBinding(binding); setDispatch(null); setValidatedManifest(null); setOrderEvidence(null); setOrderError(null); setOrderKey(`recording-${value.package.manifest_sha256.slice(0, 16)}-${Date.now().toString(36)}`); await appendProductEvent({ sourceLane: 'sourcing', eventType: 'sourcing.package_bound', summary: `${value.package.manifest_sha256} bound in the product thread to CAD ${binding.revisionId}.`, actorId: actor, actorAttestation: 'OPERATOR_ACTION_RECORDED', revisionId: binding.revisionId, artifacts: [{ artifactId: `cad:${binding.revisionId}`, kind: 'cad-geometry', sha256: binding.cadArtifactSha256 }, { artifactId: `cad-manifest:${binding.revisionId}`, kind: 'cad-artifact-manifest', sha256: binding.artifactManifestSha256 }, { artifactId: `bom-csv:${binding.revisionId}`, kind: 'BOM_CSV_ARTIFACT_SHA256', sha256: binding.bomCsvArtifactSha256 }, { artifactId: `sourcing-payload:${value.package.round_id}`, kind: 'sourcing-package-payload', sha256: value.package.payload_sha256 }, { artifactId: `sourcing-manifest:${value.package.round_id}`, kind: 'sourcing-package-manifest', sha256: value.package.manifest_sha256 }], payload: { roundId: value.package.round_id, byteRereadVerified: value.package.byte_reread_verified, dispatchCeiling: value.package.dispatch_ceiling, servicePackageEmbedsCadHashes: false, bindingLayer: 'PRODUCT_THREAD_EVENT', bomIdentity: 'BOM_CSV_ARTIFACT_SHA256', semanticBomDigest: binding.semanticBomDigest } }); })}>{busy === 'package' ? 'Sealing…' : artifactGate.ready ? 'Build + bind + reread sealed package' : 'Blocked · register CAD + BOM CSV artifact hashes'}</button>
+              <button className="btn disabled:opacity-40" disabled={!pkg || !packageBinding || busy !== null} onClick={() => run('dispatch', async (api) => { const value = await api.stageSourcingDispatch(round.round.round_id, pkg!.package.manifest_sha256, `browser-${pkg!.package.manifest_sha256}`); setDispatch(value); await appendProductEvent({ sourceLane: 'sourcing', eventType: 'sourcing.dispatch_staged', summary: `${value.dispatch.dispatch_id} · external send ${String(value.dispatch.external_send)} · network calls ${value.dispatch.network_calls}.`, actorId: actor, actorAttestation: 'OPERATOR_ACTION_RECORDED', revisionId: packageBinding!.revisionId, artifacts: [{ artifactId: `cad:${packageBinding!.revisionId}`, kind: 'cad-geometry', sha256: packageBinding!.cadArtifactSha256 }, { artifactId: `bom-csv:${packageBinding!.revisionId}`, kind: 'BOM_CSV_ARTIFACT_SHA256', sha256: packageBinding!.bomCsvArtifactSha256 }, { artifactId: `sourcing-manifest:${round.round.round_id}`, kind: 'sourcing-package-manifest', sha256: value.dispatch.manifest_sha256 }], payload: { dispatchId: value.dispatch.dispatch_id, externalSend: value.dispatch.external_send, networkCalls: value.dispatch.network_calls, idempotencyKey: value.dispatch.idempotency_key, bomIdentity: 'BOM_CSV_ARTIFACT_SHA256', semanticBomDigest: packageBinding!.semanticBomDigest } }); })}>{dispatch ? 'Retry same idempotency key' : 'Stage dispatch · zero send'}</button>
             </div>
           </div>
         )}
-        {pkg && <div className="border border-line rounded-r p-2 font-mono text-[12px] break-all">SEALED · reread {String(pkg.package.byte_reread_verified)} · payload {pkg.package.payload_sha256} · manifest {pkg.package.manifest_sha256} · {pkg.package.dispatch_ceiling}</div>}
+        {pkg && <div className="border border-line rounded-r p-2 font-mono text-[12px] break-all">SEALED · reread {String(pkg.package.byte_reread_verified)} · payload {pkg.package.payload_sha256} · manifest {pkg.package.manifest_sha256} · {pkg.package.dispatch_ceiling}{packageBinding ? ` · product-thread bound to CAD ${packageBinding.revisionId}, geometry ${packageBinding.cadArtifactSha256}, artifact manifest ${packageBinding.artifactManifestSha256}, BOM CSV artifact ${packageBinding.bomCsvArtifactSha256}, semantic BOM digest ${packageBinding.semanticBomDigest}` : ' · BLOCKED: no exact CAD/BOM CSV artifact binding'}</div>}
         {dispatch && <div className="border border-line rounded-r p-2 text-[12px]"><b>{dispatch.status}</b> · external_send {String(dispatch.dispatch.external_send)} · network_calls {dispatch.dispatch.network_calls} · retry returns the same staged receipt</div>}
         {pkg && (
           <div className="border border-line rounded-r p-3 grid gap-3" aria-label="Operator order lifecycle rehearsal">
@@ -190,7 +217,7 @@ export function ServiceSourcing() {
             </div>
             <div className="text-[12px] text-muted">This rehearses hash-linked, client-carried demo records against the sealed fixture package. They are not durable, externally authenticated, or globally replay-protected. No supplier receives a message, request, acknowledgement, or order.</div>
             <div className="flex flex-wrap items-end gap-2">
-              <button className="btn btn-primary disabled:opacity-40" disabled={orderBusy !== null} onClick={() => void runOrder('validate-order-package', async (api) => { const value = await api.validateSourcingPackage(pkg.package); setValidatedManifest(value.package?.manifest_sha256 ?? null); return value; })}>{orderBusy === 'validate-order-package' ? 'Validating…' : validatedManifest ? 'Package validated' : '1 · Validate package bytes'}</button>
+              <button className="btn btn-primary disabled:opacity-40" disabled={orderBusy !== null || !packageBinding} onClick={() => void runOrder('validate-order-package', async (api) => { const value = await api.validateSourcingPackage(pkg.package); setValidatedManifest(value.package?.manifest_sha256 ?? null); return value; })}>{orderBusy === 'validate-order-package' ? 'Validating…' : validatedManifest ? 'Package validated' : '1 · Validate package bytes'}</button>
               <label className="grid gap-1 text-muted">simulated recording outcome<select value={recordingOutcome} onChange={(event) => setRecordingOutcome(event.target.value as RecordingOutcome)} className="field text-ink" disabled={orderBusy !== null}><option value="DISPATCHED">DISPATCHED</option><option value="ACKNOWLEDGED">ACKNOWLEDGED</option><option value="EXCEPTION">EXCEPTION · known not sent</option><option value="UNKNOWN">UNKNOWN · reconciliation required</option></select></label>
               <label className="grid gap-1 text-muted min-w-[240px] flex-1">idempotency key<input value={orderKey} onChange={(event) => setOrderKey(event.target.value)} className="field font-mono text-ink" disabled={orderBusy !== null} /></label>
               <button className="btn btn-primary disabled:opacity-40" disabled={!validatedManifest || !orderKey.trim() || orderBusy !== null} onClick={() => void runOrder('record-dispatch', (api) => api.dispatchRecording({ manifest_sha256: validatedManifest!, recording_outcome: recordingOutcome, idempotency_key: orderKey.trim(), route_ref: 'supplier:recording-demo-only', actor_id: actor, occurred_at: now() }))}>{orderBusy === 'record-dispatch' ? 'Recording…' : '2 · Record simulated dispatch'}</button>

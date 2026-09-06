@@ -17,6 +17,34 @@ Three tabs: **Design**, **Classification** (parts of concern, why each trips, th
 
 URL switches: `?demo=1` shows the caption bar (→ / Space advances the eight-step scenario) · `?theme=dark` · `?service=unreachable` shows the cached-baseline banner.
 
+## Integrated Vercel preview routing
+
+Vercel serves `/api/candidate` and `/api/now` from this frontend project. Every other supported same-origin `/api/*` request goes through the closed dynamic function in `api/[...path].ts`; `vercel.json` contains no external product-service rewrite.
+
+The proxy has no implicit upstream. Set this runtime environment variable on each frontend deployment:
+
+```bash
+CADDYDADDY_PRODUCT_SERVICE_URL=https://<exact-product-service-deployment>.vercel.app
+```
+
+The value must be an exact HTTPS `*.vercel.app` origin with no credentials, port, path, query, or fragment. Missing or invalid configuration returns `503`; unknown paths, unsafe verbs, non-JSON or oversized bodies, redirects, and non-JSON or oversized responses fail closed. Browser cookies, authorization, origin, forwarding, and arbitrary request headers are never relayed. `X-CADdyDaddy-Live-Token` is relayed only to `/api/classification`.
+
+Deploy an integrated preview without promoting either component:
+
+```bash
+# 1. Deploy product service without --prod and retain its immutable URL.
+cd apps/product-service/vercel
+PRODUCT_SERVICE_DEPLOYMENT_URL="$(vercel deploy)"
+
+# 2. Deploy this frontend without --prod, binding that exact service URL.
+cd ../../../frontend
+vercel deploy \
+  --env CADDYDADDY_PRODUCT_SERVICE_URL="$PRODUCT_SERVICE_DEPLOYMENT_URL" \
+  --env CADDYDADDY_BACKEND_COMMIT_SHA="<40-character-product-service-commit>"
+```
+
+Smoke the returned frontend URL before promotion. Confirm `/api/candidate` reports the expected backend identity, `/api/now` remains read-only, and one allowed POST reaches only the exact preview service. Production must also set `CADDYDADDY_PRODUCT_SERVICE_URL` explicitly; to retain the current stable service, set it explicitly to `https://caddydaddy-product-service.vercel.app`. Never promote a frontend whose runtime target is missing, invalid, or points at an unverified service candidate.
+
 ## Interaction model
 
 - **Browser → bracket.** The left panel is a Fusion-style browser: the document, its settings, the airframe with its bodies (eye toggles) and feature history, and one generic row per component type (Battery pack, Thermal sensor, IMU, Flight controller). Drag an unplaced component onto the plate to place it where you drop it, or click it. A slot with no part renders as a dashed footprint. The specific model is chosen in Spec.

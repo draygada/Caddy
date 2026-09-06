@@ -49,7 +49,7 @@ SketchEntity = LineEntity | ArcEntity | CircleEntity
 
 class SketchLoop(StrictModel):
     loop_id: str = Field(min_length=1)
-    entities: list[SketchEntity] = Field(min_length=1)
+    entities: list[SketchEntity] = Field(min_length=1, max_length=512)
 
 
 class SketchConstraint(StrictModel):
@@ -64,14 +64,14 @@ class Sketch(StrictModel):
     sketch_id: str = Field(min_length=1)
     plane: Literal["XY", "XZ", "YZ"]
     origin: Vector3 = Field(default_factory=Vector3)
-    loops: list[SketchLoop] = Field(min_length=1)
-    constraints: list[SketchConstraint] = Field(default_factory=list)
+    loops: list[SketchLoop] = Field(min_length=1, max_length=64)
+    constraints: list[SketchConstraint] = Field(default_factory=list, max_length=512)
 
 
 class Feature(StrictModel):
     feature_id: str = Field(min_length=1)
     kind: str = Field(min_length=1)
-    depends_on: list[str] = Field(default_factory=list)
+    depends_on: list[str] = Field(default_factory=list, max_length=128)
     output_body_id: str | None = None
     parameters: dict[str, Any] = Field(default_factory=dict)
     enabled: bool = True
@@ -82,9 +82,9 @@ class CadDocument(StrictModel):
     document_id: str = Field(min_length=1)
     parent_revision_id: str | None = None
     units: Literal["mm"] = "mm"
-    sketches: list[Sketch] = Field(default_factory=list)
-    features: list[Feature] = Field(min_length=1)
-    metadata: dict[str, str] = Field(default_factory=dict)
+    sketches: list[Sketch] = Field(default_factory=list, max_length=64)
+    features: list[Feature] = Field(min_length=1, max_length=128)
+    metadata: dict[str, str] = Field(default_factory=dict, max_length=64)
 
 
 class RecomputeRequest(StrictModel):
@@ -92,8 +92,8 @@ class RecomputeRequest(StrictModel):
     expected_base_revision_id: str | None = None
     base_document: CadDocument | None = None
     candidate_document: CadDocument
-    linear_deflection_mm: float = Field(default=0.25, gt=0)
-    angular_deflection_deg: float = Field(default=15.0, gt=0, le=90)
+    linear_deflection_mm: float = Field(default=0.25, ge=0.05, le=10)
+    angular_deflection_deg: float = Field(default=15.0, ge=1, le=90)
 
     @model_validator(mode="after")
     def paired_base(self) -> "RecomputeRequest":
@@ -112,7 +112,7 @@ class AssemblyInstance(StrictModel):
     instance_id: str = Field(min_length=1)
     body_id: str = Field(min_length=1)
     source_revision_id: str = Field(min_length=1)
-    brep_base64: str = Field(min_length=1)
+    brep_base64: str = Field(min_length=1, max_length=3_500_000)
     transform: TransformSpec = Field(default_factory=TransformSpec)
 
 
@@ -131,10 +131,10 @@ class AssemblyMate(StrictModel):
 class AssemblyRequest(StrictModel):
     schema_version: Literal["caddydaddy.assembly-request/1"] = "caddydaddy.assembly-request/1"
     assembly_id: str = Field(min_length=1)
-    instances: list[AssemblyInstance] = Field(min_length=1)
-    mates: list[AssemblyMate] = Field(default_factory=list)
-    linear_deflection_mm: float = Field(default=0.25, gt=0)
-    angular_deflection_deg: float = Field(default=15.0, gt=0, le=90)
+    instances: list[AssemblyInstance] = Field(min_length=1, max_length=64)
+    mates: list[AssemblyMate] = Field(default_factory=list, max_length=128)
+    linear_deflection_mm: float = Field(default=0.25, ge=0.05, le=10)
+    angular_deflection_deg: float = Field(default=15.0, ge=1, le=90)
 
 
 class ExchangeRequest(StrictModel):
@@ -142,12 +142,12 @@ class ExchangeRequest(StrictModel):
     request_id: str = Field(min_length=1)
     direction: Literal["IMPORT", "EXPORT"]
     format: str = Field(min_length=1)
-    content_base64: str = Field(min_length=1)
+    content_base64: str = Field(min_length=1, max_length=3_500_000)
     source_revision_id: str | None = None
     step_schema: Literal["AP242"] = "AP242"
     binary_stl: bool = True
-    linear_deflection_mm: float = Field(default=0.25, gt=0)
-    angular_deflection_deg: float = Field(default=15.0, gt=0, le=90)
+    linear_deflection_mm: float = Field(default=0.25, ge=0.05, le=10)
+    angular_deflection_deg: float = Field(default=15.0, ge=1, le=90)
 
 
 class Diagnostic(StrictModel):

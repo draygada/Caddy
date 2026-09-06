@@ -44,6 +44,12 @@ def _fact(path: str, raw: object, unit: str | None) -> Fact:
     return Fact(path, "unknown" if unknown else ("" if raw is None else str(raw)), unit, unknown)
 
 
+def _add_fact(facts: dict[str, Fact], path: str, raw: object, unit: str | None) -> None:
+    if path in facts:
+        raise ValueError(f"duplicate fact path: {path!r}")
+    facts[path] = _fact(path, raw, unit)
+
+
 def _finish(part_revision_id: str | None, item_kind: str, description: str, facts: dict[str, Fact]) -> FactSnapshot:
     if item_kind not in ITEM_KINDS:
         raise ValueError(f"item_kind must be one of {ITEM_KINDS}, got {item_kind!r}")
@@ -62,9 +68,9 @@ def _extra_facts(facts: dict[str, Fact], extra: Iterable[dict] | dict | None) ->
     items = extra.items() if isinstance(extra, dict) else ((f["path"], f) for f in extra)
     for path, spec in items:
         if isinstance(spec, dict) and "value" in spec:
-            facts[path] = _fact(path, spec.get("value"), spec.get("unit"))
+            _add_fact(facts, path, spec.get("value"), spec.get("unit"))
         else:
-            facts[path] = _fact(path, spec, None)
+            _add_fact(facts, path, spec, None)
 
 
 def snapshot_from_product(description: str, facts: dict | list[dict] | None = None, *, item_kind: str = "commodity",
@@ -86,20 +92,23 @@ def snapshot_from_part_revision(part_revision: dict, facts: dict | list[dict] | 
     for _, param in sorted(doc.get("parameters", {}).items()):
         if param.get("literal") is None:
             continue
-        out[f"param.{param['name']}"] = _fact(f"param.{param['name']}", param["literal"], unit_by_type.get(param["value_type"]))
+        path = f"param.{param['name']}"
+        _add_fact(out, path, param["literal"], unit_by_type.get(param["value_type"]))
     descriptions: list[str] = []
     bom_seen = False
     for body in doc.get("bodies", []):
         bid = body["body_id"].split(":", 1)[-1]
         for key, value in sorted((body.get("metadata") or {}).items()):
-            out[f"body.{bid}.{key}"] = _fact(f"body.{bid}.{key}", value, None)
+            path = f"body.{bid}.{key}"
+            _add_fact(out, path, value, None)
         bom = body.get("bom_identity")
         if bom:
             prefix = "bom" if not bom_seen else f"bom.{bid}"
             bom_seen = True
             for key in ("part_number", "revision", "description"):
                 if bom.get(key) is not None:
-                    out[f"{prefix}.{key}"] = _fact(f"{prefix}.{key}", bom[key], None)
+                    path = f"{prefix}.{key}"
+                    _add_fact(out, path, bom[key], None)
             if bom.get("description"):
                 descriptions.append(str(bom["description"]))
     _extra_facts(out, facts)

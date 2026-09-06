@@ -9,6 +9,7 @@ import json
 import shutil
 import tempfile
 import urllib.request
+import zipfile
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -23,6 +24,10 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def sha256_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -70,32 +75,83 @@ def _artifact_records(runtime: dict[str, Any], sources: dict[str, Any]) -> Itera
                 yield artifact
 
 
-def _fetch_and_verify(records: Iterable[dict[str, Any]], cache: Path) -> list[str]:
+def _fetch_artifact(record: dict[str, Any], cache: Path) -> tuple[Path, list[str]]:
     errors: list[str] = []
     cache.mkdir(parents=True, exist_ok=True)
+    expected_hash = record["sha256"]
+    destination = cache / expected_hash
+    if not destination.is_file() or sha256_file(destination) != expected_hash:
+        request = urllib.request.Request(
+            record["url"],
+            headers={"User-Agent": "CADdyDaddy-redistribution-evidence/1"},
+        )
+        with urllib.request.urlopen(request, timeout=240) as response:
+            with destination.open("wb") as handle:
+                shutil.copyfileobj(response, handle)
+    actual_size = destination.stat().st_size
+    actual_hash = sha256_file(destination)
+    if actual_size != record["bytes"]:
+        errors.append(
+            f"download size mismatch: {record['url']}: "
+            f"{actual_size} != {record['bytes']}"
+        )
+    if actual_hash != expected_hash:
+        errors.append(
+            f"download sha256 mismatch: {record['url']}: "
+            f"{actual_hash} != {expected_hash}"
+        )
+    return destination, errors
+
+
+def _fetch_and_verify(records: Iterable[dict[str, Any]], cache: Path) -> list[str]:
+    errors: list[str] = []
     for record in records:
-        expected_hash = record["sha256"]
-        destination = cache / expected_hash
-        if not destination.is_file() or sha256_file(destination) != expected_hash:
-            request = urllib.request.Request(
-                record["url"],
-                headers={"User-Agent": "CADdyDaddy-redistribution-evidence/1"},
-            )
-            with urllib.request.urlopen(request, timeout=240) as response:
-                with destination.open("wb") as handle:
-                    shutil.copyfileobj(response, handle)
-        actual_size = destination.stat().st_size
-        actual_hash = sha256_file(destination)
-        if actual_size != record["bytes"]:
-            errors.append(
-                f"download size mismatch: {record['url']}: "
-                f"{actual_size} != {record['bytes']}"
-            )
-        if actual_hash != expected_hash:
-            errors.append(
-                f"download sha256 mismatch: {record['url']}: "
-                f"{actual_hash} != {expected_hash}"
-            )
+        _, artifact_errors = _fetch_artifact(record, cache)
+        errors.extend(artifact_errors)
+    return errors
+
+
+def _verify_embedded_wheel_evidence(
+    runtime: dict[str, Any],
+    cache: Path,
+) -> list[str]:
+    errors: list[str] = []
+    for component in runtime.get("components", []):
+        records = component.get("wheel_evidence", [])
+        if not records:
+            continue
+        artifact = component.get("package_artifact")
+        if not artifact:
+            errors.append(f"wheel evidence has no package artifact: {component.get('id')}")
+            continue
+        wheel, artifact_errors = _fetch_artifact(artifact, cache)
+        errors.extend(artifact_errors)
+        if artifact_errors:
+            continue
+        try:
+            with zipfile.ZipFile(wheel) as archive:
+                names = set(archive.namelist())
+                for record in records:
+                    wheel_path = record.get("wheel_path")
+                    if wheel_path not in names:
+                        errors.append(
+                            f"missing wheel evidence member: {component.get('id')}: {wheel_path}"
+                        )
+                        continue
+                    content = archive.read(wheel_path)
+                    if len(content) != record.get("bytes"):
+                        errors.append(
+                            f"wheel evidence size mismatch: {wheel_path}: "
+                            f"{len(content)} != {record.get('bytes')}"
+                        )
+                    actual_hash = sha256_bytes(content)
+                    if actual_hash != record.get("sha256"):
+                        errors.append(
+                            f"wheel evidence sha256 mismatch: {wheel_path}: "
+                            f"{actual_hash} != {record.get('sha256')}"
+                        )
+        except zipfile.BadZipFile:
+            errors.append(f"invalid wheel archive: {component.get('id')}")
     return errors
 
 
@@ -224,23 +280,31 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--site-packages", type=Path)
     parser.add_argument("--fetch-all-artifacts", action="store_true")
+    parser.add_argument("--verify-wheel-artifacts", action="store_true")
     parser.add_argument("--cache-dir", type=Path)
     args = parser.parse_args()
 
     errors, summary = verify_evidence(site_packages=args.site_packages)
-    if args.fetch_all_artifacts:
+    if args.fetch_all_artifacts or args.verify_wheel_artifacts:
         runtime = _load_json(SERVICE_ROOT / RUNTIME_MANIFEST)
         sources = _load_json(SERVICE_ROOT / SOURCE_MANIFEST)
+        def verify_downloads(cache: Path) -> None:
+            if args.fetch_all_artifacts:
+                errors.extend(
+                    _fetch_and_verify(_artifact_records(runtime, sources), cache)
+                )
+            if args.verify_wheel_artifacts:
+                errors.extend(_verify_embedded_wheel_evidence(runtime, cache))
+
         if args.cache_dir is None:
             with tempfile.TemporaryDirectory(prefix="caddydaddy-source-") as directory:
-                errors.extend(
-                    _fetch_and_verify(_artifact_records(runtime, sources), Path(directory))
-                )
+                verify_downloads(Path(directory))
         else:
-            errors.extend(
-                _fetch_and_verify(_artifact_records(runtime, sources), args.cache_dir)
-            )
-        summary["artifact_fetch"] = "PASS" if not errors else "HOLD"
+            verify_downloads(args.cache_dir)
+        if args.fetch_all_artifacts:
+            summary["artifact_fetch"] = "PASS" if not errors else "HOLD"
+        if args.verify_wheel_artifacts:
+            summary["wheel_artifact_verification"] = "PASS" if not errors else "HOLD"
         summary["errors"] = errors
         summary["factual_evidence"] = "PASS" if not errors else "HOLD"
 

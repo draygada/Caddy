@@ -8,10 +8,15 @@ client = TestClient(app)
 
 def test_health_and_capabilities_are_honest() -> None:
     assert client.get("/health").json() == {"status": "ok", "service": "cad-service", "execution": "real-occt"}
+    ready = client.get("/ready")
+    assert ready.status_code == 200
+    assert ready.json()["proof"]["primitive"] == "valid-1mm-box"
+    assert ready.json()["execution"] == "isolated-real-occt"
     capabilities = client.get("/v1/capabilities").json()
     assert capabilities["kernel"]["name"] == "OpenCascade"
     assert capabilities["constraints"]["mode"] == "VALIDATE_ONLY"
     assert "NATIVE_ASSEMBLY" in capabilities["exchange"]["unsupported"]
+    assert capabilities["deployment"]["execution"] == "SUBPROCESS_ISOLATED"
 
 
 def test_kernel_diagnostic_is_structured_http_422() -> None:
