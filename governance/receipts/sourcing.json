@@ -14,20 +14,20 @@
     "writer_id": "charlie-haywood/claude-code-session",
     "task_id": "sourcing-lane-2026-09-05",
     "model": "claude-fable-5-1",
-    "authority": "Charlie Haywood, in-session instructions 2026-09-05/06: implement the sourcing backend per the DNHacks engineering direction and feature specs, then the part-search lane of the 2026-09-05 agentic part-search research on a separate branch off lane/sourcing; 2026-09-06: apply the six plan-mandated rulings P-A\u2026P-F as recommended, plus residuals R-1/R-2, on lane/sourcing-rulings off merged main"
+    "authority": "Charlie Haywood, in-session instructions 2026-09-05/06: implement the sourcing backend per the DNHacks engineering direction and feature specs, then the part-search lane of the 2026-09-05 agentic part-search research on a separate branch off lane/sourcing; 2026-09-06: apply the six plan-mandated rulings P-A\u2026P-F as recommended, plus residuals R-1/R-2, on lane/sourcing-rulings off merged main; 2026-09-06: close the three Minor findings from the merge-gate review of lane/sourcing-rulings (smallest change, a covering test each, nothing outside custody)"
   },
   "lease_acquired_at": "2026-09-06T00:20:00Z",
   "renew_by": null,
   "expires_at": null,
-  "candidate_commit": "6e51feace56e8e55a8eb5a7d545f97c22459033f",
+  "candidate_commit": "1ba3aa0bc37b6f29cf7224d1ff4572434d049301",
   "registry_status": "NOT_ADMITTED \u2014 proposal at packages/sourcing/handoff/custody-lane-entry.proposed.json",
   "now_observation": {
     "schema_version": "1.0.0",
-    "observed_at": "2026-09-06T12:41:53Z",
+    "observed_at": "2026-09-06T13:09:00Z",
     "worktree_label": "forge/sourcing",
     "task": {
       "id": "sourcing-lane-2026-09-05",
-      "title": "Sourcing lane + search lane (byte-verified proposer on copies), live refresh scripts, HTTP adapter and page, engine adapter; Charlie's 2026-09-06 rulings applied",
+      "title": "Sourcing lane + search lane (byte-verified proposer on copies), live refresh scripts, HTTP adapter and page, engine adapter; Charlie's 2026-09-06 rulings applied and the three merge-gate Minor findings closed",
       "evidence_class": "MEASURED",
       "evidence_ref": "packages/sourcing/HANDOFF.md"
     },
@@ -48,18 +48,18 @@
     "lane_state": {
       "value": "IMPLEMENTED_LOCAL_UNADMITTED",
       "evidence_class": "MEASURED",
-      "evidence_ref": "git:6e51feace56e8e55a8eb5a7d545f97c22459033f"
+      "evidence_ref": "git:1ba3aa0bc37b6f29cf7224d1ff4572434d049301"
     },
     "current_action": {
-      "value": "Charlie's six plan-mandated rulings (P-A honest CSL date, P-B GREEN names deferred tree rows, P-C not-guards honoured fail-closed, P-D canonical check matched|not_checked never differs, P-E root product's determination carried, P-F candidate envelope on 409) and two residuals (R-1 refine quantity 422, R-2 glued letters never bind) committed on lane/sourcing-rulings with covering tests (173 passed); handoff and receipt refreshed; awaiting review and merge; Charlie's live cache recording still owed",
+      "value": "Charlie's six plan-mandated rulings (P-A honest CSL date, P-B GREEN names deferred tree rows, P-C not-guards honoured fail-closed, P-D canonical check matched|not_checked never differs, P-E root product's determination carried, P-F candidate envelope on 409) and two residuals (R-1 refine quantity 422, R-2 glued letters never bind) committed on lane/sourcing-rulings with covering tests, then the three merge-gate Minor findings closed on top (the missing-key 422 raised on the path so it travels with a router-only mount; a `not` operand keyed `all` is ONE conjunctive guard instead of two fail-open ones; the Makefile's custody base read from `git merge-base origin/main HEAD`) with a covering test each (174 passed); handoff and receipt refreshed; awaiting review and merge; Charlie's live cache recording still owed",
       "evidence_class": "MEASURED",
       "evidence_ref": "packages/sourcing/HANDOFF.md"
     },
     "last_evidenced_change": {
       "kind": "commit",
-      "occurred_at": "2026-09-06T12:41:08Z",
+      "occurred_at": "2026-09-06T13:06:08Z",
       "evidence_class": "MEASURED",
-      "evidence_ref": "git:6e51feace56e8e55a8eb5a7d545f97c22459033f"
+      "evidence_ref": "git:1ba3aa0bc37b6f29cf7224d1ff4572434d049301"
     },
     "blockers": [
       {
@@ -112,16 +112,16 @@
       {
         "name": "pytest tests/sourcing",
         "state": "PASSED",
-        "observed_at": "2026-09-06T12:41:53Z",
-        "candidate": "6e51feace56e8e55a8eb5a7d545f97c22459033f",
+        "observed_at": "2026-09-06T13:09:00Z",
+        "candidate": "1ba3aa0bc37b6f29cf7224d1ff4572434d049301",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/HANDOFF.md"
       },
       {
         "name": "tools/check_custody.py --lane sourcing (patched copy, over the repository registry merged with the lane's proposal; base = this branch's merge-base with main)",
         "state": "PASSED",
-        "observed_at": "2026-09-06T12:41:53Z",
-        "candidate": "6e51feace56e8e55a8eb5a7d545f97c22459033f",
+        "observed_at": "2026-09-06T13:09:00Z",
+        "candidate": "1ba3aa0bc37b6f29cf7224d1ff4572434d049301",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/HANDOFF.md"
       }
