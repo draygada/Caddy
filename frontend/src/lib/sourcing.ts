@@ -79,8 +79,8 @@ const PART_ECCN: Record<PartId, string> = {
   p45b: 'EAR99 · Molicel product page · 2026-08-20', amprius: 'EAR99 · Amprius spec sheet · 2026-08-22', lepton: '6A003.b.4.a · Teledyne FLIR · 2026-07-30', boson: '6A003.b.4.b · Teledyne FLIR · 2026-07-30',
   icm: 'EAR99 · TDK InvenSense · 2026-06-11', hg5700: '7A002.a.1.a · Honeywell · 2026-05-02', imung: 'not yet classified · SYNTHETIC part', acc120: 'not yet classified · SYNTHETIC part', h743: '3A991.a.2 · STMicroelectronics · 2026-03-15', h753: '5A992.c · STMicroelectronics self-classification · 2026-03-15', h743m: 'not yet classified · SYNTHETIC part',
   neom9n: '7A994 · u-blox · 2026-04-01', crpa: 'not yet classified · SYNTHETIC part', mcode: 'not yet classified · SYNTHETIC part', pmddl: '5A992.c · Microhard self-classification · 2026-02-19', aescustom: 'not yet classified · SYNTHETIC part', podeo: 'EAR99 · in-house',
-  imx477: 'EAR99 · Sony product page · 2026-06-02', lw20: 'EAR99 · LightWare spec sheet · 2026-05-14', alpha80: 'EAR99 · T-Motor product page · 2026-04-22', at7215: 'EAR99 · T-Motor product page · 2026-04-22', bls6120: 'EAR99 · Hitec product page · 2026-03-30',
-  ms4525: 'EAR99 · TE Connectivity datasheet · 2026-02-11', ping200: '7A994 · uAvionix self-classification · 2026-05-05', orinnano: '4A994 · NVIDIA export page · 2026-06-18', ant2400: 'EAR99 · Laird datasheet · 2026-01-27', ifc60: 'EAR99 · Fruity Chutes product page · 2026-03-03',
+  imx477: 'EAR99 · Sony product page · 2026-06-02', lw20: 'EAR99 · LightWare spec sheet · 2026-05-14', alpha80: 'EAR99 · T-Motor product page · 2026-04-22', at7215: 'EAR99 · T-Motor product page · 2026-04-22', hv6120: 'EAR99 · MKS product page · 2026-03-30',
+  ms4525: 'EAR99 · TE Connectivity datasheet · 2026-02-11', ping200: '7A994 · uAvionix self-classification · 2026-05-05', orinnano: '4A994 · NVIDIA export page · 2026-06-18', hg2409p: 'EAR99 · L-com datasheet · 2026-01-27', ifc60: 'EAR99 · Fruity Chutes product page · 2026-03-03',
 };
 const PART_VALUE = (pid: PartId) => CATALOG[pid].value_usd;
 

@@ -9,7 +9,7 @@ export type Slot = CoreSlot | ExtraSlot;
 export type Node = Slot | 'airframe';
 export type PartId =
   | 'p45b' | 'amprius' | 'lepton' | 'boson' | 'icm' | 'hg5700' | 'imung' | 'acc120' | 'h743' | 'h753' | 'h743m' | 'neom9n' | 'crpa' | 'mcode' | 'pmddl' | 'aescustom' | 'podeo'
-  | 'imx477' | 'lw20' | 'alpha80' | 'at7215' | 'bls6120' | 'ms4525' | 'ping200' | 'orinnano' | 'ant2400' | 'ifc60';
+  | 'imx477' | 'lw20' | 'alpha80' | 'at7215' | 'hv6120' | 'ms4525' | 'ping200' | 'orinnano' | 'hg2409p' | 'ifc60';
 export type CmpKey = 'function' | 'performance' | 'form' | 'fit';
 export const CMP_KEYS: CmpKey[] = ['function', 'performance', 'form', 'fit'];
 
@@ -136,11 +136,11 @@ export const CATALOG: Record<PartId, Part> = {
   lw20: { slot: 'lidar', name: 'LiDAR rangefinder · 100 m', mpn: 'LW20/C', vendor: 'LightWare', origin: 'ZA', real: true, stock: 'in stock · 2 wk', attrs: {}, cmp: { function: 'laser altimetry', performance: '100 m · 388 Hz', form: '30×20×43 mm · 20 g', fit: 'I2C or serial' }, value_usd: 300 },
   alpha80: { slot: 'esc', name: 'Motor controller · 80 A · 12S', mpn: 'Alpha 80A HV', vendor: 'T-Motor', origin: 'CN', real: true, stock: 'in stock · 2 wk', attrs: {}, cmp: { function: 'brushless speed control', performance: '80 A continuous · 6S to 12S', form: '77×47×19 mm · 110 g', fit: 'PWM · XT90' }, value_usd: 130 },
   at7215: { slot: 'motor', name: 'Propulsion motor · 3,600 W', mpn: 'AT7215 KV150', vendor: 'T-Motor', origin: 'CN', real: true, stock: 'in stock · 3 wk', attrs: {}, cmp: { function: 'fixed-wing propulsion', performance: '3,600 W · 150 KV', form: '72 mm outrunner · 400 g', fit: 'M4 cross mount' }, value_usd: 260 },
-  bls6120: { slot: 'servo', name: 'Control-surface servo · 12 kg·cm', mpn: 'BLS-HV6120', vendor: 'Hitec', origin: 'PH', real: true, stock: 'in stock · 1 wk', attrs: {}, cmp: { function: 'control-surface actuation', performance: '12 kg·cm · 0.11 s/60°', form: 'standard case · 60 g', fit: 'PWM · 3-pin' }, value_usd: 90 },
+  hv6120: { slot: 'servo', name: 'Control-surface servo · 5.4 kg·cm · slim wing', mpn: 'HV6120', vendor: 'MKS Servos', origin: 'TW', real: true, stock: 'in stock · 1 wk', attrs: {}, cmp: { function: 'control-surface actuation', performance: '5.4 kg·cm · 0.08 s/60° · HV brushless', form: '23 × 8 × 26.5 mm slim case · 11 g', fit: 'PWM · 3-pin' }, value_usd: 75 },
   ms4525: { slot: 'airspeed', name: 'Airspeed sensor · digital pitot', mpn: 'MS4525DO', vendor: 'TE Connectivity', origin: 'US', real: true, stock: 'in stock · 1 wk', attrs: {}, cmp: { function: 'differential pressure', performance: '±1 psi · 14-bit', form: 'sensor + pitot tube · 12 g', fit: 'I2C' }, value_usd: 45 },
   ping200: { slot: 'transponder', name: 'ADS-B transponder · 20 W · Mode S', mpn: 'ping200X', vendor: 'uAvionix', origin: 'US', real: true, stock: 'in stock · 3 wk', attrs: {}, cmp: { function: 'ADS-B out · Mode S', performance: '20 W · TSO-C112e', form: '47×36×11 mm · 50 g', fit: 'serial · SMA' }, value_usd: 2000 },
   orinnano: { slot: 'companion', name: 'Companion computer · 40 TOPS', mpn: 'Jetson Orin Nano 8GB', vendor: 'NVIDIA', origin: 'CN', real: true, stock: 'in stock · 2 wk', attrs: {}, cmp: { function: 'onboard compute', performance: '40 TOPS · 8 GB', form: '70×45 mm module on carrier · 140 g', fit: 'Ethernet · USB · CSI' }, value_usd: 250 },
-  ant2400: { slot: 'antenna', name: 'Telemetry antenna · 2.4 GHz · 8 dBi', mpn: 'RE8-2400', vendor: 'Laird Connectivity', origin: 'US', real: true, stock: 'in stock · 1 wk', attrs: {}, cmp: { function: 'directional telemetry', performance: '8 dBi · 2.4 GHz', form: 'patch · 40 g', fit: 'SMA' }, value_usd: 55 },
+  hg2409p: { slot: 'antenna', name: 'Telemetry antenna · 2.4 GHz · 9 dBi flat patch', mpn: 'HG2409P', vendor: 'L-com', origin: 'US', real: true, stock: 'in stock · 1 wk', attrs: {}, cmp: { function: 'directional telemetry', performance: '9 dBi · 2.4 GHz · 60° beam', form: '114 × 114 × 32 mm flat panel · 0.2 kg', fit: 'N-female · SMA pigtail' }, value_usd: 55 },
   ifc60: { slot: 'parachute', name: 'Recovery parachute · 8 kg', mpn: 'IFC-60-S', vendor: 'Fruity Chutes', origin: 'US', real: true, stock: 'built to order · 4 wk', attrs: {}, cmp: { function: 'ballistic recovery', performance: '8 kg at 4.5 m/s', form: '60 in canopy · 300 g', fit: 'servo release' }, value_usd: 480 },
 };
 
@@ -155,7 +155,7 @@ export const PALETTE: Record<Slot, PartId[]> = {
   gnss: ['crpa', 'mcode', 'neom9n'],
   datalink: ['aescustom', 'pmddl'],
   pod: ['podeo'],
-  camera: ['imx477'], lidar: ['lw20'], esc: ['alpha80'], motor: ['at7215'], servo: ['bls6120'], airspeed: ['ms4525'], transponder: ['ping200'], companion: ['orinnano'], antenna: ['ant2400'], parachute: ['ifc60'],
+  camera: ['imx477'], lidar: ['lw20'], esc: ['alpha80'], motor: ['at7215'], servo: ['hv6120'], airspeed: ['ms4525'], transponder: ['ping200'], companion: ['orinnano'], antenna: ['hg2409p'], parachute: ['ifc60'],
 };
 
 /** Editable regulated fields per slot, with the valid input range the spec panel enforces. */
@@ -233,7 +233,7 @@ export const BASELINE_PARTS: Record<Slot, PartId | null> = { battery: 'p45b', th
 /** The model placed when a generic component is dragged in from the palette. */
 export const DEFAULT_PART: Record<Slot, PartId> = {
   battery: 'p45b', thermal: 'lepton', imu: 'icm', fc: 'h743', gnss: 'neom9n', datalink: 'pmddl', pod: 'podeo',
-  camera: 'imx477', lidar: 'lw20', esc: 'alpha80', motor: 'at7215', servo: 'bls6120', airspeed: 'ms4525', transponder: 'ping200', companion: 'orinnano', antenna: 'ant2400', parachute: 'ifc60',
+  camera: 'imx477', lidar: 'lw20', esc: 'alpha80', motor: 'at7215', servo: 'hv6120', airspeed: 'ms4525', transponder: 'ping200', companion: 'orinnano', antenna: 'hg2409p', parachute: 'ifc60',
 };
 
 export const AIRFRAME = { name: 'Kestrel airframe', mpn: 'KSTRL-AF-01', vendor: 'in-house', origin: 'US', real: true as const };
