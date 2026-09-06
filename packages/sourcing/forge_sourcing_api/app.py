@@ -15,7 +15,9 @@ from pathlib import Path
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from forge_search.model import Budget
 from forge_search.propose import default_ports, propose_alternative, propose_escalation
+from forge_sourcing.fixtures import design_state
 from forge_sourcing.gate import GateRefused
 from forge_sourcing.order import OrderRefused
 from forge_sourcing.package import PackageRefused
@@ -35,7 +37,7 @@ FEATURES = {"F-07": "test_7_the_poisoned_page", "F-08": "test_propose_alternativ
 app = FastAPI(title="Strafe Forge sourcing lane")
 router = APIRouter()
 SVC = Service(DATA, csl_file=os.environ.get("FORGE_CSL_PATH") or None)
-PORTS = default_ports(DATA, mode=MODE, offline=(MODE != "live"))
+PORTS = default_ports(DATA, mode=MODE, offline=(MODE != "live"), budget=Budget(calls_cap=40, cost_cap_microusd=5_000_000) if MODE == "live" else None)   # the $5 per-process cap, as record_cache.py
 STATES = json.loads((DATA / "kestrel_round_input.json").read_text(encoding="utf-8"))["states"]
 try:
     GIT_SHA = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip()
@@ -50,11 +52,26 @@ def _now() -> str:
 def _state(name: str) -> dict:
     if name not in STATES:
         raise HTTPException(status_code=422, detail={"error": "unknown state", "state": name, "states": sorted(STATES)})
-    base = STATES["baseline"]
-    if name == "baseline":
-        return base
-    st = STATES[name]
-    return {"design_hash": st["design_hash"], "design_seq": st["design_seq"], "product": st["product"], "nodes": [st["replace_nodes"].get(n["node_id"], n) for n in base["nodes"]]}
+    return design_state(STATES, name)                          # a copy: no round aliases the module-level fixture nodes
+
+
+def _int(value, name: str) -> int:
+    """A body integer. A bool, a float or a non-numeric string is the caller's mistake, said as a 422 — never truncated, never a 500."""
+    if isinstance(value, bool) or isinstance(value, float):
+        raise HTTPException(status_code=422, detail={"error": f"{name} must be an integer"})
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail={"error": f"{name} must be an integer"}) from None
+
+
+def _propose(rid: str, b: dict) -> dict:
+    kind = b.get("kind", "alternative")
+    if kind == "escalation":
+        return propose_escalation(SVC, rid, b["line_id"], b["reason"], PORTS, proposed_at=_now())
+    if kind == "alternative":
+        return propose_alternative(SVC, rid, b["line_id"], PORTS, proposed_at=_now())
+    raise HTTPException(status_code=422, detail={"error": "unknown kind", "kind": kind, "kinds": ["alternative", "escalation"]})
 
 
 def candidate() -> dict:
@@ -140,7 +157,7 @@ async def open_round(request: Request):
 
     def go():
         design = b["design"] if "design" in b else _state(b["state"])
-        r = SVC.open_round(design, ship_to=b["ship_to"], quantity=int(b.get("quantity", 1)), transport_mode=b.get("transport_mode", "air"),
+        r = SVC.open_round(design, ship_to=b["ship_to"], quantity=_int(b.get("quantity", 1), "quantity"), transport_mode=b.get("transport_mode", "air"),
                            request_key=b["request_key"], opened_at=b.get("opened_at") or _now())
         if b.get("run"):
             SVC.resolve(r["round_id"]); SVC.screen(r["round_id"]); SVC.cost(r["round_id"], entry_date=b.get("entry_date") or _now()[:10])
@@ -172,8 +189,7 @@ VERBS = {
     "gate": lambda rid, b: SVC.gate(rid, b.get("references")),
     "declare": lambda rid, b: SVC.declare(rid, party=b["party"], person_status=b["person_status"], sharing=b["sharing"], reference=b.get("reference"), attestor=b["attestor"]),
     "package": lambda rid, b: SVC.build_package(rid, built_at=b.get("built_at") or _now()),
-    "propose": lambda rid, b: (propose_escalation(SVC, rid, b["line_id"], b["reason"], PORTS, proposed_at=_now()) if b.get("kind") == "escalation"
-                               else propose_alternative(SVC, rid, b["line_id"], PORTS, proposed_at=_now())),
+    "propose": _propose,
     "accept_proposal": lambda rid, b: SVC.accept_proposal(rid, b["proposal_id"], attestor=b["attestor"]),
     "reject_proposal": lambda rid, b: SVC.reject_proposal(rid, b["proposal_id"], attestor=b["attestor"], reason=b.get("reason", "")),
 }
@@ -213,7 +229,7 @@ def rederive():
 @router.post("/tamper")
 async def tamper(request: Request):
     b = await read_body(request)
-    return run(lambda: SVC.tamper(int(b["seq"]), b["field"], b["value"]) or {"tampered": {"seq": b["seq"], "field": b["field"]}})
+    return run(lambda: SVC.tamper(_int(b["seq"], "seq"), b["field"], b["value"]) or {"tampered": {"seq": b["seq"], "field": b["field"]}})
 
 
 @app.get("/", response_class=HTMLResponse)

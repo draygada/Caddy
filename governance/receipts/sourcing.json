@@ -19,11 +19,11 @@
   "lease_acquired_at": "2026-09-06T00:20:00Z",
   "renew_by": null,
   "expires_at": null,
-  "candidate_commit": "6fd70505b7ca8dbfe89a723b19d843fa9890c295",
+  "candidate_commit": "6e710f0ff918f6813bc889ddbc1c6c1a62726a13",
   "registry_status": "NOT_ADMITTED — proposal at packages/sourcing/handoff/custody-lane-entry.proposed.json",
   "now_observation": {
     "schema_version": "1.0.0",
-    "observed_at": "2026-09-06T07:45:24Z",
+    "observed_at": "2026-09-06T08:42:07Z",
     "worktree_label": "forge/sourcing",
     "task": {
       "id": "sourcing-lane-2026-09-05",
@@ -48,18 +48,18 @@
     "lane_state": {
       "value": "IMPLEMENTED_LOCAL_UNADMITTED",
       "evidence_class": "MEASURED",
-      "evidence_ref": "git:6fd70505b7ca8dbfe89a723b19d843fa9890c295"
+      "evidence_ref": "git:6e710f0ff918f6813bc889ddbc1c6c1a62726a13"
     },
     "current_action": {
-      "value": "search lane, API and page committed on the lane branch; handoff rewritten; awaiting integrator admission and Charlie's live cache recording",
+      "value": "final fix pass after the whole-branch review committed on the lane branch (attestor guards before mutation, proposal lifecycle, verifier letter glue, redirect and NUL guards, budgeted live mode); handoff and receipt refreshed; awaiting the scoped re-review, integrator admission and Charlie's live cache recording",
       "evidence_class": "MEASURED",
       "evidence_ref": "packages/sourcing/HANDOFF.md"
     },
     "last_evidenced_change": {
       "kind": "commit",
-      "occurred_at": "2026-09-06T07:34:48Z",
+      "occurred_at": "2026-09-06T08:41:45Z",
       "evidence_class": "MEASURED",
-      "evidence_ref": "git:6fd70505b7ca8dbfe89a723b19d843fa9890c295"
+      "evidence_ref": "git:6e710f0ff918f6813bc889ddbc1c6c1a62726a13"
     },
     "blockers": [
       {
@@ -112,16 +112,16 @@
       {
         "name": "pytest tests/sourcing",
         "state": "PASSED",
-        "observed_at": "2026-09-06T07:45:24Z",
-        "candidate": "6fd70505b7ca8dbfe89a723b19d843fa9890c295",
+        "observed_at": "2026-09-06T08:42:07Z",
+        "candidate": "6e710f0ff918f6813bc889ddbc1c6c1a62726a13",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/HANDOFF.md"
       },
       {
         "name": "tools/check_custody.py --lane sourcing (patched copy, over the repository registry merged with the lane's proposal)",
         "state": "PASSED",
-        "observed_at": "2026-09-06T07:45:24Z",
-        "candidate": "6fd70505b7ca8dbfe89a723b19d843fa9890c295",
+        "observed_at": "2026-09-06T08:42:07Z",
+        "candidate": "6e710f0ff918f6813bc889ddbc1c6c1a62726a13",
         "evidence_class": "MEASURED",
         "evidence_ref": "packages/sourcing/HANDOFF.md"
       }

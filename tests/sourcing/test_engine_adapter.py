@@ -65,6 +65,8 @@ def test_the_848_row_becomes_the_amber_flag_and_a_bad_revision_is_refused():
     assert motor["flags"] == ["848_amber"] and motor["fired"] == [] and "848_amber" in motor["flag_text"]
     with pytest.raises(ValueError):
         design_for_round(design, {**resp, "design_revision": "nope"}, design_seq=6)
+    with pytest.raises(ValueError):                                     # M1: `$` matched before a trailing newline
+        design_for_round(design, {**resp, "design_revision": "sha256:" + "a" * 64 + "\n"}, design_seq=6)
 
 
 def test_a_cannot_evaluate_row_off_the_plain_lists_reaches_unresolved():
@@ -112,3 +114,39 @@ def test_an_established_line_keeps_its_kind_and_its_words():
     passed = build_declaration([line], party="assembler", person_status="foreign_person", sharing="controlled_drawings",
                                reference="ENC placeholder", attestor="charlie", seq=2)
     assert passed["blocked"] is False and any("reference typed, not validated" in w for w in passed["words"])
+
+
+def test_the_same_rule_from_two_cause_nodes_is_two_unresolved_rows():
+    """M2: dedupe keyed on rule_id alone merged a rule propagating from two children with different missing facts."""
+    from forge_sourcing_api.engine_adapter import design_for_round
+    design, resp = _load("kestrel-baseline.design.json"), _load("evaluate-camera-flag.json")
+    resp = json.loads(json.dumps(resp))
+    base = {"rule_id": "USML-XII(e)", "state": "cannot_evaluate", "jurisdiction": "ITAR", "entry": "XII(e)", "reason_for_control": [], "node_id": "fc_board",
+            "text": None, "source_url": None, "ecfr_date": None, "rule_effective": None, "evidence": None, "problem": "missing_fact"}
+    via_imu = {**base, "cause_node_id": "imu", "facts": [{"attribute": "gyro_arw", "observed": None}]}
+    via_gnss = {**base, "cause_node_id": "gnss", "facts": [{"attribute": "range_km", "observed": None}]}
+    resp["determinations"]["fc_board"] = {"state": "question", "jurisdiction": "EAR", "entries": [], "direct_tripwires": [], "propagated_tripwires": [via_imu, via_gnss],
+                                          "unresolved_tripwires": [via_imu], "evidence_level": "declared", "destinations": {"status": "not_evaluated", "reason": "P0"}}
+    ev = next(n for n in design_for_round(design, resp, design_seq=9)["nodes"] if n["node_id"] == "fc_board")["evaluation"]
+    assert ev["unresolved"] == [{"rule_id": "USML-XII(e)", "entry": "XII(e)", "problem": "missing_fact", "missing": ["gyro_arw"]},
+                                {"rule_id": "USML-XII(e)", "entry": "XII(e)", "problem": "missing_fact", "missing": ["range_km"]}]
+
+
+def test_an_adapter_built_round_says_nothing_forbidden(service):
+    """The engine's free text (destination notes, flag text, unresolved causes) reaches the words; scan it like every other round."""
+    from forge_sourcing_api.engine_adapter import design_for_round
+    from test_claims_vocabulary import entry_offenders, offenders, strings
+    from test_search_claims import SEARCH_NEVER
+    design = _load("kestrel-baseline.design.json")
+    seen = []
+    for i, name in enumerate(("evaluate-camera-flag.json", "evaluate-missing-evidence.json")):
+        d = design_for_round(design, _load(name), design_seq=10 + i)
+        r = service.open_round(d, ship_to="TW-assembly", quantity=1, transport_mode="air", request_key=f"engine-{i}", opened_at="2026-09-06T03:00:00Z")
+        rid = r["round_id"]
+        service.resolve(rid); service.screen(rid); service.cost(rid, entry_date="2026-09-06")
+        service.gate(rid)
+        service.declare(rid, party="assembler", person_status="foreign_person", sharing="controlled_drawings", reference="LIC-000", attestor="charlie")
+        seen += strings(service.round_view(rid), [])
+    seen += strings(service.thread.events, []) + [service.rederive()["line"]]
+    assert not offenders(seen, SEARCH_NEVER), offenders(seen, SEARCH_NEVER)[:5]
+    assert not entry_offenders(seen), entry_offenders(seen)[:5]

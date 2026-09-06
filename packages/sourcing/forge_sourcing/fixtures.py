@@ -3,10 +3,23 @@ from __future__ import annotations
 
 import csv
 import json
+from copy import deepcopy
 from pathlib import Path
 
 from .hashing import sha256, sha256_bytes
 from .screen import normalize
+
+
+def design_state(states: dict, name: str) -> dict:
+    """One design state of a `kestrel_round_input.json`-shaped `states` map, as an independent copy: the baseline, or a
+    named state's `replace_nodes` laid over the baseline's nodes. A copy every time, so a round never aliases the fixture."""
+    base = states["baseline"]
+    if name == "baseline":
+        return deepcopy(base)
+    st = states[name]
+    return deepcopy({"design_hash": st["design_hash"], "design_seq": st["design_seq"], "product": st["product"],
+                     "nodes": [st["replace_nodes"].get(n["node_id"], n) for n in base["nodes"]]})
+
 
 FILES = {
     "offers": "offers.json",

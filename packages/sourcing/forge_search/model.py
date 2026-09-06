@@ -135,30 +135,35 @@ class LiveAnthropicModel:
         self.calls: list[Call] = []
 
     def propose(self, kind: str, prompt: str, schema: dict) -> dict | Abstain:
+        response, usage = self._complete(kind, prompt, schema)
+        self.calls.append(Call(kind, prompt, response, usage))       # abstains included: calls[-1].usage is THIS call's, never the previous one's
+        return response
+
+    def _complete(self, kind: str, prompt: str, schema: dict) -> tuple[dict | Abstain, dict | None]:
+        """One provider call → (response or Abstain, usage or None). Usage is reported whenever tokens were spent, abstain or not."""
         try:
             import anthropic  # noqa: PLC0415 - deliberately lazy; pinned only in the `live` extra
         except ImportError:
-            return Abstain("anthropic sdk not installed")
+            return Abstain("anthropic sdk not installed"), None
         if not os.environ.get(self.api_key_env):
-            return Abstain("no api key in environment")
+            return Abstain("no api key in environment"), None
         model = MODEL_FOR_KIND.get(kind, "claude-opus-5")
         try:
             client = anthropic.Anthropic(timeout=self.timeout_seconds, max_retries=0)
             message = client.messages.create(model=model, max_tokens=self.max_tokens, messages=[{"role": "user", "content": prompt}],
                                              output_config={"format": {"type": "json_schema", "schema": schema}, "effort": "low"})
         except Exception as error:  # noqa: BLE001 - every provider failure is an abstain, never a guess
-            return Abstain(f"provider error: {type(error).__name__}")
+            return Abstain(f"provider error: {type(error).__name__}"), None
+        u = getattr(message, "usage", None)
+        usage = {"input_tokens": int(getattr(u, "input_tokens", 0) or 0), "output_tokens": int(getattr(u, "output_tokens", 0) or 0), "model": model}
         if getattr(message, "stop_reason", None) != "end_turn":
-            return Abstain(f"stop_reason {getattr(message, 'stop_reason', None)!r}")
+            return Abstain(f"stop_reason {getattr(message, 'stop_reason', None)!r}"), usage
         text = "".join(getattr(b, "text", "") for b in getattr(message, "content", []) if getattr(b, "type", None) == "text")
         try:
             response = json.loads(text)
         except ValueError:
-            return Abstain("response is not JSON")
-        u = getattr(message, "usage", None)
-        usage = {"input_tokens": int(getattr(u, "input_tokens", 0) or 0), "output_tokens": int(getattr(u, "output_tokens", 0) or 0), "model": model}
-        self.calls.append(Call(kind, prompt, response, usage))
-        return response
+            return Abstain("response is not JSON"), usage
+        return response, usage
 
 
 class RecordingModel:

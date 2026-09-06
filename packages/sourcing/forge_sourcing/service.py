@@ -118,6 +118,8 @@ class Service:
         self._append(rnd, "escalation_opened", line_id=line["line_id"], reason=reason, detail=detail)
 
     def resolve_escalation(self, round_id: str, line_id: str, reason: str, *, attestor: str, resolution: dict) -> dict:
+        if not attestor:                                        # before any mutation: the thread would refuse the terminal event, but the escalation would already read resolved
+            raise RoundRefused("an escalation resolution needs a human attestor")
         rnd = self._round(round_id)
         line = self._line(rnd, line_id)
         esc = next((e for e in line["escalations"] if e["reason"] == reason and e["state"] == "open"), None)
@@ -134,16 +136,26 @@ class Service:
             p = next(p for p in rnd["proposals"] if p["proposal_id"] == proposal_id)
         except StopIteration:
             raise RoundRefused(f"unknown proposal {proposal_id}") from None
-        if p.get("accepted_by") or p.get("rejected_by"):                # a proposal is resolved once: no second verb, no second event
-            raise RoundRefused(f"proposal {proposal_id} is already resolved by {p.get('accepted_by') or p.get('rejected_by')}")
+        if "accepted_by" in p or "rejected_by" in p:                     # a proposal is resolved once: no second verb, no second event
+            raise RoundRefused(f"proposal {proposal_id} is already resolved by {p['accepted_by'] if 'accepted_by' in p else p['rejected_by']}")
         return p
+
+    @staticmethod
+    def _candidate_row(c: dict) -> dict:
+        """What the chain keeps of a candidate: the part, its status, and which bytes the card was read from."""
+        doc = c.get("document") or {}
+        row = {"mpn": c["mpn"], "status": c["status"], "url": c["url"] if c.get("url") is not None else doc.get("url"), "doc_sha256": doc.get("doc_sha256")}
+        return {k: v for k, v in row.items() if v is not None}
 
     def record_proposal(self, round_id: str, proposal: dict) -> dict:
         rnd = self._round(round_id)
+        if proposal["kind"] not in ("alternative", "escalation"):
+            raise RoundRefused(f"unknown proposal kind {proposal['kind']!r}; one of ('alternative', 'escalation')")
+        if any(p["proposal_id"] == proposal["proposal_id"] for p in rnd["proposals"]):
+            raise RoundRefused(f"proposal {proposal['proposal_id']} is already recorded on this round")
         receipt = self._append(rnd, f"{proposal['kind']}_proposed", "agent", line_id=proposal["line_id"], proposal_id=proposal["proposal_id"],
                                escalation_reason=proposal.get("escalation_reason"), status=proposal["status"], confident=proposal["confident"],
-                               candidates=[{"mpn": c["mpn"], "status": c["status"], **({"url": c["url"]} if c.get("url") is not None else {})}
-                                           for c in proposal["candidates"]], mode=proposal["mode"],
+                               candidates=[self._candidate_row(c) for c in proposal["candidates"]], mode=proposal["mode"],
                                prompt_sha256=proposal["prompt_sha256"], pool_sha256=proposal["pool_sha256"], rules_sha256=proposal["rules_sha256"],
                                abstained=proposal.get("abstained"), proposed_at=proposal["proposed_at"])
         proposal["seq"] = receipt["seq"]
@@ -162,6 +174,8 @@ class Service:
         raise RoundRefused("an alternative proposal is accepted in the design lane as a human part_swapped; open a new round on the new design state")
 
     def reject_proposal(self, round_id: str, proposal_id: str, *, attestor: str, reason: str) -> dict:
+        if not attestor:                                        # proposal_rejected is not a terminal kind, so the thread alone would let "" through
+            raise RoundRefused("a rejection needs a human attestor")
         rnd = self._round(round_id)
         p = self._proposal(rnd, proposal_id)
         p["rejected_by"] = attestor
@@ -386,6 +400,8 @@ class Service:
         return packet
 
     def dispatch(self, packet_id: str, *, idempotency_key: str, attestor: str, dispatched_at: str) -> dict:
+        if not attestor:                                        # before any mutation: the packet must never read acknowledged with no event behind it
+            raise ordermod.OrderRefused("NO_ATTESTOR", "a dispatch needs a human attestor")
         packet = self.packets.get(packet_id)
         if packet is None:
             raise ordermod.OrderRefused("UNKNOWN_PACKET", packet_id)
@@ -409,7 +425,11 @@ class Service:
         return receipt
 
     def close_order(self, packet_id: str, *, receiving: dict | None, inspection: dict | None, attestor: str, closed_at: str) -> dict:
-        packet = self.packets[packet_id]
+        packet = self.packets.get(packet_id)
+        if packet is None:
+            raise ordermod.OrderRefused("UNKNOWN_PACKET", packet_id)
+        if packet["acknowledgement_state"] == "not dispatched":         # create_packet's literal; dispatch replaces it with the adapter's state
+            raise ordermod.OrderRefused("NOT_DISPATCHED", "no close-out before a dispatch")
         rnd = self._round(packet["approved_revision"]["round_id"])
         packet.update(receiving_record=receiving, inspection_result=inspection, closeout_state="closed")
         ev = self._append(rnd, "order_closed", "human", attestor, packet_id=packet_id, receiving=receiving, inspection=inspection, closed_at=closed_at)

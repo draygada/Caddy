@@ -40,6 +40,17 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
+class RedirectOffAllowlist(Exception):
+    """A redirect to a host outside the allowlist: refused before the redirected request is made."""
+
+
+class AllowlistRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not host_allowed(newurl):
+            raise RedirectOffAllowlist(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 @dataclass(frozen=True)
 class FetchResult:
     url: str
@@ -64,9 +75,9 @@ class Fetcher:
         return result
 
     def _fixture_path(self, url: str) -> Path | None:
-        """The name after fixture:// is one file IN fixtures_dir; a separator, a `..` or a symlink out of it is not a fixture."""
+        """The name after fixture:// is one file IN fixtures_dir; a separator, a `..`, a NUL or a symlink out of it is not a fixture."""
         name = url[len(FIXTURE):]
-        if not name or "/" in name or "\\" in name or ".." in name:
+        if not name or "/" in name or "\\" in name or ".." in name or "\x00" in name:
             return None
         path = self.fixtures_dir / name
         return path if path.resolve().parent == self.fixtures_dir.resolve() else None
@@ -89,10 +100,12 @@ class Fetcher:
             return self._record(FetchResult(url, "OFFLINE", None, 0, _now()))
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         try:
-            with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+            with urllib.request.build_opener(AllowlistRedirectHandler).open(req, timeout=TIMEOUT) as resp:
                 if not host_allowed(resp.geturl()):
-                    return self._record(FetchResult(url, "BLOCKED", None, 0, _now()))      # redirected off the allowlist
+                    return self._record(FetchResult(url, "BLOCKED", None, 0, _now()))      # belt and braces: the handler already refused it
                 data, status = resp.read(), str(resp.status)
+        except RedirectOffAllowlist:
+            return self._record(FetchResult(url, "BLOCKED", None, 0, _now()))              # redirected off the allowlist: never requested
         except (urllib.error.URLError, TimeoutError, OSError, ValueError) as error:
             return self._record(FetchResult(url, f"ERROR {type(error).__name__}", None, 0, _now()))
         digest = sha256_bytes(data)

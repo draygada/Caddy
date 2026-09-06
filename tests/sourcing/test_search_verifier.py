@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-import pytest
-
 from conftest import DATA
 
 FIX = DATA / "search" / "fixtures"
@@ -231,3 +229,24 @@ def test_ambiguity_counts_groups_not_components():
 def test_parse_number_unit_returns_the_tuples_first_component():
     from forge_search.verify import parse_number_unit
     assert parse_number_unit("160 x 120 pixels") == (Decimal("160"), "elements")
+
+
+def test_a_number_glued_to_a_letter_is_not_a_figure_and_a_unit_glued_to_a_slash_is_not_a_unit():
+    """I6, the trust boundary: 'IP67' is a rating, '0x20' a hex literal, 'Rev1.9' a revision, 'mm/s' a speed — none of them
+    states the field. A bare dimension tuple with no spaces ('160x120 pixels') still binds both components."""
+    from forge_search.documents import text_sha256
+    from forge_search.verify import Accepted, Rejected, parse_number_unit, verify
+    for quote, field, unit, value in (("IP67 mm", "package_depth_mm", "mm", "67"), ("Rated IP67 by 2 mm", "package_depth_mm", "mm", "67"),
+                                      ("0x20 mm", "package_depth_mm", "mm", "20"), ("0x20 mm", "package_depth_mm", "mm", "0"),
+                                      ("Rev1.9 Hz", "frame_rate_hz", "Hz", "1.9"), ("speed 60 mm/s", "package_depth_mm", "mm", "60")):
+        text = quote + "\n"
+        out = verify(text, _claim(text, text_sha256(text), field, value, unit, quote), field_units=TUPLE_UNITS)
+        assert isinstance(out, Rejected), (quote, value, out)
+    text = "Rated IP67 by 2 mm\n"
+    out = verify(text, _claim(text, text_sha256(text), "package_depth_mm", "2", "mm", "Rated IP67 by 2 mm"), field_units=TUPLE_UNITS)
+    assert isinstance(out, Accepted) and out.spec.value == "2"                          # the figure the document does state
+    assert parse_number_unit("speed 60 mm/s") is None and parse_number_unit("IP67 mm") is None
+    text = "160x120 pixels\n"
+    for field, value in (("resolution_w", "160"), ("resolution_h", "120")):
+        out = verify(text, _claim(text, text_sha256(text), field, value, "elements", "160x120 pixels"), field_units=TUPLE_UNITS)
+        assert isinstance(out, Accepted) and out.spec.value == value, field

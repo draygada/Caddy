@@ -13,18 +13,10 @@ PKG = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PKG))
 from forge_search.model import Abstain  # noqa: E402
 from forge_search.propose import default_ports, propose_alternative, propose_escalation  # noqa: E402
+from forge_sourcing.fixtures import design_state as _state  # noqa: E402
 
 DATA = PKG / "data"
 PRICE_MICROUSD_PER_TOKEN = {"claude-opus-5": (5, 25), "claude-sonnet-5": (2, 10), "claude-haiku-4-5": (1, 5)}   # $/MTok = µ$/token
-
-
-def _state(states: dict, name: str) -> dict:
-    base = states["baseline"]
-    if name == "baseline":
-        return base
-    st = states[name]
-    return {"design_hash": st["design_hash"], "design_seq": st["design_seq"], "product": st["product"],
-            "nodes": [st["replace_nodes"].get(n["node_id"], n) for n in base["nodes"]]}
 
 
 def _cost(usage: dict | None) -> int | None:

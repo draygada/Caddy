@@ -5,7 +5,7 @@ propose_alternative: the flipped line, its fired rows, the nearest release text 
 allowlist, read, extracted (Call A), verified, dry-run, walked, screened and costed on copies; the result is an
 agent `alternative_proposed` event. propose_escalation: the agent proposes SOURCES for an open escalation and is
 never confident; a human resolves. Both abstain, never guess, on a cache miss, a budget breach or a schema-invalid
-response. The model never sees the screening list or the rule table's thresholds.
+response. The model never sees the screening list; the rule text it sees is the published paragraph, not the threshold atoms.
 """
 from __future__ import annotations
 
@@ -75,26 +75,33 @@ def candidate_pipeline(service, rnd: dict, line: dict, slot: dict, candidate: di
     document = {"url": url, "status": fr.status, "sha256": fr.sha256, "bytes": fr.bytes, "retrieved_at": fr.retrieved_at, "doc_sha256": None,
                 "extract": None, "hidden_spans": []}
     specs: list = []
-    if fr.ok():
-        raw = ports.fetcher.read(fr)
-        text = document_text(raw, url)
-        document["doc_sha256"] = text_sha256(text)
-        if url.lower().endswith((".html", ".htm")) or raw.lstrip().startswith(b"<"):
-            document["hidden_spans"] = hidden_spans(raw)
-        ex = extract(text, document["doc_sha256"], slot["part_class"], fields_for(ports.rules, slot["part_class"], slot["role"]),
-                     rule_sentences(ports.rules, slot["part_class"], slot["role"]), ports.model)
-        specs = ex.accepted
-        document["extract"] = {"prompt_sha256": ex.prompt_sha256, "mode": ex.mode, "abstained": ex.abstained, "accepted": len(ex.accepted),
-                               "rejected": [{"reason": r["reason"], "detail": r["detail"], "quote": r["claim"].get("quote")} for r in ex.rejected], "usage": ex.usage}
+    read = fr.ok()
+    if read:
+        try:
+            raw = ports.fetcher.read(fr)
+            text = document_text(raw, url)
+            document["doc_sha256"] = text_sha256(text)
+            if url.lower().endswith((".html", ".htm")) or raw.lstrip().startswith(b"<"):
+                document["hidden_spans"] = hidden_spans(raw)
+            ex = extract(text, document["doc_sha256"], slot["part_class"], fields_for(ports.rules, slot["part_class"], slot["role"]),
+                         rule_sentences(ports.rules, slot["part_class"], slot["role"]), ports.model)
+            specs = ex.accepted
+            document["extract"] = {"prompt_sha256": ex.prompt_sha256, "mode": ex.mode, "abstained": ex.abstained, "accepted": len(ex.accepted),
+                                   "rejected": [{"reason": r["reason"], "detail": r["detail"], "quote": r["claim"].get("quote")} for r in ex.rejected], "usage": ex.usage}
+        except BudgetExhausted:
+            raise                                               # a budget breach stays a hard abort of the proposal, never a greyed card
+        except Exception as error:  # noqa: BLE001 - a malformed vendor byte stream greys ONE card; it never crashes the proposal
+            read, specs = False, []
+            document.update(status=f"ERROR {type(error).__name__}", doc_sha256=None, extract=None, hidden_spans=[])
     ev = evaluate_candidate(service, rnd, line, slot, candidate, specs=specs, rules=ports.rules, tripped=tripped)
     ev["document"] = document
-    if not fr.ok():
-        ev["reasons"].insert(0, f"no document: {fr.status}")
+    if not read:
+        ev["reasons"].insert(0, f"no document: {document['status']}")
     elif document["extract"]["abstained"]:
         ev["reasons"].insert(0, f"extraction abstained: {document['extract']['abstained']}")
     for h in document["hidden_spans"]:
         ev["words"].insert(1, f"hidden line in the page: '{h}' — no schema slot for a classification; the number in it was not parseable")
-    ev["words"].insert(1, f"document: {url} · {fr.status}" + (f" · sha {fr.sha256[:8]}" if fr.sha256 else ""))
+    ev["words"].insert(1, f"document: {url} · {document['status']}" + (f" · sha {fr.sha256[:8]}" if fr.sha256 else ""))
     return ev
 
 
@@ -102,7 +109,7 @@ def _finish(service, rnd: dict, proposal: dict) -> dict:
     proposal["claim_ceiling"] = CLAIM_CEILING
     if proposal["abstained"]:       # a proposal that abstained is never green and never confident, however far it got; the cards it read stay
         proposal["status"], proposal["confident"] = "grey", False
-    body = {k: v for k, v in proposal.items() if k not in ("proposal_id", "seq")}
+    body = {**{k: v for k, v in proposal.items() if k not in ("proposal_id", "seq")}, "ordinal": len(rnd["proposals"])}   # two identical proposals in one second are two records
     proposal["proposal_id"] = "proposal:" + sha256(body)
     service.record_proposal(rnd["round_id"], proposal)
     return proposal
@@ -193,6 +200,7 @@ def propose_escalation(service, round_id: str, line_id: str, reason: str, ports:
             proposal["candidates"].append(entry)
     except BudgetExhausted as error:
         proposal.update(abstained=f"budget: {error}")
+        proposal["words"].append(f"abstained: budget: {error}")
     resolved = [c for c in proposal["candidates"] if c["document"]["sha256"]]
     proposal["reasons"] = ["no source resolved" if not resolved else f"{len(resolved)} source(s) fetched; a human reads them and resolves"]
     proposal["status"], proposal["confident"] = "grey", False

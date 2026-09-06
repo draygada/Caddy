@@ -92,3 +92,23 @@ def test_a_fixture_url_cannot_escape_the_fixtures_directory(tmp_path: Path):
     assert f.fetch("fixture://sub/lepton35_test_sheet.txt").status == "BLOCKED"      # a name with a separator is not a fixture name
     with pytest.raises(ValueError):
         f.read(r)
+
+
+def test_a_fixture_name_with_a_nul_byte_is_blocked_not_an_exception(tmp_path: Path):
+    f = _fetcher(tmp_path)
+    r = f.fetch("fixture://a\x00b")
+    assert r.status == "BLOCKED" and not r.ok() and f.log[-1]["status"] == "BLOCKED"
+
+
+def test_a_redirect_off_the_allowlist_is_refused_before_it_is_requested():
+    """I2: the opener used to follow every redirect and re-check the allowlist only after the bytes had come back."""
+    import urllib.request
+    from forge_search.fetch import USER_AGENT, AllowlistRedirectHandler, RedirectOffAllowlist
+    h = AllowlistRedirectHandler()
+    req = urllib.request.Request("https://www.st.com/resource/en/datasheet/stm32f100c8.pdf", headers={"User-Agent": USER_AGENT})
+    with pytest.raises(RedirectOffAllowlist):
+        h.redirect_request(req, None, 302, "Found", {}, "https://pastebin.com/raw/abc")
+    with pytest.raises(RedirectOffAllowlist):
+        h.redirect_request(req, None, 301, "Moved", {}, "https://evil.example.com/st.com/datasheet.pdf")
+    out = h.redirect_request(req, None, 302, "Found", {}, "https://www.st.com/content/ccc/resource/stm32f100c8.pdf")
+    assert isinstance(out, urllib.request.Request) and out.full_url == "https://www.st.com/content/ccc/resource/stm32f100c8.pdf"
