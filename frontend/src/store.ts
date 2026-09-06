@@ -10,6 +10,12 @@ import { countChanged, type Attrs, type Design, type Parts } from './lib/rules';
 import { service, type ServiceState } from './lib/service';
 import { CONSTRAINTS, SKETCH_DEFAULT, solveSketch } from './lib/sketch';
 import type { Unit } from './lib/units';
+
+/** the browser side of the live classification lane: a demo access token and the public-or-synthetic confirmation, kept for this tab only */
+export interface LiveAuth { accessToken: string; publicSyntheticDataConfirmed: boolean }
+const LIVE_AUTH_KEY = 'caddy.live-auth';
+const readLiveAuth = (): LiveAuth => { try { const raw = sessionStorage.getItem(LIVE_AUTH_KEY); if (raw) { const v = JSON.parse(raw); if (v && typeof v.accessToken === 'string') return { accessToken: v.accessToken, publicSyntheticDataConfirmed: !!v.publicSyntheticDataConfirmed }; } } catch { /* storage unavailable: the lane stays scripted */ } return { accessToken: '', publicSyntheticDataConfirmed: false }; };
+const writeLiveAuth = (v: LiveAuth) => { try { if (v.accessToken) sessionStorage.setItem(LIVE_AUTH_KEY, JSON.stringify(v)); else sessionStorage.removeItem(LIVE_AUTH_KEY); } catch { /* storage unavailable */ } };
 import { defaultDecline, estimate, gateFor, linesFor, offersFor, rollup, tierFor, walk, type DeclineReason, type Line, type Mode, type OfferStatus, type ResolvedOffer, type ShipTo } from './lib/sourcing';
 import type { Outcome } from './lib/rules';
 import type { ViewName } from './lib/geometry';
@@ -179,6 +185,8 @@ export interface WorkbenchState extends Snapshot {
   projects: Project[];
   project: Project | null;
   intakeOpen: boolean;
+  liveAuth: LiveAuth;
+  setLiveAuth: (next: LiveAuth) => void;
   openProject: (id: string) => void;
   createProject: (name: string, description: string, intake: Intake | null) => void;
   setProjectIntake: (intake: Intake | null) => void;
@@ -393,6 +401,8 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     projects: SAMPLE_PROJECTS.map((p) => ({ ...p })),
     project: null,
     intakeOpen: false,
+    liveAuth: readLiveAuth(),
+    setLiveAuth: (next) => { writeLiveAuth(next); set({ liveAuth: next }); },
     openProject: (id) => {
       const s = get();
       const p = s.projects.find((x) => x.id === id);

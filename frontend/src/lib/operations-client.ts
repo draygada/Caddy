@@ -450,6 +450,8 @@ export class OperationsClient {
       const diagnostic = isRecord(value.diagnostic) ? value.diagnostic : null;
       const code = typeof diagnostic?.code === 'string' && diagnostic.code ? diagnostic.code : 'SERVICE_REJECTED';
       const message = typeof diagnostic?.message === 'string' && diagnostic.message ? diagnostic.message : `${domain} service rejected the request.`;
+      // a 409 reseals the round with the blocked event appended; keep that state so continuity does not lose it
+      if (response.status === 409 && value.state !== undefined && value.state !== null) this.carriedState[domain] = value.state as ClientCarriedState;
       throw new OperationsServiceError(code, message, response.status);
     }
     validateEnvelope(value, this.candidate, domain);

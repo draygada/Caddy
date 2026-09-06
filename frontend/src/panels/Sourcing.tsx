@@ -565,7 +565,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
           </div>
 
           <div className="panel">
-            <div className="panel-head"><div className="panel-title">Pre-entry lines <span className="sub">· {f.lines.length} · declared data, heading level only</span></div><span className="text-[12px] text-muted">{f.totals.unverified > 0 ? f.totals.unverified + ' rate' + (f.totals.unverified === 1 ? '' : 's') + ' not verified' : 'every rate dated'}</span></div>
+            <div className="panel-head"><div className="panel-title">Pre-entry lines <span className="sub">· {f.lines.length} · heading level</span></div><span className="text-[12px] text-muted">{f.totals.unverified > 0 ? f.totals.unverified + ' rate' + (f.totals.unverified === 1 ? '' : 's') + ' not verified' : 'every rate dated'}</span></div>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-[13px]">
                 <thead><tr className="text-left text-[12px] text-muted"><th className="px-4 py-2 font-medium">Part</th><th className="px-3 py-2 font-medium">HTS</th><th className="px-3 py-2 font-medium">Origin</th><th className="px-3 py-2 font-medium text-right">Qty</th><th className="px-3 py-2 font-medium text-right">Unit value</th><th className="px-3 py-2 font-medium text-right">Duties</th><th className="px-3 py-2 font-medium text-right">Fees</th><th className="px-3 py-2 font-medium">Entry</th></tr></thead>
@@ -819,7 +819,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
             )}
 
             <details className="panel p-3 text-[13px]" open={serviceOpen} onToggle={(e) => setServiceOpen((e.currentTarget as HTMLDetailsElement).open)}>
-              <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Connected service round <span className="text-muted font-normal">· the product service screens, walks owners, costs and seals a package for this part</span></summary>
+              <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Connected service round <span className="text-muted font-normal">· screened by the product service</span></summary>
               {serviceOpen && <div className="mt-2"><ServiceSourcing quantity={r.qty} mode={r.mode} partKey={PART_KEY[line.slot ?? ''] ?? line.id.replace(/^l-/, '')} partLabel={(slot ? GENERIC_NAME[slot as Slot] : line.description.split(' · ')[0])} /></div>}
             </details>
 
