@@ -47,6 +47,9 @@ def required_reference(lines: list[dict], person_status: str, sharing: str) -> t
         return "none", ["no reference required: " + ("nothing controlled will be shared" if sharing != "controlled_drawings" else "US person")]
     if person_status == "unknown":
         return "unknown_person_status", ["person status unknown: declaration cannot pass until it is declared"]
+    unknown = [l["line_id"] for l in lines if l["evaluation"].get("jurisdiction") not in ("ITAR", "EAR") or not l["evaluation"].get("entries")]
+    if unknown:
+        return "unknown_classification", [f"classification not established for {', '.join(unknown)}: the engine has not concluded; declaration cannot pass"]
     if any(l["evaluation"]["jurisdiction"] == "ITAR" for l in lines):
         return "ddtc_authorization", ["ITAR technical data + foreign person + controlled drawings: DDTC authorization reference required (22 CFR 120.50, 123, 124)"]
     if any(l["evaluation"]["jurisdiction"] == "EAR" and l["evaluation"]["entries"] != ["EAR99"] for l in lines):
@@ -62,7 +65,7 @@ def build_declaration(lines: list[dict], *, party: str, person_status: str, shar
     if not attestor:
         raise GateRefused("a declaration needs a human attestor")
     kind, words = required_reference(lines, person_status, sharing)
-    blocked = kind not in ("none",) and not reference
+    blocked = kind in ("unknown_person_status", "unknown_classification") or (kind != "none" and not reference)
     if reference and kind != "none":
         words.append(f"reference '{reference}' typed by {attestor} — reference typed, not validated")
     if blocked:

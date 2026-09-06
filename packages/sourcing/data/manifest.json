@@ -33,8 +33,20 @@
   },
   "search": {
     "search/documents.json": {
-      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
-      "bytes": 3
+      "sha256": "c0f53fbd0ec4f78956ed63e5669d6c6a16ef1b415622ac5f63049f7d5c245ba2",
+      "bytes": 2669
+    },
+    "search/engine/evaluate-camera-flag.json": {
+      "sha256": "6acb9faee0466c5882b1954d8311ccf24caf3554711583a858861688e3664b8f",
+      "bytes": 5713
+    },
+    "search/engine/evaluate-missing-evidence.json": {
+      "sha256": "a60654b8957e3f0df2ede6949fe856258c4f964503879fe97d735e0193d129c5",
+      "bytes": 3974
+    },
+    "search/engine/kestrel-baseline.design.json": {
+      "sha256": "84f3ab7bae30fdb6886104b3d7f26a2d90f55ba3fdad3370fdf43108f866e821",
+      "bytes": 9737
     },
     "search/fixtures/gx220_vendor_page.html": {
       "sha256": "164ab9e7c1a3a9f82dfd28e1afbd0d3b496e4a3f3bf3404d24695310cf1fc660",
