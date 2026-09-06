@@ -22,7 +22,7 @@ def test_camera_flag_response_becomes_open_round_input(service):
     sha256(d)                                                                     # floats refused: raises if any slipped through
     assert d["design_hash"] == resp["design_revision"][len("sha256:"):] and len(d["design_hash"]) == 64 and d["design_seq"] == 3
     assert d["product"]["node_id"] == "kestrel" and d["product"]["engine"]["rule_pack_sha"] == "sha256:ac95bcdd0bdb967b90afab1b0fa8f3c8a6581220c96382207b3ba2f432c8f97f"
-    assert d["product"]["engine"]["rule_pack_status"] == "unapproved_input" and d["product"]["engine"]["canonical_sha256_check"] in ("matched", "differs")
+    assert d["product"]["engine"]["rule_pack_status"] == "unapproved_input" and d["product"]["engine"]["canonical_sha256_check"] == "not_checked"   # P-D: never "differs"
     nodes = {n["node_id"]: n for n in d["nodes"]}
     assert set(nodes) == {"wing", "motor", "prop", "fc_board", "fc_mcu", "io_mcu", "imu", "baro", "mag", "gnss", "battery_pack", "nose_thermal", "datalink"}
     th = nodes["nose_thermal"]["evaluation"]
@@ -150,3 +150,34 @@ def test_an_adapter_built_round_says_nothing_forbidden(service):
     seen += strings(service.thread.events, []) + [service.rederive()["line"]]
     assert not offenders(seen, SEARCH_NEVER), offenders(seen, SEARCH_NEVER)[:5]
     assert not entry_offenders(seen), entry_offenders(seen)[:5]
+
+
+def test_canonical_check_says_matched_or_not_checked_and_never_differs():
+    """P-D: the lane's canonical JSON is not the engine's, so an unequal hash is "not checked", never a tamper word; an equal one is "matched"."""
+    from forge_sourcing.hashing import sha256
+    from forge_sourcing_api.engine_adapter import _no_floats, design_for_round
+    design, resp = _load("kestrel-baseline.design.json"), _load("evaluate-camera-flag.json")
+    engine = design_for_round(design, resp, design_seq=15)["product"]["engine"]
+    assert engine["canonical_sha256_check"] == "not_checked"
+    assert engine["canonical_sha256_note"] == "the lane's canonical JSON is not the engine's; design_revision is carried, not recomputed"
+    same = design_for_round(design, {**resp, "design_revision": "sha256:" + sha256(_no_floats(design))}, design_seq=16)["product"]["engine"]
+    assert same["canonical_sha256_check"] == "matched" and same["canonical_sha256_note"] == engine["canonical_sha256_note"]
+
+
+def test_the_root_products_determination_is_carried_in_the_part_node_shape(service):
+    """P-E: additive — `product.evaluation` is exactly the part-node evaluation shape; `absent` when the engine printed nothing for the root."""
+    from forge_sourcing.hashing import sha256
+    from forge_sourcing_api.engine_adapter import design_for_round
+    design, flag, question = _load("kestrel-baseline.design.json"), _load("evaluate-camera-flag.json"), _load("evaluate-missing-evidence.json")
+    d = design_for_round(design, flag, design_seq=17)
+    sha256(d)                                                                     # floats refused
+    ev = d["product"]["evaluation"]
+    assert set(ev) == set(d["nodes"][0]["evaluation"]) and set(d["product"]) == {"node_id", "final_assembly_country", "declared", "engine", "evaluation"}
+    assert ev["engine_state"] == "flag" and ev["jurisdiction"] == "EAR" and ev["entries"] == ["9A012.a.3"] and ev["fired"] == ["9A012.a.3"] and ev["unresolved"] == []
+    q = design_for_round(design, question, design_seq=18)["product"]["evaluation"]
+    assert q["engine_state"] == "question" and q["jurisdiction"] is None and q["entries"] == [] and q["fired"] == []
+    assert q["unresolved"] == [{"rule_id": "CCL-9A012.a.3", "entry": "9A012.a.3", "problem": "missing_fact", "missing": ["installed_descendant_entry"]}]
+    absent = design_for_round(design, {**flag, "determinations": {k: v for k, v in flag["determinations"].items() if k != "kestrel"}}, design_seq=19)["product"]["evaluation"]
+    assert absent["engine_state"] == "absent" and absent["entries"] == []
+    r = service.open_round(d, ship_to="TW-assembly", quantity=1, transport_mode="air", request_key="engine-root", opened_at="2026-09-06T03:00:00Z")
+    assert r["product"]["evaluation"]["engine_state"] == "flag" and len(r["lines"]) == 13

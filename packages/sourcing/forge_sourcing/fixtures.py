@@ -75,16 +75,29 @@ class FixtureStore:
                 if alt:
                     index.setdefault(normalize(alt), []).append((row, "alt_name"))
         digest = sha256_bytes(raw)
+        retrieved_at = "2026-09-04T00:00:00Z"
         if self.csl_path.name == FILES["csl"]:
             source, revision = ("Consolidated Screening List, data.trade.gov consolidated.csv; committed subset of the 2026-09-04 snapshot "
                                 f"(full file sha256 {FULL_CSL_SHA}, 26,082 data rows); rows copied verbatim"), "subset-2026-09-05"
         elif digest == FULL_CSL_SHA:
             source, revision = "Consolidated Screening List, data.trade.gov consolidated.csv; full 2026-09-04 snapshot", "full-2026-09-04"
-        else:
-            source, revision = f"Consolidated Screening List, data.trade.gov consolidated.csv; file {self.csl_path.name} (sha computed at load)", f"full-{digest[:8]}"
-        self.manifest["csl"] = {"file": self.csl_path.name, "source": source, "retrieved_at": "2026-09-04T00:00:00Z", "revision": revision,
+        else:                                                  # a refresh_csl.py product: its date is the sidecar manifest's for these exact bytes, else "not verified"
+            source = f"Consolidated Screening List, data.trade.gov consolidated.csv; file {self.csl_path.name} (sha computed at load)"
+            row = self._refresh_manifest_row(digest)
+            retrieved_at = row["retrieved_at"] if isinstance(row.get("retrieved_at"), str) and row["retrieved_at"] else "not verified"
+            revision = row["revision"] if isinstance(row.get("revision"), str) and row["revision"] else f"full-{digest[:8]}"
+        self.manifest["csl"] = {"file": self.csl_path.name, "source": source, "retrieved_at": retrieved_at, "revision": revision,
                                 "sha256": digest, "row_count": len(rows)}
         return rows, {"exact": exact, "normalized": index}
+
+    def _refresh_manifest_row(self, digest: str) -> dict:
+        """The `scripts/refresh_csl.py` sidecar (`manifest.json` beside the CSV): the row whose sha256 is this file's, else {}.
+        A date nobody recorded for these exact bytes is never guessed."""
+        try:
+            rows = json.loads((self.csl_path.parent / "manifest.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        return next((r for r in rows if isinstance(r, dict) and r.get("sha256") == digest), {}) if isinstance(rows, list) else {}
 
     # ------------------------------------------------------------ access
     def shas(self) -> dict[str, str]:

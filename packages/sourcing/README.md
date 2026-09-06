@@ -62,7 +62,7 @@ What is said about the accept button (Step 10, rewritten per the S8 verifier): N
 | Kestrel lines (13) and their engine evaluations | hand-typed from THE BUILD §2.1–§2.4 and the 2026-09-05 validation; **the rule engine replaces every `evaluation` block** |
 | Offers (17) | REAL sellers and manufacturers; prices marked `typed, unverified` were not read from a vendor page; **Brightwing Components (HK) and Nordkap Sensor (NO) are SYNTHETIC** and badged |
 | Ownership rows (18) | REAL rows typed from memory of public filings with a URL each, badged *unverified this session*; Brightwing → SZ DJI and Nordkap → Nordkap Holding are SYNTHETIC |
-| Consolidated Screening List | a 7-row verbatim subset of the 2026-09-04 snapshot (full file sha `44f89e8f…`, 26,082 rows); the loader takes the full CSV unchanged |
+| Consolidated Screening List | a 7-row verbatim subset of the 2026-09-04 snapshot (full file sha `44f89e8f…`, 26,082 rows); the loader takes the full CSV unchanged, and a refreshed file's `retrieved_at` is read from the `refresh_csl.py` sidecar manifest for those exact bytes, else it prints `not verified` |
 | Tariff table | headings and overlays typed from the build spec and the two research passes; every base rate is `verified: false` until read from HTS Revision 17; MPF FY2026/FY2027 and the Taiwan 301 row are verified; Chapter 99 headings for the 2024 review rows and the Taiwan action are **not typed** |
 | Order dispatch | synthetic adapter only, labelled SYNTHETIC; no real send exists |
 | Signing | hash chain only; Ed25519 signing belongs to the platform log module and the line says so |

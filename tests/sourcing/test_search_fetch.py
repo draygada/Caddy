@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import DATA
+from conftest import DATA, run_s1
 
 HEADER = (DATA / "csl_subset.csv").read_text(encoding="utf-8").splitlines()[0]
 
@@ -112,3 +112,36 @@ def test_a_redirect_off_the_allowlist_is_refused_before_it_is_requested():
         h.redirect_request(req, None, 301, "Moved", {}, "https://evil.example.com/st.com/datasheet.pdf")
     out = h.redirect_request(req, None, 302, "Found", {}, "https://www.st.com/content/ccc/resource/stm32f100c8.pdf")
     assert isinstance(out, urllib.request.Request) and out.full_url == "https://www.st.com/content/ccc/resource/stm32f100c8.pdf"
+
+
+def test_a_refreshed_full_csl_reads_its_retrieved_at_from_the_refresh_manifest(tmp_path: Path):
+    """P-A: an unknown-hash CSV is what `refresh_csl.py` writes; the sidecar `manifest.json` row whose sha256 is this file's carries the honest date."""
+    import json
+    from forge_sourcing.fixtures import FixtureStore
+    from forge_sourcing.hashing import sha256_bytes
+    full = tmp_path / "consolidated_2026-09-06.csv"
+    full.write_text(HEADER + "\n", encoding="utf-8")
+    rows = [{"url": "u", "status": 200, "bytes": 1, "sha256": "0" * 64, "rows": 0, "file": "consolidated_2026-09-01.csv", "retrieved_at": "2026-09-01T00:00:00Z"},
+            {"url": "u", "status": 200, "bytes": full.stat().st_size, "sha256": sha256_bytes(full.read_bytes()), "rows": 0, "file": full.name, "retrieved_at": "2026-09-06T10:11:12Z"}]
+    (tmp_path / "manifest.json").write_text(json.dumps(rows, indent=1) + "\n", encoding="utf-8")
+    m = FixtureStore(DATA, csl_file=full).manifest["csl"]
+    assert m["retrieved_at"] == "2026-09-06T10:11:12Z" and m["revision"] == f"full-{m['sha256'][:8]}" and m["sha256"] == rows[1]["sha256"]
+
+
+def test_an_unknown_csl_without_its_manifest_row_prints_not_verified_and_the_subset_keeps_its_date(tmp_path: Path, baseline):
+    """P-A: no sidecar, or a sidecar naming another file's sha, prints "not verified" (the Dates constraint) — never the subset's date;
+    the committed subset is unchanged; the round view still renders the fixture line."""
+    import json
+    from forge_sourcing.fixtures import FixtureStore
+    from forge_sourcing.service import Service
+    full = tmp_path / "consolidated_2026-09-06.csv"
+    full.write_text(HEADER + "\n", encoding="utf-8")
+    assert FixtureStore(DATA, csl_file=full).manifest["csl"]["retrieved_at"] == "not verified"
+    (tmp_path / "manifest.json").write_text(json.dumps([{"sha256": "0" * 64, "retrieved_at": "2026-09-06T10:11:12Z"}]), encoding="utf-8")
+    m = FixtureStore(DATA, csl_file=full).manifest["csl"]
+    assert m["retrieved_at"] == "not verified" and m["revision"] == f"full-{m['sha256'][:8]}"
+    subset = FixtureStore(DATA).manifest["csl"]
+    assert subset["retrieved_at"] == "2026-09-04T00:00:00Z" and subset["revision"] == "subset-2026-09-05"
+    s = Service(DATA, csl_file=full)
+    view = s.round_view(run_s1(s, baseline))
+    assert view["fixtures"]["csl"]["retrieved_at"] == "not verified" and f"csl@{m['sha256'][:8]}" in view["headline"]
