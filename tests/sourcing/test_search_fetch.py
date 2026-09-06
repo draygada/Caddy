@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from conftest import DATA
 
 HEADER = (DATA / "csl_subset.csv").read_text(encoding="utf-8").splitlines()[0]
@@ -78,3 +80,15 @@ def test_offline_fetcher_reports_offline_and_serves_the_cache(tmp_path: Path):
 def test_missing_fixture_is_an_error_not_an_exception(tmp_path: Path):
     r = _fetcher(tmp_path).fetch("fixture://nope.txt")
     assert r.status == "ERROR missing fixture" and not r.ok()
+
+
+def test_a_fixture_url_cannot_escape_the_fixtures_directory(tmp_path: Path):
+    f = _fetcher(tmp_path)
+    escape = "fixture://../../kestrel_round_input.json"
+    r = f.fetch(escape)
+    assert r.status == "BLOCKED" and not r.ok() and r.bytes == 0
+    assert f.log[-1] == {"url": escape, "status": "BLOCKED", "sha256": None, "bytes": 0, "retrieved_at": r.retrieved_at}
+    assert (DATA / "kestrel_round_input.json").is_file()             # the file it aimed at is real; not one byte of it was read
+    assert f.fetch("fixture://sub/lepton35_test_sheet.txt").status == "BLOCKED"      # a name with a separator is not a fixture name
+    with pytest.raises(ValueError):
+        f.read(r)

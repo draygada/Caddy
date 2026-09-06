@@ -57,6 +57,19 @@ def _slot_for(pool: dict, node_id: str) -> dict | None:
     return slots.get(node_id) or slots.get((pool.get("aliases") or {}).get(node_id, ""))
 
 
+def _pool_row(item: dict, by_mpn: dict, words: list[str]) -> dict | None:
+    """A model row is a POINTER into the owned pool, never an address: the mpn must be a slot candidate and the url one
+    of that candidate's own documents. Anything else is dropped in words and never fetched (S-1)."""
+    cand = by_mpn.get(item["mpn"])
+    if cand is None:
+        words.append(f"{item['mpn']}: not in the pool; ignored")
+        return None
+    if item["url"] not in [d["url"] for d in cand["documents"]]:
+        words.append(f"{item['mpn']}: url not among the candidate's documents; ignored")
+        return None
+    return cand
+
+
 def candidate_pipeline(service, rnd: dict, line: dict, slot: dict, candidate: dict, url: str, ports: Ports, *, tripped: list[str]) -> dict:
     fr = ports.fetcher.fetch(url)
     document = {"url": url, "status": fr.status, "sha256": fr.sha256, "bytes": fr.bytes, "retrieved_at": fr.retrieved_at, "doc_sha256": None,
@@ -87,6 +100,8 @@ def candidate_pipeline(service, rnd: dict, line: dict, slot: dict, candidate: di
 
 def _finish(service, rnd: dict, proposal: dict) -> dict:
     proposal["claim_ceiling"] = CLAIM_CEILING
+    if proposal["abstained"]:       # a proposal that abstained is never green and never confident, however far it got; the cards it read stay
+        proposal["status"], proposal["confident"] = "grey", False
     body = {k: v for k, v in proposal.items() if k not in ("proposal_id", "seq")}
     proposal["proposal_id"] = "proposal:" + sha256(body)
     service.record_proposal(rnd["round_id"], proposal)
@@ -129,12 +144,8 @@ def propose_alternative(service, round_id: str, line_id: str, ports: Ports, *, p
             return _finish(service, rnd, proposal)
         by_mpn = {c["mpn"]: c for c in candidates}
         for item in response["candidates"]:
-            cand = by_mpn.get(item["mpn"])
+            cand = _pool_row(item, by_mpn, proposal["words"])
             if cand is None:
-                proposal["words"].append(f"{item['mpn']}: not in the pool; ignored")
-                continue
-            if item["url"] not in [d["url"] for d in cand["documents"]]:
-                proposal["words"].append(f"{item['mpn']}: url not among the candidate's documents; ignored")
                 continue
             proposal["candidates"].append(candidate_pipeline(service, rnd, line, slot, cand, item["url"], ports, tripped=tripped))
     except BudgetExhausted as error:
@@ -172,7 +183,10 @@ def propose_escalation(service, round_id: str, line_id: str, reason: str, ports:
         if error:
             proposal.update(abstained=f"schema violation: {error}", words=[f"abstained: schema violation: {error}"])
             return _finish(service, rnd, proposal)
+        by_mpn = {c["mpn"]: c for c in candidates}
         for item in response["candidates"]:
+            if _pool_row(item, by_mpn, proposal["words"]) is None:
+                continue
             fr = ports.fetcher.fetch(item["url"])
             entry = {"mpn": item["mpn"], "url": item["url"], "status": "grey", "document": {"url": item["url"], "status": fr.status, "sha256": fr.sha256, "bytes": fr.bytes, "retrieved_at": fr.retrieved_at},
                      "words": [f"source: {item['url']} · {fr.status}" + (" · a human reads it; origin is a declaration, not a datasheet number the verifier can bind" if fr.ok() else " · no source resolved")]}

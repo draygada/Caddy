@@ -190,6 +190,21 @@ def test_propose_escalation_on_the_io_mcu_is_not_confident_and_a_human_accepts(s
     assert esc["state"] == "resolved" and service.thread.events[-1]["kind"] == "escalation_resolved"
 
 
+def test_propose_escalation_ignores_a_source_the_pool_never_listed(service, baseline):
+    from conftest import make_ports
+    from forge_search.model import ScriptedModel
+    from forge_search.propose import propose_escalation
+    model = ScriptedModel({"escalation": [{"candidates": [{"mpn": "STM32F100C8T6B", "url": "fixture://../../kestrel_round_input.json"},
+                                                          {"mpn": "NOT-IN-POOL", "url": "https://www.st.com/resource/en/datasheet/stm32f100c8.pdf"}]}]})
+    ports = make_ports(model)
+    rid = run_s1(service, baseline)
+    p = propose_escalation(service, rid, "line:io_mcu", "origin_depends_on_lot", ports, proposed_at="2026-09-06T02:30:00Z")
+    assert p["candidates"] == [] and ports.fetcher.log == []                 # neither row was fetched: one url is not the part's, one mpn is not the pool's
+    assert p["status"] == "grey" and p["confident"] is False and p["reasons"] == ["no source resolved"]
+    assert any("not among the candidate's documents" in w for w in p["words"]) and any("not in the pool" in w for w in p["words"])
+    assert service.thread.events[-1]["kind"] == "escalation_proposed" and service.thread.events[-1]["candidates"] == []
+
+
 def test_budget_exhaustion_is_an_abstain_not_a_crash(service, f3_state):
     from conftest import make_ports
     from forge_search.model import Budget, BudgetedModel, ScriptedModel
@@ -199,3 +214,21 @@ def test_budget_exhaustion_is_an_abstain_not_a_crash(service, f3_state):
     rid = _f3_round(service, f3_state)
     p = propose_alternative(service, rid, "line:thermal_core", make_ports(BudgetedModel(inner, Budget(calls_cap=1, cost_cap_microusd=10_000_000))), proposed_at="2026-09-06T02:30:00Z")
     assert p["abstained"].startswith("budget:") and p["status"] == "grey" and p["candidates"] == [] and p["confident"] is False
+
+
+def test_a_budget_breach_after_a_read_candidate_is_grey_not_green(service, f3_state):
+    from conftest import make_ports
+    from forge_search.model import Budget, BudgetedModel, ScriptedModel
+    from forge_search.propose import propose_alternative
+    text, sha = _doc("lepton35_test_sheet.txt")
+    row = {"mpn": "500-0771-01", "url": "fixture://lepton35_test_sheet.txt"}
+    inner = ScriptedModel({"search": [{"candidates": [row, dict(row)]}],                 # two rows, one extract call left in the budget
+                           "extract": [{"specs": [_claim(text, sha, "frame_rate_hz", "8.7", "Hz", "Frame rate: 8.7 Hz effective."),
+                                                  _claim(text, sha, "resolution_w", "160", "elements", "160 x 120 pixels"),
+                                                  _claim(text, sha, "resolution_h", "120", "elements", "120 pixels")]}]})
+    rid = _f3_round(service, f3_state)
+    p = propose_alternative(service, rid, "line:thermal_core", make_ports(BudgetedModel(inner, Budget(calls_cap=2, cost_cap_microusd=10_000_000))), proposed_at="2026-09-06T02:30:00Z")
+    assert p["abstained"] == "budget: call cap 2 reached at stage 'extract'"
+    assert p["status"] == "grey" and p["confident"] is False                             # a proposal that abstained is never green
+    assert [c["mpn"] for c in p["candidates"]] == ["500-0771-01"] and p["ranked"] == ["500-0771-01"]     # the card already read stays in the record
+    assert service.thread.events[-1]["status"] == "grey"

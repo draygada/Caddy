@@ -1,5 +1,6 @@
 """The allowlisted fetcher (S3 §(a)): a static allowlist, a content-addressed cache under .cache/fetch, a committed
-manifest of URL → sha256, and every request logged. Blocked hosts are logged BLOCKED and never requested.
+manifest of URL → sha256, and every request logged. Blocked hosts are logged BLOCKED and never requested, and a
+`fixture://` url names ONE file inside fixtures_dir — it is never a path out of it (S-1: owned data only).
 This is the only module in forge_search that imports urllib.
 """
 from __future__ import annotations
@@ -62,9 +63,19 @@ class Fetcher:
         self.log.append(asdict(result))
         return result
 
+    def _fixture_path(self, url: str) -> Path | None:
+        """The name after fixture:// is one file IN fixtures_dir; a separator, a `..` or a symlink out of it is not a fixture."""
+        name = url[len(FIXTURE):]
+        if not name or "/" in name or "\\" in name or ".." in name:
+            return None
+        path = self.fixtures_dir / name
+        return path if path.resolve().parent == self.fixtures_dir.resolve() else None
+
     def fetch(self, url: str, *, refresh: bool = False) -> FetchResult:
         if url.startswith(FIXTURE):
-            path = self.fixtures_dir / url[len(FIXTURE):]
+            path = self._fixture_path(url)
+            if path is None:
+                return self._record(FetchResult(url, "BLOCKED", None, 0, _now()))
             if not path.is_file():
                 return self._record(FetchResult(url, "ERROR missing fixture", None, 0, _now()))
             data = path.read_bytes()
@@ -92,5 +103,8 @@ class Fetcher:
 
     def read(self, result: FetchResult) -> bytes:
         if result.url.startswith(FIXTURE):
-            return (self.fixtures_dir / result.url[len(FIXTURE):]).read_bytes()
+            path = self._fixture_path(result.url)
+            if path is None:
+                raise ValueError(f"not a fixture in {self.fixtures_dir}: {result.url}")
+            return path.read_bytes()
         return (self.cache_dir / f"{result.sha256}.bin").read_bytes()
