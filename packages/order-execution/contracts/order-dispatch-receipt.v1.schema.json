@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strafe.local/contracts/order-dispatch-receipt.v1.schema.json",
+  "title": "Immutable order dispatch receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "receipt_id", "receipt_sha256", "request_id", "request_sha256", "idempotency_key", "state", "delivery_outcome", "send_effect", "retry_disposition", "execution_mode", "external_effect", "connector_reference", "detail_code", "created_at", "supersedes_receipt_id"],
+  "properties": {
+    "schema_version": {"const": "strafe.order-dispatch-receipt/1"},
+    "receipt_id": {"type": "string", "pattern": "^order-receipt:[0-9a-f]{64}$"},
+    "receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "request_id": {"type": "string", "pattern": "^order-request:[0-9a-f]{64}$"},
+    "request_sha256": {"$ref": "#/$defs/sha256"},
+    "idempotency_key": {"type": "string", "minLength": 8},
+    "state": {"enum": ["DISPATCHED", "ACKNOWLEDGED", "EXCEPTION", "UNKNOWN", "CLOSED"]},
+    "delivery_outcome": {"enum": ["DISPATCHED", "ACKNOWLEDGED", "EXCEPTION", "UNKNOWN"]},
+    "send_effect": {"enum": ["NOT_SENT", "POSSIBLY_SENT", "SENT"]},
+    "retry_disposition": {"enum": ["SAFE_WITH_NEW_KEY", "RECONCILE_REQUIRED", "NOT_RETRYABLE"]},
+    "execution_mode": {"enum": ["RECORDING_ONLY", "EXTERNAL"]},
+    "external_effect": {"enum": ["NONE", "CONNECTOR_REPORTED"]},
+    "connector_reference": {"type": ["string", "null"]},
+    "detail_code": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,9})?Z$"},
+    "supersedes_receipt_id": {"type": ["string", "null"], "pattern": "^order-receipt:[0-9a-f]{64}$"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

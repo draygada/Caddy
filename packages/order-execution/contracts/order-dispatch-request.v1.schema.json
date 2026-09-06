@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strafe.local/contracts/order-dispatch-request.v1.schema.json",
+  "title": "Immutable order dispatch request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "request_id", "request_sha256", "idempotency_key", "candidate", "package", "connector", "execution_mode", "created_at", "actor_id", "retry_of_request_id"],
+  "properties": {
+    "schema_version": {"const": "strafe.order-dispatch-request/1"},
+    "request_id": {"type": "string", "pattern": "^order-request:[0-9a-f]{64}$"},
+    "request_sha256": {"$ref": "#/$defs/sha256"},
+    "idempotency_key": {"type": "string", "minLength": 8},
+    "candidate": {"$ref": "#/$defs/candidate"},
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_id", "sealed_manifest_sha256", "selection_count", "file_count"],
+      "properties": {
+        "package_id": {"type": "string", "minLength": 1},
+        "sealed_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "selection_count": {"type": "integer", "minimum": 1},
+        "file_count": {"type": "integer", "minimum": 1}
+      }
+    },
+    "connector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "connector_id", "route_ref"],
+      "properties": {
+        "kind": {"enum": ["EDI", "API", "EMAIL_LIKE", "RECORDING"]},
+        "connector_id": {"type": "string", "minLength": 1},
+        "route_ref": {"type": "string", "minLength": 1}
+      }
+    },
+    "execution_mode": {"enum": ["RECORDING_ONLY", "EXTERNAL"]},
+    "created_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,9})?Z$"},
+    "actor_id": {"type": "string", "minLength": 1},
+    "retry_of_request_id": {"type": ["string", "null"], "pattern": "^order-request:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_id", "revision", "artifact_sha256"],
+      "properties": {
+        "candidate_id": {"type": "string", "minLength": 1},
+        "revision": {"type": "string", "minLength": 1},
+        "artifact_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}
