@@ -13,17 +13,24 @@ authority, or CUI/GovCloud authorization.
 
 | Item | Exact identity |
 |---|---|
-| Repository candidate | `f31e57c5f528b3cd1dfb32de39b32c30b5982a4c` |
+| Native evidence commit | `33bce6b` |
+| Request lineage commit | `cb0ee10441b59f319d0678eef84de0f8648f607b` |
 | Builder | `apps/cad-service/scripts/build_vercel_bundle.py --require-clean` |
-| Payload | 69 files; 633,805 bytes |
-| Payload SHA-256 | `7d2f033e513b22e9f5356ef7eeb26c9eae1dc8601bed484ed9f2325444ea57ad` |
-| `BUNDLE_MANIFEST.json` SHA-256 | `21c19616db33dba3004c5cdc293e0cc970dcc3bd16cd3cda2bba02942f23724d` |
-| Deployment root | 70 files including manifest; 653,140 bytes |
+| Bundle payload SHA-256 | `25bde3b72ffa12155d0cf6541a30a3a54b1e9bf5ebe42f91bf088c8d05a35218` |
+| Bundle tree SHA-256 | `59ba213fa2a67833723a2edd86f1afe041edb1f5f73419c3a8cd29c3883bd18c` |
+| Resolved Linux closure | 266,442,532 bytes |
 | Native wheel | `cadquery_ocp_novtk-7.9.3.1-cp312-cp312-manylinux_2_31_x86_64.whl` |
 | Native wheel identity | 67,439,751 bytes; SHA-256 `8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b` |
 
-Any source, dependency, evidence, payload, or manifest byte change invalidates this request and
+Commit `33bce6b` is contained in the candidate lineage through `cb0ee10`. This request is bound to
+that lineage and the exact bundle payload, bundle tree, and resolved closure above. Any source,
+dependency, evidence, payload, manifest, or closure byte change invalidates this request and
 requires a newly hashed packet.
+
+The request commit is not itself a deployable approved candidate. Owner approval must be captured
+in a subsequent signed and committed decision record that reconciles the existing HOLD. The exact
+deployable commit will therefore necessarily be a descendant of this request lineage; that
+descendant must reproduce the identities above and pass every gate before upload.
 
 ## Runtime identity
 
@@ -57,12 +64,14 @@ records legal determination as `NOT_PERFORMED`; this request does not reinterpre
 
 ## Current technical gate
 
-Owner approval is necessary but not sufficient. The latest independent exact-candidate verifier
-reported that resolved `pydantic_core==2.46.5` Linux bytes did not match the committed native
-runtime manifest: expected 4,776,920 bytes and SHA-256 beginning `2711a346`; resolved 4,692,312
-bytes and SHA-256 beginning `95f68ef2`. Therefore no upload may occur unless the exact resolved
-closure passes `verify_redistribution_evidence.py`. Repairing the manifest would change this
-packet's bound hashes and require a new request.
+The prior `pydantic_core==2.46.5` native-evidence mismatch is resolved. The exact repaired
+candidate evidence is **PASS**: the native test suite passed `41/41`, the dependency audit found
+zero known advisories, and `verify_redistribution_evidence.py` validated the 266,442,532-byte
+resolved Linux closure bound above.
+
+This technical PASS does not grant approval or supersede the existing HOLD. Owner approval remains
+necessary but not sufficient: before upload, the subsequent signed/committed approval descendant
+must reproduce the bound bundle and closure identities and pass the exact closure check again.
 
 ## Preview boundary
 
@@ -78,9 +87,9 @@ packet's bound hashes and require a new request.
 
 ## Expected upload action
 
-Only after a signed owner decision, reconciliation of the existing HOLD, and a passing exact
-closure check, the operator would reproduce and verify the bundle, then perform only this preview
-upload:
+Only after a signed and committed owner decision in a descendant of this request, reconciliation
+of the existing HOLD, and a repeated passing exact closure check, the operator would reproduce and
+verify the bundle, then perform only this preview upload:
 
 ```bash
 BUNDLE_PARENT="$(mktemp -d)"
