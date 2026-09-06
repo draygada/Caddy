@@ -1,6 +1,6 @@
 """FastAPI adapter over the seam. Routes are the service verbs; the page computes nothing; every response carries the
-candidate envelope (engineering direction §3.10); a lane refusal — and only a lane refusal — is a 409 with the refusal's
-own words; a body this adapter cannot read is a 422 that says which key or what is malformed; anything else is a bug and
+candidate envelope (engineering direction §3.10), a 409 included; a lane refusal — and only a lane refusal — is a 409 with the
+refusal's own words; a body this adapter cannot read is a 422 that says which key or what is malformed; anything else is a bug and
 surfaces as a 500. GET /now is a read-only observation that defaults to UNKNOWN (F-25). Mount under /api so a Vite proxy
 forwards it unchanged.
 """
@@ -115,14 +115,17 @@ async def read_body(request: Request) -> Body:
     return Body(parsed)
 
 
-def run(fn, *, view_of: str | None = None):
+def run(fn, *, view_of=None):
+    """`view_of`: a round id, or a function of the result that names one. The 409 is built here, on the refusal path itself, so a
+    router-only mount keeps it (an app-level handler would not travel with the router). The envelope is read after the verb, never before."""
     try:
         result = fn()
-    except REFUSALS as exc:
-        raise HTTPException(status_code=409, detail={"refused": type(exc).__name__, "code": getattr(exc, "code", None), "detail": str(exc)}) from exc
+    except REFUSALS as exc:                                    # P-F: the refusal's own words, the candidate envelope beside them
+        return JSONResponse(status_code=409, content={"detail": {"refused": type(exc).__name__, "code": getattr(exc, "code", None), "detail": str(exc)},
+                                                     "candidate": candidate()})
     body = {"candidate": candidate(), "result": result}
     if view_of:
-        body["view"] = SVC.round_view(view_of)
+        body["view"] = SVC.round_view(view_of(result) if callable(view_of) else view_of)
     return body
 
 
@@ -162,9 +165,7 @@ async def open_round(request: Request):
         if b.get("run"):
             SVC.resolve(r["round_id"]); SVC.screen(r["round_id"]); SVC.cost(r["round_id"], entry_date=b.get("entry_date") or _now()[:10])
         return {"round_id": r["round_id"]}
-    body = run(go)
-    body["view"] = SVC.round_view(body["result"]["round_id"])
-    return body
+    return run(go, view_of=lambda res: res["round_id"])
 
 
 @router.get("/rounds/{round_id}")
@@ -182,7 +183,8 @@ VERBS = {
     "screen": lambda rid, b: SVC.screen(rid) and {"ok": True},
     "rescreen": lambda rid, b: SVC.rescreen(rid),
     "cost": lambda rid, b: SVC.cost(rid, entry_date=b.get("entry_date") or _now()[:10]) and {"ok": True},
-    "refine": lambda rid, b: SVC.refine(rid, quantity=b.get("quantity"), transport_mode=b.get("transport_mode"), attestor=b.get("attestor", "engineer")),
+    "refine": lambda rid, b: SVC.refine(rid, quantity=_int(b["quantity"], "quantity") if b.get("quantity") is not None else None,
+                                        transport_mode=b.get("transport_mode"), attestor=b.get("attestor", "engineer")),
     "select": lambda rid, b: SVC.select(rid, b["line_id"], b["offer_hash"], declined=b.get("declined", []), attestor=b["attestor"]),
     "adjudicate": lambda rid, b: SVC.adjudicate(rid, b["offer_hash"], b["party_id"], role=b["role"], disposition=b["disposition"], reason_code=b["reason_code"], rationale=b["rationale"], attestor=b["attestor"]),
     "resolve_escalation": lambda rid, b: SVC.resolve_escalation(rid, b["line_id"], b["reason"], attestor=b["attestor"], resolution=b.get("resolution", {})),

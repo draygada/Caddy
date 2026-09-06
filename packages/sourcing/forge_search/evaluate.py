@@ -2,7 +2,8 @@
 
 Red: a fit dimension fails, the tripped row still fires or a new control row fires, or any party matches the list.
 Grey: a check could not conclude (no accepted span, a field the rows read not published, a fit dimension unknown,
-ownership unknown, abstained, price not declared, rate not verified). Green: every check concluded.
+ownership unknown, abstained, price not declared, rate not verified). Green: every single-node check concluded; the rows that
+need the design tree are named as deferred to the engine seam, never counted as concluded.
 Ranking: screening status first, then per-unit landed cost; never price alone. The event kind is
 "compared-and-confirmed", never "inherited" (F-10).
 """
@@ -113,7 +114,14 @@ def evaluate_candidate(service, rnd: dict, line: dict, slot: dict, candidate: di
         status = "grey"
     else:
         status = "green"
-    words.append(f"{status.upper()}: " + ("; ".join(reasons) if reasons else "every check concluded on a copy of the design and the round"))
+    deferred = [n["rule_id"] for n in dr["not_evaluated"]]
+    if reasons:
+        words.append(f"{status.upper()}: " + "; ".join(reasons))
+    elif deferred:                                             # P-B: a green card never claims the tree rows it could not evaluate
+        words.append(f"{status.upper()}: every single-node check concluded on a copy of the design and the round; {len(deferred)} tree-dependent row(s) deferred to the engine seam")
+        words.append("not evaluated on a single node (need the design tree; the engine seam evaluates them): " + ", ".join(deferred))
+    else:
+        words.append(f"{status.upper()}: every check concluded on a copy of the design and the round")
     words.append("event kind: compared-and-confirmed (a fresh evaluation on a copy, not a carried-over classification)")
     words.append(HONESTY_NOTE)
     words.append(CLAIM_CEILING)

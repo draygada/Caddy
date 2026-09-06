@@ -3,13 +3,14 @@
 Until Diego's evaluate() lands this is the first slice of the engine; when it lands, propose.py calls the engine
 seam and this module goes. A row with any atom whose field is not published CANNOT fire, even if another atom is
 already false: no green rests on a number nobody published. Tree atoms (any_descendant, ancestor) are not
-evaluated here; the engine evaluates them.
+evaluated here; the engine evaluates them. A row whose own `not` guard holds is suppressed and says by which atom;
+a guard that is false or whose fact is missing never suppresses (fail-closed).
 """
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
 
-from .rules import RULES_PART_CLASS, atoms, rows_by_entry, rows_for
+from .rules import RULES_PART_CLASS, atoms, guards, rows_by_entry, rows_for
 
 OPS = {"<": lambda a, b: a < b, "<=": lambda a, b: a <= b, ">": lambda a, b: a > b, ">=": lambda a, b: a >= b}
 FLAG_ENTRY = "NO_EXPORT_CONTROL_CHANGE"
@@ -52,10 +53,13 @@ def dry_run(rules: dict, *, part_class: str | None, role: str | None, fields: di
     out = {"rules_sha256": rules["sha256"], "fired": [], "released": [], "flags": [], "cannot_fire": [], "not_evaluated": [], "not_fired": []}
     for row in rows_for(rules, part_class, role):
         when = row.get("when") or {}
-        results = [_atom(a, fields, declared, part_class) for a in atoms(when)]
+        results = [_atom(a, fields, declared, part_class) for a in atoms({k: v for k, v in when.items() if k != "not"})]
         states = [s for s, _ in results]
         record = {"rule_id": row["id"], "entry": row.get("entry"), "jurisdiction": row.get("jurisdiction"), "atoms": [d for _, d in results], "text": row.get("text")}
-        if "needs_tree" in states:
+        held = next((d for s, d in (_atom(g, fields, declared, part_class) for g in guards(when)) if s == "true"), None)
+        if held is not None:                                   # the row's own guard holds: it cannot fire, whatever else is true, missing or tree-bound
+            out["not_fired"].append({**record, "detail": f"suppressed by {held}"})
+        elif "needs_tree" in states:
             out["not_evaluated"].append({**record, "reason": "needs the tree (any_descendant/ancestor); the engine evaluates it"})
         elif "missing" in states:
             out["cannot_fire"].append({**record, "missing": [d for s, d in results if s == "missing"]})

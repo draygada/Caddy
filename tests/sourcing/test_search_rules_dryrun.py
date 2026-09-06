@@ -82,3 +82,26 @@ def test_dry_run_molicel_does_not_trip_the_cell_row_and_tree_rows_are_not_evalua
     dr = dry_run(rules, part_class="cell", role="power", fields=_f(energy_density_wh_kg=("242", "Wh/kg")), declared={"origin": "TW"})
     assert dr["fired"] == [] and any(r["entry"] == "3A001.e.1.b" for r in dr["not_fired"])
     assert any(n["entry"] == "120.41(a)(2)" for n in dr["not_evaluated"])
+
+
+def test_a_true_not_guard_suppresses_the_row_and_a_false_or_missing_guard_never_does():
+    """P-C: 7A002.a.1.b carries `not: [declared spinning_mass == true]`. Declared true → suppressed, and the Note releases; declared
+    false, or not declared at all → the row proceeds exactly as before (fail-closed: a missing guard fact never suppresses). A held
+    guard beats a tree atom too: the 120.41(a)(2) catch-all on a fastener is suppressed, not deferred."""
+    from forge_search.dryrun import dry_run, flip_gone
+    rules = _rules()
+    fields = _f(gyro_rate_range_deg_s=("400", "deg/s"), gyro_arw_deg_sqrt_h=("0.0008", "deg/sqrt(h)"))
+    base = {"origin": "NO", "adaptive_antenna": False, "pps_decryption": False, "civil_gnss_service": False}
+    held = dry_run(rules, part_class="sensor", role="nav", fields=fields, declared={**base, "spinning_mass": True})
+    row = next(r for r in held["not_fired"] if r["rule_id"] == "CCL-7A002.a.1.b")
+    assert row["detail"] == "suppressed by declared.spinning_mass = True" and "7A002.a.1.b" not in [f["entry"] for f in held["fired"]]
+    assert "RELEASE-7A002.a.1.b-spinning-mass" in [r["rule_id"] for r in held["released"]]
+    gone = flip_gone(["7A002.a.1.b"], ["7A002.a.1.b", "XII(e)(12)(i)"], held, rules)
+    assert gone["gone"] is True and gone["reasons"] == ["7A002.a.1.b: no fire"]                     # a suppressed row is gone, not a cannot
+    for declared in ({**base, "spinning_mass": False}, base):
+        dr = dry_run(rules, part_class="sensor", role="nav", fields=fields, declared=declared)
+        assert "7A002.a.1.b" in [f["entry"] for f in dr["fired"]] and not any("detail" in r for r in dr["not_fired"]), declared
+    catch = dry_run(rules, part_class="fastener", role=None, fields={}, declared={})
+    assert next(r for r in catch["not_fired"] if r["rule_id"] == "USML-120.41(a)(2)-catch")["detail"] == "suppressed by part_class fastener"
+    deferred = [n["rule_id"] for n in catch["not_evaluated"]]
+    assert "USML-120.41(a)(2)-catch" not in deferred and "RELEASE-120.41(b)(2)-commodity-list" in deferred

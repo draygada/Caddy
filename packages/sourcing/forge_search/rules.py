@@ -18,18 +18,27 @@ RULES_PART_CLASS = {
 }
 
 
+def _as_list(x) -> list:
+    return list(x) if isinstance(x, list) else [x] if x else []
+
+
 def atoms(when) -> list[dict]:
+    """Every atom under a when-clause — the `all` / `any` operands and the `not` guards alike — so a threshold is stringified,
+    a field is asked for and a sentence is found wherever the atom sits. `dry_run` splits guards off with `guards`."""
     out: list[dict] = []
-    if not isinstance(when, dict):
+    if not isinstance(when, dict) or not when:
         return out
-    if "all" in when or "any" in when:
-        for a in list(when.get("all") or []) + list(when.get("any") or []):
+    if "all" in when or "any" in when or "not" in when:
+        for a in list(when.get("all") or []) + list(when.get("any") or []) + _as_list(when.get("not")):
             out.extend(atoms(a))
-    elif "not" in when:
-        out.extend(atoms(when["not"]))
     else:
         out.append(when)
     return out
+
+
+def guards(when) -> list[dict]:
+    """A row's `not` atoms. One of them true suppresses the row; one that is false or unknown never does (P-C, fail-closed)."""
+    return [g for a in _as_list(when.get("not")) for g in atoms(a)] if isinstance(when, dict) else []
 
 
 def load_rules(path: Path) -> dict:
