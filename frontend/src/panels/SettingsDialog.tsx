@@ -10,6 +10,8 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const toggleHelp = useStore((s) => s.toggleHelp);
   const patch = useStore((s) => s.patch);
   const setProjectIntake = useStore((s) => s.setProjectIntake);
+  const liveAuth = useStore((s) => s.liveAuth);
+  const setLiveAuth = useStore((s) => s.setLiveAuth);
   const [draft, setDraft] = useState<Intake>(project?.intake ?? INTAKE_DEFAULT);
   const dirty = JSON.stringify(draft) !== JSON.stringify(project?.intake ?? INTAKE_DEFAULT);
   const incomplete = intakeIncomplete(project?.intake ?? null);
@@ -40,6 +42,14 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               </div>
             </Section>
           )}
+          <Section title="Live classification" sub={liveAuth.accessToken.trim() && liveAuth.publicSyntheticDataConfirmed ? 'armed · engine calls route to Claude' : 'off · the engine answers with its scripted model'}>
+            <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end">
+              <label className="grid gap-1 text-muted">live access token <span className="text-[12px]">· the value the product service was started with · kept for this tab only</span><input type="password" autoComplete="off" value={liveAuth.accessToken} onChange={(e) => setLiveAuth({ ...liveAuth, accessToken: e.target.value })} className="field font-mono text-ink" /></label>
+              {liveAuth.accessToken && <button onClick={() => setLiveAuth({ accessToken: '', publicSyntheticDataConfirmed: false })} className="btn">Forget token</button>}
+            </div>
+            <label className="flex items-center gap-3 min-h-11 cursor-pointer"><input type="checkbox" checked={liveAuth.publicSyntheticDataConfirmed} onChange={(e) => setLiveAuth({ ...liveAuth, publicSyntheticDataConfirmed: e.target.checked })} /> the data I submit to the engine is public or synthetic</label>
+            <div className="text-[12px] text-muted">Every live call presents the token; the server enforces its own call and cost caps and fails closed when the lane is not configured. The key stays on the server.</div>
+          </Section>
           <Section title="Appearance">
             <div role="radiogroup" aria-label="Theme" className="flex gap-1">
               {(['light', 'dark'] as const).map((t) => (

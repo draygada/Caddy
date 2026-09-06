@@ -150,7 +150,10 @@ def _default_scripted_model() -> ScriptedModel:
 
 
 def _default_live_model(model: str, api_key: str) -> ModelClient:
-    return LiveAnthropicModel(model=model, api_key=api_key)
+    # The adapter's default of 20 s is shorter than one structured opus call; the proxy allows 90 s for this route.
+    timeout = os.environ.get("CADDYDADDY_LIVE_LLM_TIMEOUT_SECONDS", "").strip()
+    seconds = float(timeout) if timeout.replace(".", "", 1).isdigit() and 0 < float(timeout) <= 90 else 20.0
+    return LiveAnthropicModel(model=model, api_key=api_key, timeout_seconds=seconds)
 
 
 def _required_secret(environment: Mapping[str, str], name: str) -> str:

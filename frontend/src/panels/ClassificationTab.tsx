@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { EngineRun } from './EngineRun';
 import { useStore, intakeIncomplete } from '../store';
 import { CATALOG, CORE_SLOTS, GENERIC_NAME, SLOTS, type Node, type Slot } from '../lib/catalog';
 import { AF_THUMB, THUMBS, type ThumbFace } from '../lib/geometry';
@@ -87,6 +88,11 @@ export function ClassificationTab({ o }: { o: Outcome }) {
     };
   });
   const concern = rows.filter((r) => r.level > 0).sort((a, b) => b.level - a.level);
+  // what the engine is told: the declared use case, the design's parts, and for a part its catalog facts and the modeled rows that fired
+  const intake = s.project?.intake ?? null;
+  const useCaseFacts: Record<string, unknown> = intake ? { end_use: intake.endUse, end_user: intake.endUser, used_on_aircraft: intake.usedOn, civil_product: intake.civilProduct, bvlos: intake.bvlos, ship_to: intake.shipTo, units: intake.qty, transport: intake.mode, notes: intake.notes } : { declared: 'not yet' };
+  const productFacts: Record<string, unknown> = { product: s.project?.name ?? 'Kestrel', description: s.project?.description ?? '', airframe: rows[0]?.model ?? '', components: rows.slice(1).map((r) => r.name + ' · ' + r.model), use_case: useCaseFacts };
+  const partFacts = (r: PartRow): Record<string, unknown> => { const pid = r.node === 'airframe' ? null : s.parts[r.node as Slot]; const part = pid ? CATALOG[pid] : null; return { part: r.name, model: r.model, ...(part ? { mpn: part.mpn, vendor: part.vendor, origin: part.origin, synthetic: !part.real, attributes: part.attrs, unit_value_usd: part.value_usd } : {}), modeled_rows: r.rules.map((rule) => rule.entry + ' · ' + rule.reason), product: s.project?.name ?? 'Kestrel', use_case: useCaseFacts }; };
   const clean = rows.filter((r) => r.level === 0);
 
   const Row = ({ r }: { r: PartRow }) => {
@@ -125,6 +131,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
             <div className="grid grid-cols-5 gap-2 border-t border-line2 pt-2">
               {cells.map((c) => <div key={c.code} className="min-w-0"><div className="font-mono text-[12px] text-muted">{c.code}</div><div className="font-mono font-bold text-[13px] inline-block px-1 rounded-r" style={{ color: c.color, background: c.bg }}>{c.word}</div><div className="text-[11px] text-muted leading-[1.3]">{c.para}</div></div>)}
             </div>
+            <EngineRun label={r.name} description={r.name + ' · ' + r.model} facts={partFacts(r)} />
             <div className="flex gap-2"><button onClick={() => { s.select(r.node); s.setWorkspace('design'); }} className="btn">Open in Design</button><button onClick={() => setReasonFor(r.node)} className="btn" aria-haspopup="dialog">Full reasoning</button></div>
           </div>
         )}
@@ -140,6 +147,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
             {incomplete ? <span className="status-word text-[22px]" style={{ color: 'var(--amber)' }}>? Requires more information</span> : <span className="status-word text-[22px]" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>}
             <span className="text-[14px] text-muted">{incomplete ? 'the use-case answers are missing or “not sure yet” · the parts below are still evaluated on their own attributes' : overall.sub}</span>
           </div>
+          <EngineRun label={s.project?.name ?? 'the product'} description={(s.project?.name ?? 'Kestrel') + ': ' + (s.project?.description ?? 'survey drone') + ' · airframe ' + (rows[0]?.model ?? '')} facts={productFacts} />
         </div>
       </div>
 
