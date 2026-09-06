@@ -28,6 +28,7 @@ import { ClassificationWorkspace } from './panels/ClassificationWorkspace';
 import { CollaborationWorkspace } from './panels/CollaborationWorkspace';
 import { registerWorkspaceNavigation, runCommand } from './commands';
 import { useTripwireStore } from './tripwire-store';
+import { DataBoundaryNotice } from './panels/DataBoundaryNotice';
 
 type MobilePanel = 'browser' | 'model' | 'status' | 'spec';
 type BaseWorkspace = Exclude<WorkspaceId, 'source' | 'sources' | 'record'>;
@@ -84,7 +85,7 @@ function CadCoreWorkspace() {
   );
 }
 
-export default function App() {
+function StrafeApplication() {
   const theme = useStore((s) => s.theme);
   const parts = useStore((s) => s.parts);
   const attrs = useStore((s) => s.attrs);
@@ -218,5 +219,13 @@ export default function App() {
       <TripwirePanel />
       {demoBar && <DemoBar />}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <DataBoundaryNotice>
+      <StrafeApplication />
+    </DataBoundaryNotice>
   );
 }

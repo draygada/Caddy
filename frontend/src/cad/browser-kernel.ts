@@ -205,7 +205,7 @@ function evaluateDocument(document: CadDocument): { bodies: EvaluatedBody[]; bod
   }
 
   for (const mate of document.assembly.mates) {
-    if (mate.kind !== 'fixed') diagnostics.push(diagnostic('warning', 'MATE_RECORDED_NOT_SOLVED', `Mate ${mate.name} is recorded but not solved by the bounded browser kernel; authored instance transforms remain in force.`, mate.id));
+    diagnostics.push(diagnostic('warning', 'MATE_RECORDED_NOT_SOLVED', `Mate ${mate.name} is recorded but not solved by the bounded browser kernel; authored instance transforms remain in force.`, mate.id));
   }
   const instanced = new Set(document.assembly.instances.map((instance) => instance.bodyId));
   const bodies: EvaluatedBody[] = [];
@@ -305,7 +305,7 @@ function buildDependencyGraph(document: CadDocument): CadDependencyGraph {
   const nodes: CadDependencyGraph['nodes'] = [];
   const edges: CadDependencyGraph['edges'] = [];
   for (const parameter of document.parameters) nodes.push({ id: parameter.id, label: parameter.name, kind: 'parameter', state: 'clean' });
-  for (const sketch of document.sketches) nodes.push({ id: sketch.id, label: sketch.name, kind: 'sketch', state: 'clean' });
+  for (const sketch of document.sketches) nodes.push({ id: sketch.id, label: sketch.name, kind: 'sketch', state: sketch.constraints.length > 0 || sketch.dimensions.length > 0 ? 'dirty' : 'clean' });
   for (const operation of document.operations) {
     if (operation.kind === 'sketch.create' || operation.kind === 'parameter.set' || operation.kind === 'assembly.instance.add' || operation.kind === 'assembly.mate.add') continue;
     nodes.push({ id: operation.id, label: operation.name, kind: 'feature', state: operation.suppressed ? 'suppressed' : 'clean' });
@@ -320,7 +320,7 @@ function buildDependencyGraph(document: CadDocument): CadDependencyGraph {
     edges.push({ from: instance.bodyId, to: instance.id, relation: 'instances' });
   }
   for (const mate of document.assembly.mates) {
-    nodes.push({ id: mate.id, label: mate.name, kind: 'mate', state: mate.kind === 'fixed' ? 'clean' : 'dirty' });
+    nodes.push({ id: mate.id, label: mate.name, kind: 'mate', state: 'dirty' });
     edges.push({ from: mate.instanceAId, to: mate.id, relation: 'mates' }, { from: mate.instanceBId, to: mate.id, relation: 'mates' });
   }
   return { nodes, edges };

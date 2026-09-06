@@ -58,6 +58,7 @@ upload/download with signed references; that path is not implemented here.
 | `CAD_NATIVE_MAX_OPEN_FILES` | `256` | Per-worker POSIX file-descriptor cap, 64-4,096 |
 | `CAD_MAX_CONCURRENCY` | `1` | Native requests admitted per instance, 1-8 |
 | `CAD_KEEPALIVE_SECONDS` | `5` | HTTP keep-alive, 1-30 seconds |
+| `CAD_NATIVE_RUNTIME_OWNER_APPROVAL` | empty | Fail-closed owner assertion bound to the exact `caddydaddy.native-runtime/v1` wheel digest; use the exact value printed by `/ready` only after repository-owner acceptance is recorded |
 
 No credential, API key, storage connection, or secret is read by this service. The native child
 receives an allowlisted environment rather than inheriting the server environment. CORS is not
@@ -114,6 +115,14 @@ Do not release a provider artifact unless its closure includes `licenses/**`,
 `THIRD_PARTY_NOTICES.md`, and `REDISTRIBUTION_EVIDENCE.md`, and the native evidence verifier
 passes against the installed runtime. Those engineering checks do not provide legal approval or
 repository-owner acceptance.
+
+The process can start without OCCT or owner approval so `/health` can report liveness, but
+`/ready`, `/v1/capabilities`, recompute, assembly, and exchange all remain blocked. A missing OCCT
+closure returns `OCCT_RUNTIME_UNAVAILABLE`; an incompatible binding returns
+`OCCT_RUNTIME_INCOMPATIBLE`; missing owner acceptance returns
+`CAD_RUNTIME_OWNER_APPROVAL_REQUIRED` with the exact manifest-bound environment value. The owner
+assertion is deployment configuration, not a legal determination, and must not be set merely to
+make readiness pass.
 
 ## OCI runtime details
 

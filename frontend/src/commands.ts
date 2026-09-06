@@ -1,6 +1,7 @@
 // Every user-facing command in one registry: the S-key command box, the
 // right-click marking menu and the keyboard shortcuts all resolve here.
-import { useStore, nodeOfBody, type BodyId, type WorkbenchState } from './store';
+import { DESIGN_PROJECT_NAME, useStore, nodeOfBody, type BodyId, type WorkbenchState } from './store';
+import { PRODUCT_NAME } from './lib/product-thread';
 import { UNITS } from './lib/units';
 import { useTripwireStore } from './tripwire-store';
 import type { WorkspaceId } from './panels/MissionNav';
@@ -36,12 +37,12 @@ export function registerWorkspaceNavigation(navigate: WorkspaceNavigation) {
 const navigate = (workspace: WorkspaceId) => () => workspaceNavigation?.(workspace);
 
 const NAVIGATION_COMMANDS: Command[] = [
-  { id: 'navigate.design', label: 'Design · mission workspace', aliases: ['CAD design', 'model viewport', 'home workspace'], group: 'navigate', scope: 'global', run: navigate('design') },
-  { id: 'navigate.core', label: 'CAD / Core · mission workspace', aliases: ['CAD core', 'live authoring', 'geometry engine', 'sketch extrusion'], group: 'navigate', scope: 'global', run: navigate('core') },
-  { id: 'navigate.classification', label: 'Classification · mission workspace', aliases: ['classify', 'compliance', 'export control', 'ordered route'], group: 'navigate', scope: 'global', run: navigate('classification') },
+  { id: 'navigate.design', label: `${DESIGN_PROJECT_NAME} Design · separate legacy workspace`, aliases: ['CAD design', 'model viewport', 'home workspace', 'Kestrel active design revision'], group: 'navigate', scope: 'global', run: navigate('design') },
+  { id: 'navigate.core', label: `${PRODUCT_NAME} Core · active Product Thread context`, aliases: ['CAD core', 'live authoring', 'geometry engine', 'sketch extrusion', 'QX-0 active revision'], group: 'navigate', scope: 'global', run: navigate('core') },
+  { id: 'navigate.classification', label: `${PRODUCT_NAME} Classification · active revision required`, aliases: ['classify', 'compliance', 'export control', 'ordered route', 'QX-0 classification'], group: 'navigate', scope: 'global', run: navigate('classification') },
   { id: 'navigate.sourcing', label: 'Source · sourcing workspace', aliases: ['sourcing', 'supplier', 'offers', 'landed cost', 'order send-off'], group: 'navigate', scope: 'global', run: navigate('source') },
   { id: 'navigate.sources', label: 'Sources · provenance workspace', aliases: ['provenance', 'evidence', 'documents', 'citations', 'source network'], group: 'navigate', scope: 'global', run: navigate('sources') },
-  { id: 'navigate.record', label: 'Record · decision workspace', aliases: ['record', 'decision record', 'audit log', 'product thread', 'history'], group: 'navigate', scope: 'global', run: navigate('record') },
+  { id: 'navigate.record', label: `${PRODUCT_NAME} Record · device-local Product Thread`, aliases: ['record', 'decision record', 'audit log', 'product thread', 'history', 'QX-0 revision record'], group: 'navigate', scope: 'global', run: navigate('record') },
   { id: 'navigate.collaboration', label: 'Collaboration · mission workspace', aliases: ['collaborate', 'team', 'comments', 'handoff'], group: 'navigate', scope: 'global', run: navigate('collaboration') },
 ];
 

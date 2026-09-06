@@ -19,7 +19,8 @@ describe('Candidate 0.2 pre-preview claims', () => {
     expect(sourcingSource).toContain('modeled estimate from declared/fixture inputs; not a supplier quote or tariff determination');
     expect(sourcingSource).toContain('hash-linked, client-carried demo records');
     expect(sourcingSource).toContain('not durable, externally authenticated, or globally replay-protected');
-    expect(sourcingSource).toContain('simulated outcome record (no external send)');
+    expect(sourcingSource).toContain("useState<RecordingOutcome>('SIMULATED')");
+    expect(sourcingSource).toContain('orderDisplayLabel');
     expect(sourcingSource).not.toContain('recorded send effect');
     expect(sourcingSource).not.toContain('immutable order records');
     expect(sourcingSource).not.toContain('Create live bounded round');

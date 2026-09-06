@@ -42,6 +42,15 @@ function now(value?: string): string {
   return value ?? new Date().toISOString();
 }
 
+function terminalizeRequestHistory(history: CadHistoryEntry[], requestId: string, status: Extract<CadRunStatus, 'succeeded' | 'failed' | 'stale'>): CadHistoryEntry[] {
+  const requestPrefix = `${requestId}:`;
+  return history.map((entry) => (
+    entry.id.startsWith(requestPrefix) && (entry.status === 'queued' || entry.status === 'running')
+      ? { ...entry, status }
+      : entry
+  ));
+}
+
 export function createCadAuthoringState(document: CadDocument): CadAuthoringState {
   return {
     document,
@@ -70,7 +79,7 @@ export function cadAuthoringReducer(state: CadAuthoringState, action: CadAuthori
       activeRequestId: action.requestId,
       status: 'queued',
       error: null,
-      history: [...state.history, {
+      history: [...terminalizeRequestHistory(state.history, action.requestId, 'succeeded'), {
         id: `${action.requestId}:queued`,
         operationId: action.operation.id,
         label: action.operation.name,
@@ -111,7 +120,7 @@ export function cadAuthoringReducer(state: CadAuthoringState, action: CadAuthori
       activeRequestId: null,
       status: 'succeeded',
       error: null,
-      history: [...state.history, {
+      history: [...terminalizeRequestHistory(state.history, action.requestId, 'succeeded'), {
         id: `${action.requestId}:succeeded`,
         operationId: state.pendingOperation?.id ?? null,
         label: `Accepted ${action.response.revisionId}`,
@@ -130,7 +139,9 @@ export function cadAuthoringReducer(state: CadAuthoringState, action: CadAuthori
       status,
       error: action.error,
       diagnostics: action.diagnostics ?? state.diagnostics,
-      history: [...state.history, {
+      pendingOperation: null,
+      activeRequestId: null,
+      history: [...terminalizeRequestHistory(state.history, action.requestId, status), {
         id: `${action.requestId}:${status}`,
         operationId: state.pendingOperation?.id ?? null,
         label: action.error,

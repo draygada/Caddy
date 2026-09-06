@@ -11,7 +11,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cad_service.app import create_app
-from cad_service.settings import DeploymentSettings
+from cad_service.settings import (
+    NATIVE_RUNTIME_OWNER_APPROVAL_ENV,
+    NATIVE_RUNTIME_OWNER_APPROVAL_VALUE,
+    DeploymentSettings,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,7 +96,12 @@ def test_clean_bundle_import_and_actual_native_cad_smoke(tmp_path: Path) -> None
         capture_output=True,
         text=True,
         cwd=bundle,
-        env={**os.environ, "PYTHONPATH": str(bundle), "CAD_ALLOWED_HOSTS": "testserver"},
+        env={
+            **os.environ,
+            "PYTHONPATH": str(bundle),
+            "CAD_ALLOWED_HOSTS": "testserver",
+            NATIVE_RUNTIME_OWNER_APPROVAL_ENV: NATIVE_RUNTIME_OWNER_APPROVAL_VALUE,
+        },
     )
     report = json.loads(completed.stdout)
     assert report["status"] == "PASS"

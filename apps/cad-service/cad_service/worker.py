@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .errors import CadError
+
 
 def _apply_resource_limits() -> None:
     try:
@@ -29,21 +31,49 @@ def _apply_resource_limits() -> None:
 
 def _dispatch(operation: str, payload: dict[str, Any]) -> dict[str, Any]:
     if operation == "probe":
-        import OCP
-        from OCP.BRepCheck import BRepCheck_Analyzer
-        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        try:
+            import OCP
+            from OCP.BRepCheck import BRepCheck_Analyzer
+            from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+            from .kernel import capabilities
+        except (ImportError, OSError) as exc:
+            raise CadError(
+                "OCCT_RUNTIME_UNAVAILABLE",
+                "The isolated worker cannot load OCCT. Install the pinned CPython 3.12 cadquery-ocp-novtk==7.9.3.1 runtime with its native shared-library closure.",
+                status_code=503,
+            ) from exc
+        if OCP.__version__ != "7.9.3.1":
+            raise CadError(
+                "OCCT_RUNTIME_INCOMPATIBLE",
+                f"The isolated worker loaded cadquery-ocp-novtk/{OCP.__version__}; the approved runtime requires exactly 7.9.3.1 backed by OCCT 7.9.3.",
+                status_code=503,
+            )
 
         shape = BRepPrimAPI_MakeBox(1.0, 1.0, 1.0).Shape()
         if shape.IsNull() or not BRepCheck_Analyzer(shape, True).IsValid():
-            raise RuntimeError("OCCT readiness primitive was invalid")
+            raise CadError(
+                "OCCT_RUNTIME_PROBE_FAILED",
+                "The pinned OCCT runtime loaded but failed its valid 1 mm B-rep primitive probe. Rebuild the isolated native closure before retrying.",
+                status_code=503,
+            )
         return {
-            "kernel": "OpenCascade",
-            "version": "7.9.3",
-            "binding": f"cadquery-ocp-novtk/{OCP.__version__}",
-            "primitive": "valid-1mm-box",
+            "proof": {
+                "kernel": "OpenCascade",
+                "version": "7.9.3",
+                "binding": f"cadquery-ocp-novtk/{OCP.__version__}",
+                "primitive": "valid-1mm-box",
+            },
+            "capabilities": capabilities(),
         }
 
-    from .kernel import assemble, exchange, recompute
+    try:
+        from .kernel import assemble, exchange, recompute
+    except (ImportError, OSError) as exc:
+        raise CadError(
+            "OCCT_RUNTIME_UNAVAILABLE",
+            "The isolated worker cannot load OCCT. Install the pinned CPython 3.12 cadquery-ocp-novtk==7.9.3.1 runtime with its native shared-library closure.",
+            status_code=503,
+        ) from exc
     from .models import AssemblyRequest, ExchangeRequest, RecomputeRequest
 
     routes = {
@@ -94,8 +124,6 @@ def main() -> int:
         result = _dispatch(str(envelope["operation"]), envelope.get("payload", {}))
         response = {"status": "SUCCEEDED", "result": result}
     except Exception as exc:
-        from .kernel import CadError
-
         if isinstance(exc, CadError):
             diagnostic = exc.diagnostic.model_dump(mode="json", exclude_none=True)
         else:

@@ -1,8 +1,14 @@
 import type { OperationsCandidateIdentity } from './operations-client';
 
-export type RecordingOutcome = 'DISPATCHED' | 'ACKNOWLEDGED' | 'EXCEPTION' | 'UNKNOWN';
+export type RecordingOutcome = 'SIMULATED' | 'ACKNOWLEDGED' | 'EXCEPTION' | 'UNKNOWN';
+export type RecordedDeliveryOutcome = 'DISPATCHED' | 'ACKNOWLEDGED' | 'EXCEPTION' | 'UNKNOWN';
 export type OrderState = 'DRAFT' | 'DISPATCH_PENDING' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'EXCEPTION' | 'UNKNOWN' | 'CLOSED';
 export type SendEffect = 'NOT_SENT' | 'POSSIBLY_SENT' | 'SENT';
+
+export function orderDisplayLabel(value: string): string {
+  if (value === 'SENT' || value === 'POSSIBLY_SENT') return 'SIMULATED';
+  return value.replaceAll('DISPATCHED', 'STAGED');
+}
 
 export interface OrderCandidateIdentity { candidate_id: string; revision: string; artifact_sha256: string }
 export interface InlinePackageFile { path: string; byte_length: number; sha256: string; content_base64: string }
@@ -20,7 +26,7 @@ export interface OrderReceipt {
   request_sha256: string;
   idempotency_key: string;
   state: OrderState;
-  delivery_outcome: RecordingOutcome;
+  delivery_outcome: RecordedDeliveryOutcome;
   send_effect: SendEffect;
   retry_disposition: 'SAFE_WITH_NEW_KEY' | 'RECONCILE_REQUIRED' | 'NOT_RETRYABLE';
   execution_mode: 'RECORDING_ONLY';
@@ -595,10 +601,12 @@ export class OrderClient {
     occurred_at: string;
     retry_of_request_id?: string | null;
   }): Promise<OrderEnvelope> {
+    const { recording_outcome, ...rest } = input;
     return this.post(
       '/api/orders/dispatches',
       {
-        ...input,
+        ...rest,
+        recording_outcome: recording_outcome === 'SIMULATED' ? 'DISPATCHED' : recording_outcome,
         package_envelope: input.package_envelope ?? this.packageEnvelope ?? undefined,
         ...this.continuity(),
       },

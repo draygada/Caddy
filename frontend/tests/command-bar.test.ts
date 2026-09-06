@@ -43,6 +43,10 @@ describe('global command palette', () => {
     for (const [query, id] of expected) {
       expect(searchCommands(globalCommands, query).map((command) => command.id)).toContain(id);
     }
+    expect(commandById('navigate.design')?.label).toContain('Kestrel Design');
+    expect(commandById('navigate.core')?.label).toContain('QX-0 hardened drone Core');
+    expect(commandById('navigate.classification')?.label).toContain('active revision required');
+    expect(commandById('navigate.record')?.label).toContain('device-local Product Thread');
   });
 
   it('executes all mission-rail navigation commands through the registered app action', () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import sourcingSource from '../src/panels/Sourcing.tsx?raw';
 import sourcesSource from '../src/panels/Sources.tsx?raw';
 import classificationSource from '../src/panels/ClassificationWorkspace.tsx?raw';
+import coreSource from '../src/panels/CoreAssemblyWorkspace.tsx?raw';
 import recordSource from '../src/panels/Record.tsx?raw';
 
 describe('product-thread panel wiring', () => {
@@ -14,6 +15,8 @@ describe('product-thread panel wiring', () => {
     expect(sourcesSource).not.toContain('human checked · L2');
     expect(classificationSource).toContain("eventType: 'classification.determination_recorded'");
     expect(classificationSource).toContain("kind: 'classification-reference-pack'");
+    expect(classificationSource).toContain('requireClassificationProductContext');
+    expect(classificationSource).toContain('...recordingContext.artifacts');
   });
 
   it('blocks package/order progression without exact CAD and BOM CSV artifact identities and records each bounded lifecycle', () => {
@@ -25,8 +28,13 @@ describe('product-thread panel wiring', () => {
     expect(sourcingSource).toContain('eventType: `order.${label}`');
   });
 
-  it('makes memory-only unsigned replay, untracked legacy state, and tamper detection visible', () => {
-    expect(recordSource).toContain('MEMORY ONLY · UNSIGNED');
+  it('makes device-local unsigned replay, workflow identity, untracked legacy state, and tamper detection visible', () => {
+    expect(recordSource).toContain('DEVICE-LOCAL · UNSIGNED · NOT SHARED');
+    expect(recordSource).toContain('PRODUCT_THREAD_DURABILITY_NOTICE');
+    expect(recordSource).toContain('active CAD revision');
+    expect(recordSource).not.toContain('no revision supplied');
+    expect(coreSource).toContain('QX-0 workflow context');
+    expect(coreSource).toContain('Product Thread revision');
     expect(recordSource).toContain('rederiveProductThread(untrackedCount)');
     expect(recordSource).toContain('tamperProductThread(latest.sequence)');
     expect(recordSource).toContain('legacy event(s)');

@@ -31,6 +31,28 @@ IDENTITY = {
 }
 
 
+def _approved_cad_capabilities() -> tuple[int, dict[str, object]]:
+    return 200, {
+        "schema_version": "caddydaddy.cad-capabilities/1",
+        "status": "AVAILABLE",
+        "kernel": {
+            "name": "OpenCascade",
+            "version": "7.9.3",
+            "binding": "cadquery-ocp-novtk/7.9.3.1",
+        },
+        "features": ["SKETCH", "EXTRUDE", "FILLET", "CHAMFER"],
+        "exchange": {"exact": ["STEP_AP242", "IGES_5_3"], "mesh_only": ["STL"]},
+        "runtime_gate": {
+            "status": "APPROVED",
+            "owner_approval": "ASSERTED_BY_DEPLOYMENT_CONFIGURATION",
+            "approval_binding": "caddydaddy.native-runtime/v1",
+            "factual_evidence": "PASS",
+            "legal_determination": "NOT_PERFORMED",
+            "artifact_sha256": "8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b",
+        },
+    }
+
+
 def _document() -> dict:
     sketch = {
         "id": "sketch:plate",
@@ -80,7 +102,12 @@ def test_cold_invocation_uses_hash_sealed_client_carried_cad_state() -> None:
         calls.append((path, payload))
         return 200, _kernel_response("cad-rev:" + "1" * 64)
 
-    first = Candidate02Routes(IDENTITY, classification_action=lambda _: (200, {}), cad_transport=first_transport)
+    first = Candidate02Routes(
+        IDENTITY,
+        classification_action=lambda _: (200, {}),
+        cad_transport=first_transport,
+        cad_capability_transport=_approved_cad_capabilities,
+    )
     document = _document()
     status, created = first.dispatch("/api/cad/recompute", {
         "document": document,
@@ -99,7 +126,12 @@ def test_cold_invocation_uses_hash_sealed_client_carried_cad_state() -> None:
         assert payload["base_document"] == continuation["base_document"]
         return 200, _kernel_response("cad-rev:" + "2" * 64)
 
-    cold = Candidate02Routes(IDENTITY, classification_action=lambda _: (200, {}), cad_transport=cold_transport)
+    cold = Candidate02Routes(
+        IDENTITY,
+        classification_action=lambda _: (200, {}),
+        cad_transport=cold_transport,
+        cad_capability_transport=_approved_cad_capabilities,
+    )
     status, updated = cold.dispatch("/api/cad/recompute", {
         "document": created["document"],
         "operation": created["document"]["operations"][-1],
@@ -115,7 +147,12 @@ def test_cold_invocation_uses_hash_sealed_client_carried_cad_state() -> None:
         assert payload["content_base64"] == "YnJlcC1ieXRlcw=="
         return 200, {"content_base64": "c3RlcA==", "content_sha256": "e" * 64}
 
-    another_cold = Candidate02Routes(IDENTITY, classification_action=lambda _: (200, {}), cad_transport=export_transport)
+    another_cold = Candidate02Routes(
+        IDENTITY,
+        classification_action=lambda _: (200, {}),
+        cad_transport=export_transport,
+        cad_capability_transport=_approved_cad_capabilities,
+    )
     status, exported = another_cold.dispatch("/api/cad/export", {
         "document": exported_request,
         "revisionId": exported_request["revisionId"],

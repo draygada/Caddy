@@ -14,7 +14,13 @@ import {
   type CandidateDisposition,
   type Stage,
 } from '../lib/classification-workspace';
-import { appendProductEvent } from '../lib/product-thread';
+import {
+  PRODUCT_NAME,
+  appendProductEvent,
+  getProductThreadSnapshot,
+  requireClassificationProductContext,
+  useProductThread,
+} from '../lib/product-thread';
 
 const stageLabels: Record<Stage, string> = {
   usml_enumerated: 'USML enumerated',
@@ -45,6 +51,7 @@ function label(value: string): string {
 }
 
 export function ClassificationWorkspace() {
+  const thread = useProductThread();
   const [description, setDescription] = useState('Commercial flight-control carrier for a small unmanned aircraft; no stated military integration.');
   const [factsText, setFactsText] = useState('{\n  "declared.military_use": "false",\n  "design.catalog_equivalent": "true"\n}');
   const [itemKind, setItemKind] = useState<ClassificationItemKind>('commodity');
@@ -54,17 +61,28 @@ export function ClassificationWorkspace() {
   const [runMode, setRunMode] = useState<ClassificationRunMode>('scripted');
   const [liveAccessToken, setLiveAccessToken] = useState('');
   const [publicSyntheticConfirmed, setPublicSyntheticConfirmed] = useState(false);
+  const [liveRevisionId, setLiveRevisionId] = useState<string | null>(null);
   const requestSequence = useRef(0);
 
   const [scenarioId, setScenarioId] = useState(WORKSPACE_SCENARIOS[0].id);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ 'cand:1:USML-XI-c-2': true });
   const scenario = getWorkspaceScenario(scenarioId);
   const offline = useMemo(() => runClassificationWorkspace(scenario), [scenario]);
+  const activeRevisionId = thread.currentCadRevision?.revisionId ?? null;
+  const executionEnabled = classificationRunEnabled(runMode, liveState === 'running', liveAccessToken, publicSyntheticConfirmed) && activeRevisionId !== null && thread.storageStatus !== 'RECOVERING_DEVICE_LOCAL';
 
   async function runLive() {
     const sequence = ++requestSequence.current;
-    setLiveState('running');
     setLiveError(null);
+    let requestedContext;
+    try {
+      requestedContext = requireClassificationProductContext(getProductThreadSnapshot());
+    } catch (error) {
+      setLiveState('error');
+      setLiveError({ code: 'ACTIVE_CAD_REVISION_REQUIRED', message: error instanceof Error ? error.message : 'An active accepted CAD revision is required.' });
+      return;
+    }
+    setLiveState('running');
     let facts: Record<string, unknown>;
     try {
       const parsed: unknown = JSON.parse(factsText);
@@ -85,14 +103,17 @@ export function ClassificationWorkspace() {
           : undefined,
       );
       if (sequence !== requestSequence.current) return;
+      const recordingContext = requireClassificationProductContext(getProductThreadSnapshot());
+      if (recordingContext.revisionId !== requestedContext.revisionId) throw new Error(`The active CAD revision changed from ${requestedContext.revisionId} to ${recordingContext.revisionId} during classification; the result was not recorded.`);
       await appendProductEvent({
         sourceLane: 'classification',
         eventType: 'classification.determination_recorded',
         summary: `${result.determination.jurisdiction} · ${result.determination.classification.join(', ') || 'no closed classification'} · ${runMode}.`,
         actorId: `service:${result.provenance.model}`,
         actorAttestation: 'SERVICE_REPORTED',
-        revisionId: result.item.part_revision_id,
+        revisionId: recordingContext.revisionId,
         artifacts: [
+          ...recordingContext.artifacts,
           { artifactId: `classification-snapshot:${result.snapshot_sha256}`, kind: 'classification-fact-snapshot', sha256: result.snapshot_sha256 },
           { artifactId: `classification-pack:${result.pack_sha256}`, kind: 'classification-reference-pack', sha256: result.pack_sha256 },
         ],
@@ -103,17 +124,21 @@ export function ClassificationWorkspace() {
           cclStep: result.determination.ccl_step,
           itemKind: result.item.item_kind,
           model: result.provenance.model,
+          activeProductId: recordingContext.productId,
+          activeCadRevisionId: recordingContext.revisionId,
+          serviceReportedPartRevisionId: result.item.part_revision_id ?? null,
           legalEffect: 'NONE',
         },
       });
       setLiveResult(result);
+      setLiveRevisionId(recordingContext.revisionId);
       setLiveState('valid');
     } catch (error) {
       if (sequence !== requestSequence.current) return;
       setLiveState('error');
       setLiveError(error instanceof ClassificationClientError
         ? { code: error.code, message: error.message }
-        : { code: 'BACKEND_UNAVAILABLE', message: error instanceof Error ? error.message : 'Charlie engine request failed.' });
+        : { code: error instanceof Error && error.message.includes('active CAD revision') ? 'PRODUCT_THREAD_REVISION_CHANGED' : 'BACKEND_UNAVAILABLE', message: error instanceof Error ? error.message : 'Charlie engine request failed.' });
     }
   }
 
@@ -122,12 +147,14 @@ export function ClassificationWorkspace() {
       <header style={{ padding: '16px 18px 14px', borderBottom: '1px solid var(--line, #d8dde3)', background: 'linear-gradient(115deg, #f7f4ea 0%, #eef3f0 62%, #e8eef3 100%)' }}>
         <div style={{ ...mono, color: '#176b45', fontSize: 11, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase' }}>Charlie engine · connected Candidate 0.2 service</div>
         <h2 id="classification-workspace-title" style={{ margin: '5px 0 4px', fontSize: 24 }}>Classification workspace</h2>
+        <div style={{ ...mono, margin: '5px 0 8px', fontSize: 11, fontWeight: 800 }}>{PRODUCT_NAME} · active Product Thread revision {activeRevisionId ?? 'REQUIRED BEFORE RUN'} · {thread.storageStatus}</div>
         <p style={{ margin: 0, maxWidth: 820, color: 'var(--muted, #5c6670)', fontSize: 13, lineHeight: 1.45 }}>
           Run the ordered USML → CCL → EAR99 jurisdiction engine and inspect its fact snapshot, reference pack, candidate board, schema- and byte-span-validated reference excerpts, and model-call provenance. Source authority and legal relevance are not verified.
         </p>
         <div role="note" style={{ marginTop: 12, padding: '9px 11px', borderLeft: '4px solid #a05a00', background: '#fff8e9', color: '#653c00', fontSize: 12, lineHeight: 1.4 }}>
           Jurisdiction-screening output only. Not legal advice, export authorization, transaction clearance, sanctions screening, or permission to ship.
         </div>
+        <div role="note" style={{ marginTop: 8, fontSize: 11, color: 'var(--muted, #5c6670)' }}>This workspace records only against the active QX-0 CAD revision. Kestrel is the separate legacy Design workspace and is not silently substituted.</div>
       </header>
 
       <div style={{ padding: 14, display: 'grid', gap: 16 }}>
@@ -184,17 +211,17 @@ export function ClassificationWorkspace() {
               </div>}
             </fieldset>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <button type="button" onClick={runLive} disabled={!classificationRunEnabled(runMode, liveState === 'running', liveAccessToken, publicSyntheticConfirmed)} style={{ border: 0, borderRadius: 6, padding: '10px 14px', background: '#176b45', color: '#fff', fontWeight: 850, cursor: classificationRunEnabled(runMode, liveState === 'running', liveAccessToken, publicSyntheticConfirmed) ? 'pointer' : 'not-allowed', opacity: classificationRunEnabled(runMode, liveState === 'running', liveAccessToken, publicSyntheticConfirmed) ? 1 : .55 }}>
+              <button type="button" onClick={runLive} disabled={!executionEnabled} style={{ border: 0, borderRadius: 6, padding: '10px 14px', background: '#176b45', color: '#fff', fontWeight: 850, cursor: executionEnabled ? 'pointer' : 'not-allowed', opacity: executionEnabled ? 1 : .55 }}>
                 {liveState === 'running' ? 'Running Charlie engine…' : runMode === 'live-claude' ? 'Run with live Claude' : 'Run deterministic ScriptedModel'}
               </button>
-              <span style={{ fontSize: 11, color: 'var(--muted, #66717c)' }}>No synthetic fallback. Failed and stale requests never replace the last contract-valid result.</span>
+              <span style={{ fontSize: 11, color: 'var(--muted, #66717c)' }}>{activeRevisionId ? `Will bind ${activeRevisionId} and its current CAD/output hashes.` : 'Blocked until an accepted QX-0 CAD revision and its document/geometry hashes are active.'} No synthetic fallback.</span>
             </div>
             {liveError && <div role="alert" style={{ padding: 10, border: '1px solid #dfaca3', borderRadius: 6, background: '#fff1ee', color: '#7b281b', fontSize: 11 }}><b style={mono}>{liveError.code}</b> · {liveError.message}{liveResult ? ' The last valid result remains below.' : ''}</div>}
           </div>
         </section>
 
         {liveResult
-          ? <LiveDetermination result={liveResult} />
+          ? <LiveDetermination result={liveResult} boundRevisionId={liveRevisionId} />
           : <section aria-label="No connected-service determination" style={{ ...card, padding: 14, color: 'var(--muted, #66717c)', fontSize: 12 }}>No connected-service determination has been accepted. The offline exercise below cannot populate this evidence area.</section>}
 
         <section aria-labelledby="offline-lab-title" style={{ borderTop: '4px solid #8b949d', paddingTop: 14 }}>
@@ -262,7 +289,7 @@ export function ClassificationWorkspace() {
   );
 }
 
-function LiveDetermination({ result }: { result: ClassificationDetermination }) {
+function LiveDetermination({ result, boundRevisionId }: { result: ClassificationDetermination; boundRevisionId: string | null }) {
   const decision = result.determination;
   return <section aria-labelledby="live-result-title" style={{ display: 'grid', gap: 10 }}>
     <div style={{ ...card, padding: 14 }}>
@@ -277,7 +304,7 @@ function LiveDetermination({ result }: { result: ClassificationDetermination }) 
       </div>
       <div style={{ marginTop: 10, display: 'grid', gap: 4 }}>{decision.basis.map((basis) => <div key={basis} style={{ fontSize: 11 }}>• {basis}</div>)}</div>
       <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 8 }}>
-        <HashLine name="Snapshot" value={result.snapshot_sha256} /><HashLine name="Reference pack" value={result.pack_sha256} /><HashLine name="Part revision" value={result.item.part_revision_id ?? 'plain product description'} />
+        <HashLine name="Snapshot" value={result.snapshot_sha256} /><HashLine name="Reference pack" value={result.pack_sha256} /><HashLine name="Bound active CAD revision" value={boundRevisionId ?? 'not recorded'} /><HashLine name="Service-reported part revision" value={result.item.part_revision_id ?? 'not reported'} />
       </div>
     </div>
     <section aria-label="Connected-service candidate board" style={{ display: 'grid', gap: 8 }}>{result.candidates.map((candidate) => <LiveCandidate key={candidate.candidate_id} candidate={candidate} />)}</section>

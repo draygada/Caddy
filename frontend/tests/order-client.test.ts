@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { OrderClient, OrderServiceError, type OrderAuditEvent, type OrderEnvelope, type OrderReceipt, type OrderStateToken } from '../src/lib/order-client';
+import { OrderClient, OrderServiceError, orderDisplayLabel, type OrderAuditEvent, type OrderEnvelope, type OrderReceipt, type OrderStateToken } from '../src/lib/order-client';
 
 const HASH_A = 'a'.repeat(64);
 const HASH_B = 'b'.repeat(64);
@@ -226,7 +226,7 @@ describe('recording-only order client', () => {
     const client = new OrderClient(candidate, fetchImpl);
 
     const validated = await client.validateSourcingPackage(sourcePackage);
-    await client.dispatchRecording({ manifest_sha256: validated.package!.manifest_sha256, recording_outcome: 'DISPATCHED', idempotency_key: 'demo-key', route_ref: 'supplier:recording-demo', actor_id: 'operator:browser', occurred_at: '2026-09-05T18:00:00Z' });
+    await client.dispatchRecording({ manifest_sha256: validated.package!.manifest_sha256, recording_outcome: 'SIMULATED', idempotency_key: 'demo-key', route_ref: 'supplier:recording-demo', actor_id: 'operator:browser', occurred_at: '2026-09-05T18:00:00Z' });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
@@ -249,7 +249,7 @@ describe('recording-only order client', () => {
       return new Response(JSON.stringify(envelope({ receipt, audit_events: [event] })), { status: 200 });
     }) as unknown as typeof fetch;
     const client = new OrderClient(candidate, fetchImpl);
-    await client.dispatchRecording({ manifest_relative_path: 'manifest.json', manifest_sha256: HASH_B, recording_outcome: 'DISPATCHED', idempotency_key: 'demo-key', route_ref: 'supplier:recording-demo', actor_id: 'operator:browser', occurred_at: '2026-09-05T18:00:00Z' });
+    await client.dispatchRecording({ manifest_relative_path: 'manifest.json', manifest_sha256: HASH_B, recording_outcome: 'SIMULATED', idempotency_key: 'demo-key', route_ref: 'supplier:recording-demo', actor_id: 'operator:browser', occurred_at: '2026-09-05T18:00:00Z' });
     await client.readReceipt(receipt.receipt_id);
     await client.acknowledge(receipt.receipt_id, 'evidence:recorded', 'operator:browser', '2026-09-05T18:00:00Z');
     await client.reconcileUnknown(receipt.receipt_id, 'evidence:not-received', 'NOT_SENT', 'operator:browser', '2026-09-05T18:00:00Z');
@@ -278,7 +278,7 @@ describe('recording-only order client', () => {
       ? envelope({ status: 'BLOCKED', diagnostic: { code: 'UNKNOWN_RECONCILIATION_REQUIRED', message: 'Evidence is required.' } })
       : envelope({ receipt, audit_events: [event] })), { status: blocked ? 409 : 200 })) as unknown as typeof fetch;
     const client = new OrderClient(candidate, fetchImpl);
-    const valid = await client.dispatchRecording({ manifest_relative_path: 'manifest.json', manifest_sha256: HASH_B, recording_outcome: 'DISPATCHED', idempotency_key: 'demo-key', route_ref: 'supplier:recording-demo', actor_id: 'operator:browser', occurred_at: '2026-09-05T18:00:00Z' });
+    const valid = await client.dispatchRecording({ manifest_relative_path: 'manifest.json', manifest_sha256: HASH_B, recording_outcome: 'SIMULATED', idempotency_key: 'demo-key', route_ref: 'supplier:recording-demo', actor_id: 'operator:browser', occurred_at: '2026-09-05T18:00:00Z' });
     blocked = true;
     await expect(client.close(receipt.receipt_id, 'operator:browser', '2026-09-05T18:00:00Z')).rejects.toMatchObject({ code: 'UNKNOWN_RECONCILIATION_REQUIRED' });
     expect(client.getLastValid()).toBe(valid);
@@ -315,5 +315,13 @@ describe('recording-only order client', () => {
     const cold = new OrderClient(candidate, fetchImpl);
     await expect(cold.resume(token)).rejects.toMatchObject({ code: 'ORDER_STATE_TAMPERED' });
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('presents recording-only wire states with truthful operator labels', () => {
+    expect(orderDisplayLabel('DISPATCHED')).toBe('STAGED');
+    expect(orderDisplayLabel('ORDER_DISPATCHED')).toBe('ORDER_STAGED');
+    expect(orderDisplayLabel('SENT')).toBe('SIMULATED');
+    expect(orderDisplayLabel('POSSIBLY_SENT')).toBe('SIMULATED');
+    expect(orderDisplayLabel('NOT_SENT')).toBe('NOT_SENT');
   });
 });

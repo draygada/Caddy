@@ -257,7 +257,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
   const mode = s.viewMode;
   const cursor = s.dragging ? 'copy' : move.current ? 'grabbing' : orbit.current.on ? (orbit.current.pan ? 'grabbing' : s.navMode === 'zoom' ? 'ns-resize' : 'move') : s.navMode === 'pan' ? 'grab' : s.navMode === 'zoom' ? 'zoom-in' : 'default';
   const modeBtn = (m: typeof mode, label: string, extra = '') => (
-    <button role="radio" aria-checked={mode === m} onClick={() => { if (m === 'sketch') s.openDialog('sketch', 'plate'); else { if (s.dialog?.kind === 'sketch') s.closeDialog(); s.patch({ viewMode: m }); } }} className={'min-h-8 px-[10px] border-0 cursor-pointer text-[13px] font-semibold ' + extra} style={{ background: mode === m ? 'var(--accent)' : 'transparent', color: mode === m ? 'var(--accentfg)' : 'var(--ink)' }}>{label}</button>
+    <button role="radio" aria-checked={mode === m} onClick={() => { if (m === 'sketch') s.openDialog('sketch', 'plate'); else { if (s.dialog?.kind === 'sketch') s.closeDialog(); s.patch({ viewMode: m }); } }} className={'cad-viewport-target min-h-8 px-[10px] border-0 cursor-pointer text-[13px] font-semibold ' + extra} style={{ background: mode === m ? 'var(--accent)' : 'transparent', color: mode === m ? 'var(--accentfg)' : 'var(--ink)' }}>{label}</button>
   );
   const cadTarget: BodyId = s.selBody ?? 'plate';
   const sketchResult = solveSketch(s.sketch);
@@ -280,33 +280,33 @@ export function Viewport({ o: _o }: { o: Outcome }) {
           {modeBtn('model', 'Model')}{modeBtn('sketch', 'Sketch', 'border-l border-line')}{modeBtn('board', 'Board', 'border-l border-line')}{modeBtn('sheet', 'Drawing sheet', 'border-l border-line')}
         </div>
         <label className="text-[13px] text-muted flex items-center gap-1">select
-          <select aria-label="Selection filter" value={s.selFilter} onChange={(e) => s.patch({ selFilter: e.target.value as typeof s.selFilter, selFace: null })} className="btn text-ink">
+          <select aria-label="Selection filter" value={s.selFilter} onChange={(e) => s.patch({ selFilter: e.target.value as typeof s.selFilter, selFace: null })} className="cad-viewport-target btn text-ink">
             <option value="component">components</option><option value="body">bodies</option><option value="face">faces</option>
           </select>
         </label>
         {s.selFilter === 'face' && s.selFace && <span role="status" className="chip normal-case">{BODY_LABEL[s.selFace.body]} · face {s.selFace.fi + 1} · preview index</span>}
         <div className="flex-1" />
         {s.viewSeq != null ? (
-          <span className="text-[13px] font-semibold text-amber">replaying #{s.viewSeq} · read-only · <button onClick={() => s.viewAt(null)} className="underline">back to live</button></span>
+          <span className="text-[13px] font-semibold text-amber">replaying #{s.viewSeq} · read-only · <button onClick={() => s.viewAt(null)} className="cad-viewport-target underline">back to live</button></span>
         ) : (
-          <span className="text-[13px] text-muted">right-click for marking menu · drag a body to move it</span>
+          <span className="cad-viewport-context-hint text-[13px] text-muted">right-click for marking menu · drag a body to move it</span>
         )}
       </div>
       <div data-cad-feature-rail role="toolbar" aria-label="CAD feature tools" className="px-3 py-2 border-b border-line2 bg-surface2 flex items-center gap-2 overflow-x-auto">
-        <div className="shrink-0 pr-2 border-r border-line">
+        <div className="cad-feature-summary shrink-0 pr-2 border-r border-line">
           <div className="text-[10px] uppercase tracking-[.12em] text-muted">Feature chain</div>
           <div className="text-[12px] font-semibold whitespace-nowrap">Sketch → solid → detail</div>
         </div>
         {cadTools.map((tool) => (
           <button key={tool.id} type="button" disabled={s.viewSeq != null || tool.disabled} onClick={() => runCommand(tool.id, tool.target)}
-            className="btn shrink-0 disabled:opacity-40" title={tool.id === 'create.extrude' ? 'Extrude ' + BODY_LABEL[cadTarget] : tool.label}>
+            className="cad-viewport-target btn shrink-0 disabled:opacity-40" title={tool.id === 'create.extrude' ? 'Extrude ' + BODY_LABEL[cadTarget] : tool.label}>
             {tool.label}
           </button>
         ))}
-        <div className="ml-auto shrink-0 pl-2 border-l border-line text-right">
+        <div className="cad-feature-summary ml-auto shrink-0 pl-2 border-l border-line text-right">
           <div className="font-mono text-[11px] text-muted">target · {BODY_LABEL[cadTarget]} · plate depth {fmtLen(plateT, s.units, true)}</div>
           <div className="font-mono text-[11px]" style={{ color: sketchResult.overall === 'CONTRADICTORY' ? 'var(--red)' : sketchResult.overall === 'REDUNDANT' ? 'var(--amber)' : 'var(--ink)' }}>
-            sketch {sketchResult.overall} · latest {latestFeature?.n ?? '—'} {latestFeature?.kind ?? 'feature'}
+            constraint record {sketchResult.overall} · not a solved-state claim · latest {latestFeature?.n ?? '—'} {latestFeature?.kind ?? 'feature'}
           </div>
         </div>
       </div>
@@ -342,27 +342,27 @@ export function Viewport({ o: _o }: { o: Outcome }) {
           </div>
         </div>
         <div className="absolute left-1/2 bottom-3 -translate-x-1/2 flex items-center gap-[2px] px-1 py-[3px] bg-surface border border-line rounded-r shadow-[0_2px_8px_rgba(0,0,0,.08)]" onMouseDown={(e) => e.stopPropagation()}>
-          <button className="nav-btn" aria-pressed={s.navMode === 'orbit'} title="Orbit (drag)" onClick={() => s.patch({ navMode: 'orbit' })}><Orbit /></button>
-          <button className="nav-btn" aria-pressed={s.navMode === 'pan'} title="Pan (drag · or shift-drag)" onClick={() => s.patch({ navMode: 'pan' })}><Pan /></button>
-          <button className="nav-btn" aria-pressed={s.navMode === 'zoom'} title="Zoom (drag up/down · or wheel)" onClick={() => s.patch({ navMode: 'zoom' })}><Zoom /></button>
+          <button className="cad-viewport-target nav-btn" aria-pressed={s.navMode === 'orbit'} title="Orbit (drag)" onClick={() => s.patch({ navMode: 'orbit' })}><Orbit /></button>
+          <button className="cad-viewport-target nav-btn" aria-pressed={s.navMode === 'pan'} title="Pan (drag · or shift-drag)" onClick={() => s.patch({ navMode: 'pan' })}><Pan /></button>
+          <button className="cad-viewport-target nav-btn" aria-pressed={s.navMode === 'zoom'} title="Zoom (drag up/down · or wheel)" onClick={() => s.patch({ navMode: 'zoom' })}><Zoom /></button>
           <span className="w-px h-5 bg-line2 mx-1" />
-          <button className="nav-btn" title="Fit" onClick={() => s.fit()}><Fit /></button>
+          <button className="cad-viewport-target nav-btn" title="Fit" onClick={() => s.fit()}><Fit /></button>
           <span className="w-px h-5 bg-line2 mx-1" />
           <div className="relative">
-            <button className="nav-btn" aria-expanded={dispOpen} title="Display settings" onClick={() => setDispOpen((v) => !v)}><Display /><span className="text-[12px] text-muted">{Math.round(s.zoom * 100)}%</span></button>
+            <button className="cad-viewport-target nav-btn" aria-expanded={dispOpen} title="Display settings" onClick={() => setDispOpen((v) => !v)}><Display /><span className="text-[12px] text-muted">{Math.round(s.zoom * 100)}%</span></button>
             {dispOpen && (
               <div role="menu" className="absolute bottom-[38px] left-0 w-[220px] bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] py-1 text-[13px]">
                 <div className="px-3 pt-1 pb-[2px] text-[12px] text-muted">Visual style</div>
                 {(['shaded', 'edges', 'wireframe'] as const).map((v) => (
-                  <button key={v} role="menuitemradio" aria-checked={s.visualStyle === v} onClick={() => s.patch({ visualStyle: v })} className="row-hover w-full text-left px-3 min-h-7 grid grid-cols-[16px_1fr] gap-2 items-center bg-transparent border-0 text-ink cursor-pointer">
+                  <button key={v} role="menuitemradio" aria-checked={s.visualStyle === v} onClick={() => s.patch({ visualStyle: v })} className="cad-viewport-target row-hover w-full text-left px-3 min-h-7 grid grid-cols-[16px_1fr] gap-2 items-center bg-transparent border-0 text-ink cursor-pointer">
                     <span className="text-ink">{s.visualStyle === v ? <Check /> : null}</span>{v === 'shaded' ? 'Shaded' : v === 'edges' ? 'Shaded with visible edges' : 'Wireframe'}
                   </button>
                 ))}
                 <div className="border-t border-line2 my-1" />
-                <button role="menuitemcheckbox" aria-checked={s.grid} onClick={() => s.patch({ grid: !s.grid })} className="row-hover w-full text-left px-3 min-h-7 grid grid-cols-[16px_1fr] gap-2 items-center bg-transparent border-0 text-ink cursor-pointer"><span>{s.grid ? <Check /> : null}</span><span className="inline-flex items-center gap-2"><GridIcon /> Layout grid</span></button>
-                <button role="menuitemcheckbox" aria-checked={s.section.on} onClick={() => { s.patch({ section: { ...s.section, on: !s.section.on } }); if (!s.section.on) s.openDialog('section', null); }} className="row-hover w-full text-left px-3 min-h-7 grid grid-cols-[16px_1fr] gap-2 items-center bg-transparent border-0 text-ink cursor-pointer"><span>{s.section.on ? <Check /> : null}</span><span>Section analysis</span></button>
+                <button role="menuitemcheckbox" aria-checked={s.grid} onClick={() => s.patch({ grid: !s.grid })} className="cad-viewport-target row-hover w-full text-left px-3 min-h-7 grid grid-cols-[16px_1fr] gap-2 items-center bg-transparent border-0 text-ink cursor-pointer"><span>{s.grid ? <Check /> : null}</span><span className="inline-flex items-center gap-2"><GridIcon /> Layout grid</span></button>
+                <button role="menuitemcheckbox" aria-checked={s.section.on} onClick={() => { s.patch({ section: { ...s.section, on: !s.section.on } }); if (!s.section.on) s.openDialog('section', null); }} className="cad-viewport-target row-hover w-full text-left px-3 min-h-7 grid grid-cols-[16px_1fr] gap-2 items-center bg-transparent border-0 text-ink cursor-pointer"><span>{s.section.on ? <Check /> : null}</span><span>Section analysis</span></button>
                 <div className="border-t border-line2 my-1" />
-                <button onClick={() => { s.setView('iso'); setDispOpen(false); }} className="row-hover w-full text-left px-3 min-h-7 grid grid-cols-[16px_1fr] gap-2 items-center bg-transparent border-0 text-ink cursor-pointer"><span /><span>Reset camera · home</span></button>
+                <button onClick={() => { s.setView('iso'); setDispOpen(false); }} className="cad-viewport-target row-hover w-full text-left px-3 min-h-7 grid grid-cols-[16px_1fr] gap-2 items-center bg-transparent border-0 text-ink cursor-pointer"><span /><span>Reset camera · home</span></button>
               </div>
             )}
           </div>

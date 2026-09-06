@@ -86,7 +86,7 @@ export function MissionNav({ active, onSelect }: MissionNavProps) {
               aria-pressed={selected}
               data-workspace={workspace.id}
               onClick={() => onSelect(workspace.id)}
-              className="flex-none min-h-8 whitespace-nowrap rounded-r border px-3 text-[12px] font-semibold cursor-pointer"
+              className="cad-mission-target flex-none min-h-8 whitespace-nowrap rounded-r border px-3 text-[12px] font-semibold cursor-pointer"
               style={{
                 borderColor: selected ? 'var(--accent)' : 'transparent',
                 background: selected ? 'var(--accent)' : 'transparent',
@@ -105,7 +105,7 @@ export function MissionNav({ active, onSelect }: MissionNavProps) {
         aria-disabled={!railState.overflow}
         disabled={!railState.overflow}
         onClick={moveRail}
-        className="flex w-14 flex-none cursor-pointer items-center justify-center whitespace-nowrap border-0 border-l border-line2 bg-surface px-1 font-mono text-[9px] text-muted disabled:cursor-default disabled:opacity-40 sm:hidden"
+        className="cad-mission-target flex w-14 flex-none cursor-pointer items-center justify-center whitespace-nowrap border-0 border-l border-line2 bg-surface px-1 font-mono text-[9px] text-muted disabled:cursor-default disabled:opacity-40 sm:hidden"
       >
         {reverse ? 'BACK <' : 'MORE >'}
       </button>

@@ -10,6 +10,8 @@ services:
     autoDeployTrigger: off
     maxShutdownDelaySeconds: 30
     envVars:
+      - key: CAD_NATIVE_RUNTIME_OWNER_APPROVAL
+        sync: false
       - key: CAD_CORS_ORIGINS
         value: https://caddydaddy-candidate-0-1.vercel.app
       - key: CAD_ALLOWED_HOSTS

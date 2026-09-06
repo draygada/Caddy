@@ -5,12 +5,19 @@ import copy
 import pytest
 from fastapi.testclient import TestClient
 
-from api.index import app
+from api.index import BoundedPayloadASGI
 from cad_service.app import create_app
-from cad_service.settings import DeploymentSettings
+from cad_service.settings import DeploymentSettings, NATIVE_RUNTIME_OWNER_APPROVAL_VALUE
 
 
-client = TestClient(app)
+settings = DeploymentSettings(native_runtime_owner_approval=NATIVE_RUNTIME_OWNER_APPROVAL_VALUE)
+client = TestClient(BoundedPayloadASGI(
+    create_app(settings),
+    max_request_bytes=settings.max_request_bytes,
+    max_response_bytes=settings.max_response_bytes,
+    request_timeout_seconds=settings.transport_timeout_seconds,
+    max_concurrency=settings.max_concurrency,
+))
 
 
 def rectangle(sketch_id: str, x: float, y: float, width: float, height: float) -> dict:

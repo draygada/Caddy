@@ -5,8 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from .errors import CadError
 from .executor import NativeExecutor
-from .kernel import CadError, capabilities
 from .models import AssemblyRequest, AssemblyResponse, ExchangeRequest, ExchangeResponse, RecomputeRequest, RecomputeResponse
 from .settings import DeploymentSettings
 
@@ -48,22 +48,34 @@ def create_app(
 
     @application.exception_handler(CadError)
     async def cad_error_handler(_: Request, exc: CadError) -> JSONResponse:
-        status_code = 504 if exc.diagnostic.code == "NATIVE_OPERATION_TIMEOUT" else 422
         return JSONResponse(
-            status_code=status_code,
-            content={"status": "FAILED", "diagnostics": [exc.diagnostic.model_dump(mode="json")]},
+            status_code=exc.status_code,
+            content={
+                "schema_version": "caddydaddy.cad-runtime-status/1",
+                "status": "BLOCKED" if exc.status_code == 503 else "FAILED",
+                "diagnostic": exc.diagnostic.model_dump(mode="json", exclude_none=True),
+                "diagnostics": [exc.diagnostic.model_dump(mode="json", exclude_none=True)],
+            },
         )
 
     @application.get("/health")
     def health() -> dict[str, str]:
-        return {"status": "ok", "service": "cad-service", "execution": "real-occt"}
+        return {"status": "ok", "service": "cad-service", "execution": "native-runtime-gated"}
 
     @application.get("/ready")
     def ready():
         try:
             proof = executor.readiness()
-        except CadError:
-            return JSONResponse(status_code=503, content={"status": "not-ready", "service": "cad-service"})
+        except CadError as exc:
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={
+                    "schema_version": "caddydaddy.cad-runtime-status/1",
+                    "status": "BLOCKED",
+                    "service": "cad-service",
+                    "diagnostic": exc.diagnostic.model_dump(mode="json", exclude_none=True),
+                },
+            )
         return {
             "status": "ready",
             "service": "cad-service",
@@ -73,8 +85,20 @@ def create_app(
         }
 
     @application.get("/v1/capabilities")
-    def get_capabilities() -> dict:
-        result = capabilities()
+    def get_capabilities():
+        try:
+            result = executor.capabilities()
+        except CadError as exc:
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={
+                    "schema_version": "caddydaddy.cad-capabilities/1",
+                    "status": "BLOCKED",
+                    "kernel": None,
+                    "runtime_gate": {"status": "BLOCKED"},
+                    "diagnostic": exc.diagnostic.model_dump(mode="json", exclude_none=True),
+                },
+            )
         result["deployment"] = {
             "execution": "SUBPROCESS_ISOLATED",
             "state": "STATELESS",

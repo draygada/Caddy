@@ -1,5 +1,7 @@
 """The engine: one pure call, code concludes, no human gate. Every test scripts the model and asserts
 on the determination. Route pins and reconciliation pins re-type the ideas pinned in proto-prod."""
+import json
+
 import jsonschema
 import pytest
 
@@ -25,6 +27,11 @@ def run(model, snapshot_=None, calls_cap=16):
 
 def cand(out, provision):
     return next(c for c in out["candidates"] if c["provision"] == provision)
+
+
+def questions(out):
+    prefix = "QUESTION "
+    return [json.loads(line[len(prefix):]) for line in out["determination"]["basis"] if line.startswith(prefix)]
 
 
 # --- The determination -------------------------------------------------------------------------
@@ -57,6 +64,7 @@ def test_an_open_usml_candidate_is_undetermined_and_never_advances_to_the_ccl():
     assert d["jurisdiction"] == "UNDETERMINED" and d["classification"] == []
     assert d["usml_step"] == "undetermined" and d["ccl_step"] == "not_reached"
     assert d["open_candidates"] == ["USML XI(c)(2)"]
+    assert questions(out)
     assert not any(c.kind == "ccl_propose" for c in m.calls)
 
 
@@ -88,6 +96,7 @@ def test_every_specific_candidate_knocked_out_is_ear99():
     d = out["determination"]
     assert d["jurisdiction"] == "EAR99" and d["classification"] == ["EAR99"] and d["ccl_step"] == "all_knocked_out"
     assert cand(out, "EAR99")["status"] == "supported" and cand(out, "EAR99")["origin"] == "floor"
+    assert questions(out) == []
 
 
 def test_an_open_ccl_candidate_is_ear_with_the_entry_undetermined_and_ear99_not_reached():
@@ -210,6 +219,88 @@ def test_unknown_provisions_are_dropped_and_never_become_candidates():
     out = run(m)
     assert {c["provision"] for c in out["candidates"]} == {"USML XI(c)(2)", "9A991.d", "EAR99"}
     assert {d["provision"] for d in out["provenance"]["dropped_candidates"]} == {"USML XXII(a)", "2B094"}
+
+
+def test_runtime_proposal_tools_enumerate_only_exact_wave_appropriate_pack_ids():
+    class SchemaRecordingModel(ScriptedModel):
+        def __init__(self, responses):
+            super().__init__(responses)
+            self.schemas = {}
+
+        def propose(self, kind, prompt, schema):
+            self.schemas.setdefault(kind, []).append(schema)
+            return super().propose(kind, prompt, schema)
+
+    model = SchemaRecordingModel({**usml_negative(), "ccl_propose": [{"candidates": []}]})
+    run(model)
+
+    active_pack = pack()
+    for kind, list_name in (("usml_propose", "USML"), ("ccl_propose", "CCL")):
+        provision_schema = model.schemas[kind][0]["properties"]["candidates"]["items"]["properties"]["provision"]
+        expected = sorted(key for key, unit in active_pack.units.items() if unit.list_name == list_name)
+        assert provision_schema == {"type": "string", "enum": expected}
+    assert "USML Category XI(c)(2)" not in model.schemas["usml_propose"][0]["properties"]["candidates"]["items"]["properties"]["provision"]["enum"]
+    assert "ECCN 9A991.d" not in model.schemas["ccl_propose"][0]["properties"]["candidates"]["items"]["properties"]["provision"]["enum"]
+
+
+def test_an_unambiguous_alias_is_rejected_until_the_model_returns_the_exact_pack_id():
+    model = ScriptedModel({
+        "usml_propose": [propose("USML Category XI(c)(2)"), propose("USML XI(c)(2)")],
+        ("advocate", "USML XI(c)(2)"): [advocate("USML XI(c)(2)", [element("USML XI(c)(2)", "indeterminate")])],
+        ("judge", "USML XI(c)(2)"): [judge("USML XI(c)(2)", "knocked_out", [element("USML XI(c)(2)", "not_met", quote="Printed Circuit Boards")])],
+        "ccl_propose": [{"candidates": []}],
+    })
+    out = run(model)
+
+    assert cand(out, "USML XI(c)(2)")["status"] == "knocked_out"
+    dropped = out["provenance"]["dropped_candidates"]
+    assert dropped == [{
+        "provision": "USML Category XI(c)(2)",
+        "reason": "not an exact canonical USML reference-pack ID; exact ID is USML XI(c)(2)",
+    }]
+
+
+def test_a_descriptive_ccl_alias_cannot_clear_the_specific_entry_review_to_ear99():
+    out = run(ScriptedModel({**usml_negative(), "ccl_propose": [propose("ECCN 9A991.d")]}))
+
+    assert out["determination"]["jurisdiction"] == "EAR"
+    assert out["determination"]["ccl_step"] == "undetermined"
+    assert cand(out, "EAR99")["status"] == "not_reached"
+    assert out["provenance"]["dropped_candidates"] == [{
+        "provision": "ECCN 9A991.d",
+        "reason": "not an exact canonical CCL reference-pack ID; exact ID is 9A991.d",
+    }]
+    assert questions(out)[0]["scope"] == "CCL"
+
+
+def test_an_unclosed_candidate_emits_a_deterministic_actionable_missing_fact_queue():
+    def open_model():
+        unresolved = element(
+            "USML XI(c)(2)", "indeterminate", element_id="el:military-design",
+            facts=("design.military_origin",),
+        )
+        return ScriptedModel({
+            "usml_propose": [propose("USML XI(c)(2)")],
+            ("advocate", "USML XI(c)(2)"): [advocate("USML XI(c)(2)", [unresolved])],
+            ("judge", "USML XI(c)(2)"): [judge("USML XI(c)(2)", "undetermined", [unresolved])],
+        })
+
+    first = questions(run(open_model()))
+    second = questions(run(open_model()))
+
+    assert first == second == [{
+        "action": "provide_verified_fact",
+        "deadline": "before_classification_rerun",
+        "element_id": "el:military-design",
+        "fact_path": "design.military_origin",
+        "fact_state": "missing",
+        "owner": "classification_requester",
+        "provision": "USML XI(c)(2)",
+        "question": ("What is the verified value and source for design.military_origin as it bears on "
+                     "USML XI(c)(2) element el:military-design?"),
+        "question_id": "Q-001",
+        "scope": "USML",
+    }]
 
 
 def test_an_empty_proposal_retries_once_then_the_usml_step_is_undemonstrated():

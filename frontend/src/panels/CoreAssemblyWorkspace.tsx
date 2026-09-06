@@ -8,6 +8,7 @@ import {
   type CoreCandidateLoad,
   type CoreEntityBinding,
 } from '../lib/core-client';
+import { PRODUCT_NAME, useProductThread } from '../lib/product-thread';
 
 const short = (value: string, keep = 10) => value.length <= keep * 2 + 1 ? value : `${value.slice(0, keep)}…${value.slice(-keep)}`;
 
@@ -43,6 +44,7 @@ function EntityButton({ entity, selected, onSelect }: { entity: CoreEntityBindin
 }
 
 export function CoreAssemblyWorkspace() {
+  const thread = useProductThread();
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
   const [load, setLoad] = useState<CoreCandidateLoad | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -100,8 +102,9 @@ export function CoreAssemblyWorkspace() {
       <section aria-labelledby="core-workspace-title" className="panel min-h-[360px] grid place-items-center p-6">
         <div className="max-w-xl text-center grid gap-4">
           <div>
-            <div className="text-[11px] uppercase tracking-[.12em] text-muted">Core / assembly</div>
+            <div className="text-[11px] uppercase tracking-[.12em] text-muted">Core / assembly · {PRODUCT_NAME}</div>
             <h2 id="core-workspace-title" className="m-0 mt-1 text-xl">Immutable Candidate workspace</h2>
+            <div className="mt-2 text-[11px] font-mono">Active Product Thread revision {thread.currentCadRevision?.revisionId ?? 'not yet accepted'}</div>
           </div>
           {phase === 'loading' ? (
             <div role="status" aria-live="polite" className="text-[14px] text-muted">Loading the real <span className="font-mono">/api/candidate</span> contract…</div>
@@ -132,14 +135,16 @@ export function CoreAssemblyWorkspace() {
     <section aria-labelledby="core-workspace-title" className="grid gap-3 min-w-0">
       <header className="panel p-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-[.12em] text-muted">Core / assembly workspace</div>
+          <div className="text-[11px] uppercase tracking-[.12em] text-muted">Core / assembly workspace · {PRODUCT_NAME}</div>
           <h2 id="core-workspace-title" className="m-0 mt-1 text-xl">{candidate.document.label}</h2>
+          <p className="m-0 mt-1 text-[12px] text-muted">QX-0 workflow context · Product Thread revision {thread.currentCadRevision?.revisionId ?? 'not yet accepted'} · Core snapshot revision {candidate.document.revisionId}. Kestrel Design is a separate legacy context.</p>
           <p className="m-0 mt-1 text-[12px] text-muted">Two-body assembly · {entities.length} exact entity bindings · {candidate.document.operations.length} operation</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="chip">{modeLabel}</span>
           <span className="chip">{candidate.snapshotProvenance.mode}</span>
-          <span className="chip">revision {short(candidate.document.revisionId, 8)}</span>
+          <span className="chip">Core snapshot {short(candidate.document.revisionId, 8)}</span>
+          <span className="chip">Thread {thread.currentCadRevision ? short(thread.currentCadRevision.revisionId, 8) : 'revision pending'}</span>
           <button type="button" className="btn" disabled={phase === 'loading'} onClick={() => void fetchLive()}>{phase === 'loading' ? 'Refreshing…' : 'Refresh API'}</button>
         </div>
       </header>

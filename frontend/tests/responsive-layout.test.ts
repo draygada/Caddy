@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import appSource from '../src/App.tsx?raw';
 import authoringSource from '../src/panels/AuthoringWorkspace.tsx?raw';
 import missionNavSource from '../src/panels/MissionNav.tsx?raw';
+import viewportSource from '../src/panels/Viewport.tsx?raw';
 
 const cssSource = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
 
@@ -17,6 +18,7 @@ describe('Candidate 0.2 compact responsive layout', () => {
     expect(missionNavSource).toContain('w-14 flex-none');
     expect(missionNavSource).toContain('whitespace-nowrap');
     expect(missionNavSource).toContain("'MORE >'");
+    expect(missionNavSource).toContain('cad-mission-target');
   });
 
   it('stacks all three CAD authoring columns without changing the desktop grid', () => {
@@ -35,5 +37,16 @@ describe('Candidate 0.2 compact responsive layout', () => {
     expect(cssSource).toMatch(/\.cad-authoring-workspace button[\s\S]*?max-width: 100%;/);
     expect(cssSource).toMatch(/\.cad-output-download > span\s*\{[\s\S]*?overflow-wrap: anywhere;/);
     expect(appSource).toContain('<CommandBox />');
+  });
+
+  it('uses narrow-only 44px interaction targets and collapses secondary CAD density', () => {
+    expect(authoringSource).toContain('className="cad-mobile-stack"');
+    expect(authoringSource).toContain('className="cad-entity-row"');
+    expect(viewportSource).toContain('cad-viewport-target');
+    expect(viewportSource).toContain('cad-feature-summary');
+    expect(cssSource).toMatch(/\.cad-authoring-workspace button\s*\{[\s\S]*?min-height: 44px;/);
+    expect(cssSource).toMatch(/\.cad-mobile-stack\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) !important;/);
+    expect(cssSource).toMatch(/\.cad-mission-target,[\s\S]*?\.cad-viewport-target\s*\{[\s\S]*?min-height: 44px;/);
+    expect(cssSource).toMatch(/\.cad-feature-summary,[\s\S]*?display: none;/);
   });
 });

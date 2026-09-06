@@ -8,6 +8,12 @@ from urllib.parse import urlsplit
 
 
 VERCEL_DOCUMENTED_BODY_LIMIT_BYTES = 4_500_000
+NATIVE_RUNTIME_MANIFEST_SCHEMA = "caddydaddy.native-runtime/v1"
+NATIVE_RUNTIME_ARTIFACT_SHA256 = "8582570e148e5e08cfb9242113edaf73068bbfb3c46b32518e879071b50c345b"
+NATIVE_RUNTIME_OWNER_APPROVAL_ENV = "CAD_NATIVE_RUNTIME_OWNER_APPROVAL"
+NATIVE_RUNTIME_OWNER_APPROVAL_VALUE = (
+    f"ACCEPTED:{NATIVE_RUNTIME_MANIFEST_SCHEMA}:{NATIVE_RUNTIME_ARTIFACT_SHA256}"
+)
 
 
 def _integer(name: str, default: int, *, minimum: int, maximum: int) -> int:
@@ -74,6 +80,7 @@ class DeploymentSettings:
     native_max_open_files: int = 256
     cors_origins: tuple[str, ...] = ()
     allowed_hosts: tuple[str, ...] = ("localhost", "127.0.0.1", "testserver")
+    native_runtime_owner_approval: str = ""
 
     def __post_init__(self) -> None:
         if self.max_request_bytes >= VERCEL_DOCUMENTED_BODY_LIMIT_BYTES:
@@ -114,6 +121,7 @@ class DeploymentSettings:
             ),
             cors_origins=_origins(os.getenv("CAD_CORS_ORIGINS", "")),
             allowed_hosts=tuple(dict.fromkeys((*configured_hosts, *platform_hosts))),
+            native_runtime_owner_approval=os.getenv(NATIVE_RUNTIME_OWNER_APPROVAL_ENV, "").strip(),
         )
 
     def public_limits(self) -> dict[str, int | str]:

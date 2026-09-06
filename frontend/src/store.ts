@@ -24,6 +24,9 @@ export type ViewMode = 'model' | 'sheet' | 'sketch' | 'board';
 export type NavMode = 'orbit' | 'pan' | 'zoom';
 export type VisualStyle = 'shaded' | 'edges' | 'wireframe';
 export type SelFilter = 'component' | 'body' | 'face';
+export const DESIGN_PROJECT_ID = 'product:caddydaddy:kestrel' as const;
+export const DESIGN_PROJECT_NAME = 'Kestrel' as const;
+export const DESIGN_PRODUCT_THREAD_RELATIONSHIP = 'SEPARATE_LEGACY_DESIGN_CONTEXT_NOT_QX_0_PRODUCT_THREAD' as const;
 /** body ids: a slot, or one of the airframe's two bodies */
 export type BodyId = Slot | 'plate' | 'flange';
 export const BODY_LABEL: Record<BodyId, string> = { plate: 'Base plate', flange: 'Flange', battery: 'Battery pack', thermal: 'Thermal sensor', imu: 'IMU', fc: 'Flight controller', gnss: 'GNSS receiver', datalink: 'Datalink radio', pod: 'Sensor pod' };
@@ -87,6 +90,12 @@ export function designHashOf(s: Snapshot): string {
 }
 
 export interface WorkbenchState extends Snapshot {
+  workflowIdentity: {
+    projectId: typeof DESIGN_PROJECT_ID;
+    projectName: typeof DESIGN_PROJECT_NAME;
+    revisionId: string;
+    productThreadRelationship: typeof DESIGN_PRODUCT_THREAD_RELATIONSHIP;
+  };
   theme: Theme;
   serviceState: ServiceState;
   demoBar: boolean;
@@ -278,7 +287,8 @@ const baseline = () => {
     spanText: SPAN_BASELINE.toFixed(1), spanMsg: '', spanErr: false,
     events: SEED_EVENTS.map((e) => ({ ...e, snap })).reverse(),
     viewSeq: null as number | null, liveStash: null as Snapshot | null,
-    versions: [{ v: 1, seq: 3, comment: 'baseline · Kestrel, twelve parts', at: '2026-09-05 09:12' }] as Version[],
+    workflowIdentity: { projectId: DESIGN_PROJECT_ID, projectName: DESIGN_PROJECT_NAME, revisionId: 'legacy-design-state:3', productThreadRelationship: DESIGN_PRODUCT_THREAD_RELATIONSHIP },
+    versions: [{ v: 1, seq: 3, comment: 'Kestrel legacy Design state #3 · separate from the active QX-0 Product Thread · twelve parts', at: '2026-09-05 09:12' }] as Version[],
     comments: [] as Comment[],
     pending: null as Pending | null, attestor: '', intent: '', confirmErr: '',
     open: {} as Record<string, boolean>, lastDiff: null as { changed: number; reeval: number } | null, lastKind: null as string | null,
@@ -299,7 +309,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     set((s) => {
       const seq = s.events.length + 1;
       const full: TimelineEvent = { seq, lane: 'design', intent: '', word: '', color: 'var(--ink)', ...ev, hash: hashOf(seq), snap: pickSnapshot(s) };
-      return { events: [full, ...s.events] };
+      return { events: [full, ...s.events], workflowIdentity: { ...s.workflowIdentity, revisionId: `legacy-design-state:${seq}` } };
     });
   };
   const changedRows = (from: PartId, to: PartId): CmpKey[] => CMP_KEYS.filter((k) => CATALOG[from].cmp[k] !== CATALOG[to].cmp[k]);
@@ -335,7 +345,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     requestDetermination: (o) => {
       const s = get();
       // Friday's cached response.json: the baseline determination
-      const cached = { entries: [] as string[], basis: 'self-classification analysis under 15 CFR 732.3(b) · Kestrel baseline · no listed entry among the 14 rows · EAR99 · not a CJ or CCATS', memoHash: 'memo-' + hashOf(4451).slice(0, 8) };
+      const cached = { entries: [] as string[], basis: 'self-classification analysis under 15 CFR 732.3(b) · Kestrel legacy Design baseline, separate from the active QX-0 Product Thread · no listed entry among the 14 rows · EAR99 · not a CJ or CCATS', memoHash: 'memo-' + hashOf(4451).slice(0, 8) };
       const fired = o.rules.filter((r) => r.node === 'airframe').map((r) => r.entry);
       const conflict = fired.length ? 'the cached memo reads EAR99 for the baseline; the engine reads ' + fired.join(', ') + ' for this design · conflict recorded · the engine’s flag stays on screen until a human resolves it · never auto-resolved toward EAR99' : null;
       set({ determination: { chip: 'CACHED', memoHash: cached.memoHash, entries: cached.entries, basis: cached.basis, conflict, at: now() } });

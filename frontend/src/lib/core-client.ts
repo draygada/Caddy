@@ -149,12 +149,22 @@ export interface CoreEntityBinding extends CoreEntityRange {
 }
 
 export interface CoreCandidateLoad {
+  cadRuntime: CoreCadRuntime;
   candidate: CoreCandidateContract;
   evidenceRole: 'IMMUTABLE_CANDIDATE_0_1_SOURCE_EVIDENCE_ONLY' | 'PACKAGED_RECOVERY_FIXTURE';
   loadedAt: string;
   releaseIdentity: CoreReleaseIdentity | null;
   source: CoreCandidateSource;
   warning: string | null;
+}
+
+export interface CoreCadRuntime {
+  connection: 'CONNECTED' | 'DISCONNECTED';
+  kernel: 'OpenCascade' | null;
+  version: '7.9.3' | null;
+  executedForThisResponse: false;
+  evidence: string;
+  reason: { code: string; message: string } | null;
 }
 
 export interface CoreReleaseIdentity {
@@ -367,6 +377,17 @@ export async function loadCoreCandidate(fetchImpl: typeof fetch = fetch): Promis
 
 export function loadCachedCoreCandidate(): CoreCandidateLoad {
   return {
+    cadRuntime: {
+      connection: 'DISCONNECTED',
+      kernel: null,
+      version: null,
+      executedForThisResponse: false,
+      evidence: 'PACKAGED_RECOVERY_FIXTURE',
+      reason: {
+        code: 'CORE_CANDIDATE_NOT_LOADED',
+        message: 'The packaged recovery fixture does not prove a connected or owner-approved OCCT runtime.',
+      },
+    },
     candidate: parseCoreCandidate(structuredClone(PACKAGED_FIXTURE)),
     evidenceRole: 'PACKAGED_RECOVERY_FIXTURE',
     loadedAt: new Date().toISOString(),
@@ -376,7 +397,7 @@ export function loadCachedCoreCandidate(): CoreCandidateLoad {
   };
 }
 
-export function parseCoreCandidateResponse(value: unknown): Pick<CoreCandidateLoad, 'candidate' | 'evidenceRole' | 'releaseIdentity'> {
+export function parseCoreCandidateResponse(value: unknown): Pick<CoreCandidateLoad, 'cadRuntime' | 'candidate' | 'evidenceRole' | 'releaseIdentity'> {
   if (!isRecord(value) || !isRecord(value.candidate) || !isRecord(value.releaseIdentity)) {
     throw invalid('Candidate 0.2 release identity is missing or malformed.');
   }
@@ -419,11 +440,66 @@ export function parseCoreCandidateResponse(value: unknown): Pick<CoreCandidateLo
   if (candidate.candidate.version !== legacy.candidateVersion || candidate.document.revisionId !== legacy.revisionId) {
     throw invalid('Candidate 0.1 legacy snapshot identity does not match its nested evidence descriptor.');
   }
+  const cadRuntime = parseCoreCadRuntime(value);
   return {
+    cadRuntime,
     candidate,
     evidenceRole: 'IMMUTABLE_CANDIDATE_0_1_SOURCE_EVIDENCE_ONLY',
     releaseIdentity: structuredClone(releaseIdentity) as unknown as CoreReleaseIdentity,
   };
+}
+
+function parseCoreCadRuntime(value: Record<string, unknown>): CoreCadRuntime {
+  const runtimeGeometry = isRecord(value.runtimeGeometry) ? value.runtimeGeometry : null;
+  const browser = runtimeGeometry && isRecord(runtimeGeometry.browser) ? runtimeGeometry.browser : null;
+  const native = runtimeGeometry && isRecord(runtimeGeometry.native) ? runtimeGeometry.native : null;
+  const capabilities = isRecord(value.capabilities) ? value.capabilities : null;
+  const contracts = isRecord(value.capabilityContracts) ? value.capabilityContracts : null;
+  const authoring = contracts && isRecord(contracts.cadAuthoring) ? contracts.cadAuthoring : null;
+  const recompute = contracts && isRecord(contracts.liveKernelRecompute) ? contracts.liveKernelRecompute : null;
+  if (
+    !runtimeGeometry
+    || runtimeGeometry.authoritativeForThisBrowserSession !== 'BROWSER_JSCAD_BOUNDED'
+    || !browser
+    || browser.kernel !== 'JSCAD'
+    || browser.scope !== 'BOUNDED_MESH_CSG_NOT_PRODUCTION_BREP'
+    || !authoring
+    || authoring.productionBrepKernel !== false
+    || !native
+    || native.executedForThisResponse !== false
+    || !capabilities
+    || typeof capabilities.nativeOcctConnected !== 'boolean'
+    || !recompute
+  ) {
+    throw invalid('Candidate runtime geometry contract is missing or could relabel browser JSCAD as production B-rep.');
+  }
+  const connected = native.connection === 'CONNECTED';
+  const disconnected = native.connection === 'DISCONNECTED';
+  const reason = isRecord(native.reason)
+    && typeof native.reason.code === 'string'
+    && typeof native.reason.message === 'string'
+    ? { code: native.reason.code, message: native.reason.message }
+    : null;
+  if (
+    (!connected && !disconnected)
+    || capabilities.nativeOcctConnected !== connected
+    || (connected && (
+      native.kernel !== 'OpenCascade'
+      || native.version !== '7.9.3'
+      || native.evidence !== 'PRODUCT_CORE_CAPABILITY'
+      || reason !== null
+      || recompute.status !== 'AVAILABLE_NATIVE_CONNECTED'
+    ))
+    || (disconnected && (
+      native.kernel !== null
+      || native.version !== null
+      || reason === null
+      || recompute.status !== 'UNAVAILABLE_NATIVE_DISCONNECTED'
+    ))
+  ) {
+    throw invalid('Candidate native runtime claim is internally inconsistent or lacks product/core capability evidence.');
+  }
+  return structuredClone(native) as unknown as CoreCadRuntime;
 }
 
 export function listCoreEntities(candidate: CoreCandidateContract): CoreEntityBinding[] {
