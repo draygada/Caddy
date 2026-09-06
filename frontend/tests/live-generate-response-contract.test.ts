@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CadOutputArtifact, CadOutputBundle } from '../src/cad/output-client';
+import { getProductThreadSnapshot, registerProductCadRevision, registerProductOutputs, resetProductThreadForTests } from '../src/lib/product-thread';
 import { productOutputRegistration } from '../src/panels/AuthoringWorkspace';
 
 const digest = (character: string) => character.repeat(64);
@@ -84,7 +85,7 @@ describe('deployed CAD generate response contract', () => {
     const registration = productOutputRegistration(bundle, acceptedCad);
 
     expect(registration.artifactManifestSha256).toBe(bundle.package.manifest_file_sha256);
-    expect(registration.bomSha256).toBe(digest('1'));
+    expect(registration.bomCsvArtifactSha256).toBe(digest('1'));
     expect(registration.artifacts).toContainEqual(expect.objectContaining({
       artifactId: `cad-output:${bundle.package.package_id}:bom/bom.csv`,
       sha256: digest('1'),
@@ -96,7 +97,7 @@ describe('deployed CAD generate response contract', () => {
     const registration = productOutputRegistration(bundle, acceptedCad);
 
     expect(registration.artifactManifestSha256).toBe(bundle.package.manifest_file_sha256);
-    expect(registration.bomSha256).toBe(digest('1'));
+    expect(registration.bomCsvArtifactSha256).toBe(digest('1'));
     expect(registration.artifacts).toContainEqual(expect.objectContaining({
       artifactId: `cad-output:${bundle.package.package_id}:bom.csv`,
       sha256: digest('1'),
@@ -124,5 +125,31 @@ describe('deployed CAD generate response contract', () => {
     expect(() => productOutputRegistration(bundle, acceptedCad)).toThrow(
       'Generated outputs are missing exact manifest or BOM identities.',
     );
+  });
+
+  it('binds one nested BOM CSV byte identity and rejects duplicate names or tampering', async () => {
+    resetProductThreadForTests();
+    await registerProductCadRevision({
+      documentId: acceptedCad.documentId,
+      revisionId: acceptedCad.revisionId,
+      documentSha256: acceptedCad.documentSha256,
+      geometrySha256: acceptedCad.geometrySha256,
+      actorId: 'operator:browser',
+      acceptedAt: acceptedCad.acceptedAt,
+    });
+    const registration = productOutputRegistration(serviceBundle(), acceptedCad);
+    await registerProductOutputs(registration);
+    expect(getProductThreadSnapshot().artifactBinding).toMatchObject({
+      bomCsvArtifactSha256: digest('1'),
+      semanticBomDigest: 'NOT_PROVIDED',
+    });
+
+    const nestedBom = registration.artifacts.find((artifact) => artifact.artifactId.endsWith(':bom/bom.csv'))!;
+    await expect(registerProductOutputs({
+      ...registration,
+      artifacts: [...registration.artifacts, { ...nestedBom, artifactId: nestedBom.artifactId.replace(':bom/bom.csv', ':bom.csv') }],
+    })).rejects.toThrow('CAD output BOM CSV artifact identity does not match the sealed artifact set.');
+    await expect(registerProductOutputs({ ...registration, bomCsvArtifactSha256: digest('2') }))
+      .rejects.toThrow('CAD output BOM CSV artifact identity does not match the sealed artifact set.');
   });
 });

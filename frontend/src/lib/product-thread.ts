@@ -4,6 +4,7 @@ export const PRODUCT_ID = 'product:caddydaddy:kestrel';
 export const PRODUCT_THREAD_ID = 'thread:caddydaddy:hackathon-candidate';
 export const PRODUCT_THREAD_DURABILITY = 'MEMORY_ONLY_BROWSER_SESSION' as const;
 export const PRODUCT_THREAD_SIGNATURE = 'UNSIGNED_NO_ED25519' as const;
+export const PRODUCT_THREAD_SEMANTIC_BOM_DIGEST = 'NOT_PROVIDED' as const;
 
 export type ProductLane = 'cad' | 'sources' | 'classification' | 'sourcing' | 'order' | 'receipt';
 export type ActorAttestation = 'OPERATOR_ACTION_RECORDED' | 'SERVICE_REPORTED' | 'SYSTEM_OBSERVED' | 'UNATTESTED';
@@ -19,7 +20,8 @@ export interface ProductArtifactBinding {
   revisionId: string;
   cadArtifactSha256: string;
   artifactManifestSha256: string;
-  bomSha256: string;
+  bomCsvArtifactSha256: string;
+  semanticBomDigest: typeof PRODUCT_THREAD_SEMANTIC_BOM_DIGEST;
   registeredAt: string;
 }
 
@@ -221,7 +223,7 @@ export function useProductThread(): ProductThreadSnapshot {
 }
 
 export function productArtifactGate(binding: ProductArtifactBinding | null): { ready: boolean; code: 'READY' | 'BLOCKED_MISSING_CAD_ARTIFACTS'; detail: string } {
-  if (!binding) return { ready: false, code: 'BLOCKED_MISSING_CAD_ARTIFACTS', detail: 'Register an exact CAD revision, geometry artifact hash, artifact-manifest hash, and BOM hash before building a sourcing or order package.' };
+  if (!binding) return { ready: false, code: 'BLOCKED_MISSING_CAD_ARTIFACTS', detail: 'Register an exact CAD revision, geometry artifact hash, artifact-manifest hash, and BOM CSV artifact byte hash before building a sourcing or order package. Semantic BOM digest is NOT_PROVIDED.' };
   return { ready: true, code: 'READY', detail: `Bound to CAD revision ${binding.revisionId}.` };
 }
 
@@ -272,7 +274,7 @@ export interface RegisterProductOutputsInput {
   outputRevisionId: string;
   outputDocumentSha256: string;
   artifactManifestSha256: string;
-  bomSha256: string;
+  bomCsvArtifactSha256: string;
   artifacts: ProductArtifactRef[];
   actorId: string;
   registeredAt?: string;
@@ -284,14 +286,15 @@ export async function registerProductOutputs(input: RegisterProductOutputsInput)
   const sourceGeometrySha256 = canonicalProductSha256(input.sourceGeometrySha256, 'CAD output source-geometry SHA-256');
   const outputDocumentSha256 = canonicalProductSha256(input.outputDocumentSha256, 'CAD output document SHA-256');
   const artifactManifestSha256 = canonicalProductSha256(input.artifactManifestSha256, 'CAD output manifest SHA-256');
-  const bomSha256 = canonicalProductSha256(input.bomSha256, 'CAD output BOM SHA-256');
+  const bomCsvArtifactSha256 = canonicalProductSha256(input.bomCsvArtifactSha256, 'CAD output BOM CSV artifact SHA-256');
   if (!input.outputDocumentId.trim() || !input.outputRevisionId.trim()) throw new Error('CAD output identity is incomplete.');
   input.artifacts.forEach(validArtifact);
   if (!input.artifacts.some((artifact) => artifact.artifactId.endsWith(':manifest.json') && artifact.sha256 === artifactManifestSha256)) {
     throw new Error('CAD output manifest identity does not match the sealed artifact set.');
   }
-  if (!input.artifacts.some((artifact) => artifact.artifactId.endsWith(':bom.csv') && artifact.sha256 === bomSha256)) {
-    throw new Error('CAD output BOM identity does not match the sealed artifact set.');
+  const bomCsvArtifacts = input.artifacts.filter((artifact) => artifact.artifactId.endsWith(':bom.csv') || artifact.artifactId.endsWith(':bom/bom.csv'));
+  if (bomCsvArtifacts.length !== 1 || bomCsvArtifacts[0].kind !== 'BOM_CSV' || bomCsvArtifacts[0].sha256 !== bomCsvArtifactSha256) {
+    throw new Error('CAD output BOM CSV artifact identity does not match the sealed artifact set.');
   }
   return enqueueProductMutation(async () => {
     const current = currentCadRevision;
@@ -306,7 +309,8 @@ export async function registerProductOutputs(input: RegisterProductOutputsInput)
       revisionId: current.revisionId,
       cadArtifactSha256: current.geometrySha256,
       artifactManifestSha256,
-      bomSha256,
+      bomCsvArtifactSha256,
+      semanticBomDigest: PRODUCT_THREAD_SEMANTIC_BOM_DIGEST,
       registeredAt,
     };
     return appendProductEventNow({
@@ -324,18 +328,20 @@ export async function registerProductOutputs(input: RegisterProductOutputsInput)
         outputRevisionId: input.outputRevisionId,
         outputDocumentSha256,
         binding: 'EXACT_CURRENT_REVISION_HASH_IDENTITIES_ONLY',
+        bomIdentity: 'BOM_CSV_ARTIFACT_SHA256',
+        semanticBomDigest: PRODUCT_THREAD_SEMANTIC_BOM_DIGEST,
         persisted: false,
       },
     });
   });
 }
 
-export async function registerProductArtifacts(input: Omit<ProductArtifactBinding, 'registeredAt'> & { registeredAt?: string; actorId: string }): Promise<ProductThreadEvent> {
+export async function registerProductArtifacts(input: Omit<ProductArtifactBinding, 'registeredAt' | 'semanticBomDigest'> & { registeredAt?: string; actorId: string }): Promise<ProductThreadEvent> {
   const registeredAt = input.registeredAt ?? new Date().toISOString();
   const refs: ProductArtifactRef[] = [
     { artifactId: `cad:${input.revisionId}`, kind: 'cad-geometry', sha256: input.cadArtifactSha256 },
     { artifactId: `cad-manifest:${input.revisionId}`, kind: 'cad-artifact-manifest', sha256: input.artifactManifestSha256 },
-    { artifactId: `bom:${input.revisionId}`, kind: 'bom', sha256: input.bomSha256 },
+    { artifactId: `bom-csv:${input.revisionId}`, kind: 'BOM_CSV_ARTIFACT_SHA256', sha256: input.bomCsvArtifactSha256 },
   ];
   refs.forEach(validArtifact);
   return enqueueProductMutation(async () => {
@@ -343,7 +349,8 @@ export async function registerProductArtifacts(input: Omit<ProductArtifactBindin
       revisionId: input.revisionId,
       cadArtifactSha256: input.cadArtifactSha256,
       artifactManifestSha256: input.artifactManifestSha256,
-      bomSha256: input.bomSha256,
+      bomCsvArtifactSha256: input.bomCsvArtifactSha256,
+      semanticBomDigest: PRODUCT_THREAD_SEMANTIC_BOM_DIGEST,
       registeredAt,
     };
     return appendProductEventNow({
@@ -355,7 +362,7 @@ export async function registerProductArtifacts(input: Omit<ProductArtifactBindin
       revisionId: input.revisionId,
       artifacts: refs,
       timestamp: registeredAt,
-      payload: { binding: 'EXACT_HASH_IDENTITIES_ONLY', persisted: false },
+      payload: { binding: 'EXACT_HASH_IDENTITIES_ONLY', bomIdentity: 'BOM_CSV_ARTIFACT_SHA256', semanticBomDigest: PRODUCT_THREAD_SEMANTIC_BOM_DIGEST, persisted: false },
     });
   });
 }

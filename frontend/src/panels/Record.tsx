@@ -33,6 +33,8 @@ export function Record() {
             <h1 className="text-[20px] font-bold m-0">CADdyDaddy product revision thread</h1>
             <div className="font-mono text-[11px] break-all mt-2">{thread.productId} · {thread.threadId}</div>
             <div className="text-amber mt-2"><b>MEMORY ONLY · UNSIGNED.</b> This thread resets on reload, has no server persistence, user authentication, Ed25519 signature, KMS/HSM custody, or cross-browser concurrency guarantee.</div>
+            <div className="text-amber mt-2"><b>BOM_CSV_ARTIFACT_SHA256 only.</b> The BOM binding identifies downloadable CSV bytes verified through the sealed package manifest. Semantic BOM graph digest: <b>NOT_PROVIDED</b>.</div>
+            {thread.artifactBinding && <div className="font-mono text-[11px] break-all mt-2">BOM CSV artifact {thread.artifactBinding.bomCsvArtifactSha256} · semantic BOM digest {thread.artifactBinding.semanticBomDigest}</div>}
           </section>
 
           <section className="panel p-3 grid gap-2">

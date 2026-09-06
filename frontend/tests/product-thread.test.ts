@@ -35,10 +35,11 @@ describe('shared product revision thread', () => {
 
   it('requires exact CAD, artifact-manifest, and BOM hashes before package binding', async () => {
     expect(productArtifactGate(getProductThreadSnapshot().artifactBinding)).toMatchObject({ ready: false, code: 'BLOCKED_MISSING_CAD_ARTIFACTS' });
-    await registerProductArtifacts({ revisionId: 'cad-rev:7', cadArtifactSha256: A, artifactManifestSha256: B, bomSha256: C, actorId: 'operator:test', registeredAt: '2026-09-06T12:00:00.000Z' });
+    await registerProductArtifacts({ revisionId: 'cad-rev:7', cadArtifactSha256: A, artifactManifestSha256: B, bomCsvArtifactSha256: C, actorId: 'operator:test', registeredAt: '2026-09-06T12:00:00.000Z' });
     const current = getProductThreadSnapshot();
     expect(productArtifactGate(current.artifactBinding)).toMatchObject({ ready: true, code: 'READY' });
-    expect(current.events[0].artifacts.map((artifact) => artifact.kind)).toEqual(['cad-geometry', 'cad-artifact-manifest', 'bom']);
+    expect(current.events[0].artifacts.map((artifact) => artifact.kind)).toEqual(['cad-geometry', 'cad-artifact-manifest', 'BOM_CSV_ARTIFACT_SHA256']);
+    expect(current.artifactBinding).toMatchObject({ bomCsvArtifactSha256: C, semanticBomDigest: 'NOT_PROVIDED' });
   });
 
   it('replays every recorded lane, refuses completeness with untracked legacy events, and detects tampering', async () => {

@@ -150,16 +150,16 @@ export function productOutputRegistration(bundle: CadOutputBundle, acceptedCad: 
   const packageBomDescriptor = packageBomDescriptors.length === 1 ? packageBomDescriptors[0] : undefined;
   const manifestSha256 = manifestArtifact && canonicalProductSha256(manifestArtifact.sha256, 'CAD output manifest SHA-256');
   const packageManifestSha256 = canonicalProductSha256(bundle.package.manifest_file_sha256, 'CAD package manifest SHA-256');
-  const bomSha256 = bomArtifact && canonicalProductSha256(bomArtifact.sha256, 'CAD output BOM SHA-256');
-  const packageBomSha256 = packageBomDescriptor && canonicalProductSha256(packageBomDescriptor.sha256, 'CAD package BOM SHA-256');
+  const bomCsvArtifactSha256 = bomArtifact && canonicalProductSha256(bomArtifact.sha256, 'CAD output BOM CSV artifact SHA-256');
+  const packageBomCsvArtifactSha256 = packageBomDescriptor && canonicalProductSha256(packageBomDescriptor.sha256, 'CAD package BOM CSV artifact SHA-256');
   if (
     !manifestSha256
     || manifestSha256 !== packageManifestSha256
     || !bomArtifact
     || !packageBomDescriptor
     || bomArtifact.path !== packageBomDescriptor.path
-    || !bomSha256
-    || bomSha256 !== packageBomSha256
+    || !bomCsvArtifactSha256
+    || bomCsvArtifactSha256 !== packageBomCsvArtifactSha256
   ) {
     throw new Error('Generated outputs are missing exact manifest or BOM identities.');
   }
@@ -172,7 +172,7 @@ export function productOutputRegistration(bundle: CadOutputBundle, acceptedCad: 
     outputRevisionId: bundle.document_identity.revision_id,
     outputDocumentSha256: canonicalProductSha256(bundle.document_identity.document_hash, 'CAD output document SHA-256'),
     artifactManifestSha256: manifestSha256,
-    bomSha256,
+    bomCsvArtifactSha256,
     artifacts,
     actorId: 'operator:browser',
   };

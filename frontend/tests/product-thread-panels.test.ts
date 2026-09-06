@@ -16,11 +16,11 @@ describe('product-thread panel wiring', () => {
     expect(classificationSource).toContain("kind: 'classification-reference-pack'");
   });
 
-  it('blocks package/order progression without exact CAD and BOM identities and records each bounded lifecycle', () => {
+  it('blocks package/order progression without exact CAD and BOM CSV artifact identities and records each bounded lifecycle', () => {
     expect(sourcingSource).toContain('BLOCKED_MISSING_CAD_ARTIFACTS');
     expect(sourcingSource).toContain("eventType: 'sourcing.package_bound'");
     expect(sourcingSource).toContain("kind: 'cad-artifact-manifest'");
-    expect(sourcingSource).toContain("kind: 'bom'");
+    expect(sourcingSource).toContain("kind: 'BOM_CSV_ARTIFACT_SHA256'");
     expect(sourcingSource).toContain('disabled={orderBusy !== null || !packageBinding}');
     expect(sourcingSource).toContain('eventType: `order.${label}`');
   });

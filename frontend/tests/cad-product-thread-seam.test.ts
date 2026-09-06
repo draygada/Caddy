@@ -25,7 +25,7 @@ function outputs(revisionId: string, documentSha256: string, geometrySha256: str
     outputRevisionId: `native:${revisionId}`,
     outputDocumentSha256: F,
     artifactManifestSha256: C,
-    bomSha256: D,
+    bomCsvArtifactSha256: D,
     artifacts: [
       { artifactId: `cad-output:package:${revisionId}:manifest.json`, kind: 'SEALED_MANIFEST', sha256: C },
       { artifactId: `cad-output:package:${revisionId}:bom.csv`, kind: 'BOM_CSV', sha256: D },
@@ -56,7 +56,7 @@ describe('CAD to shared product-thread seam', () => {
     await registerProductOutputs(outputs('cad-rev:2', E, F));
     const finalSnapshot = getProductThreadSnapshot();
     expect(productArtifactGate(finalSnapshot.artifactBinding)).toMatchObject({ ready: true, code: 'READY' });
-    expect(finalSnapshot.artifactBinding).toMatchObject({ revisionId: 'cad-rev:2', cadArtifactSha256: F, artifactManifestSha256: C, bomSha256: D });
+    expect(finalSnapshot.artifactBinding).toMatchObject({ revisionId: 'cad-rev:2', cadArtifactSha256: F, artifactManifestSha256: C, bomCsvArtifactSha256: D, semanticBomDigest: 'NOT_PROVIDED' });
     expect(finalSnapshot.events.at(-1)?.artifacts.map((artifact) => artifact.artifactId)).toContain('cad-output:package:cad-rev:2:model.stl');
   });
 
