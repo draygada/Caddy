@@ -94,6 +94,7 @@ export interface AppendProductEventInput {
 }
 
 const HASH = /^[a-f0-9]{64}$/;
+const HASH_URI = /^sha256:([a-f0-9]{64})$/;
 const listeners = new Set<() => void>();
 let events: ProductThreadEvent[] = [];
 let currentCadRevision: ProductCadRevision | null = null;
@@ -163,6 +164,13 @@ function validArtifact(artifact: ProductArtifactRef): void {
   if (!artifact.artifactId.trim() || !artifact.kind.trim() || !HASH.test(artifact.sha256)) throw new Error('Product-thread artifact identity is invalid.');
 }
 
+export function canonicalProductSha256(value: string, label = 'Product-thread SHA-256'): string {
+  if (HASH.test(value)) return value;
+  const digestUri = HASH_URI.exec(value);
+  if (digestUri) return digestUri[1];
+  throw new Error(`${label} is invalid.`);
+}
+
 function enqueueProductMutation<T>(operation: () => Promise<T>): Promise<T> {
   const queued = appendQueue.then(operation);
   appendQueue = queued.catch(() => undefined);
@@ -219,9 +227,11 @@ export function productArtifactGate(binding: ProductArtifactBinding | null): { r
 
 export async function registerProductCadRevision(input: Omit<ProductCadRevision, 'acceptedAt'> & { acceptedAt?: string; actorId: string; operationId?: string | null }): Promise<ProductThreadEvent> {
   const acceptedAt = input.acceptedAt ?? new Date().toISOString();
+  const documentSha256 = canonicalProductSha256(input.documentSha256, 'Accepted CAD document SHA-256');
+  const geometrySha256 = canonicalProductSha256(input.geometrySha256, 'Accepted CAD geometry SHA-256');
   const artifacts: ProductArtifactRef[] = [
-    { artifactId: `cad-document:${input.documentId}:${input.revisionId}`, kind: 'cad-document', sha256: input.documentSha256 },
-    { artifactId: `cad-geometry:${input.documentId}:${input.revisionId}`, kind: 'cad-geometry', sha256: input.geometrySha256 },
+    { artifactId: `cad-document:${input.documentId}:${input.revisionId}`, kind: 'cad-document', sha256: documentSha256 },
+    { artifactId: `cad-geometry:${input.documentId}:${input.revisionId}`, kind: 'cad-geometry', sha256: geometrySha256 },
   ];
   if (!input.documentId.trim() || !input.revisionId.trim()) throw new Error('Accepted CAD identity is incomplete.');
   artifacts.forEach(validArtifact);
@@ -229,8 +239,8 @@ export async function registerProductCadRevision(input: Omit<ProductCadRevision,
     currentCadRevision = {
       documentId: input.documentId,
       revisionId: input.revisionId,
-      documentSha256: input.documentSha256,
-      geometrySha256: input.geometrySha256,
+      documentSha256,
+      geometrySha256,
       acceptedAt,
     };
     artifactBinding = null;
@@ -270,12 +280,17 @@ export interface RegisterProductOutputsInput {
 
 export async function registerProductOutputs(input: RegisterProductOutputsInput): Promise<ProductThreadEvent> {
   const registeredAt = input.registeredAt ?? new Date().toISOString();
+  const sourceDocumentSha256 = canonicalProductSha256(input.sourceDocumentSha256, 'CAD output source-document SHA-256');
+  const sourceGeometrySha256 = canonicalProductSha256(input.sourceGeometrySha256, 'CAD output source-geometry SHA-256');
+  const outputDocumentSha256 = canonicalProductSha256(input.outputDocumentSha256, 'CAD output document SHA-256');
+  const artifactManifestSha256 = canonicalProductSha256(input.artifactManifestSha256, 'CAD output manifest SHA-256');
+  const bomSha256 = canonicalProductSha256(input.bomSha256, 'CAD output BOM SHA-256');
   if (!input.outputDocumentId.trim() || !input.outputRevisionId.trim()) throw new Error('CAD output identity is incomplete.');
   input.artifacts.forEach(validArtifact);
-  if (!input.artifacts.some((artifact) => artifact.artifactId.endsWith(':manifest.json') && artifact.sha256 === input.artifactManifestSha256)) {
+  if (!input.artifacts.some((artifact) => artifact.artifactId.endsWith(':manifest.json') && artifact.sha256 === artifactManifestSha256)) {
     throw new Error('CAD output manifest identity does not match the sealed artifact set.');
   }
-  if (!input.artifacts.some((artifact) => artifact.artifactId.endsWith(':bom.csv') && artifact.sha256 === input.bomSha256)) {
+  if (!input.artifacts.some((artifact) => artifact.artifactId.endsWith(':bom.csv') && artifact.sha256 === bomSha256)) {
     throw new Error('CAD output BOM identity does not match the sealed artifact set.');
   }
   return enqueueProductMutation(async () => {
@@ -283,15 +298,15 @@ export async function registerProductOutputs(input: RegisterProductOutputsInput)
     if (!current
       || current.documentId !== input.sourceDocumentId
       || current.revisionId !== input.sourceRevisionId
-      || current.documentSha256 !== input.sourceDocumentSha256
-      || current.geometrySha256 !== input.sourceGeometrySha256) {
+      || current.documentSha256 !== sourceDocumentSha256
+      || current.geometrySha256 !== sourceGeometrySha256) {
       throw new Error('CAD outputs are stale or do not match the current accepted CAD revision.');
     }
     artifactBinding = {
       revisionId: current.revisionId,
       cadArtifactSha256: current.geometrySha256,
-      artifactManifestSha256: input.artifactManifestSha256,
-      bomSha256: input.bomSha256,
+      artifactManifestSha256,
+      bomSha256,
       registeredAt,
     };
     return appendProductEventNow({
@@ -307,7 +322,7 @@ export async function registerProductOutputs(input: RegisterProductOutputsInput)
         sourceDocumentId: current.documentId,
         outputDocumentId: input.outputDocumentId,
         outputRevisionId: input.outputRevisionId,
-        outputDocumentSha256: input.outputDocumentSha256,
+        outputDocumentSha256,
         binding: 'EXACT_CURRENT_REVISION_HASH_IDENTITIES_ONLY',
         persisted: false,
       },

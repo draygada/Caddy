@@ -39,7 +39,14 @@ import {
   type CadOutputArtifact,
   type CadOutputBundle,
 } from '../cad/output-client';
-import { getProductThreadSnapshot, registerProductCadRevision, registerProductOutputs } from '../lib/product-thread';
+import {
+  canonicalProductSha256,
+  getProductThreadSnapshot,
+  registerProductCadRevision,
+  registerProductOutputs,
+  type ProductCadRevision,
+  type RegisterProductOutputsInput,
+} from '../lib/product-thread';
 
 const card: CSSProperties = { border: '1px solid var(--line, #ccd3d8)', borderRadius: 8, background: 'var(--surface, #fff)' };
 const mono: CSSProperties = { fontFamily: 'Geist Mono, ui-monospace, monospace' };
@@ -89,6 +96,49 @@ export function claimCadSubmission(inFlight: Set<string>, key: string): (() => v
   return () => { inFlight.delete(key); };
 }
 
+export function productCadRevisionRegistration(response: CadRecomputeResponse, operationId: string | null): Parameters<typeof registerProductCadRevision>[0] {
+  return {
+    documentId: response.document.id,
+    revisionId: response.revisionId,
+    documentSha256: canonicalProductSha256(response.documentHash, 'Accepted CAD document SHA-256'),
+    geometrySha256: canonicalProductSha256(response.kernel.artifactHash, 'Accepted CAD geometry SHA-256'),
+    actorId: 'operator:browser',
+    operationId,
+    acceptedAt: response.kernel.computedAt,
+  };
+}
+
+export function productOutputRegistration(bundle: CadOutputBundle, acceptedCad: ProductCadRevision): RegisterProductOutputsInput {
+  if (bundle.document_identity.source_authoring_revision_id !== acceptedCad.revisionId) {
+    throw new Error('Generated outputs do not identify the current authoring revision.');
+  }
+  const artifacts = bundle.artifacts.map((artifact) => ({
+    artifactId: `cad-output:${bundle.package.package_id}:${artifact.path}`,
+    kind: artifact.kind,
+    sha256: canonicalProductSha256(artifact.sha256, `CAD output ${artifact.path} SHA-256`),
+  }));
+  const manifestArtifact = bundle.artifacts.find((artifact) => artifact.path === 'manifest.json');
+  const bomArtifact = bundle.artifacts.find((artifact) => artifact.path === 'bom.csv');
+  const manifestSha256 = manifestArtifact && canonicalProductSha256(manifestArtifact.sha256, 'CAD output manifest SHA-256');
+  const packageManifestSha256 = canonicalProductSha256(bundle.package.manifest_file_sha256, 'CAD package manifest SHA-256');
+  if (!manifestSha256 || manifestSha256 !== packageManifestSha256 || !bomArtifact) {
+    throw new Error('Generated outputs are missing exact manifest or BOM identities.');
+  }
+  return {
+    sourceDocumentId: acceptedCad.documentId,
+    sourceRevisionId: acceptedCad.revisionId,
+    sourceDocumentSha256: canonicalProductSha256(acceptedCad.documentSha256, 'Accepted CAD document SHA-256'),
+    sourceGeometrySha256: canonicalProductSha256(acceptedCad.geometrySha256, 'Accepted CAD geometry SHA-256'),
+    outputDocumentId: bundle.document_identity.document_id,
+    outputRevisionId: bundle.document_identity.revision_id,
+    outputDocumentSha256: canonicalProductSha256(bundle.document_identity.document_hash, 'CAD output document SHA-256'),
+    artifactManifestSha256: manifestSha256,
+    bomSha256: canonicalProductSha256(bomArtifact.sha256, 'CAD output BOM SHA-256'),
+    artifacts,
+    actorId: 'operator:browser',
+  };
+}
+
 export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: AuthoringWorkspaceProps) {
   const [state, dispatch] = useReducer(cadAuthoringReducer, initialDocument ?? createCadDocument(), createCadAuthoringState);
   const [sketch, setSketch] = useState<CadSketch>(() => createSketchDraft(1));
@@ -125,15 +175,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
 
   async function registerAcceptedCad(response: CadRecomputeResponse, operationId: string | null) {
     invalidateOutputsForAcceptedRevision();
-    await registerProductCadRevision({
-      documentId: response.document.id,
-      revisionId: response.revisionId,
-      documentSha256: response.documentHash,
-      geometrySha256: response.kernel.artifactHash,
-      actorId: 'operator:browser',
-      operationId,
-      acceptedAt: response.kernel.computedAt,
-    });
+    await registerProductCadRevision(productCadRevisionRegistration(response, operationId));
   }
 
   async function submitOperation(operation: CadOperation): Promise<boolean> {
@@ -293,26 +335,8 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
         currentArtifacts = [...currentArtifacts, stl];
       }
       const bundle = await generateCadOutputs({ document: envelope.document, mesh: currentMesh, kernelArtifacts: currentArtifacts }, fetchImpl);
-      if (bundle.document_identity.source_authoring_revision_id !== currentDocument.revisionId) throw new Error('Generated outputs do not identify the current authoring revision.');
-      const manifestArtifact = bundle.artifacts.find((artifact) => artifact.path === 'manifest.json');
-      const bomArtifact = bundle.artifacts.find((artifact) => artifact.path === 'bom.csv');
-      if (!manifestArtifact || manifestArtifact.sha256 !== bundle.package.manifest_file_sha256 || !bomArtifact) throw new Error('Generated outputs are missing exact manifest or BOM identities.');
       await registerProductOutputs({
-        sourceDocumentId: acceptedCad.documentId,
-        sourceRevisionId: acceptedCad.revisionId,
-        sourceDocumentSha256: acceptedCad.documentSha256,
-        sourceGeometrySha256: acceptedCad.geometrySha256,
-        outputDocumentId: bundle.document_identity.document_id,
-        outputRevisionId: bundle.document_identity.revision_id,
-        outputDocumentSha256: bundle.document_identity.document_hash,
-        artifactManifestSha256: manifestArtifact.sha256,
-        bomSha256: bomArtifact.sha256,
-        artifacts: bundle.artifacts.map((artifact) => ({
-          artifactId: `cad-output:${bundle.package.package_id}:${artifact.path}`,
-          kind: artifact.kind,
-          sha256: artifact.sha256,
-        })),
-        actorId: 'operator:browser',
+        ...productOutputRegistration(bundle, acceptedCad),
       });
       setNativeEnvelope(envelope);
       setSealedSnapshotArtifact(envelope.artifact);
