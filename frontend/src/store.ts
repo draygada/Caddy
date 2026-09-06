@@ -78,9 +78,6 @@ export interface Project {
   /** the design as last left; drives the card preview */
   snapshot?: Snapshot;
 }
-export const SAMPLE_PROJECTS: Project[] = [
-  { id: 'kestrel', name: 'Kestrel', description: 'Fixed-wing survey drone · 7 slots · the demo design', intake: { ...INTAKE_DEFAULT, civilProduct: true }, createdAt: '2026-09-04 18:10', openedAt: '2026-09-05 09:12', components: [...CORE_SLOTS] },
-];
 export type OrderState = 'DRAFT' | 'DISPATCH_PENDING' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'EXCEPTION' | 'DISPATCH_UNKNOWN' | 'CLOSED';
 export interface Order { key: string; packetHash: string; state: OrderState; receipt: string | null; attempts: number; trail: string[] }
 export interface Round {
@@ -298,6 +295,26 @@ const baselineSnapshot = (): Snapshot => ({
   parts: { ...BASELINE_PARTS }, attrs: attrsFor(BASELINE_PARTS), pos: posFor(SPAN_BASELINE), span: SPAN_BASELINE, dims: { ...DIMS0 }, features: SEED_FEATURES.slice(), geo: { ...GEO0 }, sketch: { ...SKETCH_DEFAULT }, tint: {}, unconfirmed: {}, declared: { ...DECLARED0 },
 });
 const pickSnapshot = (s: Snapshot): Snapshot => ({ parts: s.parts, attrs: s.attrs, pos: s.pos, span: s.span, dims: s.dims, features: s.features, geo: s.geo, sketch: s.sketch, tint: s.tint, unconfirmed: s.unconfirmed, declared: s.declared });
+
+/** Merlin, the second sample: a 7 inch civil survey quad, about half built. Frame, pack, flight controller, its IMU, the 4-in-1 controller and a motor sit on the plate; the rest are in the project, not placed. */
+export const MERLIN_SLOTS: Slot[] = ['frame', 'battery', 'fc', 'imu', 'esc', 'motor', 'prop', 'gnss', 'datalink', 'camera', 'transponder'];
+const merlinSnapshot = (): Snapshot => {
+  const parts: Parts = { ...(Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts), frame: 'chimera7', battery: 'tattu1300', fc: 'px6cmini', imu: 'icm', esc: 'tekko65', motor: 'f60prov' };
+  const pos: Positions = {
+    ...posFor(SPAN_BASELINE),
+    battery: { x: 0.15, y: 0.1 }, esc: { x: 0.15, y: 0.55 }, fc: { x: 0.65, y: 0.6 }, imu: { x: 1.0, y: 0.12 }, motor: { x: 1.35, y: 0.08 }, frame: { x: 1.75, y: 0.58 },
+    gnss: { x: 1.35, y: 0.5 }, datalink: { x: 1.3, y: 0.85 }, prop: { x: 1.95, y: 0.0 }, camera: { x: 2.7, y: 0.12 }, transponder: { x: 2.7, y: 0.36 },
+  };
+  return { ...baselineSnapshot(), parts, attrs: attrsFor(parts), pos };
+};
+export const SAMPLE_PROJECTS: Project[] = [
+  { id: 'kestrel', name: 'Kestrel', description: 'Fixed-wing survey drone · 7 slots · the demo design', intake: { ...INTAKE_DEFAULT, civilProduct: true }, createdAt: '2026-09-04 18:10', openedAt: '2026-09-05 09:12', components: [...CORE_SLOTS] },
+  {
+    id: 'merlin', name: 'Merlin', description: '7 inch civil survey quadcopter · 11 components · 6 placed, 5 to go',
+    intake: { endUse: 'civil survey and mapping', endUser: 'commercial operator', shipTo: 'US', qty: 25, mode: 'air', civilProduct: true, bvlos: false, usedOn: 'none', notes: 'orthomosaic mapping of construction sites · VLOS under Part 107 · 25 units for the first fleet' },
+    createdAt: '2026-09-05 14:40', openedAt: '2026-09-05 16:05', components: [...MERLIN_SLOTS], snapshot: merlinSnapshot(),
+  },
+];
 
 const baseline = () => {
   const snap = baselineSnapshot();
@@ -640,7 +657,7 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const az = Math.abs(x) + Math.abs(y) < 1e-9 ? get().az : Math.atan2(x, y);
       set({ az, el, pan: { x: 0, y: 0 } });
     },
-    fit: () => set((s) => ({ pan: { x: 0, y: 0 }, zoom: Math.max(0.3, Math.min(2, +(2.1 / s.span).toFixed(2))) })),
+    fit: () => set((s) => ({ pan: { x: 0, y: 0 }, zoom: Math.max(0.3, Math.min(4, +(2.1 / s.span).toFixed(2))) })),
     toggleHidden: (id) => set((s) => ({ hidden: { ...s.hidden, [id]: !s.hidden[id] } })),
     isolate: (id) => set({ isolated: id }),
 

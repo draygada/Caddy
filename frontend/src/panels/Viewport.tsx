@@ -239,7 +239,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     const [x, y] = svgPt(e); const dx = x - ob.start[0], dy = y - ob.start[1];
     if (Math.abs(dx) + Math.abs(dy) > 3) ob.moved = true;
     if (ob.pan) s.patch({ pan: { x: ob.start[4] + dx, y: ob.start[5] + dy } });
-    else if (s.navMode === 'zoom' && !e.shiftKey) s.patch({ zoom: clamp(+(ob.start[6] - dy * 0.006).toFixed(2), 0.3, 2) });
+    else if (s.navMode === 'zoom' && !e.shiftKey) s.patch({ zoom: clamp(+(ob.start[6] * Math.exp(-dy * 0.006)).toFixed(2), 0.3, 4) });
     else s.patch({ az: ob.start[2] - dx * 0.008, el: clamp(ob.start[3] + dy * 0.008, -1.55, 1.55) });
   };
   const vpUp = () => {
@@ -258,7 +258,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     e.stopPropagation();
     move.current = { slot: body, from: { ...s.pos[body] }, grab: p, moved: false };
   };
-  const vpWheel = (e: WheelEvent<SVGSVGElement>) => { const dz = e.deltaY > 0 ? -0.05 : 0.05; s.patch({ zoom: clamp(+(s.zoom + dz).toFixed(2), 0.3, 2) }); };
+  const vpWheel = (e: WheelEvent<SVGSVGElement>) => { s.patch({ zoom: clamp(+(s.zoom * (e.deltaY > 0 ? 1 / 1.08 : 1.08)).toFixed(2), 0.3, 4) }); };
   const cubeDown = (e: RMouseEvent<SVGSVGElement>) => {
     e.stopPropagation(); e.preventDefault();
     cube.current = { on: true, start: [e.clientX, e.clientY, s.az, s.el], moved: false };
