@@ -4,10 +4,9 @@ import { PACKS } from '../lib/catalog';
 
 interface TopBarProps {
   onHome?: () => void;
-  onOpenTripwire?: () => void;
 }
 
-export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
+export function TopBar({ onHome }: TopBarProps = {}) {
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
   const toggleHelp = useStore((s) => s.toggleHelp);
@@ -38,7 +37,7 @@ export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
       </div>
       <div className="hidden sm:block w-px h-5 bg-line2" />
       <div className="flex gap-[6px]">
-        <button onClick={onOpenTripwire ?? openTripwire} className="btn btn-primary">Tripwire</button>
+        <button onClick={openTripwire} className="btn btn-primary">Tripwire</button>
         <button onClick={toggleTheme} className="btn">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</button>
         <button onClick={toggleHelp} aria-label="Keyboard and mouse help" className="btn btn-icon">?</button>
       </div>

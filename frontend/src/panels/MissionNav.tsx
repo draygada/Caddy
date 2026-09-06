@@ -1,16 +1,34 @@
+import { useEffect, useRef, useState } from 'react';
+
 export const WORKSPACES = [
   { id: 'design', label: 'Design', kind: 'workspace' },
-  { id: 'core', label: 'Core / Assembly', kind: 'workspace' },
+  { id: 'core', label: 'CAD / Core', kind: 'workspace' },
   { id: 'classification', label: 'Classification', kind: 'workspace' },
-  { id: 'tripwire', label: 'Tripwire', kind: 'workspace' },
   { id: 'source', label: 'Source', kind: 'overlay' },
   { id: 'sources', label: 'Sources', kind: 'overlay' },
   { id: 'record', label: 'Record', kind: 'overlay' },
   { id: 'collaboration', label: 'Collaboration', kind: 'workspace' },
-  { id: 'now', label: 'Now', kind: 'workspace' },
 ] as const;
 
 export type WorkspaceId = (typeof WORKSPACES)[number]['id'];
+
+const WORKSPACE_IDS = new Set<string>(WORKSPACES.map(({ id }) => id));
+
+export function workspaceFromSearch(search: string): WorkspaceId {
+  const candidate = new URLSearchParams(search).get('workspace');
+  return candidate && WORKSPACE_IDS.has(candidate) ? candidate as WorkspaceId : 'design';
+}
+
+export function workspaceLocation(currentHref: string, workspace: WorkspaceId): string {
+  const url = new URL(currentHref);
+  url.searchParams.set('workspace', workspace);
+  url.searchParams.delete('now');
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+export function isOverlayWorkspace(workspace: WorkspaceId): workspace is 'source' | 'sources' | 'record' {
+  return workspace === 'source' || workspace === 'sources' || workspace === 'record';
+}
 
 interface MissionNavProps {
   active: WorkspaceId;
@@ -19,6 +37,42 @@ interface MissionNavProps {
 
 export function MissionNav({ active, onSelect }: MissionNavProps) {
   const railRef = useRef<HTMLDivElement>(null);
+  const [railState, setRailState] = useState({ overflow: false, atStart: true, atEnd: false });
+
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+    const measure = () => {
+      const maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth);
+      setRailState({
+        overflow: maxScroll > 2,
+        atStart: rail.scrollLeft <= 2,
+        atEnd: rail.scrollLeft >= maxScroll - 2,
+      });
+    };
+    const selected = rail.querySelector<HTMLElement>(`[data-workspace="${active}"]`);
+    selected?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    rail.addEventListener('scroll', measure, { passive: true });
+    const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    resizeObserver?.observe(rail);
+    const frame = requestAnimationFrame(measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      rail.removeEventListener('scroll', measure);
+      resizeObserver?.disconnect();
+    };
+  }, [active]);
+
+  const reverse = railState.atEnd && !railState.atStart;
+  const moveRail = () => {
+    const rail = railRef.current;
+    if (!rail || !railState.overflow) return;
+    rail.scrollBy({
+      left: Math.max(220, rail.clientWidth * 0.75) * (reverse ? -1 : 1),
+      behavior: 'smooth',
+    });
+  };
+
   return (
     <nav aria-label="Product workspaces" className="relative flex-none min-w-0 border-b border-line2 bg-surface">
       <div ref={railRef} className="flex items-stretch gap-1 overflow-x-auto py-[6px] pl-2 pr-10 sm:pr-2 [scrollbar-width:thin]">
@@ -45,8 +99,16 @@ export function MissionNav({ active, onSelect }: MissionNavProps) {
           );
         })}
       </div>
-      <button type="button" aria-label="Show more workspaces" onClick={() => railRef.current?.scrollBy({ left: Math.max(220, railRef.current.clientWidth * 0.75), behavior: 'smooth' })} className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center border-0 border-l border-line2 bg-surface font-mono text-[9px] text-muted sm:hidden">MORE &gt;</button>
+      <button
+        type="button"
+        aria-label={reverse ? 'Show previous workspaces' : 'Show more workspaces'}
+        aria-disabled={!railState.overflow}
+        disabled={!railState.overflow}
+        onClick={moveRail}
+        className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center border-0 border-l border-line2 bg-surface font-mono text-[9px] text-muted disabled:cursor-default disabled:opacity-40 sm:hidden"
+      >
+        {reverse ? '< BACK' : 'MORE >'}
+      </button>
     </nav>
   );
 }
-import { useRef } from 'react';

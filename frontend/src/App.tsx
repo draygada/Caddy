@@ -15,16 +15,21 @@ import { CommandBox } from './panels/CommandBox';
 import { TripwirePanel } from './panels/TripwirePanel';
 import { Sources } from './panels/Sources';
 import { Record } from './panels/Record';
-import { Now } from './panels/Now';
-import { MissionNav, type WorkspaceId } from './panels/MissionNav';
+import {
+  isOverlayWorkspace,
+  MissionNav,
+  workspaceFromSearch,
+  workspaceLocation,
+  type WorkspaceId,
+} from './panels/MissionNav';
 import { CoreAssemblyWorkspace } from './panels/CoreAssemblyWorkspace';
 import { ClassificationWorkspace } from './panels/ClassificationWorkspace';
-import { TripwireAtlasWorkspace } from './panels/TripwireAtlasWorkspace';
 import { CollaborationWorkspace } from './panels/CollaborationWorkspace';
 import { runCommand } from './commands';
 import { useTripwireStore } from './tripwire-store';
 
 type MobilePanel = 'browser' | 'model' | 'status' | 'spec';
+type BaseWorkspace = Exclude<WorkspaceId, 'source' | 'sources' | 'record'>;
 
 function useCompactWorkspace() {
   const [compact, setCompact] = useState(() => window.innerWidth < 1024);
@@ -84,16 +89,16 @@ export default function App() {
   const openTimeline = useStore((s) => s.openTimeline);
   const compact = useCompactWorkspace();
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('model');
-  const [workspace, setWorkspace] = useState<WorkspaceId>(() => {
-    try { return new URLSearchParams(location.search).get('now') === '1' ? 'now' : 'design'; }
-    catch { return 'design'; }
-  });
+  const initialWorkspace = workspaceFromSearch(window.location.search);
+  const [workspace, setWorkspace] = useState<BaseWorkspace>(() => (
+    isOverlayWorkspace(initialWorkspace) ? 'design' : initialWorkspace
+  ));
   const o = useMemo(() => service.evaluate({ parts, attrs, span, declared }, pack), [parts, attrs, span, declared, pack]);
   useKeyboard();
 
   const closeMissionOverlays = () => useStore.getState().patch({ sourcingOpen: false, sourcesOpen: false, recordOpen: false });
-  const selectWorkspace = (next: WorkspaceId) => {
-    if (next === 'source' || next === 'sources' || next === 'record') {
+  const applyWorkspace = (next: WorkspaceId) => {
+    if (isOverlayWorkspace(next)) {
       useStore.getState().patch({
         sourcingOpen: next === 'source',
         sourcesOpen: next === 'sources',
@@ -104,10 +109,24 @@ export default function App() {
     closeMissionOverlays();
     setWorkspace(next);
   };
+  const selectWorkspace = (next: WorkspaceId) => {
+    applyWorkspace(next);
+    const target = workspaceLocation(window.location.href, next);
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (target !== current) window.history.pushState({ workspace: next }, '', target);
+  };
+
+  useEffect(() => {
+    applyWorkspace(initialWorkspace);
+    const onPopState = () => applyWorkspace(workspaceFromSearch(window.location.search));
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
   const goHome = () => {
     useStore.getState().closeAll();
     useTripwireStore.getState().closePanel();
-    setWorkspace('design');
+    selectWorkspace('design');
   };
   const activeWorkspace: WorkspaceId = recordOpen ? 'record' : sourcesOpen ? 'sources' : sourcingOpen ? 'source' : workspace;
 
@@ -117,9 +136,9 @@ export default function App() {
       <div className="flex flex-col gap-2 min-h-0 min-w-0">
         <Viewport o={o} />
       </div>
-      <div className="flex flex-col gap-2 min-h-0">
-        <StatusPanel o={o} />
-        <SpecPanel o={o} />
+      <div className="grid min-h-0 grid-rows-[minmax(220px,0.85fr)_minmax(240px,1.15fr)] gap-2">
+        <div className="min-h-0 overflow-hidden [&>*]:h-full"><StatusPanel o={o} /></div>
+        <div className="min-h-0 overflow-hidden [&>*]:h-full"><SpecPanel o={o} /></div>
       </div>
       <button
         onClick={openTimeline}
@@ -153,16 +172,14 @@ export default function App() {
     switch (workspace) {
       case 'core': return <CoreAssemblyWorkspace />;
       case 'classification': return <ClassificationWorkspace />;
-      case 'tripwire': return <TripwireAtlasWorkspace />;
       case 'collaboration': return <CollaborationWorkspace />;
-      case 'now': return <Now />;
       default: return designSurface;
     }
   })();
 
   return (
     <div data-theme={theme} className="relative h-full min-w-0 flex flex-col bg-bg text-ink overflow-hidden">
-      <TopBar onHome={goHome} onOpenTripwire={() => selectWorkspace('tripwire')} />
+      <TopBar onHome={goHome} />
       <MissionNav active={activeWorkspace} onSelect={selectWorkspace} />
       {unreachable && (
         <div role="status" className="flex-none px-4 py-2 border-b border-line2 bg-surface2 text-[14px] flex gap-3 items-center">
