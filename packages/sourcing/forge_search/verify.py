@@ -4,7 +4,9 @@ Checks, in order: schema (keys, types, known field) → sha_mismatch → span_no
 (unit, ambiguity, then value). Only `verify` constructs a Spec, and the number it stores is the document's, not
 the model's spelling of it. The unit check is what catches the S2 trap: a temperature coefficient labelled
 "stability" carries the wrong unit for a bias-stability field. Everything here fails closed: a quote whose
-numbers are ambiguous — a comma between digits, or two figures of the field's own unit — buys nothing.
+numbers are ambiguous — a comma between digits, or two separate groups of the field's own unit — buys
+nothing. A dimension tuple ("160 x 120 pixels") is ONE group: the datasheet writes the unit once, after the
+last component, and every component of it is a figure the document states.
 """
 from __future__ import annotations
 
@@ -24,7 +26,7 @@ UNIT_ALIASES = {
     "°/√h": "deg/sqrt(h)", "°/√hr": "deg/sqrt(h)", "deg/√h": "deg/sqrt(h)", "deg/sqrt(h)": "deg/sqrt(h)", "°/rthr": "deg/sqrt(h)", "deg/rt h": "deg/sqrt(h)",
     "wh/kg": "Wh/kg", "m/s": "m/s", "bits": "bits", "bit": "bits", "-bit": "bits",
     "µg": "micro g", "μg": "micro g", "ug": "micro g", "micro g": "micro g", "micro-g": "micro g",
-    "ppm": "ppm", "°c": "deg C", "deg c": "deg C", "degc": "deg C", "℃": "deg C", "km": "km", "h": "h", "g": "g",
+    "ppm": "ppm", "°c": "deg C", "deg c": "deg C", "degc": "deg C", "℃": "deg C", "km": "km", "mm": "mm", "h": "h", "g": "g",
     "elements": "elements", "pixels": "elements",
     "mdps/°c": "mdps/deg C", "mdps/rthz": "mdps/sqrt(Hz)", "mdps/√hz": "mdps/sqrt(Hz)",
 }
@@ -34,7 +36,11 @@ _SYMBOLIC = "|".join(re.escape(k) for k in _BY_LENGTH if not k[0].isalnum())
 # A wordy unit needs a non-alphanumeric before it, or "h" matches inside "Wh"; a symbolic one (°/h, ℃, µg)
 # may sit flush against its number, which is how vendors write it.
 UNIT = re.compile(rf"((?<![A-Za-z0-9])(?:{_WORDY})|(?:{_SYMBOLIC}))(?![A-Za-z])", re.IGNORECASE)
-NUMBER = re.compile(r"[-+±]?\d+(?:\.\d+)?")
+_NUMBER_SRC = r"[-+±]?\d+(?:\.\d+)?"
+NUMBER = re.compile(_NUMBER_SRC)
+# A dimension tuple — "160 x 120 pixels", "40 x 40 x 20 mm" — states several figures of ONE unit, written once
+# after the last component. Every component binds that unit, and the tuple counts as a single group.
+TUPLE = re.compile(rf"{_NUMBER_SRC}(?:\s*(?:[xX×]|by)\s*{_NUMBER_SRC})+")
 # Used with fullmatch, never match: "$" also matches before a trailing newline, so "8.7\n" would pass.
 _HEX64 = re.compile(r"[0-9a-f]{64}")
 _DECIMAL = re.compile(r"[-+]?\d+(?:\.\d+)?")
@@ -73,44 +79,72 @@ def canonical_unit(s: str) -> str | None:
     return UNIT_ALIASES.get(s.strip().lower())
 
 
+def _clear(quote: str, lo: int, hi: int) -> bool:
+    """Nothing but separators between two spans — no letter, no digit."""
+    return not any(c.isalnum() for c in quote[lo:hi])
+
+
 def _binds(quote: str, number: re.Match, span: tuple[int, int]) -> bool:
-    """A unit binds to a number only when nothing but separators sits between them — no letter, no digit."""
+    """A unit binds to a number only when nothing but separators sits between them, on either side."""
     start, end = span
     if start >= number.end():
-        gap = quote[number.end():start]
-    elif end <= number.start():
-        gap = quote[end:number.start()]
-    else:
-        return False
-    return not any(c.isalnum() for c in gap)
+        return _clear(quote, number.end(), start)
+    if end <= number.start():
+        return _clear(quote, end, number.start())
+    return False
 
 
-def _bound_pairs(quote: str) -> list[tuple[Decimal, str]] | None:
-    """Every (number, canonical unit) pair the quote states, in document order — each number paired only with a
-    unit adjacent to it. None when the quote's digits are not readable as written (an ambiguous comma)."""
+def _figures(text: str) -> list[Decimal] | None:
+    """The numbers in `text`, as written. None if one is not a decimal — unreachable through NUMBER, kept as
+    the fail-closed guard on the trust boundary."""
+    try:
+        return [Decimal(m.group().lstrip("±+")) for m in NUMBER.finditer(text)]
+    except InvalidOperation:
+        return None
+
+
+def _bound_groups(quote: str) -> list[tuple[list[Decimal], str]] | None:
+    """Every group of figures the quote states with a recognised unit adjacent to it, in document order. A
+    dimension tuple is one group whose components share the unit that follows it; every other bound number is
+    a group of one. None when the quote's digits are not readable as written (an ambiguous comma)."""
     if _AMBIGUOUS_COMMA.search(quote):
         return None
     quote = quote.replace(",", "")
     # ponytail: O(numbers x units) over one quote — fine for a line, ~25s on a hostile whole-document
     # quote; cap the gap length if a caller ever quotes a whole page.
-    units = [(m.span(), canonical_unit(m.group(1))) for m in UNIT.finditer(quote)]
-    pairs = []
+    units = [(m.span(), unit) for m in UNIT.finditer(quote) if (unit := canonical_unit(m.group(1)))]
+    groups: list[tuple[int, list[Decimal], str]] = []
+    tuples: list[tuple[int, int]] = []
+    for tup in TUPLE.finditer(quote):
+        # The unit of a tuple is written after its last component, never before it.
+        unit = next((u for (start, _), u in units if start >= tup.end() and _clear(quote, tup.end(), start)), None)
+        if unit is None:
+            continue
+        figures = _figures(tup.group())
+        if figures is None:
+            return None
+        groups.append((tup.start(), figures, unit))
+        tuples.append(tup.span())
     for number in NUMBER.finditer(quote):
-        for span, unit in units:
-            if unit is not None and _binds(quote, number, span):
-                try:
-                    pairs.append((Decimal(number.group().lstrip("±+")), unit))
-                except InvalidOperation:
-                    return None
-                break
-    return pairs
+        if any(lo <= number.start() < hi for lo, hi in tuples):
+            continue
+        unit = next((u for span, u in units if _binds(quote, number, span)), None)
+        if unit is None:
+            continue
+        figures = _figures(number.group())
+        if figures is None:
+            return None
+        groups.append((number.start(), figures, unit))
+    groups.sort(key=lambda g: g[0])
+    return [(figures, unit) for _, figures, unit in groups]
 
 
 def parse_number_unit(quote: str) -> tuple[Decimal, str] | None:
-    """The first number with a recognised unit adjacent to it, following or preceding. A number never borrows
-    the unit of another figure in the same quote, and a spelling that canonicalises to nothing is not a unit."""
-    pairs = _bound_pairs(quote)
-    return pairs[0] if pairs else None
+    """The first bound number in document order with its unit — for a dimension tuple, its first component and
+    the unit the whole tuple shares. A number never borrows the unit of another figure in the same quote, and
+    a spelling that canonicalises to nothing is not a unit."""
+    groups = _bound_groups(quote)
+    return (groups[0][0][0], groups[0][1]) if groups else None
 
 
 def _is_int(x) -> bool:
@@ -140,18 +174,22 @@ def verify(text: str, claim: object, *, field_units: dict[str, str]) -> Accepted
         return Rejected("sha_mismatch", "claim was made against a different document text")
     if not quote or text[start:end] != quote:
         return Rejected("span_not_found", f"text[{start}:{end}] != quote")
-    pairs = _bound_pairs(quote)
-    if not pairs:
+    groups = _bound_groups(quote)
+    if not groups:
         return Rejected("unparseable", "no number with a recognised unit in the quote")
-    number, parsed_unit = pairs[0]
     expected = field_units[field]
     claimed_unit = canonical_unit(unit)
-    if parsed_unit != expected or claimed_unit != expected:
-        return Rejected("number_mismatch", f"unit in quote {parsed_unit!r}, claimed {claimed_unit!r}, field needs {expected!r}")
-    # Two different figures of the field's own unit: the quote supports either, so it supports neither.
-    stated = sorted({n for n, u in pairs if u == expected})
-    if len(stated) > 1:
-        return Rejected("number_mismatch", f"ambiguous: {len(stated)} figures bind {expected!r}: " + ", ".join(str(n) for n in stated))
-    if Decimal(value) != number:
-        return Rejected("number_mismatch", f"quote says {number} {parsed_unit}, claim says {value}")
+    first_unit = groups[0][1]
+    if first_unit != expected or claimed_unit != expected:
+        return Rejected("number_mismatch", f"unit in quote {first_unit!r}, claimed {claimed_unit!r}, field needs {expected!r}")
+    # Ambiguity is counted in groups, not figures: a dimension tuple is one group and any of its components may
+    # be the claim. Two groups of the field's own unit support either figure, so they support neither — unless
+    # they are the same single figure written twice.
+    stated = [figures for figures, u in groups if u == expected]
+    if len(stated) > 1 and not all(len(f) == 1 and f[0] == stated[0][0] for f in stated):
+        return Rejected("number_mismatch", f"ambiguous: {len(stated)} groups bind {expected!r}: "
+                        + "; ".join(" x ".join(str(n) for n in f) for f in stated))
+    number = next((n for n in stated[0] if n == Decimal(value)), None)
+    if number is None:
+        return Rejected("number_mismatch", f"quote says {' x '.join(str(n) for n in stated[0])} {expected}, claim says {value}")
     return Accepted(Spec(field, str(number), expected, quote, start, end, sha))

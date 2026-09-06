@@ -10,6 +10,8 @@ from conftest import DATA
 FIX = DATA / "search" / "fixtures"
 UNITS = {"frame_rate_hz": "Hz", "gyro_bias_stability_1mo_deg_h": "deg/h", "gyro_rate_range_deg_s": "deg/s",
          "gyro_arw_deg_sqrt_h": "deg/sqrt(h)", "energy_density_wh_kg": "Wh/kg"}
+# The 6A003 elements row is resolution_w x resolution_h, and datasheets print both in one "W x H pixels" phrase.
+TUPLE_UNITS = {**UNITS, "resolution_w": "elements", "resolution_h": "elements", "package_depth_mm": "mm"}
 
 
 def _doc(name: str):
@@ -190,3 +192,42 @@ def test_the_stored_value_is_the_documents_number_not_the_models_spelling():
     for spelling in ("0.3", "+0.3", "0.30"):
         out = verify(text, _claim(text, sha, "gyro_bias_stability_1mo_deg_h", spelling, "deg/h", "Bias stability: 0.3 °/h"), field_units=UNITS)
         assert isinstance(out, Accepted) and out.spec.value == "0.3", spelling
+
+
+def test_a_dimension_tuple_binds_every_component_to_the_shared_unit():
+    """R3: every thermal datasheet prints resolution as "W x H pixels", and the unit follows the LAST
+    component — so plain adjacency rejected the width and the elements row could never be evaluated."""
+    from forge_search.verify import Accepted, Rejected, verify
+    text, sha = _doc("lepton35_test_sheet.txt")
+    quote = "160 x 120 pixels"
+    for field, value in (("resolution_w", "160"), ("resolution_h", "120")):
+        out = verify(text, _claim(text, sha, field, value, "elements", quote), field_units=TUPLE_UNITS)
+        assert isinstance(out, Accepted) and out.spec.value == value and out.spec.unit == "elements", field
+    out = verify(text, _claim(text, sha, "resolution_w", "130", "elements", quote), field_units=TUPLE_UNITS)
+    assert isinstance(out, Rejected) and out.reason == "number_mismatch" and "ambiguous" not in out.detail
+    text, sha = _doc("imu_ng_synthetic_sheet.txt")
+    quote = "40 x 40 x 20 mm"
+    for value in ("40", "20"):
+        out = verify(text, _claim(text, sha, "package_depth_mm", value, "mm", quote), field_units=TUPLE_UNITS)
+        assert isinstance(out, Accepted) and out.spec.value == value, value
+
+
+def test_ambiguity_counts_groups_not_components():
+    """A tuple is ONE group however many components it carries; two groups of the field's unit are still
+    ambiguous — the widened Lepton row (the tuple plus the pitch figure) and the two-clause bias line."""
+    from forge_search.documents import text_sha256
+    from forge_search.verify import Rejected, verify
+    text, sha = _doc("lepton35_test_sheet.txt")
+    row = "Array format: 160 x 120 pixels, 12 um pitch."
+    out = verify(text, _claim(text, sha, "resolution_w", "160", "elements", row), field_units=TUPLE_UNITS)
+    assert isinstance(out, Rejected) and out.reason == "number_mismatch" and "ambiguous" in out.detail
+    two = "Bias stability: 5 °/h at 25 degC; 1-month: 0.3 °/h"
+    text = two + "\n"
+    for value in ("5", "0.3"):
+        out = verify(text, _claim(text, text_sha256(text), "gyro_bias_stability_1mo_deg_h", value, "deg/h", two), field_units=TUPLE_UNITS)
+        assert isinstance(out, Rejected) and out.reason == "number_mismatch" and "ambiguous" in out.detail, value
+
+
+def test_parse_number_unit_returns_the_tuples_first_component():
+    from forge_search.verify import parse_number_unit
+    assert parse_number_unit("160 x 120 pixels") == (Decimal("160"), "elements")
