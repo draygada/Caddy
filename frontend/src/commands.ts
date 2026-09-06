@@ -23,6 +23,7 @@ const needsSlot = (_st: WorkbenchState, t: BodyId | null) => t != null && t !== 
 export const COMMANDS: Command[] = [
   { id: 'view.home', label: 'Home view', group: 'view', keys: 'F', run: (st) => st.setView('iso') },
   { id: 'view.fit', label: 'Fit to view', group: 'view', run: (st) => st.fit() },
+  { id: 'view.authoring', label: 'CAD authoring · live kernel', group: 'view', run: (st) => st.patch({ viewMode: 'authoring' }) },
   { id: 'view.top', label: 'Look from top', group: 'view', run: (st) => st.setViewDir([0, 0, 1]) },
   { id: 'view.front', label: 'Look from front', group: 'view', run: (st) => st.setViewDir([0, 1, 0]) },
   { id: 'view.right', label: 'Look from right', group: 'view', run: (st) => st.setViewDir([1, 0, 0]) },

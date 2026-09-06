@@ -8,6 +8,7 @@ import type { Outcome } from '../lib/rules';
 import { Check, Display, Fit, Grid as GridIcon, Home, Orbit, Pan, Zoom } from './Icons';
 import { SketchView } from './SketchView';
 import { BoardView } from './BoardView';
+import { AuthoringWorkspace } from './AuthoringWorkspace';
 import { FeatureDialog } from './FeatureDialog';
 import { MarkingMenu } from './MarkingMenu';
 
@@ -293,7 +294,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     <div data-panel="viewport" data-cad-workspace="design" className="panel flex-1 flex flex-col min-h-0 relative">
       <div className="flex items-center gap-2 px-3 py-[6px] border-b border-line2 flex-wrap">
         <div role="radiogroup" aria-label="View mode" className="flex border border-line rounded-r overflow-hidden">
-          {modeBtn('model', 'Model')}{modeBtn('sketch', 'Sketch', 'border-l border-line')}{modeBtn('board', 'Board', 'border-l border-line')}{modeBtn('sheet', 'Drawing sheet', 'border-l border-line')}
+          {modeBtn('model', 'Model')}{modeBtn('sketch', 'Sketch', 'border-l border-line')}{modeBtn('board', 'Board', 'border-l border-line')}{modeBtn('authoring', 'CAD authoring', 'border-l border-line')}{modeBtn('sheet', 'Drawing sheet', 'border-l border-line')}
         </div>
         <label className="text-[13px] text-muted flex items-center gap-1">select
           <select aria-label="Selection filter" value={s.selFilter} onChange={(e) => s.patch({ selFilter: e.target.value as typeof s.selFilter, selFace: null })} className="btn text-ink">
@@ -316,6 +317,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
         </div>
       )}
       {mode === 'board' && <BoardView />}
+      {mode === 'authoring' && <div className="flex-1 min-h-0 overflow-auto bg-surface2"><AuthoringWorkspace /></div>}
       <div ref={canvasRef} onContextMenu={onContext} className="flex-1 min-h-0 items-center justify-center p-2 relative" style={{ display: mode === 'model' ? 'flex' : 'none', background: s.dragging ? 'var(--surface2)' : 'transparent' }}>
         <svg viewBox={`0 0 ${VB_W} ${VB_H}`} role="img" aria-label="Orbitable bracket with movable slot bodies"
           onMouseDown={vpDown} onMouseMove={vpMove} onMouseUp={vpUp} onMouseLeave={vpUp} onWheel={vpWheel} onDragOver={vpDragOver} onDrop={vpDrop}
