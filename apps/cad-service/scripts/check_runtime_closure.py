@@ -11,7 +11,7 @@ from pathlib import Path
 
 VERCEL_STANDARD_PYTHON_BYTES = 500 * 1024 * 1024
 VERCEL_DOCUMENTED_BODY_BYTES = 4_500_000
-SERVICE_BODY_BYTES = 4_250_000
+SERVICE_BODY_BYTES = 4_000_000
 EXPECTED_PACKAGES = {
     "annotated-doc": "0.0.5",
     "annotated-types": "0.8.0",

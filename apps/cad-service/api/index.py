@@ -11,7 +11,7 @@ from cad_service.app import create_app
 from cad_service.settings import DeploymentSettings, VERCEL_DOCUMENTED_BODY_LIMIT_BYTES
 
 
-SERVICE_BODY_LIMIT_BYTES = 4_250_000
+SERVICE_BODY_LIMIT_BYTES = 4_000_000
 
 Scope = dict[str, Any]
 Message = dict[str, Any]

@@ -43,11 +43,28 @@ def _hosts(raw: str) -> tuple[str, ...]:
     return hosts
 
 
+def _vercel_hosts() -> tuple[str, ...]:
+    """Admit only hostnames Vercel identifies for this exact deployment/project."""
+    result: list[str] = []
+    for name in ("VERCEL_URL", "VERCEL_BRANCH_URL", "VERCEL_PROJECT_PRODUCTION_URL"):
+        value = os.getenv(name, "").strip().lower()
+        if not value:
+            continue
+        if "://" in value or "/" in value or value.startswith(".") or value.endswith("."):
+            raise ValueError(f"{name} must be a hostname without a scheme, path, or trailing dot")
+        parsed = urlsplit(f"https://{value}")
+        if parsed.hostname != value or parsed.port is not None:
+            raise ValueError(f"{name} must be a valid hostname")
+        if value not in result:
+            result.append(value)
+    return tuple(result)
+
+
 @dataclass(frozen=True)
 class DeploymentSettings:
     port: int = 8000
-    max_request_bytes: int = 4_250_000
-    max_response_bytes: int = 4_250_000
+    max_request_bytes: int = 4_000_000
+    max_response_bytes: int = 4_000_000
     transport_timeout_seconds: int = 40
     native_timeout_seconds: int = 30
     max_concurrency: int = 1
@@ -68,13 +85,17 @@ class DeploymentSettings:
 
     @classmethod
     def from_env(cls) -> "DeploymentSettings":
+        configured_hosts = _hosts(
+            os.getenv("CAD_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver")
+        )
+        platform_hosts = _vercel_hosts()
         return cls(
             port=_integer("PORT", 8000, minimum=1, maximum=65_535),
             max_request_bytes=_integer(
-                "CAD_MAX_REQUEST_BYTES", 4_250_000, minimum=1_024, maximum=4_499_999
+                "CAD_MAX_REQUEST_BYTES", 4_000_000, minimum=1_024, maximum=4_499_999
             ),
             max_response_bytes=_integer(
-                "CAD_MAX_RESPONSE_BYTES", 4_250_000, minimum=1_024, maximum=4_499_999
+                "CAD_MAX_RESPONSE_BYTES", 4_000_000, minimum=1_024, maximum=4_499_999
             ),
             transport_timeout_seconds=_integer(
                 "CAD_TRANSPORT_TIMEOUT_SECONDS", 40, minimum=2, maximum=120
@@ -92,9 +113,7 @@ class DeploymentSettings:
                 "CAD_NATIVE_MAX_OPEN_FILES", 256, minimum=64, maximum=4_096
             ),
             cors_origins=_origins(os.getenv("CAD_CORS_ORIGINS", "")),
-            allowed_hosts=_hosts(
-                os.getenv("CAD_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver")
-            ),
+            allowed_hosts=tuple(dict.fromkeys((*configured_hosts, *platform_hosts))),
         )
 
     def public_limits(self) -> dict[str, int | str]:
