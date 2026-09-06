@@ -25,6 +25,17 @@ import {
   type SketchDimensionKind,
   type SketchEntity,
 } from '../cad';
+import {
+  CAD_OUTPUT_LIMITATIONS,
+  createNativeDocumentDraft,
+  downloadCadOutputArtifact,
+  generateCadOutputs,
+  loadNativeDocument,
+  restoreNativeAuthoring,
+  sealNativeDocument,
+  type CadNativeEnvelope,
+  type CadOutputBundle,
+} from '../cad/output-client';
 
 const card: CSSProperties = { border: '1px solid var(--line, #ccd3d8)', borderRadius: 8, background: 'var(--surface, #fff)' };
 const mono: CSSProperties = { fontFamily: 'Geist Mono, ui-monospace, monospace' };
@@ -62,6 +73,12 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   const [mate, setMate] = useState<Pick<CadAssemblyMate, 'name' | 'kind' | 'instanceAId' | 'instanceBId' | 'offset'>>({ name: 'Mate 1', kind: 'coincident', instanceAId: '', instanceBId: '', offset: 0 });
   const [transferMessage, setTransferMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [nativeEnvelope, setNativeEnvelope] = useState<CadNativeEnvelope | null>(null);
+  const [outputBundle, setOutputBundle] = useState<CadOutputBundle | null>(null);
+  const [outputMessage, setOutputMessage] = useState<string | null>(null);
+  const [outputError, setOutputError] = useState<string | null>(null);
+  const [outputBusy, setOutputBusy] = useState(false);
+  const [kernelArtifacts, setKernelArtifacts] = useState<CadExportResponse[]>([]);
 
   async function submitOperation(operation: CadOperation) {
     const requestId = cadId('request');
@@ -102,10 +119,62 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
     try {
       const result = await exportCad({ document: state.lastValidDocument, format, revisionId: state.lastValidDocument.revisionId }, fetchImpl);
       downloadExport(result);
+      setKernelArtifacts((current) => [...current.filter((item) => item.format !== result.format), result]);
       setTransferMessage(`Exported ${result.fileName} from ${result.revisionId}.`);
     } catch (error) {
       setTransferMessage(error instanceof Error ? error.message : 'Export failed; no file was created.');
     }
+  }
+
+  async function handleNativeSave() {
+    setOutputBusy(true);
+    setOutputMessage('Validating and sealing native authoring state...');
+    try {
+      if (!state.lastValidMesh) throw new Error('Run one successful kernel recompute before saving native output.');
+      const envelope = await sealNativeDocument(await createNativeDocumentDraft(state.lastValidDocument, state.lastValidMesh), fetchImpl);
+      await downloadCadOutputArtifact(envelope.artifact);
+      setNativeEnvelope(envelope);
+      setOutputError(null);
+      setOutputMessage(`Saved native revision ${shortId(envelope.document.revision_id)} · ${shortId(envelope.document.document_hash)}.`);
+    } catch (error) {
+      setOutputError(error instanceof Error ? error.message : 'Native save failed closed.');
+      setOutputMessage('Last valid native/output state preserved. No file was downloaded.');
+    } finally { setOutputBusy(false); }
+  }
+
+  async function handleNativeLoad(file: File) {
+    setOutputBusy(true);
+    setOutputMessage(`Validating ${file.name}...`);
+    try {
+      const envelope = await loadNativeDocument(await fileToBase64(file), fetchImpl);
+      dispatch({ type: 'replace-from-import', response: restoreNativeAuthoring(envelope.document) });
+      setNativeEnvelope(envelope);
+      setOutputBundle(null);
+      setKernelArtifacts([]);
+      setOutputError(null);
+      setOutputMessage(`Loaded verified native revision ${shortId(envelope.document.revision_id)}. Exchange artifacts must be regenerated.`);
+    } catch (error) {
+      setOutputError(error instanceof Error ? error.message : 'Native load failed closed.');
+      setOutputMessage('Last valid authoring state preserved.');
+    } finally { setOutputBusy(false); }
+  }
+
+  async function handleGenerateOutputs() {
+    setOutputBusy(true);
+    setOutputMessage('Sealing native state and deriving output package...');
+    try {
+      if (!state.lastValidMesh) throw new Error('Run one successful kernel recompute before generating outputs.');
+      const envelope = await sealNativeDocument(await createNativeDocumentDraft(state.lastValidDocument, state.lastValidMesh), fetchImpl);
+      const currentArtifacts = kernelArtifacts.filter((artifact) => artifact.revisionId === state.lastValidDocument.revisionId);
+      const bundle = await generateCadOutputs({ document: envelope.document, mesh: state.lastValidMesh, kernelArtifacts: currentArtifacts }, fetchImpl);
+      setNativeEnvelope(envelope);
+      setOutputBundle(bundle);
+      setOutputError(null);
+      setOutputMessage(`Verified ${bundle.artifacts.length} downloadable artifacts · package ${shortId(bundle.package.package_id)}.`);
+    } catch (error) {
+      setOutputError(error instanceof Error ? error.message : 'Output generation failed closed.');
+      setOutputMessage('Last valid output bundle preserved. No replacement artifacts were admitted.');
+    } finally { setOutputBusy(false); }
   }
 
   const statusColor = state.status === 'failed' || state.status === 'stale' ? '#a33d2f' : state.status === 'running' || state.status === 'queued' ? '#9b6200' : '#176b45';
@@ -132,6 +201,17 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
         <aside style={{ display: 'grid', gap: 9 }}>
           <ProjectTree document={state.document} selectedId={state.selectedId} onSelect={(id) => dispatch({ type: 'select', id })} />
           <TransferPanel message={transferMessage} onImport={handleImport} onExport={handleExport} />
+          <OutputPanel
+            busy={outputBusy}
+            nativeEnvelope={nativeEnvelope}
+            bundle={outputBundle}
+            message={outputMessage}
+            error={outputError}
+            retainedFormats={kernelArtifacts.filter((artifact) => artifact.revisionId === state.lastValidDocument.revisionId).map((artifact) => artifact.format)}
+            onNativeSave={handleNativeSave}
+            onNativeLoad={handleNativeLoad}
+            onGenerate={handleGenerateOutputs}
+          />
         </aside>
 
         <main style={{ display: 'grid', gap: 9, minWidth: 0 }}>
@@ -237,7 +317,36 @@ function DependencyRail({ graph, history, diagnostics }: { graph: ReturnType<typ
 }
 
 function TransferPanel({ message, onImport, onExport }: { message: string | null; onImport: (file: File, format: CadTransferFormat) => void; onExport: (format: CadTransferFormat) => void }) {
-  return <section aria-labelledby="transfer-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}><h3 id="transfer-title" style={{ margin: 0, fontSize: 13 }}>CAD transfer</h3><label style={{ ...button, textAlign: 'center' }}>Import STEP / IGES / STL<input aria-label="Import CAD file" type="file" accept=".step,.stp,.iges,.igs,.stl" style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, formatFromName(file.name)); }} /></label><div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>{(['STEP', 'IGES', 'STL'] as CadTransferFormat[]).map((format) => <button key={format} type="button" onClick={() => onExport(format)} style={button}>{format}</button>)}</div><p style={{ margin: 0, fontSize: 9, lineHeight: 1.4, color: '#66736b' }}>Round-trip fidelity, native assemblies, drawings, and manufacturing outputs are not claimed until the adapter returns verified artifacts.</p>{message && <div role="status" style={{ fontSize: 9, padding: 6, background: '#f2f5f2' }}>{message}</div>}</section>;
+  return <section aria-labelledby="transfer-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}><h3 id="transfer-title" style={{ margin: 0, fontSize: 13 }}>Kernel exchange</h3><label style={{ ...button, textAlign: 'center' }}>Import STEP / IGES / STL<input aria-label="Import CAD file" type="file" accept=".step,.stp,.iges,.igs,.stl" style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, formatFromName(file.name)); }} /></label><div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>{(['STEP', 'IGES', 'STL'] as CadTransferFormat[]).map((format) => <button key={format} type="button" onClick={() => onExport(format)} style={button}>{format}</button>)}</div><p style={{ margin: 0, fontSize: 9, lineHeight: 1.4, color: '#66736b' }}>Exports are kernel exchange bytes, not editable feature-history round trips. A validated export is retained for the current manufacturing bundle.</p>{message && <div role="status" style={{ fontSize: 9, padding: 6, background: '#f2f5f2' }}>{message}</div>}</section>;
+}
+
+function OutputPanel({ busy, nativeEnvelope, bundle, message, error, retainedFormats, onNativeSave, onNativeLoad, onGenerate }: {
+  busy: boolean;
+  nativeEnvelope: CadNativeEnvelope | null;
+  bundle: CadOutputBundle | null;
+  message: string | null;
+  error: string | null;
+  retainedFormats: CadTransferFormat[];
+  onNativeSave: () => void;
+  onNativeLoad: (file: File) => void;
+  onGenerate: () => void;
+}) {
+  return <section aria-labelledby="outputs-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}><h3 id="outputs-title" style={{ margin: 0, fontSize: 13 }}>Native & manufacturing outputs</h3><span style={{ ...mono, fontSize: 8 }}>{bundle ? 'last valid' : 'not generated'}</span></div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+      <button type="button" disabled={busy} onClick={onNativeSave} style={button}>Save native</button>
+      <label style={{ ...button, textAlign: 'center', opacity: busy ? .55 : 1 }}>Load native<input aria-label="Load native CAD document" type="file" accept=".json,.caddy.json,application/json" disabled={busy} style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onNativeLoad(file); event.currentTarget.value = ''; }} /></label>
+    </div>
+    <button type="button" disabled={busy} onClick={onGenerate} style={{ ...actionButton, opacity: busy ? .55 : 1 }}>{busy ? 'Validating outputs...' : 'Generate drawing + BOM package'}</button>
+    <div style={{ ...mono, fontSize: 8, color: '#66736b' }}>Retained exchange · {retainedFormats.length ? retainedFormats.join(' / ') : 'none'} · native {nativeEnvelope ? shortId(nativeEnvelope.document.document_hash) : 'not sealed'}</div>
+    {error && <div role="alert" style={{ padding: 7, border: '1px solid #dca39a', background: '#fff0ed', color: '#7d281e', fontSize: 9 }}>{error}</div>}
+    {message && <div role="status" aria-live="polite" style={{ padding: 7, background: '#f2f5f2', fontSize: 9, lineHeight: 1.35 }}>{message}</div>}
+    {bundle && <div style={{ display: 'grid', gap: 4 }}>
+      <div style={{ ...mono, fontSize: 8, overflowWrap: 'anywhere' }}>package · {bundle.package.package_id}<br />manifest · {bundle.package.manifest_file_sha256}</div>
+      <div style={{ display: 'grid', gap: 3 }}>{bundle.artifacts.map((artifact) => <button key={artifact.path} type="button" onClick={() => void downloadCadOutputArtifact(artifact)} style={{ ...button, display: 'flex', justifyContent: 'space-between', gap: 6, textAlign: 'left' }}><span>{artifact.path}</span><span style={{ ...mono, fontSize: 8 }}>{artifact.size_bytes} B · {shortId(artifact.sha256)}</span></button>)}</div>
+    </div>}
+    <details><summary style={{ cursor: 'pointer', fontSize: 9, fontWeight: 800 }}>Output boundaries</summary><ul style={{ margin: '5px 0 0', paddingLeft: 17, fontSize: 8, lineHeight: 1.45 }}>{CAD_OUTPUT_LIMITATIONS.map((item) => <li key={item}>{item.replaceAll('_', ' ').toLowerCase()}</li>)}</ul></details>
+  </section>;
 }
 
 function ids(value: string): string[] { return value.split(',').map((item) => item.trim()).filter(Boolean); }
