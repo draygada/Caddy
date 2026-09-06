@@ -16,16 +16,28 @@ not make OCP/OCCT a fully admitted production dependency.
 ## Proven boundaries
 
 - Interchange: STEP AP242, IGES 5.3, and STL only.
-- Constraint behavior: validate authored coordinates; do not claim general constraint solving.
-- Assembly behavior: fixed, point, distance, and prealigned-concentric placement only.
+- Constraint behavior: deterministic bounded Gauss-Newton solving for the admitted constraint set,
+  with residual, equation-rank, and local Jacobian-rank degree-of-freedom diagnostics. This is not a
+  general production constraint solver, and solved coordinates are not returned as a rewritten
+  authoring document.
+- Assembly behavior: deterministic bounded rigid placement for fixed, point, distance, and
+  concentric mates, with axis alignment, local degree-of-freedom estimates, and conflict rejection;
+  no general nonlinear assembly solving, kinematics, limits, or interference.
+- Topology behavior: provenance-derived semantic IDs report preserved, remapped, lost, and new
+  entities. Remapping is heuristic and does not claim perfect persistent naming across arbitrary
+  OCCT enumeration or upstream topology changes.
 - Transport: request and response bodies are bounded to 4,250,000 bytes by the deployment ASGI
   adapter. Larger CAD artifacts require a future object-storage reference contract.
 - Vercel: measured Linux dependency closure is 265,146,169 logical bytes against the standard
   524,288,000-byte Python-function limit. Provider bundle tracing is not yet proven.
 - OCI: Python `3.12.11`, Linux amd64, base-image manifest digest, OCP wheel URL, and OCP wheel hash
   are pinned. Image construction was not run because Docker is unavailable on the host.
-- Redistribution: OCP/OCCT primary texts and source-fetch evidence exist, but the native
-  transitive SBOM and approval gates remain incomplete.
+- Redistribution: artifact evidence is **PASS** for the measured 70-ELF/22-component closure when
+  the verifier succeeds and the complete release closure is packaged. Legal determination is
+  **NOT_PERFORMED**, and repository-owner acceptance remains unrecorded.
+
+Artifact evidence: **PASS**. Legal determination: **NOT_PERFORMED**. These statuses do not make the
+overall candidate releasable.
 
 ## Promotion criteria
 
@@ -45,13 +57,16 @@ OCI preflight is PASS only when:
 - the installed closure and image SBOM are captured; and
 - the replacement-wheel build argument is exercised with a verified alternate wheel.
 
-Redistribution is PASS only when:
+Objective redistribution artifact evidence is PASS only when:
 
 - every bundled native object has exact version/source/license/notice evidence;
-- durable corresponding-source access is recorded;
-- the rebuild/relink path is independently reproduced;
-- all required notices are user-accessible in the delivered surface; and
-- repository license authority records approval.
+- the evidence verifier passes against the installed runtime; and
+- every release closure includes `licenses/**`, `THIRD_PARTY_NOTICES.md`, and
+  `REDISTRIBUTION_EVIDENCE.md`.
+
+Release approval remains HOLD until durable corresponding-source delivery is accepted, the
+provider-produced artifact is checked, and the required repository-owner governance decision is
+recorded. No legal determination is performed by these engineering checks.
 
 Overall candidate release remains **HOLD** while any criterion above is missing. A readiness PASS
 does not grant deployment authority.
@@ -65,10 +80,9 @@ the current wheel.
 
 ## Lane J2 native evidence update
 
-The exact unmodified wheel is paired with a 70-ELF/22-component manifest,
-verbatim package notices, the original auditwheel SBOM, and hash-verified
-corresponding-source coordinates under apps/cad-service/licenses/. This closes
-the factual unidentified-component and missing-source-artifact HOLDs when the
-service packages that directory and its verifier passes. Repository-owner
-acceptance remains an explicit human governance gate, not an ungranted
-technical deployment authority claim or a legal conclusion.
+The exact unmodified wheel is paired with a 70-ELF/22-component manifest, verbatim package notices,
+the original auditwheel SBOM, and hash-verified corresponding-source coordinates under
+`apps/cad-service/licenses/`. This closes the factual unidentified-component and
+missing-source-artifact HOLDs when the service packages the complete release closure and its
+verifier passes. Repository-owner acceptance remains an explicit human governance gate, not an
+ungranted technical deployment-authority claim or a legal conclusion.

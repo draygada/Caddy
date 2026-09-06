@@ -2,6 +2,9 @@
 
 This is an objective engineering record, not a legal determination.
 
+Artifact evidence: **PASS**. Legal determination: **NOT_PERFORMED**. Release approval remains
+**HOLD** pending the separately recorded provider and human governance gates.
+
 ## Exact result
 
 - The pinned artifact remains byte-for-byte unmodified:
@@ -29,10 +32,17 @@ This is an objective engineering record, not a legal determination.
 The unmodified wheel alone is not factually notice/source complete. It does not
 contain the complete third-party notice set or corresponding-source ledger.
 
-The deployable service artifact can keep that wheel unmodified and include this
-directory. On that boundary, the objective missing-artifact HOLD is closed only
-when scripts/verify_redistribution_evidence.py passes against the installed
-site-packages tree and the deployment packaging includes licenses/**.
+The deployable service artifact can keep that wheel unmodified and include the service supplement.
+On that boundary, the objective missing-artifact HOLD is closed only when
+`scripts/verify_redistribution_evidence.py` passes against the installed site-packages tree and the
+release closure includes all of:
+
+- `licenses/**`
+- `THIRD_PARTY_NOTICES.md`
+- `REDISTRIBUTION_EVIDENCE.md`
+
+Omitting any member of this closure makes the artifact evidence incomplete. A complete closure does
+not make a legal determination, record repository-owner acceptance, or grant deployment authority.
 
 ## Reproducible checks
 

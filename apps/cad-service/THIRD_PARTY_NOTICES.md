@@ -1,7 +1,9 @@
 # CAD service dependency and redistribution engineering record
 
-Status: local execution **PASS**; technical Vercel size preflight **PASS**; redistribution
-**HOLD**.
+Status: local execution **PASS**; technical Vercel size preflight **PASS**; artifact evidence
+**PASS**; legal determination **NOT_PERFORMED**; release approval **HOLD**.
+
+Artifact evidence: **PASS**. Legal determination: **NOT_PERFORMED**.
 
 This record reports engineering facts and unresolved gates. It is not legal advice, a license
 interpretation, or distribution approval.
@@ -23,7 +25,9 @@ Primary upstream evidence:
 - <https://dev.opencascade.org/doc/overview/html/index.html>
 - <https://github.com/gumyr/build123d>
 
-The exact official license texts used by this packet are under `licenses/`.
+The exact license and notice evidence used by this packet is under `licenses/`. Any release closure
+must include `licenses/**`, this `THIRD_PARTY_NOTICES.md`, and
+`REDISTRIBUTION_EVIDENCE.md`; omitting any of the three makes the artifact evidence incomplete.
 
 ## Corresponding source packet
 
@@ -92,7 +96,7 @@ libraries. `pyelftools` inspection recorded:
   desired ABI-compatible OCCT build, verify that wheel, and rebuild the image with the exact
   replacement URL and hash through `OCP_WHEEL_URL` and `OCP_WHEEL_SHA256`.
 
-## Native SBOM gap
+## Wheel-alone SBOM gap and service supplement
 
 The wheel includes `auditwheel.cdx.json` with SHA-256
 `9acbb7d86c746873c40a970bd1afc89855986aa1e5b9ae85e6a53032f7201b10`. It lists 19 components,
@@ -101,27 +105,38 @@ JBIG, FreeType, Fontconfig, and JPEG XR packages. Every component's license fiel
 The wheel also contains bundled `libgomp`, `liblzma`, `libuuid`, and `libzstd` objects that are
 not represented as separately licensed components in that SBOM summary.
 
-Therefore the native transitive notice/source map is incomplete. This is the controlling
-redistribution blocker even though the OCP, OCP build-system, and OCCT primary license files are
-now preserved.
+The wheel alone therefore has an incomplete native transitive notice/source map. The service
+supplement under `licenses/` maps all 70 measured ELF files to 22 components and source sets. The
+repository verifier checks that supplement and reports artifact evidence **PASS** while reporting
+legal determination **NOT_PERFORMED**. This factual closure does not itself authorize
+redistribution.
 
 ## Required artifacts and gates
 
-Redistribution remains HOLD until all items below are evidenced:
+Artifact evidence is **PASS** for the measured closure when the verifier succeeds and the complete
+release closure is present. Release approval remains **HOLD** until the separate provider and human
+governance gates below are resolved:
 
 - PASS: exact runtime versions and Linux wheel hash are pinned.
 - PASS: official OCP Apache-2.0, OCCT LGPL-2.1, and OCCT exception texts are bundled.
 - PASS: exact OCP, OCP build-system, and OCCT source archives can be fetched and hash-verified.
 - PASS: a replacement-wheel build input exists for the OCI path.
 - PASS: Vercel size and 4.5 MB transport boundaries have local checks.
-- HOLD: every bundled native library needs an exact source/version/license/notice mapping.
-- HOLD: corresponding source copies need an approved durable publication or delivery location.
-- HOLD: the rebuilt/relinked wheel path needs an executed clean-room proof and ABI smoke test.
-- HOLD: repository license authority has not approved runtime redistribution.
+- PASS: all 70 measured native files have exact component, source, license/notice, and hash records
+  in the service supplement.
+- PASS: the verifier reports `factual_evidence: PASS` and
+  `legal_determination: NOT_PERFORMED` for the measured closure.
+- REQUIRED IN EVERY RELEASE CLOSURE: `licenses/**`, `THIRD_PARTY_NOTICES.md`, and
+  `REDISTRIBUTION_EVIDENCE.md`.
+- HOLD: an approved durable publication or delivery location for corresponding source is
+  unrecorded.
+- HOLD: repository-owner acceptance of the applicable obligations is unrecorded; no legal
+  determination has been performed.
 - HOLD: no provider-produced Vercel bundle or OCI image has been captured and checked.
 
-PASS may be recorded only when every HOLD above is replaced by an evidence pointer and the
-repository license authority records approval. Deployment authority is a separate gate.
+Release approval may be recorded only when every release HOLD above is replaced by an evidence
+pointer and the required human decision is recorded. Artifact evidence PASS is not legal approval,
+repository-owner acceptance, or deployment authority.
 
 ## Lane J2 objective evidence supplement (2026-09-05)
 
