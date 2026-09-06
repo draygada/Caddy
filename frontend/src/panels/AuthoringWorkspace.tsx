@@ -19,6 +19,7 @@ import {
   type CadExportResponse,
   type CadFeatureKind,
   type CadOperation,
+  type CadRecomputeResponse,
   type CadSketch,
   type CadTransferFormat,
   type SketchConstraintKind,
@@ -38,6 +39,7 @@ import {
   type CadOutputArtifact,
   type CadOutputBundle,
 } from '../cad/output-client';
+import { getProductThreadSnapshot, registerProductCadRevision, registerProductOutputs } from '../lib/product-thread';
 
 const card: CSSProperties = { border: '1px solid var(--line, #ccd3d8)', borderRadius: 8, background: 'var(--surface, #fff)' };
 const mono: CSSProperties = { fontFamily: 'Geist Mono, ui-monospace, monospace' };
@@ -113,6 +115,27 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   const [preferredSketchId, setPreferredSketchId] = useState(sketch.id);
   const inFlightSubmissions = useRef(new Set<string>());
 
+  function invalidateOutputsForAcceptedRevision() {
+    setNativeEnvelope(null);
+    setSealedSnapshotArtifact(null);
+    setOutputBundle(null);
+    setOutputError(null);
+    setOutputMessage('CAD revision changed. Seal a new output package before sourcing or order progression can resume.');
+  }
+
+  async function registerAcceptedCad(response: CadRecomputeResponse, operationId: string | null) {
+    invalidateOutputsForAcceptedRevision();
+    await registerProductCadRevision({
+      documentId: response.document.id,
+      revisionId: response.revisionId,
+      documentSha256: response.documentHash,
+      geometrySha256: response.kernel.artifactHash,
+      actorId: 'operator:browser',
+      operationId,
+      acceptedAt: response.kernel.computedAt,
+    });
+  }
+
   async function submitOperation(operation: CadOperation): Promise<boolean> {
     const release = claimCadSubmission(inFlightSubmissions.current, 'workspace-write');
     if (!release) {
@@ -128,7 +151,12 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
     try {
       const response = await recomputeCad({ document: draft, operation, expectedRevisionId: acceptedBase.revisionId }, fetchImpl, executionPreference);
       dispatch({ type: 'succeeded', requestId, response });
-      setFormError(null);
+      try {
+        await registerAcceptedCad(response, operation.id);
+        setFormError(null);
+      } catch (error) {
+        setFormError(error instanceof Error ? `CAD was accepted, but shared-thread registration failed closed: ${error.message}` : 'CAD was accepted, but shared-thread registration failed closed.');
+      }
       return true;
     } catch (error) {
       dispatch({ type: 'failed', requestId, error: error instanceof Error ? error.message : 'CAD recompute failed.', stale: error instanceof CadApiError && error.code === 'CAD_STALE', diagnostics: error instanceof CadApiError ? error.diagnostics : undefined });
@@ -173,6 +201,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
     try {
       const response = await importCad({ format, fileName: file.name, dataBase64: await fileToBase64(file), expectedRevisionId: state.lastValidDocument.revisionId }, fetchImpl);
       dispatch({ type: 'replace-from-import', response });
+      await registerAcceptedCad(response, null);
       setTransferMessage(`Imported ${file.name} as authoritative revision ${response.revisionId}.`);
     } catch (error) {
       setTransferMessage(error instanceof Error ? error.message : 'Import failed; the last valid document is unchanged.');
@@ -228,7 +257,9 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
     setOutputMessage(`Validating ${file.name}...`);
     try {
       const envelope = await loadNativeDocument(await fileToBase64(file), fetchImpl);
-      dispatch({ type: 'replace-from-import', response: restoreNativeAuthoring(envelope.document) });
+      const restored = restoreNativeAuthoring(envelope.document);
+      dispatch({ type: 'replace-from-import', response: restored });
+      await registerAcceptedCad(restored, null);
       setNativeEnvelope(envelope);
       setSealedSnapshotArtifact(envelope.artifact);
       setOutputBundle(null);
@@ -246,8 +277,13 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
     setOutputMessage('Sealing CADdyDaddy snapshot and deriving output package...');
     try {
       if (!state.lastValidMesh) throw new Error('Run one successful kernel recompute before generating outputs.');
+      if (state.status === 'failed' || state.status === 'stale') throw new Error('Restore or recompute the CAD document before sealing outputs; failed or stale fallback state cannot be registered as current.');
       const currentDocument = state.lastValidDocument;
       const currentMesh = state.lastValidMesh;
+      const acceptedCad = getProductThreadSnapshot().currentCadRevision;
+      if (!acceptedCad || acceptedCad.documentId !== currentDocument.id || acceptedCad.revisionId !== currentDocument.revisionId) {
+        throw new Error('The shared product thread does not contain this exact accepted CAD revision. Recompute before sealing outputs.');
+      }
       const envelope = await sealNativeDocument(await createNativeDocumentDraft(currentDocument, currentMesh), fetchImpl);
       let currentArtifacts = kernelArtifacts.filter((artifact) => artifact.revisionId === currentDocument.revisionId);
       if (!currentArtifacts.some((artifact) => artifact.format === 'STL')) {
@@ -257,6 +293,27 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
         currentArtifacts = [...currentArtifacts, stl];
       }
       const bundle = await generateCadOutputs({ document: envelope.document, mesh: currentMesh, kernelArtifacts: currentArtifacts }, fetchImpl);
+      if (bundle.document_identity.source_authoring_revision_id !== currentDocument.revisionId) throw new Error('Generated outputs do not identify the current authoring revision.');
+      const manifestArtifact = bundle.artifacts.find((artifact) => artifact.path === 'manifest.json');
+      const bomArtifact = bundle.artifacts.find((artifact) => artifact.path === 'bom.csv');
+      if (!manifestArtifact || manifestArtifact.sha256 !== bundle.package.manifest_file_sha256 || !bomArtifact) throw new Error('Generated outputs are missing exact manifest or BOM identities.');
+      await registerProductOutputs({
+        sourceDocumentId: acceptedCad.documentId,
+        sourceRevisionId: acceptedCad.revisionId,
+        sourceDocumentSha256: acceptedCad.documentSha256,
+        sourceGeometrySha256: acceptedCad.geometrySha256,
+        outputDocumentId: bundle.document_identity.document_id,
+        outputRevisionId: bundle.document_identity.revision_id,
+        outputDocumentSha256: bundle.document_identity.document_hash,
+        artifactManifestSha256: manifestArtifact.sha256,
+        bomSha256: bomArtifact.sha256,
+        artifacts: bundle.artifacts.map((artifact) => ({
+          artifactId: `cad-output:${bundle.package.package_id}:${artifact.path}`,
+          kind: artifact.kind,
+          sha256: artifact.sha256,
+        })),
+        actorId: 'operator:browser',
+      });
       setNativeEnvelope(envelope);
       setSealedSnapshotArtifact(envelope.artifact);
       setOutputBundle(bundle);

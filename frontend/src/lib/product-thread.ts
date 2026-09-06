@@ -23,6 +23,14 @@ export interface ProductArtifactBinding {
   registeredAt: string;
 }
 
+export interface ProductCadRevision {
+  documentId: string;
+  revisionId: string;
+  documentSha256: string;
+  geometrySha256: string;
+  acceptedAt: string;
+}
+
 export interface ProductThreadEvent {
   schemaVersion: 'caddydaddy.product-thread-event/1';
   productId: typeof PRODUCT_ID;
@@ -49,6 +57,7 @@ export interface ProductThreadSnapshot {
   durabilityBoundary: typeof PRODUCT_THREAD_DURABILITY;
   signatureBoundary: typeof PRODUCT_THREAD_SIGNATURE;
   events: readonly ProductThreadEvent[];
+  currentCadRevision: ProductCadRevision | null;
   artifactBinding: ProductArtifactBinding | null;
   mutationVersion: number;
 }
@@ -87,6 +96,7 @@ export interface AppendProductEventInput {
 const HASH = /^[a-f0-9]{64}$/;
 const listeners = new Set<() => void>();
 let events: ProductThreadEvent[] = [];
+let currentCadRevision: ProductCadRevision | null = null;
 let artifactBinding: ProductArtifactBinding | null = null;
 let mutationVersion = 0;
 let expectedProjection: Partial<Record<ProductLane, LaneProjection>> = {};
@@ -100,6 +110,7 @@ function makeSnapshot(): ProductThreadSnapshot {
     durabilityBoundary: PRODUCT_THREAD_DURABILITY,
     signatureBoundary: PRODUCT_THREAD_SIGNATURE,
     events,
+    currentCadRevision,
     artifactBinding,
     mutationVersion,
   };
@@ -152,6 +163,42 @@ function validArtifact(artifact: ProductArtifactRef): void {
   if (!artifact.artifactId.trim() || !artifact.kind.trim() || !HASH.test(artifact.sha256)) throw new Error('Product-thread artifact identity is invalid.');
 }
 
+function enqueueProductMutation<T>(operation: () => Promise<T>): Promise<T> {
+  const queued = appendQueue.then(operation);
+  appendQueue = queued.catch(() => undefined);
+  return queued;
+}
+
+async function appendProductEventNow(input: AppendProductEventInput): Promise<ProductThreadEvent> {
+  const artifacts = input.artifacts ?? [];
+  artifacts.forEach(validArtifact);
+  const previousHash = events.at(-1)?.eventHash ?? null;
+  const preimage: Omit<ProductThreadEvent, 'eventHash'> = {
+    schemaVersion: 'caddydaddy.product-thread-event/1',
+    productId: PRODUCT_ID,
+    threadId: PRODUCT_THREAD_ID,
+    sequence: events.length + 1,
+    previousHash,
+    revisionId: input.revisionId ?? null,
+    artifacts,
+    actorId: input.actorId,
+    actorAttestation: input.actorAttestation,
+    sourceLane: input.sourceLane,
+    eventType: input.eventType,
+    summary: input.summary,
+    timestamp: input.timestamp ?? new Date().toISOString(),
+    durabilityBoundary: PRODUCT_THREAD_DURABILITY,
+    signatureBoundary: PRODUCT_THREAD_SIGNATURE,
+    payload: input.payload ?? {},
+  };
+  const event: ProductThreadEvent = { ...preimage, eventHash: await sha256(eventPreimage(preimage)) };
+  events = [...events, event];
+  expectedProjection = projectionOf(events);
+  mutationVersion += 1;
+  publish();
+  return event;
+}
+
 export function subscribeProductThread(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -170,6 +217,104 @@ export function productArtifactGate(binding: ProductArtifactBinding | null): { r
   return { ready: true, code: 'READY', detail: `Bound to CAD revision ${binding.revisionId}.` };
 }
 
+export async function registerProductCadRevision(input: Omit<ProductCadRevision, 'acceptedAt'> & { acceptedAt?: string; actorId: string; operationId?: string | null }): Promise<ProductThreadEvent> {
+  const acceptedAt = input.acceptedAt ?? new Date().toISOString();
+  const artifacts: ProductArtifactRef[] = [
+    { artifactId: `cad-document:${input.documentId}:${input.revisionId}`, kind: 'cad-document', sha256: input.documentSha256 },
+    { artifactId: `cad-geometry:${input.documentId}:${input.revisionId}`, kind: 'cad-geometry', sha256: input.geometrySha256 },
+  ];
+  if (!input.documentId.trim() || !input.revisionId.trim()) throw new Error('Accepted CAD identity is incomplete.');
+  artifacts.forEach(validArtifact);
+  return enqueueProductMutation(async () => {
+    currentCadRevision = {
+      documentId: input.documentId,
+      revisionId: input.revisionId,
+      documentSha256: input.documentSha256,
+      geometrySha256: input.geometrySha256,
+      acceptedAt,
+    };
+    artifactBinding = null;
+    return appendProductEventNow({
+      sourceLane: 'cad',
+      eventType: 'cad.recompute_accepted',
+      summary: `Accepted CAD revision ${input.revisionId}; prior output bindings are no longer current.`,
+      actorId: input.actorId,
+      actorAttestation: 'OPERATOR_ACTION_RECORDED',
+      revisionId: input.revisionId,
+      artifacts,
+      timestamp: acceptedAt,
+      payload: {
+        documentId: input.documentId,
+        operationId: input.operationId ?? null,
+        outputBinding: 'INVALIDATED_UNTIL_CURRENT_REVISION_OUTPUTS_SEALED',
+        persisted: false,
+      },
+    });
+  });
+}
+
+export interface RegisterProductOutputsInput {
+  sourceDocumentId: string;
+  sourceRevisionId: string;
+  sourceDocumentSha256: string;
+  sourceGeometrySha256: string;
+  outputDocumentId: string;
+  outputRevisionId: string;
+  outputDocumentSha256: string;
+  artifactManifestSha256: string;
+  bomSha256: string;
+  artifacts: ProductArtifactRef[];
+  actorId: string;
+  registeredAt?: string;
+}
+
+export async function registerProductOutputs(input: RegisterProductOutputsInput): Promise<ProductThreadEvent> {
+  const registeredAt = input.registeredAt ?? new Date().toISOString();
+  if (!input.outputDocumentId.trim() || !input.outputRevisionId.trim()) throw new Error('CAD output identity is incomplete.');
+  input.artifacts.forEach(validArtifact);
+  if (!input.artifacts.some((artifact) => artifact.artifactId.endsWith(':manifest.json') && artifact.sha256 === input.artifactManifestSha256)) {
+    throw new Error('CAD output manifest identity does not match the sealed artifact set.');
+  }
+  if (!input.artifacts.some((artifact) => artifact.artifactId.endsWith(':bom.csv') && artifact.sha256 === input.bomSha256)) {
+    throw new Error('CAD output BOM identity does not match the sealed artifact set.');
+  }
+  return enqueueProductMutation(async () => {
+    const current = currentCadRevision;
+    if (!current
+      || current.documentId !== input.sourceDocumentId
+      || current.revisionId !== input.sourceRevisionId
+      || current.documentSha256 !== input.sourceDocumentSha256
+      || current.geometrySha256 !== input.sourceGeometrySha256) {
+      throw new Error('CAD outputs are stale or do not match the current accepted CAD revision.');
+    }
+    artifactBinding = {
+      revisionId: current.revisionId,
+      cadArtifactSha256: current.geometrySha256,
+      artifactManifestSha256: input.artifactManifestSha256,
+      bomSha256: input.bomSha256,
+      registeredAt,
+    };
+    return appendProductEventNow({
+      sourceLane: 'cad',
+      eventType: 'cad.outputs_registered',
+      summary: `Registered ${input.artifacts.length} sealed output identities for current CAD revision ${current.revisionId}.`,
+      actorId: input.actorId,
+      actorAttestation: 'OPERATOR_ACTION_RECORDED',
+      revisionId: current.revisionId,
+      artifacts: input.artifacts,
+      timestamp: registeredAt,
+      payload: {
+        sourceDocumentId: current.documentId,
+        outputDocumentId: input.outputDocumentId,
+        outputRevisionId: input.outputRevisionId,
+        outputDocumentSha256: input.outputDocumentSha256,
+        binding: 'EXACT_CURRENT_REVISION_HASH_IDENTITIES_ONLY',
+        persisted: false,
+      },
+    });
+  });
+}
+
 export async function registerProductArtifacts(input: Omit<ProductArtifactBinding, 'registeredAt'> & { registeredAt?: string; actorId: string }): Promise<ProductThreadEvent> {
   const registeredAt = input.registeredAt ?? new Date().toISOString();
   const refs: ProductArtifactRef[] = [
@@ -178,59 +323,30 @@ export async function registerProductArtifacts(input: Omit<ProductArtifactBindin
     { artifactId: `bom:${input.revisionId}`, kind: 'bom', sha256: input.bomSha256 },
   ];
   refs.forEach(validArtifact);
-  artifactBinding = {
-    revisionId: input.revisionId,
-    cadArtifactSha256: input.cadArtifactSha256,
-    artifactManifestSha256: input.artifactManifestSha256,
-    bomSha256: input.bomSha256,
-    registeredAt,
-  };
-  publish();
-  return appendProductEvent({
-    sourceLane: 'cad',
-    eventType: 'cad.artifacts_registered',
-    summary: `Registered exact CAD output identities for ${input.revisionId}.`,
-    actorId: input.actorId,
-    actorAttestation: 'OPERATOR_ACTION_RECORDED',
-    revisionId: input.revisionId,
-    artifacts: refs,
-    timestamp: registeredAt,
-    payload: { binding: 'EXACT_HASH_IDENTITIES_ONLY', persisted: false },
+  return enqueueProductMutation(async () => {
+    artifactBinding = {
+      revisionId: input.revisionId,
+      cadArtifactSha256: input.cadArtifactSha256,
+      artifactManifestSha256: input.artifactManifestSha256,
+      bomSha256: input.bomSha256,
+      registeredAt,
+    };
+    return appendProductEventNow({
+      sourceLane: 'cad',
+      eventType: 'cad.artifacts_registered',
+      summary: `Registered exact CAD output identities for ${input.revisionId}.`,
+      actorId: input.actorId,
+      actorAttestation: 'OPERATOR_ACTION_RECORDED',
+      revisionId: input.revisionId,
+      artifacts: refs,
+      timestamp: registeredAt,
+      payload: { binding: 'EXACT_HASH_IDENTITIES_ONLY', persisted: false },
+    });
   });
 }
 
 export function appendProductEvent(input: AppendProductEventInput): Promise<ProductThreadEvent> {
-  const operation = appendQueue.then(async () => {
-    const artifacts = input.artifacts ?? [];
-    artifacts.forEach(validArtifact);
-    const previousHash = events.at(-1)?.eventHash ?? null;
-    const preimage: Omit<ProductThreadEvent, 'eventHash'> = {
-      schemaVersion: 'caddydaddy.product-thread-event/1',
-      productId: PRODUCT_ID,
-      threadId: PRODUCT_THREAD_ID,
-      sequence: events.length + 1,
-      previousHash,
-      revisionId: input.revisionId ?? null,
-      artifacts,
-      actorId: input.actorId,
-      actorAttestation: input.actorAttestation,
-      sourceLane: input.sourceLane,
-      eventType: input.eventType,
-      summary: input.summary,
-      timestamp: input.timestamp ?? new Date().toISOString(),
-      durabilityBoundary: PRODUCT_THREAD_DURABILITY,
-      signatureBoundary: PRODUCT_THREAD_SIGNATURE,
-      payload: input.payload ?? {},
-    };
-    const event: ProductThreadEvent = { ...preimage, eventHash: await sha256(eventPreimage(preimage)) };
-    events = [...events, event];
-    expectedProjection = projectionOf(events);
-    mutationVersion += 1;
-    publish();
-    return event;
-  });
-  appendQueue = operation.catch(() => undefined);
-  return operation;
+  return enqueueProductMutation(() => appendProductEventNow(input));
 }
 
 export function tamperProductThread(sequence: number): boolean {
@@ -275,6 +391,7 @@ export async function rederiveProductThread(untrackedCount = 0): Promise<Product
 
 export function resetProductThreadForTests(): void {
   events = [];
+  currentCadRevision = null;
   artifactBinding = null;
   mutationVersion = 0;
   expectedProjection = {};
