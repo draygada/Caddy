@@ -355,6 +355,16 @@ CANDIDATE02_POST_ROUTES = (
     "/api/cad/recompute",
     "/api/cad/import",
     "/api/cad/export",
+    "/api/cad/outputs/native/seal",
+    "/api/cad/outputs/native/load",
+    "/api/cad/outputs/generate",
+    "/api/orders/packages/validate",
+    "/api/orders/dispatches",
+    "/api/orders/receipts/read",
+    "/api/orders/receipts/acknowledge",
+    "/api/orders/receipts/reconcile",
+    "/api/orders/receipts/close",
+    "/api/orders/audit/verify",
 )
 
 CAD_UPSTREAM_ROUTES = {
@@ -401,6 +411,8 @@ class Candidate02Routes:
         classification_action: Callable[[Any], tuple[int, dict[str, Any]]] | None = None,
         sourcing_runtime: Any | None = None,
         provenance_runtime: Any | None = None,
+        order_runtime: Any | None = None,
+        cad_output_runtime: Any | None = None,
         cad_transport: Callable[[str, dict[str, Any]], tuple[int, dict[str, Any]]] | None = None,
         cad_service_url: str | None = None,
     ) -> None:
@@ -435,6 +447,28 @@ class Candidate02Routes:
                 provenance_runtime = ProvenanceRuntime(self.candidate_identity)
             except Exception:
                 unavailable["/api/provenance"] = "Provenance adapter is unavailable in this product-service artifact."
+        if cad_output_runtime is None:
+            try:
+                from .cad_output_api import CadOutputRuntime
+
+                cad_output_runtime = CadOutputRuntime()
+            except Exception:
+                unavailable["/api/cad/outputs"] = "CAD-output adapter is unavailable in this product-service artifact."
+        if order_runtime is None:
+            package_root = os.environ.get("CADDYDADDY_ORDER_PACKAGE_ROOT")
+            if package_root:
+                try:
+                    from .order_api import OrderApiRuntime
+
+                    order_runtime = OrderApiRuntime(Path(package_root), {
+                        "candidate_id": self.candidate_identity["candidate_id"],
+                        "revision": self.candidate_identity["revision_id"],
+                        "artifact_sha256": self.candidate_identity["snapshot_sha256"],
+                    })
+                except Exception:
+                    unavailable["/api/orders"] = "Recording-only order adapter could not verify its configured package root."
+            else:
+                unavailable["/api/orders"] = "Set CADDYDADDY_ORDER_PACKAGE_ROOT to an existing sealed-package directory to enable recording-only order rehearsal."
 
         self._actions: dict[str, Callable[[Any], tuple[int, dict[str, Any]]]] = {
             "/api/classification": classification_action or self._unavailable(unavailable["/api/classification"], "classification"),
@@ -449,6 +483,16 @@ class Candidate02Routes:
             "/api/cad/recompute": self._cad_recompute,
             "/api/cad/import": self._cad_import,
             "/api/cad/export": self._cad_export,
+            "/api/cad/outputs/native/seal": getattr(cad_output_runtime, "seal_native", self._unavailable(unavailable.get("/api/cad/outputs", "CAD-output adapter is unavailable."), "cad-output")),
+            "/api/cad/outputs/native/load": getattr(cad_output_runtime, "load_native", self._unavailable(unavailable.get("/api/cad/outputs", "CAD-output adapter is unavailable."), "cad-output")),
+            "/api/cad/outputs/generate": getattr(cad_output_runtime, "generate", self._unavailable(unavailable.get("/api/cad/outputs", "CAD-output adapter is unavailable."), "cad-output")),
+            "/api/orders/packages/validate": getattr(order_runtime, "validate_package", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
+            "/api/orders/dispatches": getattr(order_runtime, "dispatch_recording", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
+            "/api/orders/receipts/read": getattr(order_runtime, "read_receipt", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
+            "/api/orders/receipts/acknowledge": getattr(order_runtime, "acknowledge", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
+            "/api/orders/receipts/reconcile": getattr(order_runtime, "reconcile_unknown", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
+            "/api/orders/receipts/close": getattr(order_runtime, "close", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
+            "/api/orders/audit/verify": getattr(order_runtime, "verify_audit", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
         }
 
     @classmethod
