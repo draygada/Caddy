@@ -33,6 +33,10 @@ from . import REPOSITORY_ROOT
 CANDIDATE_TIME = "2026-09-05T20:00:00Z"
 TRIPWIRE_SOURCE_COMMIT = "898f6167e4305a4f86f3ebe4a473278ffbd56530"
 PRODUCT_THREAD_ID = "product-thread:caddydaddy-demo-01"
+RELEASE_CANDIDATE_VERSION = "0.2"
+RELEASE_CANDIDATE_ID = f"candidate:{RELEASE_CANDIDATE_VERSION}"
+RELEASE_REVISION_ID = "revision:caddydaddy-candidate-0.2"
+RELEASE_IDENTITY_SCHEMA = "caddydaddy.release-identity/1"
 BOUNDED_CLAIM = "CADdyDaddy binds a selected CAD entity to its immutable product revision and runs a review-readiness guardrail through Tripwire; Candidate 0.1 returns insufficient evidence and requires human review, not a compliance determination."
 POSITIONING = "We're closing the loop from idea to execution for high-stakes industries."
 REQUEST_KEYS = {"entity_id", "node_id", "product_thread_id", "forge_record_id", "occurrence_path", "forge_record_revision_id", "forge_revision_id"}
@@ -227,10 +231,43 @@ class CandidateRuntime:
             raise _snapshot_error("RULEPACK_TAMPERED")
 
     def candidate(self) -> dict[str, Any]:
-        return deepcopy(self.state.public)
+        public = deepcopy(self.state.public)
+        source_candidate = public.get("candidate", {})
+        source_document = public.get("document", {})
+        public["releaseIdentity"] = {
+            "schemaVersion": RELEASE_IDENTITY_SCHEMA,
+            "candidateId": RELEASE_CANDIDATE_ID,
+            "candidateVersion": RELEASE_CANDIDATE_VERSION,
+            "revisionId": RELEASE_REVISION_ID,
+            "snapshotSha256": self.state.snapshot_receipt["document_sha256"],
+        }
+        public["sourceSnapshotIdentity"] = {
+            "candidateVersion": str(source_candidate.get("version", "unknown")),
+            "revisionId": str(source_document.get("revisionId", "revision:unknown")),
+            "snapshotSha256": self.state.snapshot_receipt["document_sha256"],
+            "immutable": True,
+        }
+        return public
 
     def health(self) -> dict[str, Any]:
-        return {"ok": True, "service": "caddydaddy-product-service", "candidate": "0.1", "status": "SNAPSHOT_RUNTIME", "policy_state": "DRAFT_REVIEW_ONLY", "snapshot": {"sha256": self.state.snapshot_receipt["document_sha256"], "source": deepcopy(self.state.snapshot_receipt["source"]), "verified": True}}
+        source_candidate = self.state.public.get("candidate", {})
+        source_document = self.state.public.get("document", {})
+        return {
+            "ok": True,
+            "service": "caddydaddy-product-service",
+            "candidate": RELEASE_CANDIDATE_VERSION,
+            "candidate_id": RELEASE_CANDIDATE_ID,
+            "revision_id": RELEASE_REVISION_ID,
+            "status": "CANDIDATE_0_2_RUNTIME",
+            "policy_state": "DRAFT_REVIEW_ONLY",
+            "snapshot": {
+                "sha256": self.state.snapshot_receipt["document_sha256"],
+                "source": deepcopy(self.state.snapshot_receipt["source"]),
+                "source_candidate_version": str(source_candidate.get("version", "unknown")),
+                "source_revision_id": str(source_document.get("revisionId", "revision:unknown")),
+                "verified": True,
+            },
+        }
 
     def evaluate_request(self, request: Any) -> tuple[int, dict[str, Any]]:
         try:
@@ -426,6 +463,7 @@ class Candidate02Routes:
         self.cad_service_url = (cad_service_url if cad_service_url is not None else os.environ.get("CADDYDADDY_CAD_SERVICE_URL", "")).rstrip("/")
         self._cad_transport = cad_transport or self._http_cad_transport
         unavailable: dict[str, str] = {}
+        default_inline_order_runtime = False
 
         if classification_action is None:
             try:
@@ -457,19 +495,37 @@ class Candidate02Routes:
                 unavailable["/api/cad/outputs"] = "CAD-output adapter is unavailable in this product-service artifact."
         if order_runtime is None:
             package_root = os.environ.get("CADDYDADDY_ORDER_PACKAGE_ROOT")
-            if package_root:
-                try:
-                    from .order_api import OrderApiRuntime
+            try:
+                from .order_api import OrderApiRuntime
 
-                    order_runtime = OrderApiRuntime(Path(package_root), {
-                        "candidate_id": self.candidate_identity["candidate_id"],
-                        "revision": self.candidate_identity["revision_id"],
-                        "artifact_sha256": self.candidate_identity["snapshot_sha256"],
-                    })
-                except Exception:
+                order_runtime = OrderApiRuntime(Path(package_root) if package_root else None, {
+                    "candidate_id": self.candidate_identity["candidate_id"],
+                    "revision": self.candidate_identity["revision_id"],
+                    "artifact_sha256": self.candidate_identity["snapshot_sha256"],
+                })
+                default_inline_order_runtime = package_root is None
+            except Exception:
+                if package_root:
                     unavailable["/api/orders"] = "Recording-only order adapter could not verify its configured package root."
-            else:
-                unavailable["/api/orders"] = "Set CADDYDADDY_ORDER_PACKAGE_ROOT to an existing sealed-package directory to enable recording-only order rehearsal."
+                else:
+                    unavailable["/api/orders"] = "Recording-only inline order adapter is unavailable in this product-service artifact."
+
+        def order_action(name: str) -> Callable[[Any], tuple[int, dict[str, Any]]]:
+            action = getattr(order_runtime, name, None)
+            if action is None:
+                return self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")
+            if not default_inline_order_runtime:
+                return action
+
+            def invoke(payload: Any) -> tuple[int, dict[str, Any]]:
+                if payload == {}:
+                    return self._unavailable(
+                        "Inline recording-only order routes require a sealed client-carried payload.",
+                        "orders",
+                    )(payload)
+                return action(payload)
+
+            return invoke
 
         self._actions: dict[str, Callable[[Any], tuple[int, dict[str, Any]]]] = {
             "/api/classification": classification_action or self._unavailable(unavailable["/api/classification"], "classification"),
@@ -487,24 +543,23 @@ class Candidate02Routes:
             "/api/cad/outputs/native/seal": getattr(cad_output_runtime, "seal_native", self._unavailable(unavailable.get("/api/cad/outputs", "CAD-output adapter is unavailable."), "cad-output")),
             "/api/cad/outputs/native/load": getattr(cad_output_runtime, "load_native", self._unavailable(unavailable.get("/api/cad/outputs", "CAD-output adapter is unavailable."), "cad-output")),
             "/api/cad/outputs/generate": getattr(cad_output_runtime, "generate", self._unavailable(unavailable.get("/api/cad/outputs", "CAD-output adapter is unavailable."), "cad-output")),
-            "/api/orders/packages/validate": getattr(order_runtime, "validate_package", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
-            "/api/orders/dispatches": getattr(order_runtime, "dispatch_recording", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
-            "/api/orders/receipts/read": getattr(order_runtime, "read_receipt", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
-            "/api/orders/receipts/acknowledge": getattr(order_runtime, "acknowledge", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
-            "/api/orders/receipts/reconcile": getattr(order_runtime, "reconcile_unknown", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
-            "/api/orders/receipts/close": getattr(order_runtime, "close", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
-            "/api/orders/audit/verify": getattr(order_runtime, "verify_audit", self._unavailable(unavailable.get("/api/orders", "Recording-only order adapter is unavailable."), "orders")),
+            "/api/orders/packages/validate": order_action("validate_package"),
+            "/api/orders/dispatches": order_action("dispatch_recording"),
+            "/api/orders/receipts/read": order_action("read_receipt"),
+            "/api/orders/receipts/acknowledge": order_action("acknowledge"),
+            "/api/orders/receipts/reconcile": order_action("reconcile_unknown"),
+            "/api/orders/receipts/close": order_action("close"),
+            "/api/orders/audit/verify": order_action("verify_audit"),
         }
 
     @classmethod
     def from_runtime(cls, runtime: CandidateRuntime) -> "Candidate02Routes":
         public = runtime.candidate()
-        candidate = public.get("candidate", {})
-        document = public.get("document", {})
+        release = public.get("releaseIdentity", {})
         return cls({
-            "candidate_id": f"candidate:{candidate.get('version', 'unknown')}",
-            "revision_id": str(document.get("revisionId", "revision:unknown")),
-            "snapshot_sha256": str(candidate.get("payloadHash", "")),
+            "candidate_id": str(release.get("candidateId", RELEASE_CANDIDATE_ID)),
+            "revision_id": str(release.get("revisionId", RELEASE_REVISION_ID)),
+            "snapshot_sha256": str(release.get("snapshotSha256", runtime.state.snapshot_receipt["document_sha256"])),
         })
 
     @property

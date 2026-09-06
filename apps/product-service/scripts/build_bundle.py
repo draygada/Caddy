@@ -77,13 +77,59 @@ from api.index import handler
 for module in json.loads(os.environ["CADDYDADDY_BUNDLE_IMPORTS"]):
     importlib.import_module(module)
 
-from product_service.app import CANDIDATE02_POST_ROUTES, Candidate02Routes, CandidateRuntime
+from product_service.app import (
+    CANDIDATE02_POST_ROUTES,
+    RELEASE_CANDIDATE_ID,
+    RELEASE_CANDIDATE_VERSION,
+    RELEASE_REVISION_ID,
+    Candidate02Routes,
+    CandidateRuntime,
+)
 
-routes = Candidate02Routes.from_runtime(CandidateRuntime())
+runtime = CandidateRuntime()
+routes = Candidate02Routes.from_runtime(runtime)
 missing = sorted(set(CANDIDATE02_POST_ROUTES) - routes.post_paths)
 if missing:
     raise RuntimeError(f"Candidate 0.2 routes failed to mount: {missing}")
-print(json.dumps({"handler": handler.__name__, "post_routes": sorted(routes.post_paths)}))
+health = runtime.health()
+expected_identity = {
+    "candidate_id": RELEASE_CANDIDATE_ID,
+    "revision_id": RELEASE_REVISION_ID,
+    "snapshot_sha256": runtime.state.snapshot_receipt["document_sha256"],
+}
+if health.get("candidate") != RELEASE_CANDIDATE_VERSION or routes.candidate_identity != expected_identity:
+    raise RuntimeError("Candidate 0.2 release identity did not survive isolated bundle startup")
+
+classification_status, classification_body = routes.dispatch("/api/classification", {
+    "product_or_part": "Public synthetic fastener",
+    "item_kind": "commodity",
+    "facts": {"source": "isolated bundle smoke"},
+    "budget": {"calls_cap": 4, "cost_cap_microusd": 1000000, "estimated_cost_microusd": 1000},
+})
+if classification_status != 200:
+    raise RuntimeError(f"Bundled classification route failed: {classification_status} {classification_body.get('diagnostic', {})}")
+
+order_status, order_body = routes.dispatch("/api/orders/packages/validate", {
+    "candidate": {
+        "candidate_id": expected_identity["candidate_id"],
+        "revision": expected_identity["revision_id"],
+        "artifact_sha256": expected_identity["snapshot_sha256"],
+    }
+})
+order_boundary = order_body.get("runtime_boundary", {})
+if order_status == 503 or order_boundary.get("connector") != "RECORDING_ONLY" or order_boundary.get("external_effect") != "NONE" or order_boundary.get("external_calls") != 0:
+    raise RuntimeError(f"Bundled inline order route failed its no-effect startup smoke: {order_status}")
+
+print(json.dumps({
+    "handler": handler.__name__,
+    "post_routes": sorted(routes.post_paths),
+    "candidate_identity": routes.candidate_identity,
+    "health_candidate": health["candidate"],
+    "classification_status": classification_status,
+    "classification_determination": classification_body.get("determination"),
+    "order_status": order_status,
+    "order_boundary": order_boundary,
+}))
 '''
     environment = os.environ.copy()
     environment.pop("PYTHONPATH", None)

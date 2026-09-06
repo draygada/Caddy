@@ -36,6 +36,14 @@
       "target": "packages/classification/forge_classification"
     },
     {
+      "source": "packages/classification/contracts",
+      "target": "packages/classification/contracts"
+    },
+    {
+      "source": "packages/classification/data",
+      "target": "packages/classification/data"
+    },
+    {
       "source": "packages/cad-output/src/caddydaddy_cad_output",
       "target": "packages/cad-output/caddydaddy_cad_output"
     },
