@@ -303,9 +303,8 @@ export function Viewport({ o: _o }: { o: Outcome }) {
         {s.viewSeq != null ? (
           <span className="text-[13px] font-semibold text-amber">replaying #{s.viewSeq} · read-only · <button onClick={() => s.viewAt(null)} className="underline">back to live</button></span>
         ) : (
-          <span className="text-[13px] text-muted">right-click for commands · <span className="font-mono">S</span> command box · drag a body to move it</span>
+          <span />
         )}
-        <button onClick={() => s.patch({ cmdOpen: true })} className="btn font-mono" title="Command box (S)">S</button>
       </div>
       {mode === 'sheet' && <SheetView span={s.span} />}
       {mode === 'sketch' && <SketchView />}
@@ -376,6 +375,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
               <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 21,7.5 12,12 3,7.5" fill="var(--cube-top)" stroke="var(--cube-ink)" strokeWidth="1" strokeLinejoin="round" /><polygon points="3,7.5 12,12 12,21 3,16.5" fill="var(--cube)" stroke="var(--cube-ink)" strokeWidth="1" strokeLinejoin="round" /><polygon points="21,7.5 12,12 12,21 21,16.5" fill="var(--cube)" stroke="var(--cube-ink)" strokeWidth="1" strokeLinejoin="round" /></svg>
               <svg viewBox="0 0 10 6" width="10" height="6" aria-hidden="true"><polygon points="0,0 10,0 5,6" fill="currentColor" /></svg>
             </button>
+            {cubeMenu && <div className="fixed inset-0 z-[19]" onMouseDown={(e) => { e.stopPropagation(); setCubeMenu(false); }} />}
             {cubeMenu && (
               <div role="menu" className="absolute right-3 top-[176px] panel py-1 min-w-[160px] shadow-[0_8px_24px_rgba(0,0,0,.14)] z-20 text-[13px]">
                 {[

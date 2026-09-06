@@ -117,7 +117,7 @@ export function Browser() {
                 <select aria-label="Units" value={s.units} onChange={(e) => s.setUnits(e.target.value as typeof s.units)} className="btn btn-xs text-ink">{UNITS.map((u) => <option key={u} value={u}>{u}</option>)}</select>
               </div>
             )}
-            <Row depth={1} icon={<Home />} name="Named views" open={open.views} onToggle={() => toggle('views')} trailing={<button className="btn btn-xs" onClick={(e) => { e.stopPropagation(); s.openDialog('named_view', null); }}>save</button>} />
+            <Row depth={1} icon={<Home />} name="Named views" open={open.views} onToggle={() => toggle('views')} trailing={<button className="btn btn-xs" onClick={(e) => { e.stopPropagation(); s.openDialog('named_view', null); }}aria-label="save" title="save"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v15H5z" /><path d="M8 3v6h8V3" /><path d="M8 21v-7h8v7" /></svg></button>} />
             {open.views && (
               <>
                 <Row depth={2} icon={<Home />} name="Home" onClick={() => s.setView('iso')} trailing={<button className="btn btn-xs" onClick={(e) => { e.stopPropagation(); s.setHome(); }} title="set the current camera as home">set</button>} />
@@ -125,11 +125,11 @@ export function Browser() {
                 {s.namedViews.map((v) => <Row key={v.id} depth={2} icon={<Eye />} name={v.name} onClick={() => s.patch({ az: v.az, el: v.el, zoom: v.zoom, pan: v.pan })} trailing={<button className="btn btn-xs" onClick={(e) => { e.stopPropagation(); s.patch({ namedViews: s.namedViews.filter((x) => x.id !== v.id) }); }}>×</button>} />)}
               </>
             )}
-            <Row depth={1} icon={<Folder />} name="Versions" open={open.versions} onToggle={() => toggle('versions')} trailing={<>{s.versions.length}<button className="btn btn-xs" onClick={(e) => { e.stopPropagation(); s.openDialog('save_version', null); }}>save</button></>} />
+            <Row depth={1} icon={<Folder />} name="Versions" open={open.versions} onToggle={() => toggle('versions')} trailing={<>{s.versions.length}<button className="btn btn-xs" onClick={(e) => { e.stopPropagation(); s.openDialog('save_version', null); }}aria-label="save" title="save"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v15H5z" /><path d="M8 3v6h8V3" /><path d="M8 21v-7h8v7" /></svg></button></>} />
             {open.versions && s.versions.slice().reverse().map((v) => (
               <Row key={v.v} depth={2} icon={<Doc />} name={<span>v{v.v} <span className="text-muted">· {v.comment || '(no comment)'}</span></span>} active={s.viewSeq === v.seq} onClick={() => s.viewAt(v.seq >= s.events.length ? null : v.seq)} trailing={'#' + v.seq + ' · ' + v.at.slice(5)} title="open this version in the timeline" />
             ))}
-            <Row depth={1} icon={<Folder />} name="Comments" open={open.comments} onToggle={() => toggle('comments')} trailing={<>{s.comments.length}<button className="btn btn-xs" onClick={(e) => { e.stopPropagation(); s.openDialog('add_comment', null); }}>add</button></>} />
+            <Row depth={1} icon={<Folder />} name="Comments" open={open.comments} onToggle={() => toggle('comments')} trailing={<>{s.comments.length}<button className="btn btn-xs" onClick={(e) => { e.stopPropagation(); s.openDialog('add_comment', null); }}aria-label="add a comment">+</button></>} />
             {open.comments && (s.comments.length === 0 ? <div className="text-[12px] text-muted" style={{ paddingLeft: 6 + 2 * 16 + 58 }}>no comments · add one on the current state</div> : s.comments.slice().reverse().map((c) => (
               <Row key={c.id} depth={2} icon={<Doc />} name={<span><b>{c.author}</b> <span className="text-muted">· {c.text}</span></span>} trailing={'#' + c.seq} onClick={() => s.viewAt(c.seq >= s.events.length ? null : c.seq)} title={c.at} />
             )))}

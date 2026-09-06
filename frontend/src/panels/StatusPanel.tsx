@@ -1,6 +1,6 @@
 import { useStore, intakeIncomplete } from '../store';
 import type { Outcome } from '../lib/rules';
-import { attentionOf, overallOf, slotStatus, STATUS_CLAIM_CEILING } from '../lib/viewmodel';
+import { attentionOf, overallOf, slotStatus } from '../lib/viewmodel';
 import { CORE_SLOTS, GENERIC_NAME, SLOTS, type Node } from '../lib/catalog';
 
 const CLEAN = 'no match · limited scan';
@@ -41,7 +41,6 @@ export function StatusPanel({ o }: { o: Outcome }) {
       ) : (
         <div className="p-3 grid gap-1 border-b border-line2">
           <span className="status-word text-[20px] justify-self-start" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>
-          <div className="text-[14px]">{overall.entries}</div>
         </div>
       )}
       <div className="px-3 py-2 grid">
@@ -58,9 +57,6 @@ export function StatusPanel({ o }: { o: Outcome }) {
         {clean.length > 0 && (
           <div className="text-[13px] text-muted py-[3px] px-1"><b className="text-ink">{clean.length} part{clean.length === 1 ? '' : 's'}</b> · no match in the modeled rows · {clean.map(({ n }) => name(n)).join(', ')}</div>
         )}
-      </div>
-      <div role="note" aria-label="Claim ceiling" data-testid="status-claim-ceiling" className="px-3 py-2 border-t border-line2 text-[11px] leading-snug text-muted">
-        <span className="font-semibold" style={{ color: 'var(--amber)' }}>{STATUS_CLAIM_CEILING.title}.</span> {STATUS_CLAIM_CEILING.body}
       </div>
     </div>
   );

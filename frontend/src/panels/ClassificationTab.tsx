@@ -3,7 +3,7 @@ import { useStore, intakeIncomplete } from '../store';
 import { CATALOG, CORE_SLOTS, GENERIC_NAME, SLOTS, type Node, type Slot } from '../lib/catalog';
 import { AF_THUMB, THUMBS, type ThumbFace } from '../lib/geometry';
 import type { Outcome, Rule } from '../lib/rules';
-import { destCellsOf, overallOf, slotStatus, STATUS_CLAIM_CEILING } from '../lib/viewmodel';
+import { destCellsOf, overallOf, slotStatus } from '../lib/viewmodel';
 
 type Level = 0 | 1 | 2 | 3 | 4;
 const LEVEL_COLOR: Record<Level, string> = { 0: 'var(--m2)', 1: 'var(--amber)', 2: 'var(--amber)', 3: 'var(--red)', 4: 'var(--black)' };
@@ -58,7 +58,6 @@ function Thumb({ faces }: { faces: ThumbFace[] | null }) {
 /** Classification: the part visually, why it trips, and the regulation behind an expand. Only parts of concern up front. */
 export function ClassificationTab({ o }: { o: Outcome }) {
   const s = useStore();
-  const [open, setOpen] = useState<Record<string, boolean>>({});
   const [showClean, setShowClean] = useState(false);
   const overall = overallOf(o);
   const incomplete = intakeIncomplete(s.project?.intake ?? null);
@@ -82,24 +81,21 @@ export function ClassificationTab({ o }: { o: Outcome }) {
   });
   const concern = rows.filter((r) => r.level > 0).sort((a, b) => b.level - a.level);
   const clean = rows.filter((r) => r.level === 0);
-  const toggle = (id: string) => setOpen((v) => ({ ...v, [id]: !v[id] }));
 
   const Row = ({ r }: { r: PartRow }) => {
-    const isOpen = !!open[r.node];
     const st = slotStatus(o, s.unconfirmed, r.node);
     const cells = destCellsOf(o, r.node);
     return (
       <div className="border-t border-line2">
-        <button onClick={() => toggle(r.node)} aria-expanded={isOpen} className="row-hover w-full text-left grid grid-cols-[56px_minmax(0,1fr)_auto_auto] gap-4 items-center px-4 py-3 bg-transparent border-0 text-ink cursor-pointer">
+        <div className="w-full text-left grid grid-cols-[56px_minmax(0,1fr)_auto] gap-4 items-center px-4 py-3 text-ink">
           <Thumb faces={r.thumb} />
           <span className="min-w-0">
             <span className="block text-[15px] font-semibold">{r.name} <span className="text-muted font-normal text-[13px]">· {r.model}</span></span>
             <span className="block text-[13px]" style={{ color: r.level >= 3 ? LEVEL_COLOR[r.level] : 'var(--muted)' }}>{r.why}</span>
           </span>
           <span className="grid justify-items-end gap-1"><RiskBar level={r.level} /><span className="text-[12px] font-semibold whitespace-nowrap" style={{ color: st.color }}>{st.word}</span></span>
-          <span className="text-[13px] text-muted w-[72px] text-right">{isOpen ? 'less' : 'see more'}</span>
-        </button>
-        {isOpen && (
+        </div>
+        {(
           <div className="px-4 pb-4 pl-[88px] grid gap-3 text-[13px]">
             {r.rules.map((rule) => (
               <div key={rule.id} className="border border-line rounded-r p-3 grid gap-2 bg-surface">
@@ -137,13 +133,11 @@ export function ClassificationTab({ o }: { o: Outcome }) {
             {incomplete ? <span className="status-word text-[22px]" style={{ color: 'var(--amber)' }}>? Requires more information</span> : <span className="status-word text-[22px]" style={{ color: overall.color, background: overall.bg }}>{overall.glyph} {overall.word}</span>}
             <span className="text-[14px] text-muted">{incomplete ? 'the use-case answers are missing or “not sure yet” · the parts below are still evaluated on their own attributes' : overall.sub}</span>
           </div>
-          <div className="text-[14px]">{overall.entries}</div>
-          <div className="text-[12px] text-muted">{STATUS_CLAIM_CEILING.title}: {STATUS_CLAIM_CEILING.body}</div>
         </div>
       </div>
 
       <div className="panel">
-        <div className="panel-head"><div className="panel-title">Parts of concern <span className="sub">· {concern.length} of {rows.length}</span></div><span className="text-[12px] text-muted">click a part for the regulation behind it</span></div>
+        <div className="panel-head"><div className="panel-title">Parts of concern <span className="sub">· {concern.length} of {rows.length}</span></div><span /></div>
         {concern.length === 0 && <div className="px-4 py-6 text-[14px] text-muted">No part matched a modeled row. Human review is still required before any export decision.</div>}
         {concern.map((r) => <Row key={r.node} r={r} />)}
       </div>
