@@ -139,6 +139,19 @@ function canonical(value: unknown): string {
   throw new OrderServiceError('ORDER_CANONICAL_INVALID', 'Order evidence is outside the canonical JSON model.');
 }
 
+function asciiJsonString(value: string): string {
+  return JSON.stringify(value).replace(/[\u007f-\uffff]/g, (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
+}
+
+function sourcingCanonical(value: unknown): string {
+  if (value === null || typeof value === 'boolean') return JSON.stringify(value);
+  if (typeof value === 'string') return asciiJsonString(value);
+  if (typeof value === 'number' && Number.isInteger(value)) return String(value);
+  if (Array.isArray(value)) return `[${value.map(sourcingCanonical).join(',')}]`;
+  if (isRecord(value)) return `{${Object.keys(value).sort().map((key) => `${asciiJsonString(key)}:${sourcingCanonical(value[key])}`).join(',')}}`;
+  throw new OrderServiceError('SOURCING_PACKAGE_INVALID', 'Sourcing evidence is outside the canonical JSON model.');
+}
+
 async function sha256(value: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(canonical(value));
   return sha256Bytes(bytes);
@@ -147,6 +160,97 @@ async function sha256(value: unknown): Promise<string> {
 async function sha256Bytes(bytes: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', Uint8Array.from(bytes));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function inlineBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  }
+  return btoa(binary);
+}
+
+function requireSourcingCandidate(value: unknown, expected: OrderCandidateIdentity): void {
+  if (
+    !isRecord(value)
+    || value.candidate_id !== expected.candidate_id
+    || value.revision_id !== expected.revision
+    || value.snapshot_sha256 !== expected.artifact_sha256
+  ) {
+    throw new OrderServiceError('ORDER_CANDIDATE_STALE', 'The sealed sourcing package belongs to a different candidate.');
+  }
+  requireHash(value.snapshot_sha256, 'ORDER_CANDIDATE_STALE');
+}
+
+async function bridgeSourcingPackage(value: unknown, expected: OrderCandidateIdentity): Promise<OrderPackageEnvelope> {
+  if (!isRecord(value) || !isRecord(value.payload) || !isRecord(value.manifest)) {
+    throw new OrderServiceError('SOURCING_PACKAGE_INVALID', 'The sourcing response omitted its sealed payload or manifest.');
+  }
+  const payload = value.payload;
+  const sourceManifest = value.manifest;
+  if (
+    value.byte_reread_verified !== true
+    || value.dispatch_ceiling !== 'STAGED_ONLY'
+    || value.continuity !== 'CLIENT_CARRIED_CANONICAL_BYTES'
+    || payload.schema_version !== 'caddydaddy.staged-order-payload/1'
+    || payload.external_send_authorized !== false
+    || sourceManifest.schema_version !== 'caddydaddy.staged-order-manifest/1'
+    || sourceManifest.dispatch_ceiling !== 'STAGED_ONLY'
+  ) {
+    throw new OrderServiceError('ORDER_BOUNDARY_VIOLATION', 'The sourcing package does not preserve the staged-only, zero-send boundary.');
+  }
+  requireSourcingCandidate(value.candidate, expected);
+  requireSourcingCandidate(payload.candidate, expected);
+  requireSourcingCandidate(sourceManifest.candidate, expected);
+
+  const roundId = requireString(value.round_id, 'SOURCING_PACKAGE_INVALID');
+  const payloadPath = requireString(value.payload_file, 'SOURCING_PACKAGE_INVALID');
+  const sourceManifestPath = requireString(value.manifest_file, 'SOURCING_PACKAGE_INVALID');
+  const payloadHash = requireHash(value.payload_sha256, 'SOURCING_PACKAGE_INVALID');
+  const sourceManifestHash = requireHash(value.manifest_sha256, 'SOURCING_PACKAGE_INVALID');
+  const payloadBytes = new TextEncoder().encode(sourcingCanonical(payload));
+  const sourceManifestBytes = new TextEncoder().encode(sourcingCanonical(sourceManifest));
+  if (
+    payloadPath !== `payload-${payloadHash}.json`
+    || sourceManifestPath !== `manifest-${sourceManifestHash}.json`
+    || value.payload_bytes !== payloadBytes.length
+    || await sha256Bytes(payloadBytes) !== payloadHash
+    || await sha256Bytes(sourceManifestBytes) !== sourceManifestHash
+    || payload.round_id !== roundId
+    || sourceManifest.round_id !== roundId
+    || sourceManifest.payload_file !== payloadPath
+    || sourceManifest.payload_sha256 !== payloadHash
+    || sourceManifest.payload_bytes !== payloadBytes.length
+    || sourceManifest.corpus_sha256 !== payload.corpus_sha256
+    || value.corpus_sha256 !== payload.corpus_sha256
+  ) {
+    throw new OrderServiceError('SOURCING_PACKAGE_TAMPERED', 'The sourcing payload, manifest, or canonical byte hashes do not agree.');
+  }
+  if (!isRecord(payload.selected_offer)) {
+    throw new OrderServiceError('SOURCING_PACKAGE_INVALID', 'The staged sourcing payload omitted its selected offer.');
+  }
+  const offerId = requireString(payload.selected_offer.offer_id, 'SOURCING_PACKAGE_INVALID');
+  const disposition = requireString(payload.selected_offer.screening_disposition, 'SOURCING_PACKAGE_INVALID');
+  if (!['eligible-fixture', 'eligible-bounded'].includes(disposition)) {
+    throw new OrderServiceError('ORDER_GATE_BLOCKED', 'Only a sourcing-service-eligible selection can enter the recording-only order rehearsal.');
+  }
+
+  const files: InlinePackageFile[] = [
+    { path: payloadPath, byte_length: payloadBytes.length, sha256: payloadHash, content_base64: inlineBase64(payloadBytes) },
+    { path: sourceManifestPath, byte_length: sourceManifestBytes.length, sha256: sourceManifestHash, content_base64: inlineBase64(sourceManifestBytes) },
+  ];
+  const manifestPreimage = {
+    schema_version: 'strafe.sealed-sourcing-package/1',
+    package_id: `sourcing-package:${sourceManifestHash}`,
+    package_status: 'SEALED',
+    candidate: expected,
+    selections: [{ line_id: roundId, offer_id: offerId, selected: true, offer_status: 'APPROVED', gate_state: 'CLEARED' }],
+    files: files.map(({ path, byte_length, sha256: hash }) => ({ path, byte_length, sha256: hash })),
+  };
+  const manifest = { ...manifestPreimage, seal: { algorithm: 'SHA-256' as const, manifest_sha256: await sha256(manifestPreimage) } };
+  const envelopePreimage = { schema_version: 'caddydaddy.order-package-envelope/1' as const, manifest, files };
+  const envelope: OrderPackageEnvelope = { ...envelopePreimage, seal: { algorithm: 'SHA-256', envelope_sha256: await sha256(envelopePreimage) } };
+  return validatePackageEnvelope(envelope, expected);
 }
 
 async function verifyRecord(
@@ -474,6 +578,10 @@ export class OrderClient {
       typeof input === 'string' ? { manifest_relative_path: input } : { package_envelope: input },
       validatePackage,
     );
+  }
+
+  async validateSourcingPackage(input: unknown): Promise<OrderEnvelope> {
+    return this.validatePackage(await bridgeSourcingPackage(input, this.candidate));
   }
 
   dispatchRecording(input: {

@@ -118,6 +118,54 @@ async function digestBytes(bytes: Uint8Array): Promise<string> {
   return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
+function asciiJsonString(value: string): string {
+  return JSON.stringify(value).replace(/[\u007f-\uffff]/g, (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
+}
+
+function sourcingCanonical(value: unknown): string {
+  if (value === null || typeof value === 'boolean') return JSON.stringify(value);
+  if (typeof value === 'string') return asciiJsonString(value);
+  if (typeof value === 'number' && Number.isInteger(value)) return String(value);
+  if (Array.isArray(value)) return `[${value.map(sourcingCanonical).join(',')}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record).sort().map((key) => `${asciiJsonString(key)}:${sourcingCanonical(record[key])}`).join(',')}}`;
+}
+
+async function stagedSourcingPackage(): Promise<Record<string, unknown>> {
+  const sourceCandidate = { candidate_id: candidate.candidate_id, revision_id: candidate.revision_id, snapshot_sha256: candidate.snapshot_sha256 };
+  const payload = {
+    schema_version: 'caddydaddy.staged-order-payload/1',
+    candidate: sourceCandidate,
+    round_id: 'round:connected',
+    selected_offer: { offer_id: 'offer:user:one', seller: 'München Supply', screening_disposition: 'eligible-bounded' },
+    corpus_sha256: HASH_C,
+    external_send_authorized: false,
+  };
+  const payloadBytes = new TextEncoder().encode(sourcingCanonical(payload));
+  const payloadHash = await digestBytes(payloadBytes);
+  const payloadFile = `payload-${payloadHash}.json`;
+  const manifest = {
+    schema_version: 'caddydaddy.staged-order-manifest/1',
+    candidate: sourceCandidate,
+    round_id: 'round:connected',
+    payload_file: payloadFile,
+    payload_sha256: payloadHash,
+    payload_bytes: payloadBytes.length,
+    corpus_sha256: HASH_C,
+    dispatch_ceiling: 'STAGED_ONLY',
+  };
+  const manifestHash = await digestBytes(new TextEncoder().encode(sourcingCanonical(manifest)));
+  return {
+    ...manifest,
+    manifest_file: `manifest-${manifestHash}.json`,
+    manifest_sha256: manifestHash,
+    byte_reread_verified: true,
+    payload,
+    manifest,
+    continuity: 'CLIENT_CARRIED_CANONICAL_BYTES',
+  };
+}
+
 function envelope(values: Partial<OrderEnvelope>): OrderEnvelope {
   return {
     schema_version: 'caddydaddy.order-api/1',
@@ -153,6 +201,41 @@ describe('recording-only order client', () => {
 
     await expect(client.validatePackage('manifest-demo.json')).resolves.toMatchObject({ package: { byte_reread_verified: true } });
     expect(receiver).toBeUndefined();
+  });
+
+  it('revalidates a sealed sourcing response and carries its inline bytes into stateless dispatch', async () => {
+    const sourcePackage = await stagedSourcingPackage();
+    let validatedEnvelope: OrderEnvelope['package_envelope'];
+    const fetchImpl = vi.fn(async (path: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      if (String(path).endsWith('/packages/validate')) {
+        expect(body).not.toHaveProperty('manifest_relative_path');
+        validatedEnvelope = body.package_envelope as OrderEnvelope['package_envelope'];
+        const manifestHash = validatedEnvelope!.manifest.seal.manifest_sha256;
+        return new Response(JSON.stringify(envelope({
+          package: { package_id: validatedEnvelope!.manifest.package_id as string, manifest_sha256: manifestHash, selection_count: 1, file_count: 2, byte_reread_verified: true },
+          package_envelope: validatedEnvelope,
+        })), { status: 200 });
+      }
+      expect(body.package_envelope).toEqual(validatedEnvelope);
+      expect(body.manifest_sha256).toBe(validatedEnvelope!.manifest.seal.manifest_sha256);
+      return new Response(JSON.stringify(envelope({ receipt, audit_events: [event] })), { status: 200 });
+    }) as unknown as typeof fetch;
+    const client = new OrderClient(candidate, fetchImpl);
+
+    const validated = await client.validateSourcingPackage(sourcePackage);
+    await client.dispatchRecording({ manifest_sha256: validated.package!.manifest_sha256, recording_outcome: 'DISPATCHED', idempotency_key: 'demo-key', route_ref: 'supplier:recording-demo', actor_id: 'operator:browser', occurred_at: '2026-09-05T18:00:00Z' });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects tampered sourcing bytes before calling the order service', async () => {
+    const sourcePackage = await stagedSourcingPackage();
+    (sourcePackage.payload as Record<string, unknown>).external_send_authorized = true;
+    const fetchImpl = vi.fn() as unknown as typeof fetch;
+    const client = new OrderClient(candidate, fetchImpl);
+
+    await expect(client.validateSourcingPackage(sourcePackage)).rejects.toMatchObject({ code: 'ORDER_BOUNDARY_VIOLATION' });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('dispatches, reads, acknowledges, reconciles, closes, and verifies through explicit routes', async () => {
