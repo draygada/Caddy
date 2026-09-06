@@ -6,7 +6,7 @@ import { SLOT_LABEL, type Slot } from '../lib/catalog';
 const DOC_IDS: SourceDocId[] = ['gx220-vendor-page', 'hg5700-brochure', 'lepton-datasheet'];
 
 /** Sources panel: inspect cached extractor proposals, their fixture-span checks, and Call B catalog candidates with an engine dry-run. */
-export function Sources() {
+export function Sources({ embedded = false }: { embedded?: boolean } = {}) {
   const s = useStore();
   const src = s.sources;
   const doc = src.doc ? DOCS[src.doc] : null;
@@ -21,7 +21,7 @@ export function Sources() {
           <span className="chip">{src.llmNote ? 'CACHED' : 'idle'}</span>
           {s.apiNote && <span className="min-w-0 break-words text-[12px] text-amber">{s.apiNote}</span>}
         </div>
-        <button onClick={() => s.patch({ sourcesOpen: false })} className="btn">Back to model · Esc</button>
+        {!embedded && <button onClick={() => s.patch({ sourcesOpen: false })} className="btn">Back to model · Esc</button>}
       </div>
       <div className="grid flex-1 min-h-0 min-w-0 grid-cols-1 content-start gap-4 overflow-y-auto overflow-x-hidden p-4 [overflow-wrap:anywhere] lg:grid-cols-2">
         <div className="grid min-w-0 gap-3 content-start">

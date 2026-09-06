@@ -44,7 +44,7 @@ function consequences(ro: ResolvedOffer, line: Line, round: Round, o: Outcome): 
   return out;
 }
 
-export function Sourcing({ o }: { o: Outcome }) {
+export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boolean }) {
   const s = useStore();
   const r = s.round;
   const [shipTo, setShipTo] = useState<ShipTo>('US');
@@ -83,7 +83,7 @@ export function Sourcing({ o }: { o: Outcome }) {
         {r && <span className="chip">ship-to {r.shipTo}</span>}{r && <span className="chip">qty {r.qty}</span>}{r && <span className="chip">{r.mode}</span>}
         {rail}
       </div>
-      <button onClick={close} className="btn">Back to model · Esc</button>
+      {!embedded && <button onClick={close} className="btn">Back to model · Esc</button>}
     </div>
   );
 

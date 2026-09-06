@@ -2,7 +2,7 @@ import { useStore } from '../store';
 import { STATUS_WORD } from '../lib/sourcing';
 
 /** /record: the printable design decision record. Cmd-P prints it; no PDF library. */
-export function Record() {
+export function Record({ embedded = false }: { embedded?: boolean } = {}) {
   const s = useStore();
   const r = s.round;
   const design = s.events.filter((e) => e.lane === 'design').slice().reverse();
@@ -18,7 +18,7 @@ export function Record() {
     <div role="dialog" aria-label="Design decision record" className="absolute inset-0 bg-bg z-[9] flex flex-col overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-[10px] border-b border-line2 bg-surface print:hidden">
         <span className="min-w-0 break-words text-[13px] font-semibold">/record <span className="text-muted font-normal">· design decision record · printable</span></span>
-        <span className="flex flex-wrap gap-2"><button onClick={() => window.print()} className="btn btn-primary">Print · Cmd-P</button><button onClick={() => s.patch({ recordOpen: false })} className="btn">Close · Esc</button></span>
+        <span className="flex flex-wrap gap-2"><button onClick={() => window.print()} className="btn btn-primary">Print · Cmd-P</button>{!embedded && <button onClick={() => s.patch({ recordOpen: false })} className="btn">Close · Esc</button>}</span>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 sm:p-6 bg-surface text-ink">
         <div className="grid w-full min-w-0 max-w-[880px] mx-auto gap-6 text-[13px] [overflow-wrap:anywhere]" id="record">

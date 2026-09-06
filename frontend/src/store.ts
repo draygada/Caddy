@@ -20,6 +20,22 @@ import { PACKS, type PackId } from './lib/catalog';
 
 export type { Pos, Positions } from './lib/design';
 export type Theme = 'light' | 'dark';
+/** The three primary tabs plus the secondary surfaces reachable from "More" and the command box. */
+export type WorkspaceId = 'design' | 'classification' | 'sourcing' | 'core' | 'stages' | 'atlas' | 'collaboration' | 'sources' | 'record' | 'now';
+export const PRIMARY_WORKSPACES: { id: WorkspaceId; label: string }[] = [
+  { id: 'design', label: 'Design' },
+  { id: 'classification', label: 'Classification' },
+  { id: 'sourcing', label: 'Sourcing' },
+];
+export const MORE_WORKSPACES: { id: WorkspaceId; label: string; hint: string }[] = [
+  { id: 'sources', label: 'Sources', hint: 'datasheets, the verifier, Call B' },
+  { id: 'record', label: 'Record', hint: 'printable decision record' },
+  { id: 'core', label: 'Core / Assembly', hint: 'immutable kernel snapshot' },
+  { id: 'stages', label: 'Classification stages', hint: 'order-of-review workspace' },
+  { id: 'atlas', label: 'Tripwire atlas', hint: 'feature bibles and progress' },
+  { id: 'collaboration', label: 'Collaboration', hint: 'append-only history' },
+  { id: 'now', label: 'Now', hint: 'Shipyard observation' },
+];
 export type ViewMode = 'model' | 'sheet' | 'sketch' | 'board';
 export type NavMode = 'orbit' | 'pan' | 'zoom';
 export type VisualStyle = 'shaded' | 'edges' | 'wireframe';
@@ -145,6 +161,8 @@ export interface WorkbenchState extends Snapshot {
   round: Round | null;
   sourcingOpen: boolean;
   injectException: boolean;
+  workspace: WorkspaceId;
+  setWorkspace: (w: WorkspaceId) => void;
   /** rule pack the engine evaluates under (committed) */
   pack: PackId;
   determination: { chip: 'CACHED' | 'LIVE'; memoHash: string; entries: string[]; basis: string; conflict: string | null; at: string } | null;
@@ -314,6 +332,8 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     namedViews: [], homeView: { ...ISO },
     lane: 'all', copied: null, viewMode: 'model', grid: true, navMode: 'orbit', visualStyle: 'edges', hidden: {},
     round: null, sourcingOpen: false, injectException: false,
+    workspace: 'design',
+    setWorkspace: (w) => set({ workspace: w, sourcingOpen: w === 'sourcing', sourcesOpen: w === 'sources', recordOpen: w === 'record', reasoningOpen: false, timelineOpen: false, marking: null, cmdOpen: false }),
     pack: 'v2', determination: null, apiWarm: false, apiNote: null, tamperedSeq: null, recordOpen: false, sourcesOpen: false,
     sources: { doc: null, slot: null, network: [], proposals: [], showHidden: false, candidates: [], candidateNode: null, llmNote: null },
     extracted: {}, escalations: {}, memos: [], slotList: null, target: null,

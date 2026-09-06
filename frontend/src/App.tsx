@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useStore } from './store';
+import { useStore, type WorkspaceId } from './store';
 import { service } from './lib/service';
 import { TopBar } from './panels/TopBar';
 import { Browser } from './panels/Browser';
@@ -16,7 +16,8 @@ import { TripwirePanel } from './panels/TripwirePanel';
 import { Sources } from './panels/Sources';
 import { Record } from './panels/Record';
 import { Now } from './panels/Now';
-import { MissionNav, type WorkspaceId } from './panels/MissionNav';
+import { MissionNav } from './panels/MissionNav';
+import { ClassificationTab } from './panels/ClassificationTab';
 import { CoreAssemblyWorkspace } from './panels/CoreAssemblyWorkspace';
 import { ClassificationWorkspace } from './panels/ClassificationWorkspace';
 import { TripwireAtlasWorkspace } from './panels/TripwireAtlasWorkspace';
@@ -58,6 +59,9 @@ function useKeyboard() {
       else if (k === 'h') runCommand('create.hole');
       else if (k === 'i') runCommand('inspect.measure');
       else if (k === 't') runCommand('review.tripwire');
+      else if (k === '1') st.setWorkspace('design');
+      else if (k === '2') st.setWorkspace('classification');
+      else if (k === '3') st.setWorkspace('sourcing');
       else if ((e.key === 'ArrowRight' || e.key === ' ') && st.demoBar) { e.preventDefault(); st.advance(); }
     };
     window.addEventListener('keydown', onKey);
@@ -82,34 +86,17 @@ export default function App() {
   const helpOpen = useStore((s) => s.helpOpen);
   const eventCount = useStore((s) => s.events.length);
   const openTimeline = useStore((s) => s.openTimeline);
+  const workspace = useStore((s) => s.workspace);
+  const setWorkspace = useStore((s) => s.setWorkspace);
   const compact = useCompactWorkspace();
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('model');
-  const [workspace, setWorkspace] = useState<WorkspaceId>(() => {
-    try { return new URLSearchParams(location.search).get('now') === '1' ? 'now' : 'design'; }
-    catch { return 'design'; }
-  });
+  useEffect(() => { try { if (new URLSearchParams(location.search).get('now') === '1') setWorkspace('now'); } catch { /* no location */ } }, [setWorkspace]);
   const o = useMemo(() => service.evaluate({ parts, attrs, span, declared }, pack), [parts, attrs, span, declared, pack]);
   useKeyboard();
 
-  const closeMissionOverlays = () => useStore.getState().patch({ sourcingOpen: false, sourcesOpen: false, recordOpen: false });
-  const selectWorkspace = (next: WorkspaceId) => {
-    if (next === 'source' || next === 'sources' || next === 'record') {
-      useStore.getState().patch({
-        sourcingOpen: next === 'source',
-        sourcesOpen: next === 'sources',
-        recordOpen: next === 'record',
-      });
-      return;
-    }
-    closeMissionOverlays();
-    setWorkspace(next);
-  };
-  const goHome = () => {
-    useStore.getState().closeAll();
-    useTripwireStore.getState().closePanel();
-    setWorkspace('design');
-  };
-  const activeWorkspace: WorkspaceId = recordOpen ? 'record' : sourcesOpen ? 'sources' : sourcingOpen ? 'source' : workspace;
+  // Flags set by commands or buttons still route to their tab.
+  const active: WorkspaceId = recordOpen ? 'record' : sourcesOpen ? 'sources' : sourcingOpen ? 'sourcing' : workspace;
+  const goHome = () => { useStore.getState().closeAll(); useTripwireStore.getState().closePanel(); setWorkspace('design'); };
 
   const designSurface = !compact ? (
     <div className="flex-1 min-h-0 grid grid-cols-[340px_minmax(0,1fr)_400px_32px] gap-2 pt-2 pb-2 pl-2">
@@ -121,12 +108,7 @@ export default function App() {
         <StatusPanel o={o} />
         <SpecPanel o={o} />
       </div>
-      <button
-        onClick={openTimeline}
-        aria-label="Open timeline"
-        className="w-8 min-h-full bg-surface border border-line2 border-r-0 rounded-l-r text-ink cursor-pointer text-[13px] font-semibold tracking-[.04em] py-3 hover:bg-hover"
-        style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-      >
+      <button onClick={openTimeline} aria-label="Open timeline" className="w-8 min-h-full bg-surface border border-line2 border-r-0 rounded-l-r text-ink cursor-pointer text-[13px] font-semibold tracking-[.04em] py-3 hover:bg-hover" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
         Timeline · {eventCount} events
       </button>
     </div>
@@ -139,9 +121,7 @@ export default function App() {
         {mobilePanel === 'spec' && <SpecPanel o={o} />}
       </div>
       <nav aria-label="Mobile workspace" className="flex-none grid grid-cols-5 border-t border-line2 bg-surface pb-[env(safe-area-inset-bottom)]">
-        {([
-          ['browser', 'Browser'], ['model', 'Model'], ['status', 'Status'], ['spec', 'Spec'],
-        ] as const).map(([id, label]) => (
+        {([['browser', 'Browser'], ['model', 'Model'], ['status', 'Status'], ['spec', 'Spec']] as const).map(([id, label]) => (
           <button key={id} aria-pressed={mobilePanel === id} onClick={() => setMobilePanel(id)} className="min-h-12 border-0 border-r border-line2 bg-transparent text-[12px] font-semibold text-ink aria-pressed:bg-accent aria-pressed:text-accentfg">{label}</button>
         ))}
         <button aria-label="Open timeline" onClick={openTimeline} className="min-h-12 border-0 bg-transparent text-[12px] font-semibold text-ink">History</button>
@@ -149,36 +129,33 @@ export default function App() {
     </div>
   );
 
-  const workspaceSurface = (() => {
-    switch (workspace) {
-      case 'core': return <CoreAssemblyWorkspace />;
-      case 'classification': return <ClassificationWorkspace />;
-      case 'tripwire': return <TripwireAtlasWorkspace />;
-      case 'collaboration': return <CollaborationWorkspace />;
-      case 'now': return <Now />;
-      default: return designSurface;
+  const surface = (() => {
+    switch (active) {
+      case 'design': return designSurface;
+      case 'classification': return <ClassificationTab o={o} />;
+      case 'sourcing': return <div className="relative flex-1 min-h-0"><Sourcing o={o} embedded /></div>;
+      case 'sources': return <div className="relative flex-1 min-h-0"><Sources embedded /></div>;
+      case 'record': return <div className="relative flex-1 min-h-0"><Record embedded /></div>;
+      case 'core': return <main className="flex-1 min-h-0 overflow-auto p-2"><CoreAssemblyWorkspace /></main>;
+      case 'stages': return <main className="flex-1 min-h-0 overflow-auto p-2"><ClassificationWorkspace /></main>;
+      case 'atlas': return <main className="flex-1 min-h-0 overflow-auto p-2"><TripwireAtlasWorkspace /></main>;
+      case 'collaboration': return <main className="flex-1 min-h-0 overflow-auto p-2"><CollaborationWorkspace /></main>;
+      case 'now': return <main className="flex-1 min-h-0 overflow-auto"><Now /></main>;
     }
   })();
 
   return (
     <div data-theme={theme} className="relative h-full min-w-0 flex flex-col bg-bg text-ink overflow-hidden">
-      <TopBar onHome={goHome} onOpenTripwire={() => selectWorkspace('tripwire')} />
-      <MissionNav active={activeWorkspace} onSelect={selectWorkspace} />
+      <TopBar onHome={goHome} />
+      <MissionNav active={active} onSelect={setWorkspace} />
       {unreachable && (
         <div role="status" className="flex-none px-4 py-2 border-b border-line2 bg-surface2 text-[14px] flex gap-3 items-center">
           <span className="chip">Cached</span>
           <span>service not reachable · replaying the cached baseline · last outcome 2026-09-05 09:12</span>
         </div>
       )}
-      {workspace === 'design' ? workspaceSurface : (
-        <main className="flex-1 min-h-0 overflow-auto p-2">
-          {workspaceSurface}
-        </main>
-      )}
+      {surface}
       {reasoningOpen && <Reasoning o={o} />}
-      {sourcingOpen && <Sourcing o={o} />}
-      {sourcesOpen && <Sources />}
-      {recordOpen && <Record />}
       {timelineOpen && <Timeline />}
       {helpOpen && <HelpOverlay />}
       <CommandBox />

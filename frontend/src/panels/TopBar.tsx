@@ -13,7 +13,6 @@ export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
   const toggleHelp = useStore((s) => s.toggleHelp);
   const patch = useStore((s) => s.patch);
   const pack = useStore((s) => s.pack);
-  const openTripwire = useTripwireStore((s) => s.openPanel);
   const closeTripwire = useTripwireStore((s) => s.closePanel);
   const goHome = () => {
     if (onHome) {
@@ -38,7 +37,7 @@ export function TopBar({ onHome, onOpenTripwire }: TopBarProps = {}) {
       </div>
       <div className="hidden sm:block w-px h-5 bg-line2" />
       <div className="flex gap-[6px]">
-        <button onClick={onOpenTripwire ?? openTripwire} className="btn btn-primary">Tripwire</button>
+        {onOpenTripwire && <button onClick={onOpenTripwire} className="btn hidden">Tripwire</button>}
         <button onClick={toggleTheme} className="btn">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</button>
         <button onClick={toggleHelp} aria-label="Keyboard and mouse help" className="btn btn-icon">?</button>
       </div>

@@ -14,7 +14,7 @@ export interface Rule {
 }
 export interface CannotFire { id: string; node: Node; entry: string; text: string }
 /** Amber, never red: who may buy the finished product, separate from export control. */
-export interface Advisory { id: string; node: Node; entry: string; text: string; printOnly?: boolean }
+export interface Advisory { id: string; node: Node; entry: string; text: string; printOnly?: boolean; /** 'amber' needs a look; 'info' is a declared fact restated */ severity?: 'amber' | 'info' }
 export interface DestCell { code: DestCode; word: DestWord; para: string; tone: Tone }
 export interface DeMinimis { code: DestCode; subject_to_EAR: boolean; us_controlled_pct: number; threshold: number; because: string }
 export interface DutyRow { id: string; label: string; rate: string; amount: number | null; note: string; fired: boolean; printOnly: boolean; citation: string }
@@ -125,14 +125,14 @@ export function outcome(d: Design, packId: PackId = 'v2'): Outcome {
   if (d.parts.datalink) {
     const bits = dl.crypto_bits ?? 0;
     if (bits > 56 && !decl.mass_market) add({ id: 'r10', node: 'datalink', entry: '5A002.a', kind: 'CCL', reason: 'NS Column 1 + EI · key > 56 bits · mass-market not declared', number: 'key ' + bits + ' bits > 56 bits', sentence: 'a. Designed or modified to use “cryptography for data confidentiality” having a “described security algorithm” …', ecfr: E, eff: '2021-03-29', fr: '86 FR 16482 · 740.17(b) mass-market is a declared fact', url: 'ecfr.gov/…/part-774/supplement-1 · 5A002', atoms: ['crypto_bits ' + bits + ' · mass_market false'], cols: 'EI' });
-    else if (bits > 56) advisories.push({ id: 'a-dl', node: 'datalink', entry: '5A992.c', text: 'AES-' + bits + ' declared mass-market (740.17(b)) · 5A992.c · vendor self-classification, NLR · declared, badged' });
+    else if (bits > 56) advisories.push({ id: 'a-dl', node: 'datalink', entry: '5A992.c', text: 'AES-' + bits + ' declared mass-market (740.17(b)) · 5A992.c · vendor self-classification, NLR · declared, badged', severity: 'info' });
   } else cannot.push({ id: 'c-dl', node: 'datalink', entry: '5A002.a', text: 'cannot fire · field empty (key length)' });
 
   // Row 12 · board target
   if (d.parts.fc) {
     if (decl.board_target === '600-series UAV') add({ id: 'r12', node: 'fc', entry: '3A611.g', kind: 'CCL', reason: 'NS Column 1 + RS Column 1 · layout target 600-series UAV · LVS $1,500 · layout is the only characteristic evaluated (Note)', number: 'board_target: 600-series UAV', sentence: 'g. Printed circuit boards … “specially designed” for a commodity controlled by 3A611 or a defense article …', ecfr: E, eff: '2024-04-15', fr: 'connectors under a 600-series parent print 3A611.y.1; heat sinks 3A611.y.3 · .y parts never green', url: 'ecfr.gov/…/part-774/supplement-1 · 3A611', atoms: ['declared board_target'], cols: 'SIX' });
     else if (decl.board_target === 'USML article') add({ id: 'r12u', node: 'fc', entry: 'USML XI(c)(2)', kind: 'USML', reason: 'defense article · layout target USML article', number: 'board_target: USML article', sentence: '(2) Printed circuit boards … specially designed for defense articles …', ecfr: E, eff: '2023-09-14', fr: '22 CFR 121.1', url: 'ecfr.gov/…/title-22/part-121 · XI(c)', atoms: ['declared board_target'], cols: 'USML' });
-    else advisories.push({ id: 'a-board', node: 'fc', entry: '9A991.d', text: 'layout target civil UAV · 9A991.d · AT only · declared' });
+    else advisories.push({ id: 'a-board', node: 'fc', entry: '9A991.d', text: 'layout target civil UAV · 9A991.d · AT only · declared', severity: 'info' });
   }
 
   // Row 13 · used on, for the pod

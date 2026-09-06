@@ -11,6 +11,10 @@ npm test
 npm run build
 ```
 
+`/api` goes to the product service (`apps/product-service`). The dev proxy defaults to the deployed Candidate 0.1 service, the same target `vercel.json` uses in production. To run the service locally: build the kernel environment (`uv sync --project packages/core-kernel --group dev --locked`), generate a snapshot with `apps/product-service/scripts/generate_snapshot.py` (see its `--help`), start `python -m product_service --port 4173` with `CADDYDADDY_SNAPSHOT_PATH` pointing at it and `apps/product-service` plus `packages/compliance-bridge` on `PYTHONPATH`, then put `VITE_API_TARGET=http://127.0.0.1:4173` in `frontend/.env.local` (gitignored). Do not point the proxy at a port another project is using; a 404 on `/api/candidate` usually means exactly that.
+
+Three tabs: **Design**, **Classification** (parts of concern, why each trips, the regulation behind an expand) and **Sourcing**. Everything else (Sources, Record, Core / Assembly, Classification stages, Tripwire atlas, Collaboration, Now) is under **More** and in the command box. Keys 1 · 2 · 3 switch tabs.
+
 URL switches: `?demo=1` shows the caption bar (→ / Space advances the eight-step scenario) · `?theme=dark` · `?service=unreachable` shows the cached-baseline banner.
 
 ## Interaction model
