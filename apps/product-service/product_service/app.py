@@ -37,7 +37,7 @@ RELEASE_CANDIDATE_VERSION = "0.2"
 RELEASE_CANDIDATE_ID = f"candidate:{RELEASE_CANDIDATE_VERSION}"
 RELEASE_REVISION_ID = "revision:caddydaddy-candidate-0.2"
 RELEASE_IDENTITY_SCHEMA = "caddydaddy.release-identity/1"
-BOUNDED_CLAIM = "CADdyDaddy binds a selected CAD entity to its immutable product revision and runs a review-readiness guardrail through Tripwire; Candidate 0.1 returns insufficient evidence and requires human review, not a compliance determination."
+BOUNDED_CLAIM = "CADdyDaddy Candidate 0.2 connects bounded CAD authoring and execution-support workflows while preserving explicit review, evidence, and no-external-effect boundaries; no response is a legal determination, transaction clearance, or permission to ship."
 POSITIONING = "We're closing the loop from idea to execution for high-stakes industries."
 REQUEST_KEYS = {"entity_id", "node_id", "product_thread_id", "forge_record_id", "occurrence_path", "forge_record_revision_id", "forge_revision_id"}
 MAX_REQUEST_BODY_BYTES = 65536
@@ -231,21 +231,191 @@ class CandidateRuntime:
             raise _snapshot_error("RULEPACK_TAMPERED")
 
     def candidate(self) -> dict[str, Any]:
-        public = deepcopy(self.state.public)
-        source_candidate = public.get("candidate", {})
-        source_document = public.get("document", {})
+        legacy_public = deepcopy(self.state.public)
+        source_candidate = legacy_public.get("candidate", {})
+        source_document = legacy_public.get("document", {})
+        snapshot_sha256 = self.state.snapshot_receipt["document_sha256"]
+
+        public = {
+            key: deepcopy(value)
+            for key, value in legacy_public.items()
+            if key not in {
+                "candidate",
+                "capabilities",
+                "capabilityContracts",
+                "boundaryMetadata",
+                "legacySnapshotEvidence",
+                "releaseIdentity",
+                "sourceSnapshotIdentity",
+                "document",
+            }
+        }
+        public["candidate"] = {
+            **deepcopy(source_candidate),
+            "id": RELEASE_CANDIDATE_ID,
+            "version": RELEASE_CANDIDATE_VERSION,
+            "revisionId": RELEASE_REVISION_ID,
+            "status": "CANDIDATE_0_2_RUNTIME",
+            "claim": BOUNDED_CLAIM,
+            "claimCeiling": BOUNDED_CLAIM,
+        }
         public["releaseIdentity"] = {
             "schemaVersion": RELEASE_IDENTITY_SCHEMA,
             "candidateId": RELEASE_CANDIDATE_ID,
             "candidateVersion": RELEASE_CANDIDATE_VERSION,
             "revisionId": RELEASE_REVISION_ID,
-            "snapshotSha256": self.state.snapshot_receipt["document_sha256"],
+            "snapshotSha256": snapshot_sha256,
         }
-        public["sourceSnapshotIdentity"] = {
+        public["capabilities"] = {
+            "authoring": True,
+            "recompute": True,
+            "import": True,
+            "export": True,
+            "regulatoryClassification": True,
+            "classification": True,
+            "sourcing": True,
+            "provenance": True,
+            "cadOutputs": True,
+            "ordering": True,
+            "liveSupplierSend": False,
+            "govCloudAuthorized": False,
+            "cuiAuthorized": False,
+        }
+        public["capabilityContracts"] = {
+            "cadAuthoring": {
+                "status": "IMPLEMENTED_BOUNDED",
+                "operations": [
+                    "SKETCH",
+                    "EXTRUDE",
+                    "REVOLVE",
+                    "BOOLEAN",
+                    "HOLE",
+                    "FILLET",
+                    "CHAMFER",
+                    "TRANSFORM",
+                ],
+                "multiBody": True,
+                "assemblies": True,
+            },
+            "liveKernelRecompute": {
+                "status": "IMPLEMENTED_BOUNDED",
+                "kernel": "OpenCascade 7.9.3",
+                "staleRevisionRejection": True,
+                "dependencyGraph": True,
+            },
+            "cadExchange": {
+                "status": "IMPLEMENTED_BOUNDED",
+                "formats": ["STEP", "IGES", "STL"],
+                "editableExternalNativeHistoryRoundTrip": False,
+            },
+            "classification": {
+                "status": "IMPLEMENTED_REVIEW_SUPPORT_ONLY",
+                "orderedRoute": ["USML", "CCL", "EAR99"],
+                "intentionalResidualEar99FallThrough": True,
+                "legalDetermination": False,
+            },
+            "sourcingAndProvenance": {
+                "status": "IMPLEMENTED_BOUNDED",
+                "fullCslScreening": False,
+                "liveSupplierSend": False,
+            },
+            "cadOutputs": {
+                "status": "IMPLEMENTED_BOUNDED",
+                "outputs": ["CADDYDADDY_SNAPSHOT", "SVG", "DXF", "BOM_CSV", "SEALED_MANUFACTURING_BUNDLE"],
+                "camOrGcode": False,
+                "gdtCertification": False,
+            },
+            "ordering": {
+                "status": "IMPLEMENTED_RECORDING_ONLY",
+                "externalEffect": "NONE",
+                "connector": "RECORDING_ONLY",
+            },
+        }
+        public["boundaryMetadata"] = {
+            "cad": {
+                "sketchSolver": "BOUNDED_GAUSS_NEWTON",
+                "degreesOfFreedom": "LOCAL_JACOBIAN_RANK_ESTIMATE",
+                "assemblyMates": "BOUNDED_RIGID_RESOLUTION",
+                "topologyPersistence": "HEURISTIC_REMAP_NOT_PERFECT_PERSISTENT_NAMING",
+                "editableExternalNativeHistory": "NOT_IMPLEMENTED",
+            },
+            "assurance": {
+                "legalDetermination": "NOT_PERFORMED",
+                "fullCslScreening": "NOT_IMPLEMENTED",
+                "sourceAuthorityCurrencyAndCompleteness": "NOT_VERIFIED",
+            },
+            "operations": {
+                "supplierCommunication": "NONE",
+                "productionOrderExecution": "NONE",
+            },
+            "deployment": {
+                "govCloudAuthorization": "NOT_CLAIMED",
+                "cuiAuthorization": "NOT_CLAIMED",
+            },
+            "continuity": {
+                "model": "HASH_SEALED_CLIENT_CARRIED_STATE",
+                "durableGlobalState": False,
+                "authenticatedState": False,
+                "globalReplayPrevention": False,
+            },
+        }
+
+        current_document = deepcopy(source_document)
+        current_document["revisionId"] = RELEASE_REVISION_ID
+        current_document["evidenceRole"] = "LEGACY_CANDIDATE_0_1_TRIPWIRE_BINDING_PROJECTION"
+        current_document["sourceSnapshotRevisionId"] = str(source_document.get("revisionId", "revision:unknown"))
+        scene = current_document.get("scene")
+        if isinstance(scene, dict):
+            legacy_scene_revision = scene.get("revisionId")
+            scene["revisionId"] = RELEASE_REVISION_ID
+            scene["legacyRevisionId"] = legacy_scene_revision
+            for node in scene.get("nodes", []):
+                metadata = node.get("metadata") if isinstance(node, dict) else None
+                if isinstance(metadata, dict) and "sourceRevisionId" in metadata:
+                    metadata["legacySourceRevisionId"] = metadata["sourceRevisionId"]
+                    metadata["sourceRevisionId"] = RELEASE_REVISION_ID
+        public["document"] = current_document
+
+        forge_revision = public.get("forgeRevision")
+        if isinstance(forge_revision, dict) and "revision_id" in forge_revision:
+            forge_revision["legacy_revision_id"] = forge_revision["revision_id"]
+            forge_revision["revision_id"] = RELEASE_REVISION_ID
+            forge_revision["evidenceRole"] = "LEGACY_CANDIDATE_0_1_GEOMETRY_PROJECTION"
+
+        sourcing_round = public.get("sourcingRound")
+        if isinstance(sourcing_round, dict) and "sourceRevisionId" in sourcing_round:
+            sourcing_round["legacySourceRevisionId"] = sourcing_round["sourceRevisionId"]
+            sourcing_round["sourceRevisionId"] = RELEASE_REVISION_ID
+            sourcing_round["evidenceRole"] = "LEGACY_CANDIDATE_0_1_SOURCING_PROJECTION"
+
+        for history_entry in public.get("history", []):
+            if isinstance(history_entry, dict) and "revisionId" in history_entry:
+                history_entry["legacyRevisionId"] = history_entry["revisionId"]
+                history_entry["revisionId"] = RELEASE_REVISION_ID
+                history_entry["evidenceRole"] = "LEGACY_CANDIDATE_0_1_HISTORY_PROJECTION"
+
+        states = public.get("states")
+        current_state = states.get("current") if isinstance(states, dict) else None
+        if isinstance(current_state, dict):
+            for key in ("displayedRevisionId", "requestedRevisionId"):
+                if key in current_state:
+                    current_state[f"legacy{key[0].upper()}{key[1:]}"] = current_state[key]
+                    current_state[key] = RELEASE_REVISION_ID
+            current_state["evidenceRole"] = "LEGACY_CANDIDATE_0_1_STATE_PROJECTION"
+
+        if isinstance(public.get("kernelProvenance"), dict):
+            public["kernelProvenance"]["evidenceRole"] = "LEGACY_CANDIDATE_0_1_BUILD_EVIDENCE"
+        if isinstance(public.get("snapshotProvenance"), dict):
+            public["snapshotProvenance"]["evidenceRole"] = "LEGACY_CANDIDATE_0_1_BUILD_EVIDENCE"
+
+        public["legacySnapshotEvidence"] = {
+            "role": "IMMUTABLE_CANDIDATE_0_1_SOURCE_EVIDENCE_ONLY",
             "candidateVersion": str(source_candidate.get("version", "unknown")),
             "revisionId": str(source_document.get("revisionId", "revision:unknown")),
-            "snapshotSha256": self.state.snapshot_receipt["document_sha256"],
+            "snapshotSha256": snapshot_sha256,
             "immutable": True,
+            "currentCapabilityAuthority": False,
+            "publicSnapshot": legacy_public,
         }
         return public
 
@@ -1252,12 +1422,12 @@ def create_server(host: str, port: int, runtime: CandidateRuntime | None = None,
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Serve local CADdyDaddy Candidate 0.1")
+    parser = argparse.ArgumentParser(description="Serve local CADdyDaddy Candidate 0.2")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=4173)
     args = parser.parse_args(argv)
     server = create_server(args.host, args.port)
-    print(f"CADdyDaddy Candidate 0.1 listening at http://{args.host}:{args.port}")
+    print(f"CADdyDaddy Candidate 0.2 listening at http://{args.host}:{args.port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
