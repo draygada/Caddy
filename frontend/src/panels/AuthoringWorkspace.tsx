@@ -241,7 +241,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
         </div>
       )}
 
-      <div className="cad-authoring-layout" style={{ display: 'grid', gridTemplateColumns: wide ? 'minmax(220px, .72fr) minmax(360px, 1.45fr) minmax(280px, .95fr)' : 'minmax(0, 1fr)', gap: 8, padding: 8, alignItems: 'start' }}>
+      <div className="cad-authoring-layout" style={{ display: 'grid', gap: 8, padding: 8, alignItems: 'start', ...(wide ? { gridTemplateColumns: 'minmax(220px, .72fr) minmax(360px, 1.45fr) minmax(280px, .95fr)' } : { gridTemplateColumns: 'minmax(0, 1fr)' }) }}>
         <aside className="cad-authoring-column" style={{ display: 'grid', gap: 8, minWidth: 0 }}>
           <ProjectTree document={state.document} selectedId={state.selectedId} onSelect={(id) => dispatch({ type: 'select', id })} />
           <TransferPanel message={transferMessage} onImport={handleImport} onExport={handleExport} />
@@ -456,7 +456,7 @@ export function OutputPanel({ busy, nativeEnvelope, sealedSnapshotArtifact, bund
         <button type="button" disabled={busy} onClick={onNativeSeal} className="btn btn-xs disabled:opacity-50">Seal snapshot</button>
         <label className={'btn btn-xs text-center cursor-pointer flex items-center justify-center' + (busy ? ' opacity-50' : '')}>Load snapshot<input aria-label="Load CADdyDaddy snapshot (.caddy.json)" type="file" accept=".json,.caddy.json,application/json" disabled={busy} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) onNativeLoad(file); event.currentTarget.value = ''; }} /></label>
       </div>
-      <button type="button" onClick={() => sealedSnapshotArtifact && onDownload(sealedSnapshotArtifact)} aria-label="Download sealed CADdyDaddy snapshot (.caddy.json)" aria-disabled={!sealedSnapshotArtifact} className="btn btn-xs" style={{ opacity: sealedSnapshotArtifact ? 1 : .5 }}>Download sealed snapshot</button>
+      <button type="button" disabled={!sealedSnapshotArtifact} onClick={() => sealedSnapshotArtifact && onDownload(sealedSnapshotArtifact)} aria-label="Download sealed CADdyDaddy snapshot (.caddy.json)" className="btn btn-xs" style={{ opacity: sealedSnapshotArtifact ? 1 : .5 }}>Download sealed snapshot</button>
       <button type="button" disabled={busy} onClick={onGenerate} className="btn btn-primary disabled:opacity-50">{busy ? 'Validating outputs…' : 'Generate drawing and BOM package'}</button>
       <div className={noteCls}>Retained STEP / IGES / STL exchange · {retainedFormats.length ? retainedFormats.join(' / ') : 'none'} · snapshot {nativeEnvelope ? shortId(nativeEnvelope.document.document_hash) : 'not sealed'}</div>
       {error && <div role="alert" className="text-[12px] px-2 py-1 rounded-r border" style={{ borderColor: 'var(--red)', color: 'var(--red)' }}>{error}</div>}
