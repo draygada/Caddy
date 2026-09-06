@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "caddydaddy.hardened-drone-manifest/1",
+  "benchmarkId": "benchmark:qx-0-bench-quad-v1",
+  "benchmarkVersion": "1.0.0",
+  "sourceBaseCommit": "645482900826026adbf2bfd2af76f08889012680",
+  "generationCommand": "cd frontend && npx vite-node scripts/generate-hardened-drone-evidence.ts",
+  "artifacts": [
+    {
+      "path": "hardened-drone.cad-document.json",
+      "kind": "CAD_DOCUMENT",
+      "sizeBytes": 78808,
+      "sha256": "b827ef52d56153812fc10bf71c947fad102346ab4956d23c571455ec61c7475c"
+    },
+    {
+      "path": "hardened-drone.stl",
+      "kind": "ASCII_STL",
+      "sizeBytes": 926552,
+      "sha256": "e3f17baa6870ac4d3a9d3d3cf233066d6cf64c4ca690f56337886dbb91421025"
+    },
+    {
+      "path": "hardened-drone.bom.csv",
+      "kind": "BOM_CSV",
+      "sizeBytes": 1591,
+      "sha256": "85a8878c35b2a5b57754f753114d9d06b3c2c57a1d207bcd5094a6a2e7ecf511"
+    }
+  ],
+  "claimCeiling": "Synthetic non-flight-capable geometry benchmark. Not a flightworthy design, manufacturing release, legal classification, or permission to build or operate an aircraft."
+}

@@ -1,0 +1,3401 @@
+{
+  "schemaVersion": "caddydaddy.cad-document/1",
+  "id": "document:qx-0-bench-quad-v1",
+  "name": "QX-0 Bench Quad - 260 mm frame",
+  "revisionId": "revision:d5daae9c9cdbec105c569d99",
+  "units": {
+    "length": "mm",
+    "angle": "deg"
+  },
+  "parameters": [
+    {
+      "id": "parameter:frame-span",
+      "name": "frame_span",
+      "expression": "260 mm",
+      "unit": "mm",
+      "resolvedValue": 260
+    },
+    {
+      "id": "parameter:deck-clearance",
+      "name": "deck_clearance",
+      "expression": "10 mm",
+      "unit": "mm",
+      "resolvedValue": 10
+    },
+    {
+      "id": "parameter:guard-diameter",
+      "name": "guard_diameter",
+      "expression": "48 mm",
+      "unit": "mm",
+      "resolvedValue": 48
+    },
+    {
+      "id": "parameter:fixture-scale",
+      "name": "fixture_scale",
+      "expression": "1",
+      "unit": "unitless",
+      "resolvedValue": 1
+    }
+  ],
+  "sketches": [
+    {
+      "id": "sketch:frame",
+      "name": "Cross frame profile",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:frame-x",
+          "kind": "rectangle",
+          "construction": false,
+          "origin": {
+            "x": -130,
+            "y": -15
+          },
+          "width": 260,
+          "height": 30
+        },
+        {
+          "id": "entity:frame-y",
+          "kind": "rectangle",
+          "construction": false,
+          "origin": {
+            "x": -15,
+            "y": -130
+          },
+          "width": 30,
+          "height": 260
+        }
+      ],
+      "dimensions": [
+        {
+          "id": "dimension:sketch:frame",
+          "kind": "distance",
+          "entityIds": [
+            "entity:frame-x"
+          ],
+          "value": 260,
+          "expression": "frame_span",
+          "unit": "mm"
+        }
+      ],
+      "constraints": [
+        {
+          "id": "constraint:sketch:frame",
+          "kind": "fixed",
+          "entityIds": [
+            "entity:frame-x"
+          ]
+        }
+      ],
+      "solverState": "under-constrained"
+    },
+    {
+      "id": "sketch:deck",
+      "name": "Deck profile",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:deck",
+          "kind": "rectangle",
+          "construction": false,
+          "origin": {
+            "x": -25,
+            "y": -25
+          },
+          "width": 50,
+          "height": 50
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:deck-holes",
+      "name": "Deck hole pattern",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:deck-hole-ne",
+          "kind": "circle",
+          "construction": false,
+          "center": {
+            "x": 15,
+            "y": 15
+          },
+          "radius": 3
+        },
+        {
+          "id": "entity:deck-hole-nw",
+          "kind": "circle",
+          "construction": false,
+          "center": {
+            "x": -15,
+            "y": 15
+          },
+          "radius": 3
+        },
+        {
+          "id": "entity:deck-hole-se",
+          "kind": "circle",
+          "construction": false,
+          "center": {
+            "x": 15,
+            "y": -15
+          },
+          "radius": 3
+        },
+        {
+          "id": "entity:deck-hole-sw",
+          "kind": "circle",
+          "construction": false,
+          "center": {
+            "x": -15,
+            "y": -15
+          },
+          "radius": 3
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:guard-outer",
+      "name": "Guard outer profile",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:guard-outer",
+          "kind": "circle",
+          "construction": false,
+          "center": {
+            "x": 0,
+            "y": 0
+          },
+          "radius": 24
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:guard-inner",
+      "name": "Guard opening",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:guard-inner",
+          "kind": "circle",
+          "construction": false,
+          "center": {
+            "x": 0,
+            "y": 0
+          },
+          "radius": 18
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:puck",
+      "name": "Dummy rotor puck profile",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:puck",
+          "kind": "circle",
+          "construction": false,
+          "center": {
+            "x": 0,
+            "y": 0
+          },
+          "radius": 12
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:esc",
+      "name": "ESC envelope profile",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:esc",
+          "kind": "rectangle",
+          "construction": false,
+          "origin": {
+            "x": -14,
+            "y": -6
+          },
+          "width": 28,
+          "height": 12
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:standoff",
+      "name": "Standoff profile",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:standoff",
+          "kind": "circle",
+          "construction": false,
+          "center": {
+            "x": 0,
+            "y": 0
+          },
+          "radius": 2.5
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:canopy",
+      "name": "Canopy revolve section",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:canopy-1",
+          "kind": "line",
+          "construction": false,
+          "start": {
+            "x": 0,
+            "y": 0
+          },
+          "end": {
+            "x": 20,
+            "y": 0
+          }
+        },
+        {
+          "id": "entity:canopy-2",
+          "kind": "line",
+          "construction": false,
+          "start": {
+            "x": 20,
+            "y": 0
+          },
+          "end": {
+            "x": 20,
+            "y": 4
+          }
+        },
+        {
+          "id": "entity:canopy-3",
+          "kind": "line",
+          "construction": false,
+          "start": {
+            "x": 20,
+            "y": 4
+          },
+          "end": {
+            "x": 8,
+            "y": 12
+          }
+        },
+        {
+          "id": "entity:canopy-4",
+          "kind": "line",
+          "construction": false,
+          "start": {
+            "x": 8,
+            "y": 12
+          },
+          "end": {
+            "x": 0,
+            "y": 12
+          }
+        },
+        {
+          "id": "entity:canopy-5",
+          "kind": "line",
+          "construction": false,
+          "start": {
+            "x": 0,
+            "y": 12
+          },
+          "end": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:rail",
+      "name": "Landing rail profile",
+      "plane": {
+        "kind": "origin",
+        "plane": "XZ"
+      },
+      "entities": [
+        {
+          "id": "entity:rail",
+          "kind": "rectangle",
+          "construction": false,
+          "origin": {
+            "x": -55,
+            "y": -3
+          },
+          "width": 110,
+          "height": 6
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:battery",
+      "name": "Battery envelope profile",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:battery",
+          "kind": "rectangle",
+          "construction": false,
+          "origin": {
+            "x": -24,
+            "y": -14
+          },
+          "width": 48,
+          "height": 28
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:controller",
+      "name": "Controller envelope profile",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:controller",
+          "kind": "rectangle",
+          "construction": false,
+          "origin": {
+            "x": -17,
+            "y": -17
+          },
+          "width": 34,
+          "height": 34
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:sensor",
+      "name": "Sensor pod proxy profile",
+      "plane": {
+        "kind": "origin",
+        "plane": "YZ"
+      },
+      "entities": [
+        {
+          "id": "entity:sensor",
+          "kind": "spline",
+          "construction": false,
+          "closed": true,
+          "points": [
+            {
+              "x": -12,
+              "y": -8
+            },
+            {
+              "x": 12,
+              "y": -8
+            },
+            {
+              "x": 12,
+              "y": 3
+            },
+            {
+              "x": 0,
+              "y": 9
+            },
+            {
+              "x": -12,
+              "y": 3
+            }
+          ]
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    },
+    {
+      "id": "sketch:mast",
+      "name": "GNSS datalink mast profile",
+      "plane": {
+        "kind": "origin",
+        "plane": "XY"
+      },
+      "entities": [
+        {
+          "id": "entity:mast",
+          "kind": "circle",
+          "construction": false,
+          "center": {
+            "x": 0,
+            "y": 0
+          },
+          "radius": 2
+        }
+      ],
+      "dimensions": [],
+      "constraints": [],
+      "solverState": "unresolved"
+    }
+  ],
+  "operations": [
+    {
+      "id": "operation:parameter:frame-span",
+      "kind": "parameter.set",
+      "name": "Set frame_span",
+      "dependsOn": [],
+      "suppressed": false,
+      "parameter": {
+        "id": "parameter:frame-span",
+        "name": "frame_span",
+        "expression": "260 mm",
+        "unit": "mm",
+        "resolvedValue": 260
+      }
+    },
+    {
+      "id": "operation:parameter:deck-clearance",
+      "kind": "parameter.set",
+      "name": "Set deck_clearance",
+      "dependsOn": [],
+      "suppressed": false,
+      "parameter": {
+        "id": "parameter:deck-clearance",
+        "name": "deck_clearance",
+        "expression": "10 mm",
+        "unit": "mm",
+        "resolvedValue": 10
+      }
+    },
+    {
+      "id": "operation:parameter:guard-diameter",
+      "kind": "parameter.set",
+      "name": "Set guard_diameter",
+      "dependsOn": [],
+      "suppressed": false,
+      "parameter": {
+        "id": "parameter:guard-diameter",
+        "name": "guard_diameter",
+        "expression": "48 mm",
+        "unit": "mm",
+        "resolvedValue": 48
+      }
+    },
+    {
+      "id": "operation:parameter:fixture-scale",
+      "kind": "parameter.set",
+      "name": "Set fixture_scale",
+      "dependsOn": [],
+      "suppressed": false,
+      "parameter": {
+        "id": "parameter:fixture-scale",
+        "name": "fixture_scale",
+        "expression": "1",
+        "unit": "unitless",
+        "resolvedValue": 1
+      }
+    },
+    {
+      "id": "operation:sketch:frame",
+      "kind": "sketch.create",
+      "name": "Create Cross frame profile",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:frame",
+        "name": "Cross frame profile",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:frame-x",
+            "kind": "rectangle",
+            "construction": false,
+            "origin": {
+              "x": -130,
+              "y": -15
+            },
+            "width": 260,
+            "height": 30
+          },
+          {
+            "id": "entity:frame-y",
+            "kind": "rectangle",
+            "construction": false,
+            "origin": {
+              "x": -15,
+              "y": -130
+            },
+            "width": 30,
+            "height": 260
+          }
+        ],
+        "dimensions": [
+          {
+            "id": "dimension:sketch:frame",
+            "kind": "distance",
+            "entityIds": [
+              "entity:frame-x"
+            ],
+            "value": 260,
+            "expression": "frame_span",
+            "unit": "mm"
+          }
+        ],
+        "constraints": [
+          {
+            "id": "constraint:sketch:frame",
+            "kind": "fixed",
+            "entityIds": [
+              "entity:frame-x"
+            ]
+          }
+        ],
+        "solverState": "under-constrained"
+      }
+    },
+    {
+      "id": "operation:sketch:deck",
+      "kind": "sketch.create",
+      "name": "Create Deck profile",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:deck",
+        "name": "Deck profile",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:deck",
+            "kind": "rectangle",
+            "construction": false,
+            "origin": {
+              "x": -25,
+              "y": -25
+            },
+            "width": 50,
+            "height": 50
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:deck-holes",
+      "kind": "sketch.create",
+      "name": "Create Deck hole pattern",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:deck-holes",
+        "name": "Deck hole pattern",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:deck-hole-ne",
+            "kind": "circle",
+            "construction": false,
+            "center": {
+              "x": 15,
+              "y": 15
+            },
+            "radius": 3
+          },
+          {
+            "id": "entity:deck-hole-nw",
+            "kind": "circle",
+            "construction": false,
+            "center": {
+              "x": -15,
+              "y": 15
+            },
+            "radius": 3
+          },
+          {
+            "id": "entity:deck-hole-se",
+            "kind": "circle",
+            "construction": false,
+            "center": {
+              "x": 15,
+              "y": -15
+            },
+            "radius": 3
+          },
+          {
+            "id": "entity:deck-hole-sw",
+            "kind": "circle",
+            "construction": false,
+            "center": {
+              "x": -15,
+              "y": -15
+            },
+            "radius": 3
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:guard-outer",
+      "kind": "sketch.create",
+      "name": "Create Guard outer profile",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:guard-outer",
+        "name": "Guard outer profile",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:guard-outer",
+            "kind": "circle",
+            "construction": false,
+            "center": {
+              "x": 0,
+              "y": 0
+            },
+            "radius": 24
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:guard-inner",
+      "kind": "sketch.create",
+      "name": "Create Guard opening",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:guard-inner",
+        "name": "Guard opening",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:guard-inner",
+            "kind": "circle",
+            "construction": false,
+            "center": {
+              "x": 0,
+              "y": 0
+            },
+            "radius": 18
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:puck",
+      "kind": "sketch.create",
+      "name": "Create Dummy rotor puck profile",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:puck",
+        "name": "Dummy rotor puck profile",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:puck",
+            "kind": "circle",
+            "construction": false,
+            "center": {
+              "x": 0,
+              "y": 0
+            },
+            "radius": 12
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:esc",
+      "kind": "sketch.create",
+      "name": "Create ESC envelope profile",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:esc",
+        "name": "ESC envelope profile",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:esc",
+            "kind": "rectangle",
+            "construction": false,
+            "origin": {
+              "x": -14,
+              "y": -6
+            },
+            "width": 28,
+            "height": 12
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:standoff",
+      "kind": "sketch.create",
+      "name": "Create Standoff profile",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:standoff",
+        "name": "Standoff profile",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:standoff",
+            "kind": "circle",
+            "construction": false,
+            "center": {
+              "x": 0,
+              "y": 0
+            },
+            "radius": 2.5
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:canopy",
+      "kind": "sketch.create",
+      "name": "Create Canopy revolve section",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:canopy",
+        "name": "Canopy revolve section",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:canopy-1",
+            "kind": "line",
+            "construction": false,
+            "start": {
+              "x": 0,
+              "y": 0
+            },
+            "end": {
+              "x": 20,
+              "y": 0
+            }
+          },
+          {
+            "id": "entity:canopy-2",
+            "kind": "line",
+            "construction": false,
+            "start": {
+              "x": 20,
+              "y": 0
+            },
+            "end": {
+              "x": 20,
+              "y": 4
+            }
+          },
+          {
+            "id": "entity:canopy-3",
+            "kind": "line",
+            "construction": false,
+            "start": {
+              "x": 20,
+              "y": 4
+            },
+            "end": {
+              "x": 8,
+              "y": 12
+            }
+          },
+          {
+            "id": "entity:canopy-4",
+            "kind": "line",
+            "construction": false,
+            "start": {
+              "x": 8,
+              "y": 12
+            },
+            "end": {
+              "x": 0,
+              "y": 12
+            }
+          },
+          {
+            "id": "entity:canopy-5",
+            "kind": "line",
+            "construction": false,
+            "start": {
+              "x": 0,
+              "y": 12
+            },
+            "end": {
+              "x": 0,
+              "y": 0
+            }
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:rail",
+      "kind": "sketch.create",
+      "name": "Create Landing rail profile",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:rail",
+        "name": "Landing rail profile",
+        "plane": {
+          "kind": "origin",
+          "plane": "XZ"
+        },
+        "entities": [
+          {
+            "id": "entity:rail",
+            "kind": "rectangle",
+            "construction": false,
+            "origin": {
+              "x": -55,
+              "y": -3
+            },
+            "width": 110,
+            "height": 6
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:battery",
+      "kind": "sketch.create",
+      "name": "Create Battery envelope profile",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:battery",
+        "name": "Battery envelope profile",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:battery",
+            "kind": "rectangle",
+            "construction": false,
+            "origin": {
+              "x": -24,
+              "y": -14
+            },
+            "width": 48,
+            "height": 28
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:controller",
+      "kind": "sketch.create",
+      "name": "Create Controller envelope profile",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:controller",
+        "name": "Controller envelope profile",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:controller",
+            "kind": "rectangle",
+            "construction": false,
+            "origin": {
+              "x": -17,
+              "y": -17
+            },
+            "width": 34,
+            "height": 34
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:sensor",
+      "kind": "sketch.create",
+      "name": "Create Sensor pod proxy profile",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:sensor",
+        "name": "Sensor pod proxy profile",
+        "plane": {
+          "kind": "origin",
+          "plane": "YZ"
+        },
+        "entities": [
+          {
+            "id": "entity:sensor",
+            "kind": "spline",
+            "construction": false,
+            "closed": true,
+            "points": [
+              {
+                "x": -12,
+                "y": -8
+              },
+              {
+                "x": 12,
+                "y": -8
+              },
+              {
+                "x": 12,
+                "y": 3
+              },
+              {
+                "x": 0,
+                "y": 9
+              },
+              {
+                "x": -12,
+                "y": 3
+              }
+            ]
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:sketch:mast",
+      "kind": "sketch.create",
+      "name": "Create GNSS datalink mast profile",
+      "dependsOn": [],
+      "suppressed": false,
+      "sketch": {
+        "id": "sketch:mast",
+        "name": "GNSS datalink mast profile",
+        "plane": {
+          "kind": "origin",
+          "plane": "XY"
+        },
+        "entities": [
+          {
+            "id": "entity:mast",
+            "kind": "circle",
+            "construction": false,
+            "center": {
+              "x": 0,
+              "y": 0
+            },
+            "radius": 2
+          }
+        ],
+        "dimensions": [],
+        "constraints": [],
+        "solverState": "unresolved"
+      }
+    },
+    {
+      "id": "operation:frame-extrude",
+      "kind": "feature.extrude",
+      "name": "Extrude cross frame",
+      "dependsOn": [
+        "sketch:frame"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:frame"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "Cross frame",
+      "parameters": {
+        "distance": 5,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:deck-extrude",
+      "kind": "feature.extrude",
+      "name": "Extrude deck",
+      "dependsOn": [
+        "sketch:deck"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:deck"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "Perforated deck",
+      "parameters": {
+        "distance": 8,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:deck-hole",
+      "kind": "feature.hole",
+      "name": "Cut deck hole pattern",
+      "dependsOn": [
+        "sketch:deck-holes",
+        "body:deck"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:deck-holes"
+      ],
+      "targetBodyIds": [
+        "body:deck"
+      ],
+      "outputBodyName": null,
+      "parameters": {
+        "radius": 3,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:guard-extrude",
+      "kind": "feature.extrude",
+      "name": "Extrude guard outer",
+      "dependsOn": [
+        "sketch:guard-outer"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:guard-outer"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "Guard ring",
+      "parameters": {
+        "distance": 4,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:guard-hole",
+      "kind": "feature.hole",
+      "name": "Cut guard opening",
+      "dependsOn": [
+        "sketch:guard-inner",
+        "body:guard"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:guard-inner"
+      ],
+      "targetBodyIds": [
+        "body:guard"
+      ],
+      "outputBodyName": null,
+      "parameters": {
+        "radius": 18,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:puck-extrude",
+      "kind": "feature.extrude",
+      "name": "Extrude dummy rotor puck",
+      "dependsOn": [
+        "sketch:puck"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:puck"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "Dummy rotor puck",
+      "parameters": {
+        "distance": 6,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:esc-extrude",
+      "kind": "feature.extrude",
+      "name": "Extrude ESC envelope",
+      "dependsOn": [
+        "sketch:esc"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:esc"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "ESC envelope",
+      "parameters": {
+        "distance": 4,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:standoff-extrude",
+      "kind": "feature.extrude",
+      "name": "Extrude standoff",
+      "dependsOn": [
+        "sketch:standoff"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:standoff"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "Deck standoff",
+      "parameters": {
+        "distance": 10,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:canopy-revolve",
+      "kind": "feature.revolve",
+      "name": "Revolve canopy",
+      "dependsOn": [
+        "sketch:canopy"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:canopy"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "Bench canopy",
+      "parameters": {
+        "angle": 360,
+        "unit": "deg"
+      }
+    },
+    {
+      "id": "operation:rail-extrude",
+      "kind": "feature.extrude",
+      "name": "Extrude landing rail",
+      "dependsOn": [
+        "sketch:rail"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:rail"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "Landing rail",
+      "parameters": {
+        "distance": 4,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:battery-extrude",
+      "kind": "feature.extrude",
+      "name": "Extrude battery envelope",
+      "dependsOn": [
+        "sketch:battery"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:battery"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "Battery envelope",
+      "parameters": {
+        "distance": 16,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:controller-extrude",
+      "kind": "feature.extrude",
+      "name": "Extrude controller envelope",
+      "dependsOn": [
+        "sketch:controller"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:controller"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "Controller envelope",
+      "parameters": {
+        "distance": 6,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:sensor-extrude",
+      "kind": "feature.extrude",
+      "name": "Extrude sensor pod proxy",
+      "dependsOn": [
+        "sketch:sensor"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:sensor"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "Sensor pod proxy",
+      "parameters": {
+        "distance": 18,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mast-extrude",
+      "kind": "feature.extrude",
+      "name": "Extrude GNSS datalink mast proxy",
+      "dependsOn": [
+        "sketch:mast"
+      ],
+      "suppressed": false,
+      "inputIds": [
+        "sketch:mast"
+      ],
+      "targetBodyIds": [],
+      "outputBodyName": "GNSS datalink mast proxy",
+      "parameters": {
+        "distance": 32,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:instance:frame",
+      "kind": "assembly.instance.add",
+      "name": "Insert Cross frame",
+      "dependsOn": [
+        "body:frame"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:frame",
+        "name": "Cross frame",
+        "bodyId": "body:frame",
+        "grounded": true,
+        "transform": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:deck",
+      "kind": "assembly.instance.add",
+      "name": "Insert Perforated deck",
+      "dependsOn": [
+        "body:deck"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:deck",
+        "name": "Perforated deck",
+        "bodyId": "body:deck",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            0,
+            10
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:guard-east",
+      "kind": "assembly.instance.add",
+      "name": "Insert Guard east",
+      "dependsOn": [
+        "body:guard"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:guard-east",
+        "name": "Guard east",
+        "bodyId": "body:guard",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            115,
+            0,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:guard-west",
+      "kind": "assembly.instance.add",
+      "name": "Insert Guard west",
+      "dependsOn": [
+        "body:guard"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:guard-west",
+        "name": "Guard west",
+        "bodyId": "body:guard",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            -115,
+            0,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:guard-north",
+      "kind": "assembly.instance.add",
+      "name": "Insert Guard north",
+      "dependsOn": [
+        "body:guard"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:guard-north",
+        "name": "Guard north",
+        "bodyId": "body:guard",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            115,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:guard-south",
+      "kind": "assembly.instance.add",
+      "name": "Insert Guard south",
+      "dependsOn": [
+        "body:guard"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:guard-south",
+        "name": "Guard south",
+        "bodyId": "body:guard",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -115,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:puck-east",
+      "kind": "assembly.instance.add",
+      "name": "Insert Dummy rotor puck east",
+      "dependsOn": [
+        "body:puck"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:puck-east",
+        "name": "Dummy rotor puck east",
+        "bodyId": "body:puck",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            115,
+            0,
+            9
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:puck-west",
+      "kind": "assembly.instance.add",
+      "name": "Insert Dummy rotor puck west",
+      "dependsOn": [
+        "body:puck"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:puck-west",
+        "name": "Dummy rotor puck west",
+        "bodyId": "body:puck",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            -115,
+            0,
+            9
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:puck-north",
+      "kind": "assembly.instance.add",
+      "name": "Insert Dummy rotor puck north",
+      "dependsOn": [
+        "body:puck"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:puck-north",
+        "name": "Dummy rotor puck north",
+        "bodyId": "body:puck",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            115,
+            9
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:puck-south",
+      "kind": "assembly.instance.add",
+      "name": "Insert Dummy rotor puck south",
+      "dependsOn": [
+        "body:puck"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:puck-south",
+        "name": "Dummy rotor puck south",
+        "bodyId": "body:puck",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -115,
+            9
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:esc-east",
+      "kind": "assembly.instance.add",
+      "name": "Insert ESC envelope east",
+      "dependsOn": [
+        "body:esc"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:esc-east",
+        "name": "ESC envelope east",
+        "bodyId": "body:esc",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            66.7,
+            0,
+            6
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:esc-west",
+      "kind": "assembly.instance.add",
+      "name": "Insert ESC envelope west",
+      "dependsOn": [
+        "body:esc"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:esc-west",
+        "name": "ESC envelope west",
+        "bodyId": "body:esc",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            -66.7,
+            0,
+            6
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            180
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:esc-north",
+      "kind": "assembly.instance.add",
+      "name": "Insert ESC envelope north",
+      "dependsOn": [
+        "body:esc"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:esc-north",
+        "name": "ESC envelope north",
+        "bodyId": "body:esc",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            66.7,
+            6
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            90
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:esc-south",
+      "kind": "assembly.instance.add",
+      "name": "Insert ESC envelope south",
+      "dependsOn": [
+        "body:esc"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:esc-south",
+        "name": "ESC envelope south",
+        "bodyId": "body:esc",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -66.7,
+            6
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            -90
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:standoff-ne",
+      "kind": "assembly.instance.add",
+      "name": "Insert Deck standoff NE",
+      "dependsOn": [
+        "body:standoff"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:standoff-ne",
+        "name": "Deck standoff NE",
+        "bodyId": "body:standoff",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            18,
+            18,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:standoff-nw",
+      "kind": "assembly.instance.add",
+      "name": "Insert Deck standoff NW",
+      "dependsOn": [
+        "body:standoff"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:standoff-nw",
+        "name": "Deck standoff NW",
+        "bodyId": "body:standoff",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            -18,
+            18,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:standoff-se",
+      "kind": "assembly.instance.add",
+      "name": "Insert Deck standoff SE",
+      "dependsOn": [
+        "body:standoff"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:standoff-se",
+        "name": "Deck standoff SE",
+        "bodyId": "body:standoff",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            18,
+            -18,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:standoff-sw",
+      "kind": "assembly.instance.add",
+      "name": "Insert Deck standoff SW",
+      "dependsOn": [
+        "body:standoff"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:standoff-sw",
+        "name": "Deck standoff SW",
+        "bodyId": "body:standoff",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            -18,
+            -18,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:canopy",
+      "kind": "assembly.instance.add",
+      "name": "Insert Bench canopy",
+      "dependsOn": [
+        "body:canopy"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:canopy",
+        "name": "Bench canopy",
+        "bodyId": "body:canopy",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            0,
+            18
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:rail-port",
+      "kind": "assembly.instance.add",
+      "name": "Insert Landing rail port",
+      "dependsOn": [
+        "body:rail"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:rail-port",
+        "name": "Landing rail port",
+        "bodyId": "body:rail",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -32,
+            -5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:rail-starboard",
+      "kind": "assembly.instance.add",
+      "name": "Insert Landing rail starboard",
+      "dependsOn": [
+        "body:rail"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:rail-starboard",
+        "name": "Landing rail starboard",
+        "bodyId": "body:rail",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            28,
+            -5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:battery",
+      "kind": "assembly.instance.add",
+      "name": "Insert Battery envelope",
+      "dependsOn": [
+        "body:battery"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:battery",
+        "name": "Battery envelope",
+        "bodyId": "body:battery",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -7,
+            14
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:controller",
+      "kind": "assembly.instance.add",
+      "name": "Insert Controller envelope",
+      "dependsOn": [
+        "body:controller"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:controller",
+        "name": "Controller envelope",
+        "bodyId": "body:controller",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            8,
+            30
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:sensor",
+      "kind": "assembly.instance.add",
+      "name": "Insert Sensor pod proxy",
+      "dependsOn": [
+        "body:sensor"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:sensor",
+        "name": "Sensor pod proxy",
+        "bodyId": "body:sensor",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -39,
+            12
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:instance:mast",
+      "kind": "assembly.instance.add",
+      "name": "Insert GNSS datalink mast proxy",
+      "dependsOn": [
+        "body:mast"
+      ],
+      "suppressed": false,
+      "instance": {
+        "id": "instance:mast",
+        "name": "GNSS datalink mast proxy",
+        "bodyId": "body:mast",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            28,
+            18
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "operation:mate:deck-frame",
+      "kind": "assembly.mate.add",
+      "name": "Mate Deck height from frame",
+      "dependsOn": [
+        "instance:frame",
+        "instance:deck"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:deck-frame",
+        "name": "Deck height from frame",
+        "kind": "distance",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:deck",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 10,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:guard-east-frame",
+      "kind": "assembly.mate.add",
+      "name": "Mate Guard east to frame",
+      "dependsOn": [
+        "instance:frame",
+        "instance:guard-east"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:guard-east-frame",
+        "name": "Guard east to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:guard-east",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:guard-west-frame",
+      "kind": "assembly.mate.add",
+      "name": "Mate Guard west to frame",
+      "dependsOn": [
+        "instance:frame",
+        "instance:guard-west"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:guard-west-frame",
+        "name": "Guard west to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:guard-west",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:guard-north-frame",
+      "kind": "assembly.mate.add",
+      "name": "Mate Guard north to frame",
+      "dependsOn": [
+        "instance:frame",
+        "instance:guard-north"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:guard-north-frame",
+        "name": "Guard north to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:guard-north",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:guard-south-frame",
+      "kind": "assembly.mate.add",
+      "name": "Mate Guard south to frame",
+      "dependsOn": [
+        "instance:frame",
+        "instance:guard-south"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:guard-south-frame",
+        "name": "Guard south to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:guard-south",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:puck-east-guard",
+      "kind": "assembly.mate.add",
+      "name": "Mate Puck east concentric to guard",
+      "dependsOn": [
+        "instance:guard-east",
+        "instance:puck-east"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:puck-east-guard",
+        "name": "Puck east concentric to guard",
+        "kind": "concentric",
+        "instanceAId": "instance:guard-east",
+        "instanceBId": "instance:puck-east",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:puck-west-guard",
+      "kind": "assembly.mate.add",
+      "name": "Mate Puck west concentric to guard",
+      "dependsOn": [
+        "instance:guard-west",
+        "instance:puck-west"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:puck-west-guard",
+        "name": "Puck west concentric to guard",
+        "kind": "concentric",
+        "instanceAId": "instance:guard-west",
+        "instanceBId": "instance:puck-west",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:puck-north-guard",
+      "kind": "assembly.mate.add",
+      "name": "Mate Puck north concentric to guard",
+      "dependsOn": [
+        "instance:guard-north",
+        "instance:puck-north"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:puck-north-guard",
+        "name": "Puck north concentric to guard",
+        "kind": "concentric",
+        "instanceAId": "instance:guard-north",
+        "instanceBId": "instance:puck-north",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:puck-south-guard",
+      "kind": "assembly.mate.add",
+      "name": "Mate Puck south concentric to guard",
+      "dependsOn": [
+        "instance:guard-south",
+        "instance:puck-south"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:puck-south-guard",
+        "name": "Puck south concentric to guard",
+        "kind": "concentric",
+        "instanceAId": "instance:guard-south",
+        "instanceBId": "instance:puck-south",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:esc-east-frame",
+      "kind": "assembly.mate.add",
+      "name": "Mate ESC east to frame",
+      "dependsOn": [
+        "instance:frame",
+        "instance:esc-east"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:esc-east-frame",
+        "name": "ESC east to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:esc-east",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:esc-west-frame",
+      "kind": "assembly.mate.add",
+      "name": "Mate ESC west to frame",
+      "dependsOn": [
+        "instance:frame",
+        "instance:esc-west"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:esc-west-frame",
+        "name": "ESC west to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:esc-west",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:esc-north-frame",
+      "kind": "assembly.mate.add",
+      "name": "Mate ESC north to frame",
+      "dependsOn": [
+        "instance:frame",
+        "instance:esc-north"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:esc-north-frame",
+        "name": "ESC north to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:esc-north",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:esc-south-frame",
+      "kind": "assembly.mate.add",
+      "name": "Mate ESC south to frame",
+      "dependsOn": [
+        "instance:frame",
+        "instance:esc-south"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:esc-south-frame",
+        "name": "ESC south to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:esc-south",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:standoff-ne-deck",
+      "kind": "assembly.mate.add",
+      "name": "Mate Standoff ne to deck",
+      "dependsOn": [
+        "instance:deck",
+        "instance:standoff-ne"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:standoff-ne-deck",
+        "name": "Standoff ne to deck",
+        "kind": "fixed",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:standoff-ne",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:standoff-nw-deck",
+      "kind": "assembly.mate.add",
+      "name": "Mate Standoff nw to deck",
+      "dependsOn": [
+        "instance:deck",
+        "instance:standoff-nw"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:standoff-nw-deck",
+        "name": "Standoff nw to deck",
+        "kind": "fixed",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:standoff-nw",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:standoff-se-deck",
+      "kind": "assembly.mate.add",
+      "name": "Mate Standoff se to deck",
+      "dependsOn": [
+        "instance:deck",
+        "instance:standoff-se"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:standoff-se-deck",
+        "name": "Standoff se to deck",
+        "kind": "fixed",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:standoff-se",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:standoff-sw-deck",
+      "kind": "assembly.mate.add",
+      "name": "Mate Standoff sw to deck",
+      "dependsOn": [
+        "instance:deck",
+        "instance:standoff-sw"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:standoff-sw-deck",
+        "name": "Standoff sw to deck",
+        "kind": "fixed",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:standoff-sw",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:canopy-deck",
+      "kind": "assembly.mate.add",
+      "name": "Mate Canopy to deck",
+      "dependsOn": [
+        "instance:deck",
+        "instance:canopy"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:canopy-deck",
+        "name": "Canopy to deck",
+        "kind": "coincident",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:canopy",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:rail-port-frame",
+      "kind": "assembly.mate.add",
+      "name": "Mate Port rail to frame",
+      "dependsOn": [
+        "instance:frame",
+        "instance:rail-port"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:rail-port-frame",
+        "name": "Port rail to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:rail-port",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:rail-starboard-frame",
+      "kind": "assembly.mate.add",
+      "name": "Mate Starboard rail to frame",
+      "dependsOn": [
+        "instance:frame",
+        "instance:rail-starboard"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:rail-starboard-frame",
+        "name": "Starboard rail to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:rail-starboard",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:battery-deck",
+      "kind": "assembly.mate.add",
+      "name": "Mate Battery envelope to deck",
+      "dependsOn": [
+        "instance:deck",
+        "instance:battery"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:battery-deck",
+        "name": "Battery envelope to deck",
+        "kind": "fixed",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:battery",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:controller-deck",
+      "kind": "assembly.mate.add",
+      "name": "Mate Controller clearance from deck",
+      "dependsOn": [
+        "instance:deck",
+        "instance:controller"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:controller-deck",
+        "name": "Controller clearance from deck",
+        "kind": "distance",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:controller",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 12,
+        "unit": "mm"
+      }
+    },
+    {
+      "id": "operation:mate:sensor-deck",
+      "kind": "assembly.mate.add",
+      "name": "Mate Sensor pod presentation angle",
+      "dependsOn": [
+        "instance:deck",
+        "instance:sensor"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:sensor-deck",
+        "name": "Sensor pod presentation angle",
+        "kind": "angle",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:sensor",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": -12,
+        "unit": "deg"
+      }
+    },
+    {
+      "id": "operation:mate:mast-deck",
+      "kind": "assembly.mate.add",
+      "name": "Mate Mast origin to deck",
+      "dependsOn": [
+        "instance:deck",
+        "instance:mast"
+      ],
+      "suppressed": false,
+      "mate": {
+        "id": "mate:mast-deck",
+        "name": "Mast origin to deck",
+        "kind": "coincident",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:mast",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    }
+  ],
+  "bodies": [
+    {
+      "id": "body:frame",
+      "name": "Cross frame",
+      "featureIds": [
+        "operation:frame-extrude"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    },
+    {
+      "id": "body:deck",
+      "name": "Perforated deck",
+      "featureIds": [
+        "operation:deck-extrude",
+        "operation:deck-hole"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    },
+    {
+      "id": "body:guard",
+      "name": "Guard ring",
+      "featureIds": [
+        "operation:guard-extrude",
+        "operation:guard-hole"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    },
+    {
+      "id": "body:puck",
+      "name": "Dummy rotor puck",
+      "featureIds": [
+        "operation:puck-extrude"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    },
+    {
+      "id": "body:esc",
+      "name": "ESC envelope",
+      "featureIds": [
+        "operation:esc-extrude"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    },
+    {
+      "id": "body:standoff",
+      "name": "Deck standoff",
+      "featureIds": [
+        "operation:standoff-extrude"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    },
+    {
+      "id": "body:canopy",
+      "name": "Bench canopy",
+      "featureIds": [
+        "operation:canopy-revolve"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    },
+    {
+      "id": "body:rail",
+      "name": "Landing rail",
+      "featureIds": [
+        "operation:rail-extrude"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    },
+    {
+      "id": "body:battery",
+      "name": "Battery envelope",
+      "featureIds": [
+        "operation:battery-extrude"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    },
+    {
+      "id": "body:controller",
+      "name": "Controller envelope",
+      "featureIds": [
+        "operation:controller-extrude"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    },
+    {
+      "id": "body:sensor",
+      "name": "Sensor pod proxy",
+      "featureIds": [
+        "operation:sensor-extrude"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    },
+    {
+      "id": "body:mast",
+      "name": "GNSS datalink mast proxy",
+      "featureIds": [
+        "operation:mast-extrude"
+      ],
+      "material": "Synthetic benchmark polymer (metadata only)",
+      "visible": true,
+      "state": "valid"
+    }
+  ],
+  "assembly": {
+    "instances": [
+      {
+        "id": "instance:frame",
+        "name": "Cross frame",
+        "bodyId": "body:frame",
+        "grounded": true,
+        "transform": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:deck",
+        "name": "Perforated deck",
+        "bodyId": "body:deck",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            0,
+            10
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:guard-east",
+        "name": "Guard east",
+        "bodyId": "body:guard",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            115,
+            0,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:guard-west",
+        "name": "Guard west",
+        "bodyId": "body:guard",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            -115,
+            0,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:guard-north",
+        "name": "Guard north",
+        "bodyId": "body:guard",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            115,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:guard-south",
+        "name": "Guard south",
+        "bodyId": "body:guard",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -115,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:puck-east",
+        "name": "Dummy rotor puck east",
+        "bodyId": "body:puck",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            115,
+            0,
+            9
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:puck-west",
+        "name": "Dummy rotor puck west",
+        "bodyId": "body:puck",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            -115,
+            0,
+            9
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:puck-north",
+        "name": "Dummy rotor puck north",
+        "bodyId": "body:puck",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            115,
+            9
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:puck-south",
+        "name": "Dummy rotor puck south",
+        "bodyId": "body:puck",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -115,
+            9
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:esc-east",
+        "name": "ESC envelope east",
+        "bodyId": "body:esc",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            66.7,
+            0,
+            6
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:esc-west",
+        "name": "ESC envelope west",
+        "bodyId": "body:esc",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            -66.7,
+            0,
+            6
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            180
+          ]
+        }
+      },
+      {
+        "id": "instance:esc-north",
+        "name": "ESC envelope north",
+        "bodyId": "body:esc",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            66.7,
+            6
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            90
+          ]
+        }
+      },
+      {
+        "id": "instance:esc-south",
+        "name": "ESC envelope south",
+        "bodyId": "body:esc",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -66.7,
+            6
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            -90
+          ]
+        }
+      },
+      {
+        "id": "instance:standoff-ne",
+        "name": "Deck standoff NE",
+        "bodyId": "body:standoff",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            18,
+            18,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:standoff-nw",
+        "name": "Deck standoff NW",
+        "bodyId": "body:standoff",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            -18,
+            18,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:standoff-se",
+        "name": "Deck standoff SE",
+        "bodyId": "body:standoff",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            18,
+            -18,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:standoff-sw",
+        "name": "Deck standoff SW",
+        "bodyId": "body:standoff",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            -18,
+            -18,
+            5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:canopy",
+        "name": "Bench canopy",
+        "bodyId": "body:canopy",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            0,
+            18
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:rail-port",
+        "name": "Landing rail port",
+        "bodyId": "body:rail",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -32,
+            -5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:rail-starboard",
+        "name": "Landing rail starboard",
+        "bodyId": "body:rail",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            28,
+            -5
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:battery",
+        "name": "Battery envelope",
+        "bodyId": "body:battery",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -7,
+            14
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:controller",
+        "name": "Controller envelope",
+        "bodyId": "body:controller",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            8,
+            30
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:sensor",
+        "name": "Sensor pod proxy",
+        "bodyId": "body:sensor",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            -39,
+            12
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "instance:mast",
+        "name": "GNSS datalink mast proxy",
+        "bodyId": "body:mast",
+        "grounded": false,
+        "transform": {
+          "translation": [
+            0,
+            28,
+            18
+          ],
+          "rotationDegrees": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    ],
+    "mates": [
+      {
+        "id": "mate:deck-frame",
+        "name": "Deck height from frame",
+        "kind": "distance",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:deck",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 10,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:guard-east-frame",
+        "name": "Guard east to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:guard-east",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:guard-west-frame",
+        "name": "Guard west to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:guard-west",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:guard-north-frame",
+        "name": "Guard north to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:guard-north",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:guard-south-frame",
+        "name": "Guard south to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:guard-south",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:puck-east-guard",
+        "name": "Puck east concentric to guard",
+        "kind": "concentric",
+        "instanceAId": "instance:guard-east",
+        "instanceBId": "instance:puck-east",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:puck-west-guard",
+        "name": "Puck west concentric to guard",
+        "kind": "concentric",
+        "instanceAId": "instance:guard-west",
+        "instanceBId": "instance:puck-west",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:puck-north-guard",
+        "name": "Puck north concentric to guard",
+        "kind": "concentric",
+        "instanceAId": "instance:guard-north",
+        "instanceBId": "instance:puck-north",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:puck-south-guard",
+        "name": "Puck south concentric to guard",
+        "kind": "concentric",
+        "instanceAId": "instance:guard-south",
+        "instanceBId": "instance:puck-south",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:esc-east-frame",
+        "name": "ESC east to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:esc-east",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:esc-west-frame",
+        "name": "ESC west to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:esc-west",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:esc-north-frame",
+        "name": "ESC north to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:esc-north",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:esc-south-frame",
+        "name": "ESC south to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:esc-south",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:standoff-ne-deck",
+        "name": "Standoff ne to deck",
+        "kind": "fixed",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:standoff-ne",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:standoff-nw-deck",
+        "name": "Standoff nw to deck",
+        "kind": "fixed",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:standoff-nw",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:standoff-se-deck",
+        "name": "Standoff se to deck",
+        "kind": "fixed",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:standoff-se",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:standoff-sw-deck",
+        "name": "Standoff sw to deck",
+        "kind": "fixed",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:standoff-sw",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:canopy-deck",
+        "name": "Canopy to deck",
+        "kind": "coincident",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:canopy",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:rail-port-frame",
+        "name": "Port rail to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:rail-port",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:rail-starboard-frame",
+        "name": "Starboard rail to frame",
+        "kind": "fixed",
+        "instanceAId": "instance:frame",
+        "instanceBId": "instance:rail-starboard",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:battery-deck",
+        "name": "Battery envelope to deck",
+        "kind": "fixed",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:battery",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:controller-deck",
+        "name": "Controller clearance from deck",
+        "kind": "distance",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:controller",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 12,
+        "unit": "mm"
+      },
+      {
+        "id": "mate:sensor-deck",
+        "name": "Sensor pod presentation angle",
+        "kind": "angle",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:sensor",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": -12,
+        "unit": "deg"
+      },
+      {
+        "id": "mate:mast-deck",
+        "name": "Mast origin to deck",
+        "kind": "coincident",
+        "instanceAId": "instance:deck",
+        "instanceBId": "instance:mast",
+        "referenceA": "origin",
+        "referenceB": "origin",
+        "offset": 0,
+        "unit": "mm"
+      }
+    ]
+  }
+}

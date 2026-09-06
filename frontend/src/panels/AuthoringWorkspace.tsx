@@ -7,6 +7,7 @@ import {
   createCadAuthoringState,
   createCadDocument,
   createFeatureOperation,
+  createHardenedDroneFixture,
   createInstanceOperation,
   createMateOperation,
   createParameterOperation,
@@ -14,6 +15,7 @@ import {
   exportCad,
   importCad,
   recomputeCad,
+  HARDENED_DRONE_BENCHMARK,
   type CadAssemblyMate,
   type CadDocument,
   type CadExportResponse,
@@ -205,6 +207,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   const [outputMessage, setOutputMessage] = useState<string | null>(() => restoredSession?.outputMessage ?? null);
   const [outputError, setOutputError] = useState<string | null>(() => restoredSession?.outputError ?? null);
   const [outputBusy, setOutputBusy] = useState(false);
+  const [benchmarkBusy, setBenchmarkBusy] = useState(false);
   const [kernelArtifacts, setKernelArtifacts] = useState<CadExportResponse[]>(() => restoredSession?.kernelArtifacts ?? []);
   const [preferredSketchId, setPreferredSketchId] = useState(() => restoredSession?.preferredSketchId ?? sketch.id);
   const inFlightSubmissions = useRef(new Set<string>());
@@ -408,6 +411,40 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
     } finally { setOutputBusy(false); }
   }
 
+  async function handleLoadHardenedDrone(frameSpanMm: number = HARDENED_DRONE_BENCHMARK.defaultFrameSpanMm) {
+    const release = claimCadSubmission(inFlightSubmissions.current, 'workspace-write');
+    if (!release) {
+      setFormError('A CAD write is already running. The benchmark load was ignored.');
+      return;
+    }
+    setBenchmarkBusy(true);
+    setFormError(null);
+    setTransferMessage(`Recomputing the public QX-0 benchmark at ${frameSpanMm} mm...`);
+    try {
+      const fixture = createHardenedDroneFixture({ frameSpanMm });
+      const response = await recomputeCad({
+        document: fixture.document,
+        operation: fixture.operation,
+        expectedRevisionId: fixture.document.revisionId,
+      }, fetchImpl, 'BROWSER_JSCAD_BOUNDED');
+      dispatch({ type: 'replace-from-import', response });
+      await registerAcceptedCad(response, fixture.operation.id);
+      const firstSketchId = response.document.sketches[0]?.id ?? sketch.id;
+      setSketch(createSketchDraft(response.document.sketches.length + 1));
+      setPreferredSketchId(firstSketchId);
+      setFeatureInputs(firstSketchId);
+      setInstanceBody(response.document.bodies[0]?.id ?? '');
+      setKernelArtifacts([]);
+      setTransferMessage(`Loaded QX-0 at ${frameSpanMm} mm: ${response.document.bodies.length} CAD definitions, ${response.document.assembly.instances.length} physical instances, ${response.mesh.triangles.length} triangles, revision ${shortId(response.revisionId)}.`);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'QX-0 benchmark recompute failed closed.');
+      setTransferMessage('QX-0 was not admitted. The prior last-valid CAD revision remains available.');
+    } finally {
+      setBenchmarkBusy(false);
+      release();
+    }
+  }
+
   const statusColor = state.status === 'failed' || state.status === 'stale' ? '#a33d2f' : state.status === 'running' || state.status === 'queued' ? '#9b6200' : '#176b45';
   const engineMode = state.kernel?.engineMode ?? (state.kernel?.mode === 'live' ? 'CONNECTED_OCCT' : 'AUTO_CONNECTED_OCCT_OR_BROWSER_JSCAD_BOUNDED');
   const engineLabel = engineMode === 'CONNECTED_OCCT' ? 'Connected Candidate 0.2 service · stateless kernel adapter' : `engineMode ${engineMode}`;
@@ -425,6 +462,11 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
         </div>
         <div role="note" style={{ marginTop: 9, padding: '8px 10px', borderLeft: '4px solid #9b6200', background: '#fff9eb', fontSize: 11, lineHeight: 1.4 }}>
           The approved connected OCCT service is preferred when available. Otherwise the MIT JSCAD browser fallback performs bounded solid modeling and real STL exchange without uploading OCCT/OCP. Failed, stale, or unsupported work never replaces the last valid viewport.
+        </div>
+        <div aria-label="QX-0 hardened drone benchmark" style={{ marginTop: 8, padding: '8px 10px', border: '1px solid #9db0a5', borderRadius: 6, background: '#edf5ef', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 7 }}>
+          <div style={{ flex: '1 1 260px', minWidth: 0 }}><b style={{ fontSize: 11 }}>QX-0 hardened CAD case</b><div style={{ fontSize: 9, color: '#53635a', marginTop: 2 }}>12 BOM definitions · 25 inert instances · 24 recorded mates · public synthetic geometry only. Generic dimensions and non-fixed mates remain non-solving in browser mode.</div></div>
+          <button type="button" disabled={benchmarkBusy} onClick={() => { void handleLoadHardenedDrone(); }} style={{ ...actionButton, opacity: benchmarkBusy ? .55 : 1 }}>{benchmarkBusy ? 'Recomputing QX-0...' : 'Load QX-0 · 260 mm'}</button>
+          <button type="button" disabled={benchmarkBusy} onClick={() => { void handleLoadHardenedDrone(HARDENED_DRONE_BENCHMARK.expandedFrameSpanMm); }} style={{ ...button, opacity: benchmarkBusy ? .55 : 1 }}>Run span ablation · 300 mm</button>
         </div>
       </header>
 

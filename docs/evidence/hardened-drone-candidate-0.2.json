@@ -1,0 +1,732 @@
+{
+  "schemaVersion": "caddydaddy.hardened-drone-evidence/1",
+  "status": "PASS",
+  "benchmark": {
+    "id": "benchmark:qx-0-bench-quad-v1",
+    "name": "QX-0 Bench Quad",
+    "version": "1.0.0",
+    "defaultFrameSpanMm": 260,
+    "expandedFrameSpanMm": 300,
+    "bodyDefinitions": 12,
+    "bomLines": 12,
+    "physicalInstances": 25,
+    "mates": 24,
+    "claimCeiling": "Synthetic non-flight-capable geometry benchmark. Not a flightworthy design, manufacturing release, legal classification, or permission to build or operate an aircraft."
+  },
+  "sourceBaseCommit": "645482900826026adbf2bfd2af76f08889012680",
+  "engine": {
+    "name": "@jscad/modeling",
+    "version": "2.13.0",
+    "mode": "BROWSER_JSCAD_BOUNDED"
+  },
+  "identities": {
+    "revisionId": "revision:d5daae9c9cdbec105c569d99",
+    "documentHash": "sha256:4b45b4be464ce573ff90b385728316bb551a65b54bafc76243ec64a5dc7c5cae",
+    "dependencyGraphHash": "sha256:c4b7f73d39b21b422a5215ca630c181b8bc26de5e6ca50a9c346b555b1501ea3",
+    "meshArtifactHash": "sha256:d51b6e095cf909e9f05b76faa2a5cc851df286c5714f3f27d508696e4c8744d5",
+    "manifestSha256": "2b08a099ff401cd645c02c1fef50a37f61f37788f80c316e3c2ec4a994d81593"
+  },
+  "counts": {
+    "bomLines": 12,
+    "physicalParts": 25,
+    "bodyDefinitions": 12,
+    "sketches": 14,
+    "features": 14,
+    "operations": 81,
+    "instances": 25,
+    "mates": 24,
+    "dependencyNodes": 93,
+    "dependencyEdges": 103,
+    "meshGroups": 25,
+    "triangles": 5020,
+    "diagnostics": 12,
+    "diagnosticErrors": 0
+  },
+  "geometry": {
+    "bodies": [
+      {
+        "bodyId": "body:frame",
+        "instanceId": "instance:frame",
+        "bounds": {
+          "min": [
+            -130.00062000000003,
+            -130.00062000000003,
+            0
+          ],
+          "max": [
+            130.00062000000003,
+            130.00062000000003,
+            5
+          ]
+        },
+        "volume": 73502.85600756007,
+        "topology": {
+          "faces": 44,
+          "edges": 66,
+          "vertices": 24
+        }
+      },
+      {
+        "bodyId": "body:deck",
+        "instanceId": "instance:deck",
+        "bounds": {
+          "min": [
+            -25,
+            -25,
+            10
+          ],
+          "max": [
+            25,
+            25,
+            18
+          ]
+        },
+        "volume": 19097.79011602906,
+        "topology": {
+          "faces": 490,
+          "edges": 1106,
+          "vertices": 596
+        }
+      },
+      {
+        "bodyId": "body:guard",
+        "instanceId": "instance:guard-east",
+        "bounds": {
+          "min": [
+            91,
+            -24.000000000000007,
+            5
+          ],
+          "max": [
+            139,
+            24.000000000000007,
+            9
+          ]
+        },
+        "volume": 3157.6896421874853,
+        "topology": {
+          "faces": 196,
+          "edges": 544,
+          "vertices": 288
+        }
+      },
+      {
+        "bodyId": "body:guard",
+        "instanceId": "instance:guard-west",
+        "bounds": {
+          "min": [
+            -139,
+            -24.000000000000007,
+            5
+          ],
+          "max": [
+            -91,
+            24.000000000000007,
+            9
+          ]
+        },
+        "volume": 3157.6896421874826,
+        "topology": {
+          "faces": 196,
+          "edges": 544,
+          "vertices": 288
+        }
+      },
+      {
+        "bodyId": "body:guard",
+        "instanceId": "instance:guard-north",
+        "bounds": {
+          "min": [
+            -24,
+            91,
+            5
+          ],
+          "max": [
+            24,
+            139,
+            9
+          ]
+        },
+        "volume": 3157.6896421874985,
+        "topology": {
+          "faces": 196,
+          "edges": 544,
+          "vertices": 288
+        }
+      },
+      {
+        "bodyId": "body:guard",
+        "instanceId": "instance:guard-south",
+        "bounds": {
+          "min": [
+            -24,
+            -139,
+            5
+          ],
+          "max": [
+            24,
+            -91,
+            9
+          ]
+        },
+        "volume": 3157.6896421874817,
+        "topology": {
+          "faces": 196,
+          "edges": 544,
+          "vertices": 288
+        }
+      },
+      {
+        "bodyId": "body:puck",
+        "instanceId": "instance:puck-east",
+        "bounds": {
+          "min": [
+            103,
+            -12,
+            9
+          ],
+          "max": [
+            127,
+            12,
+            15
+          ]
+        },
+        "volume": 2706.591121874984,
+        "topology": {
+          "faces": 188,
+          "edges": 282,
+          "vertices": 96
+        }
+      },
+      {
+        "bodyId": "body:puck",
+        "instanceId": "instance:puck-west",
+        "bounds": {
+          "min": [
+            -127,
+            -12,
+            9
+          ],
+          "max": [
+            -103,
+            12,
+            15
+          ]
+        },
+        "volume": 2706.591121874987,
+        "topology": {
+          "faces": 188,
+          "edges": 282,
+          "vertices": 96
+        }
+      },
+      {
+        "bodyId": "body:puck",
+        "instanceId": "instance:puck-north",
+        "bounds": {
+          "min": [
+            -12,
+            103,
+            9
+          ],
+          "max": [
+            12,
+            127,
+            15
+          ]
+        },
+        "volume": 2706.5911218749907,
+        "topology": {
+          "faces": 188,
+          "edges": 282,
+          "vertices": 96
+        }
+      },
+      {
+        "bodyId": "body:puck",
+        "instanceId": "instance:puck-south",
+        "bounds": {
+          "min": [
+            -12,
+            -127,
+            9
+          ],
+          "max": [
+            12,
+            -103,
+            15
+          ]
+        },
+        "volume": 2706.5911218749884,
+        "topology": {
+          "faces": 188,
+          "edges": 282,
+          "vertices": 96
+        }
+      },
+      {
+        "bodyId": "body:esc",
+        "instanceId": "instance:esc-east",
+        "bounds": {
+          "min": [
+            52.7,
+            -6,
+            6
+          ],
+          "max": [
+            80.7,
+            6,
+            10
+          ]
+        },
+        "volume": 1344,
+        "topology": {
+          "faces": 12,
+          "edges": 18,
+          "vertices": 8
+        }
+      },
+      {
+        "bodyId": "body:esc",
+        "instanceId": "instance:esc-west",
+        "bounds": {
+          "min": [
+            -80.7,
+            -6,
+            6
+          ],
+          "max": [
+            -52.7,
+            6,
+            10
+          ]
+        },
+        "volume": 1344,
+        "topology": {
+          "faces": 12,
+          "edges": 18,
+          "vertices": 8
+        }
+      },
+      {
+        "bodyId": "body:esc",
+        "instanceId": "instance:esc-north",
+        "bounds": {
+          "min": [
+            -6,
+            52.7,
+            6
+          ],
+          "max": [
+            6,
+            80.7,
+            10
+          ]
+        },
+        "volume": 1344,
+        "topology": {
+          "faces": 12,
+          "edges": 18,
+          "vertices": 8
+        }
+      },
+      {
+        "bodyId": "body:esc",
+        "instanceId": "instance:esc-south",
+        "bounds": {
+          "min": [
+            -6,
+            -80.7,
+            6
+          ],
+          "max": [
+            6,
+            -52.7,
+            10
+          ]
+        },
+        "volume": 1344,
+        "topology": {
+          "faces": 12,
+          "edges": 18,
+          "vertices": 8
+        }
+      },
+      {
+        "bodyId": "body:standoff",
+        "instanceId": "instance:standoff-ne",
+        "bounds": {
+          "min": [
+            15.5,
+            15.5,
+            5
+          ],
+          "max": [
+            20.5,
+            20.5,
+            15
+          ]
+        },
+        "volume": 195.78928833007762,
+        "topology": {
+          "faces": 188,
+          "edges": 282,
+          "vertices": 96
+        }
+      },
+      {
+        "bodyId": "body:standoff",
+        "instanceId": "instance:standoff-nw",
+        "bounds": {
+          "min": [
+            -20.5,
+            15.5,
+            5
+          ],
+          "max": [
+            -15.5,
+            20.5,
+            15
+          ]
+        },
+        "volume": 195.7892883300783,
+        "topology": {
+          "faces": 188,
+          "edges": 282,
+          "vertices": 96
+        }
+      },
+      {
+        "bodyId": "body:standoff",
+        "instanceId": "instance:standoff-se",
+        "bounds": {
+          "min": [
+            15.5,
+            -20.5,
+            5
+          ],
+          "max": [
+            20.5,
+            -15.5,
+            15
+          ]
+        },
+        "volume": 195.7892883300769,
+        "topology": {
+          "faces": 188,
+          "edges": 282,
+          "vertices": 96
+        }
+      },
+      {
+        "bodyId": "body:standoff",
+        "instanceId": "instance:standoff-sw",
+        "bounds": {
+          "min": [
+            -20.5,
+            -20.5,
+            5
+          ],
+          "max": [
+            -15.5,
+            -15.5,
+            15
+          ]
+        },
+        "volume": 195.78928833007745,
+        "topology": {
+          "faces": 188,
+          "edges": 282,
+          "vertices": 96
+        }
+      },
+      {
+        "bodyId": "body:canopy",
+        "instanceId": "instance:canopy",
+        "bounds": {
+          "min": [
+            -20,
+            -20,
+            18
+          ],
+          "max": [
+            20,
+            20,
+            30
+          ]
+        },
+        "volume": 10224.89979374996,
+        "topology": {
+          "faces": 288,
+          "edges": 432,
+          "vertices": 146
+        }
+      },
+      {
+        "bodyId": "body:rail",
+        "instanceId": "instance:rail-port",
+        "bounds": {
+          "min": [
+            -55,
+            -32,
+            -8
+          ],
+          "max": [
+            55,
+            -28,
+            -2
+          ]
+        },
+        "volume": 2640,
+        "topology": {
+          "faces": 12,
+          "edges": 18,
+          "vertices": 8
+        }
+      },
+      {
+        "bodyId": "body:rail",
+        "instanceId": "instance:rail-starboard",
+        "bounds": {
+          "min": [
+            -55,
+            28,
+            -8
+          ],
+          "max": [
+            55,
+            32,
+            -2
+          ]
+        },
+        "volume": 2640,
+        "topology": {
+          "faces": 12,
+          "edges": 18,
+          "vertices": 8
+        }
+      },
+      {
+        "bodyId": "body:battery",
+        "instanceId": "instance:battery",
+        "bounds": {
+          "min": [
+            -24,
+            -21,
+            14
+          ],
+          "max": [
+            24,
+            7,
+            30
+          ]
+        },
+        "volume": 21504,
+        "topology": {
+          "faces": 12,
+          "edges": 18,
+          "vertices": 8
+        }
+      },
+      {
+        "bodyId": "body:controller",
+        "instanceId": "instance:controller",
+        "bounds": {
+          "min": [
+            -17,
+            -9,
+            30
+          ],
+          "max": [
+            17,
+            25,
+            36
+          ]
+        },
+        "volume": 6936,
+        "topology": {
+          "faces": 12,
+          "edges": 18,
+          "vertices": 8
+        }
+      },
+      {
+        "bodyId": "body:sensor",
+        "instanceId": "instance:sensor",
+        "bounds": {
+          "min": [
+            0,
+            -47,
+            0
+          ],
+          "max": [
+            18,
+            -30,
+            24
+          ]
+        },
+        "volume": 6048,
+        "topology": {
+          "faces": 16,
+          "edges": 24,
+          "vertices": 10
+        }
+      },
+      {
+        "bodyId": "body:mast",
+        "instanceId": "instance:mast",
+        "bounds": {
+          "min": [
+            -2,
+            26,
+            18
+          ],
+          "max": [
+            2,
+            30,
+            50
+          ]
+        },
+        "volume": 400.97646249999934,
+        "topology": {
+          "faces": 188,
+          "edges": 282,
+          "vertices": 96
+        }
+      }
+    ],
+    "bounds": {
+      "min": [
+        -139,
+        -139,
+        -8
+      ],
+      "max": [
+        139,
+        139,
+        50
+      ]
+    },
+    "totalVolume": 172610.80258940932
+  },
+  "diagnosticCodes": [
+    "BROWSER_GEOMETRY_PROVENANCE",
+    "CONSTRAINTS_RECORDED_NOT_SOLVED",
+    "DIMENSIONS_RECORDED_NOT_DRIVING",
+    "MATE_RECORDED_NOT_SOLVED"
+  ],
+  "artifacts": [
+    {
+      "path": "hardened-drone.cad-document.json",
+      "kind": "CAD_DOCUMENT",
+      "sizeBytes": 78808,
+      "sha256": "b827ef52d56153812fc10bf71c947fad102346ab4956d23c571455ec61c7475c"
+    },
+    {
+      "path": "hardened-drone.stl",
+      "kind": "ASCII_STL",
+      "sizeBytes": 926552,
+      "sha256": "e3f17baa6870ac4d3a9d3d3cf233066d6cf64c4ca690f56337886dbb91421025"
+    },
+    {
+      "path": "hardened-drone.bom.csv",
+      "kind": "BOM_CSV",
+      "sizeBytes": 1591,
+      "sha256": "85a8878c35b2a5b57754f753114d9d06b3c2c57a1d207bcd5094a6a2e7ecf511"
+    }
+  ],
+  "checks": [
+    {
+      "id": "CAD-01",
+      "status": "PASS",
+      "claim": "Twelve pinned CAD body definitions recomputed."
+    },
+    {
+      "id": "CAD-02",
+      "status": "PASS",
+      "claim": "Every physical part instance has evaluated geometry."
+    },
+    {
+      "id": "CAD-03",
+      "status": "PASS",
+      "claim": "The committed BOM has twelve named lines."
+    },
+    {
+      "id": "CAD-04",
+      "status": "PASS",
+      "claim": "Every non-grounded instance is connected by a recorded mate."
+    },
+    {
+      "id": "CAD-05",
+      "status": "PASS",
+      "claim": "Pinned input replays to identical document and mesh identities."
+    },
+    {
+      "id": "CAD-06",
+      "status": "PASS",
+      "claim": "The bounded 260-to-300 mm fixture span ablation changes document and mesh identities."
+    },
+    {
+      "id": "CAD-07",
+      "status": "PASS",
+      "claim": "Nominal fixture emits no kernel errors."
+    },
+    {
+      "id": "CAD-08",
+      "status": "PASS",
+      "claim": "Document, STL, and BOM artifacts have byte-level SHA-256 identities."
+    }
+  ],
+  "specGap": [
+    {
+      "capability": "multi-part drone CAD and twelve-line BOM",
+      "status": "DEMONSTRATED_LOCAL_BOUNDED"
+    },
+    {
+      "capability": "fixture span drives geometry and invalidates hashes",
+      "status": "DEMONSTRATED_FIXTURE_FACTORY_ONLY"
+    },
+    {
+      "capability": "generic editable driving dimensions",
+      "status": "ABSENT"
+    },
+    {
+      "capability": "assembly instance transforms",
+      "status": "DEMONSTRATED_LOCAL_BOUNDED"
+    },
+    {
+      "capability": "non-fixed mate solving and collision analysis",
+      "status": "ABSENT"
+    },
+    {
+      "capability": "STL export",
+      "status": "DEMONSTRATED_LOCAL_BOUNDED"
+    },
+    {
+      "capability": "STEP/IGES and production B-rep",
+      "status": "ABSENT_NATIVE_DISCONNECTED"
+    },
+    {
+      "capability": "current-CAD Tripwire binding and edit invalidation",
+      "status": "ABSENT"
+    },
+    {
+      "capability": "classification bound to current CAD revision",
+      "status": "ABSENT"
+    },
+    {
+      "capability": "full-BOM sourcing and external ordering",
+      "status": "ABSENT_ZERO_SEND_ONLY"
+    },
+    {
+      "capability": "durable signed multi-user product thread",
+      "status": "ABSENT_MEMORY_ONLY_UNSIGNED"
+    }
+  ],
+  "boundaries": [
+    "Synthetic non-flight-capable geometry benchmark. Not a flightworthy design, manufacturing release, legal classification, or permission to build or operate an aircraft.",
+    "The model uses inert solid envelopes and contains no flight-control logic, propulsion design, performance model, payload capability, or manufacturing release.",
+    "Browser JSCAD mesh/CSG is not production B-rep authority. Dimensions and non-fixed mates are recorded but not solved.",
+    "The fixture assumption that this data is non-controlled is not a legal classification."
+  ]
+}

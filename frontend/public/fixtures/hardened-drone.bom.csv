@@ -1,0 +1,13 @@
+part_number,name,quantity,slot,material,boundary
+"QX0-100","Cross frame","1","airframe","Synthetic benchmark polymer (metadata only)","Inert structural envelope"
+"QX0-110","Perforated deck","1","airframe","Synthetic benchmark polymer (metadata only)","Inert structural envelope"
+"QX0-120","Guard ring","4","airframe","Synthetic benchmark polymer (metadata only)","Inert perimeter geometry"
+"QX0-200","Dummy rotor puck","4","motor","Synthetic benchmark polymer (metadata only)","Solid placeholder; no propulsion geometry"
+"QX0-210","ESC envelope","4","ESC","Synthetic benchmark polymer (metadata only)","Envelope only; no circuitry or control logic"
+"QX0-300","Deck standoff","4","harness/connectors/fasteners/passives","Synthetic benchmark polymer (metadata only)","Inert fastener proxy"
+"QX0-400","Bench canopy","1","airframe","Synthetic benchmark polymer (metadata only)","Inert enclosure geometry"
+"QX0-410","Landing rail","2","airframe","Synthetic benchmark polymer (metadata only)","Bench support only"
+"QX0-500","Battery envelope","1","battery","Synthetic benchmark polymer (metadata only)","Envelope only; no electrical specification"
+"QX0-600","Controller envelope","1","flight-controller PCBA","Synthetic benchmark polymer (metadata only)","Envelope only; no electronics or firmware"
+"QX0-700","Sensor pod proxy","1","sensor pod / thermal core","Synthetic benchmark polymer (metadata only)","Solid placeholder; no sensing capability"
+"QX0-800","GNSS / datalink mast proxy","1","GNSS / datalink","Synthetic benchmark polymer (metadata only)","Solid placeholder; no radio capability"
