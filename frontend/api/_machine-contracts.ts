@@ -68,4 +68,3 @@ export function serviceUrl(base: string, path: string): string {
   const normalized = base.endsWith('/') ? base : `${base}/`;
   return new URL(path.replace(/^\//, ''), normalized).toString();
 }
-

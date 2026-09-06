@@ -207,4 +207,3 @@ export function createCandidateHandler(overrides: Partial<RuntimeDependencies> =
 }
 
 export default createCandidateHandler();
-

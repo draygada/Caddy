@@ -50,4 +50,3 @@ export function createNowHandler(env?: RuntimeEnv) {
 }
 
 export default createNowHandler();
-
