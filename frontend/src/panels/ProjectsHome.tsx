@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore, INTAKE_DEFAULT, intakeIncomplete, type Intake } from '../store';
 import { IntakeForm } from './IntakeForm';
 import { DesignPreview } from './DesignPreview';
@@ -15,6 +15,12 @@ export function ProjectsHome() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [intake, setIntake] = useState<Intake>(INTAKE_DEFAULT);
+  useEffect(() => {
+    if (!creating) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setCreating(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [creating]);
 
   return (
     <div className="h-full min-h-0 flex flex-col bg-bg text-ink">
@@ -36,9 +42,10 @@ export function ProjectsHome() {
           </div>
 
           {creating && (
-            <div className="panel">
-              <div className="panel-head"><div className="panel-title">New project <span className="sub">· the use case comes first</span></div><button onClick={() => setCreating(false)} className="btn">Cancel</button></div>
-              <div className="p-4 grid gap-4">
+            <div className="fixed inset-0 z-[40] bg-scrim flex items-center justify-center p-4" onMouseDown={() => setCreating(false)}>
+            <div role="dialog" aria-label="New project" onMouseDown={(e) => e.stopPropagation()} className="panel w-full max-w-[820px] max-h-full flex flex-col shadow-[0_16px_40px_rgba(0,0,0,.22)]">
+              <div className="panel-head"><div className="panel-title">New project <span className="sub">· the use case comes first</span></div><button onClick={() => setCreating(false)} className="btn">Cancel · Esc</button></div>
+              <div className="p-4 grid gap-4 overflow-auto">
                 <div className="grid grid-cols-[1fr_2fr] gap-3 text-[13px]">
                   <label className="grid gap-1 text-muted">project name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Kestrel v2" className="field" autoFocus /></label>
                   <label className="grid gap-1 text-muted">what are you building?<input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="fixed-wing survey drone with a thermal payload" className="field" /></label>
@@ -55,6 +62,7 @@ export function ProjectsHome() {
                   </div>
                 </div>
               </div>
+            </div>
             </div>
           )}
 
