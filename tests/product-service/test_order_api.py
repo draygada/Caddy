@@ -279,3 +279,114 @@ def test_fastapi_router_exposes_only_recording_state_routes(tmp_path: Path) -> N
         "/api/orders/receipts/close",
         "/api/orders/audit/verify",
     }
+
+
+def test_inline_package_and_state_token_survive_every_cold_instance(tmp_path: Path) -> None:
+    relative, manifest_hash = write_package(tmp_path)
+    status, validated = OrderApiRuntime(tmp_path, CANDIDATE).validate_package(request(relative, manifest_hash))
+    assert status == 200
+    dispatch = dispatch_request(relative, manifest_hash, recording_outcome="DISPATCHED")
+    dispatch.pop("manifest_relative_path")
+    dispatch["package_envelope"] = validated["package_envelope"]
+
+    status, dispatched = OrderApiRuntime(None, CANDIDATE).dispatch_recording(dispatch)
+    assert status == 200
+    assert dispatched["state_token"]["schema_version"] == "caddydaddy.order-state-token/1"
+    assert dispatched["state_token_sha256"] == dispatched["state_token"]["seal"]["state_sha256"]
+    receipt_id = dispatched["receipt"]["receipt_id"]
+
+    status, readback = OrderApiRuntime(None, CANDIDATE).read_receipt({
+        "candidate": CANDIDATE,
+        "receipt_id": receipt_id,
+        "state_token": dispatched["state_token"],
+    })
+    assert status == 200 and readback["is_latest"] is True
+
+    status, acknowledged = OrderApiRuntime(None, CANDIDATE).acknowledge({
+        "candidate": CANDIDATE,
+        "receipt_id": receipt_id,
+        "state_token": readback["state_token"],
+        "acknowledgement_ref": "evidence:cold-ack",
+        "actor_id": "actor:reviewer",
+        "occurred_at": NOW,
+    })
+    assert status == 200 and acknowledged["receipt"]["state"] == "ACKNOWLEDGED"
+
+    status, closed = OrderApiRuntime(None, CANDIDATE).close({
+        "candidate": CANDIDATE,
+        "receipt_id": acknowledged["receipt"]["receipt_id"],
+        "state_token": acknowledged["state_token"],
+        "actor_id": "actor:reviewer",
+        "occurred_at": NOW,
+        "resolution_ref": "evidence:cold-close",
+    })
+    assert status == 200 and closed["receipt"]["state"] == "CLOSED"
+    assert closed["state_token"]["state_sequence"] == 2
+    assert closed["runtime_boundary"]["external_effect"] == "NONE"
+
+
+def test_state_token_tamper_collision_and_stale_receipt_fail_closed(tmp_path: Path) -> None:
+    relative, manifest_hash = write_package(tmp_path)
+    runtime = OrderApiRuntime(tmp_path, CANDIDATE)
+    _, dispatched = runtime.dispatch_recording(
+        dispatch_request(relative, manifest_hash, recording_outcome="DISPATCHED")
+    )
+    token = dispatched["state_token"]
+
+    tampered = json.loads(json.dumps(token))
+    tampered["request"]["connector"]["route_ref"] = "supplier:tampered"
+    status, blocked = OrderApiRuntime(None, CANDIDATE).read_receipt({
+        "candidate": CANDIDATE,
+        "receipt_id": dispatched["receipt"]["receipt_id"],
+        "state_token": tampered,
+    })
+    assert status == 409 and blocked["diagnostic"]["code"] == "STATE_TOKEN_TAMPERED"
+
+    collision = dispatch_request(relative, manifest_hash, recording_outcome="DISPATCHED")
+    collision.update({"state_token": token, "route_ref": "supplier:collision"})
+    status, blocked = OrderApiRuntime(None, CANDIDATE).dispatch_recording(collision)
+    assert status == 409 and blocked["diagnostic"]["code"] == "IDEMPOTENCY_CONFLICT"
+
+    _, acknowledged = runtime.acknowledge({
+        "candidate": CANDIDATE,
+        "receipt_id": dispatched["receipt"]["receipt_id"],
+        "state_token": token,
+        "acknowledgement_ref": "evidence:ack",
+        "actor_id": "actor:reviewer",
+        "occurred_at": NOW,
+    })
+    status, blocked = OrderApiRuntime(None, CANDIDATE).close({
+        "candidate": CANDIDATE,
+        "receipt_id": dispatched["receipt"]["receipt_id"],
+        "state_token": acknowledged["state_token"],
+        "actor_id": "actor:reviewer",
+        "occurred_at": NOW,
+    })
+    assert status == 409 and blocked["diagnostic"]["code"] == "STALE_RECEIPT"
+
+
+def test_unknown_reconciliation_uses_only_sealed_client_state(tmp_path: Path) -> None:
+    relative, manifest_hash = write_package(tmp_path)
+    _, validated = OrderApiRuntime(tmp_path, CANDIDATE).validate_package(request(relative, manifest_hash))
+    dispatch = dispatch_request(relative, manifest_hash, recording_outcome="UNKNOWN")
+    dispatch.pop("manifest_relative_path")
+    dispatch["package_envelope"] = validated["package_envelope"]
+    _, unknown = OrderApiRuntime(None, CANDIDATE).dispatch_recording(dispatch)
+    transition = {
+        "candidate": CANDIDATE,
+        "receipt_id": unknown["receipt"]["receipt_id"],
+        "state_token": unknown["state_token"],
+        "actor_id": "actor:reviewer",
+        "occurred_at": NOW,
+    }
+    status, blocked = OrderApiRuntime(None, CANDIDATE).close(transition)
+    assert status == 409 and blocked["diagnostic"]["code"] == "UNKNOWN_RECONCILIATION_REQUIRED"
+    status, reconciled = OrderApiRuntime(None, CANDIDATE).reconcile_unknown({
+        **transition,
+        "resolution_ref": "evidence:cold-confirmed-not-sent",
+        "reconciled_send_effect": "NOT_SENT",
+    })
+    assert status == 200
+    assert reconciled["receipt"]["state"] == "CLOSED"
+    assert reconciled["receipt"]["retry_disposition"] == "SAFE_WITH_NEW_KEY"
+    assert reconciled["runtime_boundary"] == RUNTIME_BOUNDARY

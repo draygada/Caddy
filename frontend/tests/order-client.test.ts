@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { OrderClient, OrderServiceError, type OrderAuditEvent, type OrderEnvelope, type OrderReceipt } from '../src/lib/order-client';
+import { OrderClient, OrderServiceError, type OrderAuditEvent, type OrderEnvelope, type OrderReceipt, type OrderStateToken } from '../src/lib/order-client';
 
 const HASH_A = 'a'.repeat(64);
 const HASH_B = 'b'.repeat(64);
@@ -8,6 +8,115 @@ const candidate = { candidate_id: 'candidate:0.2', revision_id: 'revision:02', s
 const orderCandidate = { candidate_id: candidate.candidate_id, revision: candidate.revision_id, artifact_sha256: candidate.snapshot_sha256 };
 const event: OrderAuditEvent = { event_id: `order-event:${HASH_C}`, event_sha256: HASH_C, sequence: 0, event_type: 'ORDER_DISPATCHED', state: 'DISPATCHED', request_id: `order-request:${HASH_B}`, receipt_id: `order-receipt:${HASH_C}` };
 const receipt: OrderReceipt = { receipt_id: `order-receipt:${HASH_C}`, receipt_sha256: HASH_C, request_id: `order-request:${HASH_B}`, request_sha256: HASH_B, idempotency_key: 'demo-key', state: 'DISPATCHED', delivery_outcome: 'DISPATCHED', send_effect: 'SENT', retry_disposition: 'NOT_RETRYABLE', execution_mode: 'RECORDING_ONLY', external_effect: 'NONE', connector_reference: 'recording:demo-key', detail_code: 'RECORDED_DISPATCH_SIMULATION', created_at: '2026-09-05T18:00:00Z', supersedes_receipt_id: null };
+
+function canonical(value: unknown): string {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
+  if (typeof value === 'number' && Number.isInteger(value)) return String(value);
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonical(record[key])}`).join(',')}}`;
+}
+
+async function digest(value: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(canonical(value));
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function portableState(): Promise<OrderStateToken> {
+  const fileBytes = new TextEncoder().encode('fixture');
+  const fileHash = await digestBytes(fileBytes);
+  const manifestPreimage = {
+    schema_version: 'strafe.sealed-sourcing-package/1',
+    package_id: 'package:portable',
+    package_status: 'SEALED',
+    candidate: orderCandidate,
+    selections: [{ line_id: 'line:1', offer_id: 'offer:1', selected: true, offer_status: 'APPROVED', gate_state: 'CLEARED' }],
+    files: [{ path: 'bom.csv', byte_length: fileBytes.length, sha256: fileHash }],
+  };
+  const manifest = { ...manifestPreimage, seal: { algorithm: 'SHA-256', manifest_sha256: await digest(manifestPreimage) } };
+  const packagePreimage = {
+    schema_version: 'caddydaddy.order-package-envelope/1',
+    manifest,
+    files: [{ path: 'bom.csv', byte_length: fileBytes.length, sha256: fileHash, content_base64: btoa('fixture') }],
+  };
+  const packageEnvelope = { ...packagePreimage, seal: { algorithm: 'SHA-256', envelope_sha256: await digest(packagePreimage) } };
+  const dispatchInput = {
+    recording_outcome: 'DISPATCHED',
+    idempotency_key: 'demo-key',
+    route_ref: 'supplier:recording-demo',
+    actor_id: 'operator:browser',
+    occurred_at: '2026-09-05T18:00:00Z',
+    retry_of_request_id: null,
+  };
+  const requestPreimage = {
+    schema_version: 'strafe.order-dispatch-request/1',
+    idempotency_key: 'demo-key',
+    candidate: orderCandidate,
+    package: { package_id: 'package:portable', sealed_manifest_sha256: manifest.seal.manifest_sha256, selection_count: 1, file_count: 1 },
+    connector: { kind: 'RECORDING', connector_id: 'recording:v1', route_ref: 'supplier:recording-demo' },
+    execution_mode: 'RECORDING_ONLY',
+    created_at: '2026-09-05T18:00:00Z',
+    actor_id: 'operator:browser',
+    retry_of_request_id: null,
+  };
+  const requestHash = await digest(requestPreimage);
+  const requestRecord = { ...requestPreimage, request_id: `order-request:${requestHash}`, request_sha256: requestHash };
+  const receiptPreimage = {
+    schema_version: 'strafe.order-dispatch-receipt/1',
+    request_id: requestRecord.request_id,
+    request_sha256: requestHash,
+    idempotency_key: 'demo-key',
+    state: 'DISPATCHED',
+    delivery_outcome: 'DISPATCHED',
+    send_effect: 'SENT',
+    retry_disposition: 'NOT_RETRYABLE',
+    execution_mode: 'RECORDING_ONLY',
+    external_effect: 'NONE',
+    connector_reference: 'recording:demo-key',
+    detail_code: 'RECORDED_DISPATCH_SIMULATION',
+    created_at: '2026-09-05T18:00:00Z',
+    supersedes_receipt_id: null,
+  };
+  const receiptHash = await digest(receiptPreimage);
+  const receiptRecord = { ...receiptPreimage, receipt_id: `order-receipt:${receiptHash}`, receipt_sha256: receiptHash };
+  const eventPreimage = {
+    schema_version: 'strafe.order-audit-event/1',
+    sequence: 0,
+    previous_event_sha256: null,
+    event_type: 'ORDER_DISPATCHED',
+    state: 'DISPATCHED',
+    request_id: requestRecord.request_id,
+    receipt_id: receiptRecord.receipt_id,
+    actor_id: 'operator:browser',
+    occurred_at: '2026-09-05T18:00:00Z',
+    payload: { external_effect: 'NONE' },
+  };
+  const eventHash = await digest(eventPreimage);
+  const auditEvent = { ...eventPreimage, event_id: `order-event:${eventHash}`, event_sha256: eventHash };
+  const statePreimage = {
+    schema_version: 'caddydaddy.order-state-token/1',
+    candidate: orderCandidate,
+    package_envelope: packageEnvelope,
+    dispatch_input: dispatchInput,
+    dispatch_fingerprint_sha256: await digest(dispatchInput),
+    request: requestRecord,
+    receipts: [receiptRecord],
+    latest_receipt_id: receiptRecord.receipt_id,
+    audit_events: [auditEvent],
+    state_sequence: 0,
+    parent_state_sha256: null,
+  };
+  return {
+    ...statePreimage,
+    seal: { algorithm: 'SHA-256', state_sha256: await digest(statePreimage) },
+  } as OrderStateToken;
+}
+
+async function digestBytes(bytes: Uint8Array): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 function envelope(values: Partial<OrderEnvelope>): OrderEnvelope {
   return {
@@ -73,5 +182,38 @@ describe('recording-only order client', () => {
     blocked = true;
     await expect(client.close(receipt.receipt_id, 'operator:browser', '2026-09-05T18:00:00Z')).rejects.toMatchObject({ code: 'UNKNOWN_RECONCILIATION_REQUIRED' });
     expect(client.getLastValid()).toBe(valid);
+  });
+
+  it('revalidates, resumes, and carries portable state from a cold client', async () => {
+    const token = await portableState();
+    const calls: Record<string, unknown>[] = [];
+    const tokenReceipt = token.receipts[0] as unknown as OrderReceipt;
+    const tokenEvent = token.audit_events[0] as unknown as OrderAuditEvent;
+    const fetchImpl = vi.fn(async (_path: string | URL | Request, init?: RequestInit) => {
+      calls.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return new Response(JSON.stringify(envelope({
+        is_latest: true,
+        latest_receipt_id: token.latest_receipt_id,
+        request: token.request as unknown as OrderEnvelope['request'],
+        receipt: tokenReceipt,
+        audit_events: [tokenEvent],
+        state_token: token,
+        state_token_sha256: token.seal.state_sha256,
+      })), { status: 200 });
+    }) as unknown as typeof fetch;
+    const cold = new OrderClient(candidate, fetchImpl);
+    await cold.resume(token);
+    await cold.readReceipt(token.latest_receipt_id);
+    expect(calls[0].state_token).toEqual(token);
+    expect(cold.getStateToken()).toEqual(token);
+  });
+
+  it('rejects a tampered resumed token before any network request', async () => {
+    const token = await portableState();
+    token.dispatch_input.route_ref = 'supplier:tampered';
+    const fetchImpl = vi.fn() as unknown as typeof fetch;
+    const cold = new OrderClient(candidate, fetchImpl);
+    await expect(cold.resume(token)).rejects.toMatchObject({ code: 'ORDER_STATE_TAMPERED' });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
