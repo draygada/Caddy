@@ -1,0 +1,19 @@
+{
+  "schema_version": "caddydaddy.anthropic-outcome-ablation-evidence/1",
+  "recorded_at": "2026-09-06",
+  "candidate_before_fix": "d642c5300fd3b5933df390fd317293ba7a1f3906",
+  "branch": "ship/hardened-drone-candidate-0.2-20260906",
+  "model": "claude-sonnet-5",
+  "data_boundary": "PUBLIC_SYNTHETIC_ONLY",
+  "claim_ceiling": "Diagnostic evidence only; not a legal determination, transaction clearance, or production-readiness claim.",
+  "outcomes": [
+    {"case":"defense_specific_uav","execution":"hybrid_deterministic_proposal_live_advocate_judge","provider_attempts":2,"emitted_jurisdiction":"ITAR","emitted_classification":["USML VIII(a)(5)"],"verdict":"DIAGNOSTIC_SUCCESS_NOT_LEGAL_DETERMINATION"},
+    {"case":"civil_90_minute_uav_first_judge","execution":"hybrid_live_usml_judge","provider_attempts":1,"emitted_jurisdiction":"UNDETERMINED","emitted_classification":[],"verdict":"EXPECTED_FAIL_CLOSED"},
+    {"case":"civil_90_minute_uav_ccl_continuation","execution":"hybrid_live_ccl_advocate_judge","provider_attempts":2,"emitted_jurisdiction":"EAR99","emitted_classification":["EAR99"],"verdict":"INVALID_P0_COUNTEREXAMPLE","reason":"The live judge marked its challenge sustained and admitted 90 minutes exceeds one hour, but the pre-fix reconciler retained knocked_out and fell through."},
+    {"case":"ambiguous_module","execution":"fully_live","provider_attempts":2,"emitted_jurisdiction":"UNDETERMINED","emitted_classification":[],"verdict":"EXPECTED_AMBIGUITY"}
+  ],
+  "provider_attempt_ledger": {"fully_live_baseline":6,"preliminary_hybrid_timeout":1,"routing_only_corrections":0,"itar_and_first_civil_pass":3,"civil_ccl_continuation":2,"total":12,"authorized_ceiling":12},
+  "application_accounting": {"estimated_microusd_per_provider_attempt":250000,"estimated_provider_attempt_total_microusd":3000000,"authorized_ceiling_microusd":6000000,"provider_invoice":"UNKNOWN","hybrid_engine_ledgers_include_non_provider_fixture_calls":true},
+  "remediation": {"defect":"sustained challenge did not defeat a knocked_out ruling","post_fix_expected_status":"UNDETERMINED","code":"packages/classification/forge_classification/reconcile.py","regression":"tests/classification/test_engine.py::test_a_sustained_challenge_defeats_a_knocked_out_ruling"},
+  "cleanup": {"temporary_anthropic_key_deleted":true,"temporary_preview_deployments_removed":true,"stable_alias_changed":false,"preexisting_key_touched":false,"local_key_bridge_bytes":0,"local_key_bridge_mode":"000"}
+}

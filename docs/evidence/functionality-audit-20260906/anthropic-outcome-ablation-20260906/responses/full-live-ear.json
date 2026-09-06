@@ -1,0 +1,111 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "cand:550e728a9ba6fad6bf0889260a505bd1a28baa94fa83b703601bde5721f4001e",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML VIII(a)(9)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "USML VIII(a)(9) captures unmanned aerial vehicles/systems with specific endurance/altitude or other performance parameters not otherwise enumerated in VIII(a); the 90-minute endurance and 120 km range are near common UAV control thresholds, warranting a specially-designed check even though it is a civil-origin platform.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:7b7ffeeb562c926c01451c6ec2bb217379bc8b5f7ed0935fd458e035ef241a0e",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML VIII(a)(1)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "UAV is an aircraft; USML VIII(a)(1) covers military aircraft/UAVs, but this article is a non-military civil pipeline-inspection UAV with contemporaneous civil development, so military design/use is absent.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:90289934c6022e6034974c54ad71dfd2d766dc65eff4d0b81e8e771b806409ce",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML VIII(h)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "VIII(h) covers components, parts, accessories specially designed for defense articles in VIII(a)-(g); since the UAV as a whole is being evaluated, a reviewer might ask whether any sub-elements are specially designed military parts, though facts state no defense article, weapon, controlled sensor, or inertial equipment is incorporated.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:ba2ed13f0818a531a976e9d2134001915ce7dbf54e16ec483335b13a8c237c1e",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML XI(a)(3)(iii)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "Category XI(a) covers military electronics including certain UAV control/beyond-line-of-sight systems; the fact 'controlled_flight_beyond_direct_natural_vision = true' raises a nearest-miss concern about specially-designed military avionics/control links, though facts state no military design and no controlled inertial/sensor items are incorporated.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:64a6992d5467750b4e969d88bdb91d6612565e914f2020da49e890b30f5c3370",
+      "challenge": null,
+      "elements": [],
+      "origin": "floor",
+      "provision": "EAR99",
+      "reference_notes": [],
+      "stage": "residual",
+      "status": "not_reached",
+      "why_considered": "The residual is seated on every board; it is elected only when every specific candidate is knocked out.",
+      "why_rejected": null
+    }
+  ],
+  "determination": {
+    "basis": [
+      "USML specially-designed read: incomplete or conflicting; the ordered review cannot advance",
+      "QUESTION {\"action\":\"provide_screening_facts\",\"deadline\":\"before_classification_rerun\",\"missing_fact_topics\":[\"function\",\"performance\",\"design_origin_and_modifications\",\"intended_end_item\",\"civil_or_military_application\"],\"owner\":\"classification_requester\",\"question\":\"What verified item facts are available for the unresolved USML review?\",\"question_id\":\"Q-001\",\"scope\":\"USML\"}"
+    ],
+    "ccl_step": "not_reached",
+    "classification": [],
+    "jurisdiction": "UNDETERMINED",
+    "open_candidates": [],
+    "usml_step": "undetermined"
+  },
+  "item": {
+    "item_kind": "commodity",
+    "part_revision_id": null
+  },
+  "pack_sha256": "21818b45bcc1e5a23781cf569565cbcf9ea74a264d36a31b47975f38090f760e",
+  "provenance": {
+    "budget": {
+      "calls_cap": 4,
+      "calls_used": 2,
+      "cost_cap_microusd": 2000000,
+      "cost_used_microusd": 500000
+    },
+    "calls": [
+      {
+        "cost_microusd": 250000,
+        "prompt_sha256": "bdd654dccdcdb38fe3223883b30c0ef6c15f9abca242dce7b81886f8f740f219",
+        "provision": null,
+        "response_sha256": null,
+        "stage": "usml_propose"
+      },
+      {
+        "cost_microusd": 250000,
+        "prompt_sha256": "e47e70a52256c6b299bb99b67faac4f81f95ce0e169c19952adac5c55525dc81",
+        "provision": null,
+        "response_sha256": "3795a1653718c0a3858731f93420832e04fb0a09193425d5278526e05ed891a3",
+        "stage": "usml_propose"
+      }
+    ],
+    "dropped_candidates": [],
+    "model": "LiveAnthropicModel",
+    "reference_notes": [
+      "USML proposal unavailable: provider error: APITimeoutError"
+    ]
+  },
+  "schema_version": "forge-classification.determination/1",
+  "snapshot_sha256": "839a36c48beeffabf6f3f78e490f5213852df8528c3490acece7f6a44f1c754e"
+}

@@ -1,0 +1,111 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "cand:48337c784ade4c165de8dc12e0a86c65bd5228b9ef8eeb5463d5a79a64548537",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML XII(c)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "The UAV is specially designed to carry and integrate a military target-designation payload; target-designation and related fire-control/guidance equipment is enumerated in USML XII(c), making the platform's integration purpose a plausible nearest-miss even though the article itself is the airframe, not the designation payload.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:901d0d87ecb4a1c39ded4f2e2f5341626f40a852c0e24cb029f1414213b3f2aa",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML VIII(h)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "USML VIII(h) covers parts, components, accessories, attachments, and associated equipment specially designed for USML VIII aircraft; the airframe's power conditioning, payload interfaces, and flight software specially designed around the defense article could be assessed as specially-designed components under this paragraph.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:b442c06857b2fd030b0f8c6d8607faae9e1e5f5895a79a22b82f19ef5ebdf60a",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML IV(a)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "Although described as an unmanned aerial vehicle rather than a guided missile, the fact pattern's emphasis on integration with a military targeting defense article and lack of civil equivalent raises the possibility a reviewer would check whether the vehicle instead meets the guided-missile/rocket description in USML IV(a), which must be ruled out.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:ca6e5667268abd2aa81057dfcd7c0a09cc29ab18dd33570f26b6fd6706102f3d",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML VIII(a)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "Item is a complete unmanned aerial vehicle (UAV); military aircraft and unmanned aerial vehicles specially designed for military use fall under USML VIII(a), warranting review as a nearest-miss even though this UAV is defined by its payload integration rather than airframe characteristics.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:dccbfc187594929530b1b007d58c9b3400d0188c8013f8479336681a127c3226",
+      "challenge": null,
+      "elements": [],
+      "origin": "floor",
+      "provision": "EAR99",
+      "reference_notes": [],
+      "stage": "residual",
+      "status": "not_reached",
+      "why_considered": "The residual is seated on every board; it is elected only when every specific candidate is knocked out.",
+      "why_rejected": null
+    }
+  ],
+  "determination": {
+    "basis": [
+      "USML specially-designed read: incomplete or conflicting; the ordered review cannot advance",
+      "QUESTION {\"action\":\"provide_screening_facts\",\"deadline\":\"before_classification_rerun\",\"missing_fact_topics\":[\"function\",\"performance\",\"design_origin_and_modifications\",\"intended_end_item\",\"civil_or_military_application\"],\"owner\":\"classification_requester\",\"question\":\"What verified item facts are available for the unresolved USML review?\",\"question_id\":\"Q-001\",\"scope\":\"USML\"}"
+    ],
+    "ccl_step": "not_reached",
+    "classification": [],
+    "jurisdiction": "UNDETERMINED",
+    "open_candidates": [],
+    "usml_step": "undetermined"
+  },
+  "item": {
+    "item_kind": "commodity",
+    "part_revision_id": null
+  },
+  "pack_sha256": "21818b45bcc1e5a23781cf569565cbcf9ea74a264d36a31b47975f38090f760e",
+  "provenance": {
+    "budget": {
+      "calls_cap": 4,
+      "calls_used": 2,
+      "cost_cap_microusd": 2000000,
+      "cost_used_microusd": 500000
+    },
+    "calls": [
+      {
+        "cost_microusd": 250000,
+        "prompt_sha256": "06039525059b64e51e7543488c529f5d9ee159a44ef6456eef8ce5deea71af91",
+        "provision": null,
+        "response_sha256": null,
+        "stage": "usml_propose"
+      },
+      {
+        "cost_microusd": 250000,
+        "prompt_sha256": "a10eab8ab5ca285309aefb838efd52ff2afa2c1eb6f5650b896fdd34db1c4731",
+        "provision": null,
+        "response_sha256": "5fd1e7626aa5d214e382f4c9af3f1de9097951438e2c9602b95c503887ad2af0",
+        "stage": "usml_propose"
+      }
+    ],
+    "dropped_candidates": [],
+    "model": "LiveAnthropicModel",
+    "reference_notes": [
+      "USML proposal unavailable: provider error: APITimeoutError"
+    ]
+  },
+  "schema_version": "forge-classification.determination/1",
+  "snapshot_sha256": "09a39bd44bfcb6fd5b4feeedc207dfe675704480ff6c7cc509a0466706844f29"
+}

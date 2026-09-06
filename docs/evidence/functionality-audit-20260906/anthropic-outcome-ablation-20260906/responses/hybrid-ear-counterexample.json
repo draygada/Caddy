@@ -1,0 +1,215 @@
+{
+  "case": "ear",
+  "method": {
+    "claim_ceiling": "diagnostic candidate-adjudication ablation; not end-to-end classification or legal determination",
+    "proposal_stages": "deterministic_fixture",
+    "stage_routing": "see scripted_engine_calls and provider_calls; only listed provider_calls reached Anthropic"
+  },
+  "provider_calls": [
+    "advocate",
+    "judge"
+  ],
+  "result": {
+    "candidates": [
+      {
+        "candidate_id": "cand:c2350962ce1a743b0abfb6d477125a72be85c52d7d4a68e6eea60b1b08b4ab0c",
+        "challenge": {
+          "resolution": "rejected",
+          "text": "The civil-development assertion could be unreliable or incomplete."
+        },
+        "elements": [
+          {
+            "basis": "stated",
+            "citation": {
+              "end": 84,
+              "quote": "Unmanned aerial vehicles (UAVs) specially designed to incorporate a defense article;",
+              "start": 0,
+              "unit_key": "USML VIII(a)(5)",
+              "unit_sha256": "aae7912342129280098cf8950d46ad32502daa924a395b75dc2d299316c914d0"
+            },
+            "disposition": "not_met",
+            "element_id": "incorporates_defense_article",
+            "facts_relied_on": [
+              "incorporates_defense_article",
+              "military_design",
+              "development_purpose",
+              "contemporaneous_civil_development_documents"
+            ],
+            "unit_key": "USML VIII(a)(5)"
+          }
+        ],
+        "origin": "proposed",
+        "provision": "USML VIII(a)(5)",
+        "reference_notes": [],
+        "stage": "usml_enumerated",
+        "status": "knocked_out",
+        "why_considered": "A complete UAV must be checked for special design to incorporate a defense article before the CCL is reached.",
+        "why_rejected": "The pinned paragraph requires the UAV to be specially designed to incorporate a defense article; the synthetic facts expressly state the opposite and identify contemporaneous civil development records."
+      },
+      {
+        "candidate_id": "cand:23e61ad23bdc87dfec5ef9e59290efa45d86b8c0fd920dfa830f1065cc15d6a1",
+        "challenge": {
+          "resolution": "sustained",
+          "text": "Challenge: 90 minutes (1.5 hours) is greater than 1 hour, so the endurance element is met, not not_met, meaning the knocked_out ruling is erroneous and the provision should instead be supported."
+        },
+        "elements": [
+          {
+            "basis": "stated",
+            "citation": null,
+            "disposition": "met",
+            "element_id": "non-military-uav",
+            "facts_relied_on": [
+              "article_type",
+              "military_design"
+            ],
+            "unit_key": "9A012"
+          },
+          {
+            "basis": "stated",
+            "citation": {
+              "end": 153,
+              "quote": "“UAVs” or unmanned “airships”, designed to have controlled flight out of the direct 'natural vision' of the 'operator' and having any of the following:",
+              "start": 0,
+              "unit_key": "9A012.a",
+              "unit_sha256": "3db603da556acc552b46b3da15367ef748b2b72f33570a5739f269eb96df1dcf"
+            },
+            "disposition": "met",
+            "element_id": "designed-for-controlled-flight-beyond-natural-vision",
+            "facts_relied_on": [
+              "controlled_flight_beyond_direct_natural_vision",
+              "article_type"
+            ],
+            "unit_key": "9A012.a"
+          },
+          {
+            "basis": "stated",
+            "citation": {
+              "end": 44,
+              "quote": "A maximum 'endurance' of 1 hour or greater;",
+              "start": 0,
+              "unit_key": "9A012.a.2",
+              "unit_sha256": "c58152db33ea204a321b2c4d0d693a5fec453c5eb182bbc910f97869878bde28"
+            },
+            "disposition": "not_met",
+            "element_id": "maximum-endurance-1-hour-or-greater",
+            "facts_relied_on": [
+              "maximum_endurance_minutes_isa_sea_level_zero_wind"
+            ],
+            "unit_key": "9A012.a.2"
+          }
+        ],
+        "origin": "proposed",
+        "provision": "9A012.a.2",
+        "reference_notes": [
+          "citation struck on element endurance-measured-under-isa-sea-level-zero-wind: span_not_found",
+          "citation struck on element operator-natural-vision-definitions-satisfied: span_not_found",
+          "citation struck on element non-military-uav: span_not_found"
+        ],
+        "stage": "other_ccl",
+        "status": "knocked_out",
+        "why_considered": "The complete civil UAV is designed for flight beyond direct natural vision and has 90-minute endurance.",
+        "why_rejected": "The stated maximum endurance is 90 minutes, i.e., 1.5 hours, which the advocate treats as meeting the 1-hour-or-greater threshold. However, 90 minutes (1.5 hours) is indeed greater than 1 hour, so on its face the numeric comparison favors 'met.' Re-examining: the fact clearly states 90 minutes = 1.5 hours, which is greater than the 1-hour threshold in 9A012.a.2. There is no basis in the facts to find this not met — the endurance figure exceeds the threshold under the exact measurement conditions (ISA sea-level, zero-wind) specified by the Technical Note, matching the fact's own stated conditions. Correcting course: this element is in fact met, not not_met, so the knocked_out basis asserted above is unsupported. All chapeau and technical elements are satisfied on the facts given, so the provision is properly supported rather than knocked out.\",\"challenge\":{\"text\":\"Challenge: 90 minutes (1.5 hours) is greater than 1 hour, so the endurance element is met, not not_met, meaning the knocked_out ruling is erroneous and the provision should instead be supported.\",\"resolution\":\"sustained\"}}"
+      },
+      {
+        "candidate_id": "cand:2c2139f57cd0579e1bd2987ac9c957b56b89e889b9db5250e3d6f31405088007",
+        "challenge": null,
+        "elements": [],
+        "origin": "floor",
+        "provision": "EAR99",
+        "reference_notes": [],
+        "stage": "residual",
+        "status": "supported",
+        "why_considered": "The residual is seated on every board; it is elected only when every specific candidate is knocked out.",
+        "why_rejected": null
+      }
+    ],
+    "determination": {
+      "basis": [
+        "USML specially-designed read: released; proposal and routed candidates agree",
+        "USML: negative — every candidate knocked out on a cited element; the item is subject to the EAR",
+        "CCL proposal: reference-valid candidate set admitted",
+        "CCL specially-designed read: not required; no such candidate surfaced",
+        "CCL six_hundred_series: no candidate surfaced",
+        "CCL specially_designed_ear: no candidate surfaced",
+        "CCL other_ccl: negative — every candidate knocked out on a cited element",
+        "EAR99: elected only after a valid CCL proposal and the completed ordered review left no specific candidate"
+      ],
+      "ccl_step": "all_knocked_out",
+      "classification": [
+        "EAR99"
+      ],
+      "jurisdiction": "EAR99",
+      "open_candidates": [],
+      "usml_step": "negative"
+    },
+    "item": {
+      "item_kind": "commodity",
+      "part_revision_id": null
+    },
+    "pack_sha256": "21818b45bcc1e5a23781cf569565cbcf9ea74a264d36a31b47975f38090f760e",
+    "provenance": {
+      "budget": {
+        "calls_cap": 6,
+        "calls_used": 6,
+        "cost_cap_microusd": 1500000,
+        "cost_used_microusd": 1500000
+      },
+      "calls": [
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "bdd654dccdcdb38fe3223883b30c0ef6c15f9abca242dce7b81886f8f740f219",
+          "provision": null,
+          "response_sha256": "7be796444fcfee2328e816fdc0f7111082347a674863b3cb2cfee1214811fbb4",
+          "stage": "usml_propose"
+        },
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "a41cb613c5271f8d766877f8a6ce11a16c161d3a4938c91ec48e615debb70f6c",
+          "provision": "USML VIII(a)(5)",
+          "response_sha256": "39fd57604924c052da62a6abdac54383cda9d14b2d3f02ea943593bf1433fa04",
+          "stage": "advocate"
+        },
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "bc13d3b88799c5686fa59ee0f43bc4956f776983ed4f6869f88a5702b139b234",
+          "provision": "USML VIII(a)(5)",
+          "response_sha256": "5bab5e0292415b189ada8be8aa29cc1ff2b11a3086c190c1571b62ebbf6288a9",
+          "stage": "judge"
+        },
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "5e96d2c834ecc577eada8c1cc382d883ac26a9f4f0458d835e1b4b2fb9767dba",
+          "provision": null,
+          "response_sha256": "25d682e5be97055a71b7f83e1db366421c6fb429dc0ff80a67efe2b6916b7717",
+          "stage": "ccl_propose"
+        },
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "c1d90d35fd370eea1dcd7bc8c0a64109493b955f2f121cb795f462208544a413",
+          "provision": "9A012.a.2",
+          "response_sha256": "45d3eaf8ba0385b4c986e592c5e291f8e3e5f9f1a6c1b5a9eed9ba31319750fc",
+          "stage": "advocate"
+        },
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "d2134afe164ba6b7e669cda2420a490764ed03b41ba828715801d3b8b8d1db60",
+          "provision": "9A012.a.2",
+          "response_sha256": "5e5da154cd0ee97132706750b49150627c87539f944b14664934a14309ee9007",
+          "stage": "judge"
+        }
+      ],
+      "dropped_candidates": [],
+      "model": "HybridAblationModel",
+      "reference_notes": []
+    },
+    "schema_version": "forge-classification.determination/1",
+    "snapshot_sha256": "839a36c48beeffabf6f3f78e490f5213852df8528c3490acece7f6a44f1c754e"
+  },
+  "schema_version": "caddydaddy.anthropic-outcome-ablation/1",
+  "scripted_engine_calls": [
+    "usml_propose",
+    "advocate",
+    "judge",
+    "ccl_propose"
+  ]
+}

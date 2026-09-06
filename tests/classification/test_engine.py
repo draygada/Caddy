@@ -181,6 +181,20 @@ def test_a_sustained_challenge_defeats_a_supported_ruling():
     assert out["determination"]["jurisdiction"] == "UNDETERMINED"
 
 
+def test_a_sustained_challenge_defeats_a_knocked_out_ruling():
+    m = ScriptedModel({
+        "usml_propose": [propose("USML XI(c)(2)")],
+        ("advocate", "USML XI(c)(2)"): [advocate("USML XI(c)(2)", [element("USML XI(c)(2)", "indeterminate")])],
+        ("judge", "USML XI(c)(2)"): [judge("USML XI(c)(2)", "knocked_out", [element("USML XI(c)(2)", "not_met", quote="Printed Circuit Boards")],
+                                             challenge={"text": "The failed element is actually met by the stated facts.", "resolution": "sustained"})],
+    })
+    out = run(m)
+    c = cand(out, "USML XI(c)(2)")
+    assert c["status"] == "undetermined"
+    assert out["determination"]["jurisdiction"] == "UNDETERMINED"
+    assert any("sustained challenge defeats the knocked_out ruling" in n for n in c["reference_notes"])
+
+
 def test_a_supported_ruling_with_an_open_element_is_undetermined():
     m = ScriptedModel({
         "usml_propose": [propose("USML XI(c)(2)")],

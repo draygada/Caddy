@@ -1,0 +1,117 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "cand:4e93130a1e25317b8d057d61013755b5d27d054b9987a6476dd7de57fd82b375",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML XII(c)(1)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "Fire control, guidance, and related equipment category could be implicated if the payload-interface module integrates guidance-related sensor or inertial equipment, a possibility left open by the unresolved facts on controlled sensors/inertial items.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:77f32b3ada3bd7ca43798bf2da176a8bebc7b390f13fcb23a4cf8f1d20daf4a2",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML XI(a)(1)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "Military electronics category covers specially designed electronic equipment for military systems; a payload-interface/flight-control module could be viewed as controlled electronic equipment if incorporating controlled sensors, encryption, or inertial items, which is unresolved here.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:7b1ee025a56c00295375956dd7c800786c675849db2b2fa2629ee2d870bc63e5",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML VIII(a)(1)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "Item is described as an unmanned-aircraft flight-control and payload-interface module; USML VIII(a) covers unmanned aircraft and related articles, so a control module for a UAS is a plausible enumerated or SD match if the host aircraft/mission were military.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:b4b5cdde90b3fbad3f47a17939ca9f11b80d524b1ee7fe3cb2393384e82ad9b1",
+      "challenge": null,
+      "elements": [],
+      "origin": "proposed",
+      "provision": "USML VIII(h)(1)",
+      "reference_notes": [],
+      "stage": "usml_enumerated",
+      "status": "not_reached",
+      "why_considered": "USML VIII(h) catalogs specially designed components, parts, and accessories for military aircraft, including flight control systems; a flight-control module could fall here if specially designed for a defense article, though development history/military nexus is unknown.",
+      "why_rejected": null
+    },
+    {
+      "candidate_id": "cand:a7077735436280e79c0fcd5cfa7adeb8687ed7ec7e8d8c9956b9d09b1ad5e381",
+      "challenge": null,
+      "elements": [],
+      "origin": "floor",
+      "provision": "EAR99",
+      "reference_notes": [],
+      "stage": "residual",
+      "status": "not_reached",
+      "why_considered": "The residual is seated on every board; it is elected only when every specific candidate is knocked out.",
+      "why_rejected": null
+    }
+  ],
+  "determination": {
+    "basis": [
+      "USML specially-designed read: incomplete or conflicting; the ordered review cannot advance",
+      "QUESTION {\"action\":\"provide_verified_fact\",\"deadline\":\"before_classification_rerun\",\"fact_path\":\"controlled_flight_beyond_direct_natural_vision\",\"fact_state\":\"recorded_unknown\",\"owner\":\"classification_requester\",\"question\":\"What is the verified value and source for controlled_flight_beyond_direct_natural_vision?\",\"question_id\":\"Q-001\",\"scope\":\"USML\"}",
+      "QUESTION {\"action\":\"provide_verified_fact\",\"deadline\":\"before_classification_rerun\",\"fact_path\":\"controlled_sensor_encryption_or_inertial_items\",\"fact_state\":\"recorded_unknown\",\"owner\":\"classification_requester\",\"question\":\"What is the verified value and source for controlled_sensor_encryption_or_inertial_items?\",\"question_id\":\"Q-002\",\"scope\":\"USML\"}",
+      "QUESTION {\"action\":\"provide_verified_fact\",\"deadline\":\"before_classification_rerun\",\"fact_path\":\"host_platform\",\"fact_state\":\"recorded_unknown\",\"owner\":\"classification_requester\",\"question\":\"What is the verified value and source for host_platform?\",\"question_id\":\"Q-003\",\"scope\":\"USML\"}",
+      "QUESTION {\"action\":\"provide_verified_fact\",\"deadline\":\"before_classification_rerun\",\"fact_path\":\"incorporates_defense_article\",\"fact_state\":\"recorded_unknown\",\"owner\":\"classification_requester\",\"question\":\"What is the verified value and source for incorporates_defense_article?\",\"question_id\":\"Q-004\",\"scope\":\"USML\"}",
+      "QUESTION {\"action\":\"provide_verified_fact\",\"deadline\":\"before_classification_rerun\",\"fact_path\":\"maximum_endurance\",\"fact_state\":\"recorded_unknown\",\"owner\":\"classification_requester\",\"question\":\"What is the verified value and source for maximum_endurance?\",\"question_id\":\"Q-005\",\"scope\":\"USML\"}",
+      "QUESTION {\"action\":\"provide_verified_fact\",\"deadline\":\"before_classification_rerun\",\"fact_path\":\"maximum_range\",\"fact_state\":\"recorded_unknown\",\"owner\":\"classification_requester\",\"question\":\"What is the verified value and source for maximum_range?\",\"question_id\":\"Q-006\",\"scope\":\"USML\"}",
+      "QUESTION {\"action\":\"provide_verified_fact\",\"deadline\":\"before_classification_rerun\",\"fact_path\":\"military_or_civil_development\",\"fact_state\":\"recorded_unknown\",\"owner\":\"classification_requester\",\"question\":\"What is the verified value and source for military_or_civil_development?\",\"question_id\":\"Q-007\",\"scope\":\"USML\"}"
+    ],
+    "ccl_step": "not_reached",
+    "classification": [],
+    "jurisdiction": "UNDETERMINED",
+    "open_candidates": [],
+    "usml_step": "undetermined"
+  },
+  "item": {
+    "item_kind": "commodity",
+    "part_revision_id": null
+  },
+  "pack_sha256": "21818b45bcc1e5a23781cf569565cbcf9ea74a264d36a31b47975f38090f760e",
+  "provenance": {
+    "budget": {
+      "calls_cap": 4,
+      "calls_used": 2,
+      "cost_cap_microusd": 2000000,
+      "cost_used_microusd": 500000
+    },
+    "calls": [
+      {
+        "cost_microusd": 250000,
+        "prompt_sha256": "52e7a41fd243e401675cb2751806ac1ad3f6094a2884ac8cf2caf5d0319723e0",
+        "provision": null,
+        "response_sha256": null,
+        "stage": "usml_propose"
+      },
+      {
+        "cost_microusd": 250000,
+        "prompt_sha256": "9b122862267164728d83ac1476182c5e5cec8e734cb138cca4d236f09f2091ee",
+        "provision": null,
+        "response_sha256": "b0f892e7c72f40d4f3a2f9889b0fb5b2b13974fb3befdb1641eba8fe85642a31",
+        "stage": "usml_propose"
+      }
+    ],
+    "dropped_candidates": [],
+    "model": "LiveAnthropicModel",
+    "reference_notes": [
+      "USML proposal unavailable: provider error: APITimeoutError"
+    ]
+  },
+  "schema_version": "forge-classification.determination/1",
+  "snapshot_sha256": "8e768cf3518b3dd26dbfd6c2696e340f5b39b8e83ccf98eadd3c1c6295246501"
+}

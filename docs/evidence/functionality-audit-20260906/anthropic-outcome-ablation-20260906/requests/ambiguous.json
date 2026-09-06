@@ -1,0 +1,21 @@
+{
+  "product_or_part": "PUBLIC SYNTHETIC hypothetical: an unmanned-aircraft flight-control and payload-interface module offered for an unspecified future platform. The available intake does not establish whether it was developed for a defense article, a military mission, or general civil use; whether contemporaneous dual-use or general-purpose development records exist; whether the host aircraft flies beyond direct natural vision; its endurance or range; or whether controlled sensors, encryption, or inertial equipment are incorporated. The hypothetical contains no real technical data.",
+  "facts": {
+    "data_boundary": "PUBLIC_SYNTHETIC_ONLY",
+    "article_type": "flight-control and payload-interface module",
+    "host_platform": "unknown",
+    "military_or_civil_development": "unknown",
+    "incorporates_defense_article": "unknown",
+    "development_documentation": "not provided",
+    "controlled_flight_beyond_direct_natural_vision": "unknown",
+    "maximum_endurance": "unknown",
+    "maximum_range": "unknown",
+    "controlled_sensor_encryption_or_inertial_items": "unknown"
+  },
+  "item_kind": "commodity",
+  "budget": {
+    "calls_cap": 4,
+    "cost_cap_microusd": 2000000,
+    "estimated_cost_microusd": 250000
+  }
+}

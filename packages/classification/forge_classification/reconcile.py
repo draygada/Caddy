@@ -1,8 +1,9 @@
 """Records outrank summaries. Every rule here is a pure function over recorded per-provision rows.
 
-A knockout needs a verified citation on a failed element; a supported ruling needs every element met
-and no sustained challenge; an advocate cannot knock out its own provision; a model's silence is
-never a finding; a code the pack cannot resolve is generalised in prose and refused in structure.
+A knockout needs a verified citation on a failed element; a supported ruling needs every element met.
+A sustained self-challenge defeats either dispositive ruling; an advocate cannot knock out its own
+provision; a model's silence is never a finding; a code the pack cannot resolve is generalised in prose
+and refused in structure.
 """
 
 from __future__ import annotations
@@ -68,6 +69,9 @@ def reconcile_ruling(ruling: object, elements: list[dict], challenge: dict | Non
     cited_failure = any(e["disposition"] == "not_met" and e["citation"] for e in elements)
     open_elements = any(e["disposition"] != "met" for e in elements)
     sustained = bool(challenge and challenge.get("resolution") == "sustained")
+    if sustained and ruling in ("knocked_out", "supported"):
+        notes.append(f"a sustained challenge defeats the {ruling} ruling; reconciled to undetermined")
+        return "undetermined", notes
     if ruling == "knocked_out":
         if not cited_failure:
             notes.append("judge ruled knocked_out without a verified citation on a failed element; reconciled to undetermined")
@@ -79,9 +83,6 @@ def reconcile_ruling(ruling: object, elements: list[dict], challenge: dict | Non
             return "undetermined", notes
         if open_elements:
             notes.append("judge ruled supported with an element not met or indeterminate; reconciled to undetermined")
-            return "undetermined", notes
-        if sustained:
-            notes.append("a sustained challenge defeats the supported ruling; reconciled to undetermined")
             return "undetermined", notes
         return "supported", notes
     if ruling != "undetermined":

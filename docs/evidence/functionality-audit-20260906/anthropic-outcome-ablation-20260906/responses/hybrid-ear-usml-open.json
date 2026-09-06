@@ -1,0 +1,143 @@
+{
+  "case": "ear",
+  "method": {
+    "advocate_and_judge": "LiveAnthropicModel",
+    "claim_ceiling": "diagnostic candidate-adjudication ablation; not end-to-end classification or legal determination",
+    "proposal_stages": "deterministic_fixture"
+  },
+  "provider_calls": [
+    "judge"
+  ],
+  "result": {
+    "candidates": [
+      {
+        "candidate_id": "cand:c2350962ce1a743b0abfb6d477125a72be85c52d7d4a68e6eea60b1b08b4ab0c",
+        "challenge": null,
+        "elements": [
+          {
+            "basis": "stated",
+            "citation": null,
+            "disposition": "met",
+            "element_id": "1",
+            "facts_relied_on": [
+              "article_type"
+            ],
+            "unit_key": "USML VIII(a)(5)"
+          },
+          {
+            "basis": "stated",
+            "citation": null,
+            "disposition": "not_met",
+            "element_id": "2",
+            "facts_relied_on": [
+              "incorporates_defense_article",
+              "military_design",
+              "development_purpose",
+              "contemporaneous_civil_development_documents",
+              "controlled_sensor_or_inertial_items"
+            ],
+            "unit_key": "USML VIII(a)(5)"
+          },
+          {
+            "basis": "stated",
+            "citation": null,
+            "disposition": "indeterminate",
+            "element_id": "incorporates_defense_article",
+            "facts_relied_on": [
+              "incorporates_defense_article",
+              "military_design",
+              "development_purpose"
+            ],
+            "unit_key": "USML VIII(a)(5)"
+          }
+        ],
+        "origin": "proposed",
+        "provision": "USML VIII(a)(5)",
+        "reference_notes": [
+          "citation struck on element 1: span_not_found",
+          "citation struck on element 2: span_not_found",
+          "element incorporates_defense_article carried from the advocate: the judge did not address it",
+          "judge ruled knocked_out without a verified citation on a failed element; reconciled to undetermined"
+        ],
+        "stage": "usml_enumerated",
+        "status": "undetermined",
+        "why_considered": "A complete UAV must be checked for special design to incorporate a defense article before the CCL is reached.",
+        "why_rejected": null
+      },
+      {
+        "candidate_id": "cand:2c2139f57cd0579e1bd2987ac9c957b56b89e889b9db5250e3d6f31405088007",
+        "challenge": null,
+        "elements": [],
+        "origin": "floor",
+        "provision": "EAR99",
+        "reference_notes": [],
+        "stage": "residual",
+        "status": "not_reached",
+        "why_considered": "The residual is seated on every board; it is elected only when every specific candidate is knocked out.",
+        "why_rejected": null
+      }
+    ],
+    "determination": {
+      "basis": [
+        "USML specially-designed read: released; proposal and routed candidates agree",
+        "USML: open — a candidate could not be closed on the facts given; the CCL is not reached",
+        "QUESTION {\"action\":\"clarify_and_substantiate_fact\",\"deadline\":\"before_classification_rerun\",\"element_id\":\"incorporates_defense_article\",\"fact_path\":\"development_purpose\",\"fact_state\":\"present_but_insufficient\",\"owner\":\"classification_requester\",\"provision\":\"USML VIII(a)(5)\",\"question\":\"What is the verified value and source for development_purpose as it bears on USML VIII(a)(5) element incorporates_defense_article?\",\"question_id\":\"Q-001\",\"scope\":\"USML\"}",
+        "QUESTION {\"action\":\"clarify_and_substantiate_fact\",\"deadline\":\"before_classification_rerun\",\"element_id\":\"incorporates_defense_article\",\"fact_path\":\"incorporates_defense_article\",\"fact_state\":\"present_but_insufficient\",\"owner\":\"classification_requester\",\"provision\":\"USML VIII(a)(5)\",\"question\":\"What is the verified value and source for incorporates_defense_article as it bears on USML VIII(a)(5) element incorporates_defense_article?\",\"question_id\":\"Q-002\",\"scope\":\"USML\"}",
+        "QUESTION {\"action\":\"clarify_and_substantiate_fact\",\"deadline\":\"before_classification_rerun\",\"element_id\":\"incorporates_defense_article\",\"fact_path\":\"military_design\",\"fact_state\":\"present_but_insufficient\",\"owner\":\"classification_requester\",\"provision\":\"USML VIII(a)(5)\",\"question\":\"What is the verified value and source for military_design as it bears on USML VIII(a)(5) element incorporates_defense_article?\",\"question_id\":\"Q-003\",\"scope\":\"USML\"}"
+      ],
+      "ccl_step": "not_reached",
+      "classification": [],
+      "jurisdiction": "UNDETERMINED",
+      "open_candidates": [
+        "USML VIII(a)(5)"
+      ],
+      "usml_step": "undetermined"
+    },
+    "item": {
+      "item_kind": "commodity",
+      "part_revision_id": null
+    },
+    "pack_sha256": "21818b45bcc1e5a23781cf569565cbcf9ea74a264d36a31b47975f38090f760e",
+    "provenance": {
+      "budget": {
+        "calls_cap": 6,
+        "calls_used": 3,
+        "cost_cap_microusd": 1500000,
+        "cost_used_microusd": 750000
+      },
+      "calls": [
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "bdd654dccdcdb38fe3223883b30c0ef6c15f9abca242dce7b81886f8f740f219",
+          "provision": null,
+          "response_sha256": "7be796444fcfee2328e816fdc0f7111082347a674863b3cb2cfee1214811fbb4",
+          "stage": "usml_propose"
+        },
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "a41cb613c5271f8d766877f8a6ce11a16c161d3a4938c91ec48e615debb70f6c",
+          "provision": "USML VIII(a)(5)",
+          "response_sha256": "39fd57604924c052da62a6abdac54383cda9d14b2d3f02ea943593bf1433fa04",
+          "stage": "advocate"
+        },
+        {
+          "cost_microusd": 250000,
+          "prompt_sha256": "bc13d3b88799c5686fa59ee0f43bc4956f776983ed4f6869f88a5702b139b234",
+          "provision": "USML VIII(a)(5)",
+          "response_sha256": "841c237336adb68fdb4b8922c4b2a21b9bc8c4722968742a3325682486675560",
+          "stage": "judge"
+        }
+      ],
+      "dropped_candidates": [],
+      "model": "HybridAblationModel",
+      "reference_notes": []
+    },
+    "schema_version": "forge-classification.determination/1",
+    "snapshot_sha256": "839a36c48beeffabf6f3f78e490f5213852df8528c3490acece7f6a44f1c754e"
+  },
+  "schema_version": "caddydaddy.anthropic-outcome-ablation/1",
+  "scripted_engine_calls": [
+    "usml_propose",
+    "advocate"
+  ]
+}
