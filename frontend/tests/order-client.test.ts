@@ -211,14 +211,16 @@ describe('recording-only order client', () => {
       if (String(path).endsWith('/packages/validate')) {
         expect(body).not.toHaveProperty('manifest_relative_path');
         validatedEnvelope = body.package_envelope as OrderEnvelope['package_envelope'];
-        const manifestHash = validatedEnvelope!.manifest.seal.manifest_sha256;
+        const inlineManifest = validatedEnvelope!.manifest as { package_id: string; seal: { manifest_sha256: string } };
+        const manifestHash = inlineManifest.seal.manifest_sha256;
         return new Response(JSON.stringify(envelope({
-          package: { package_id: validatedEnvelope!.manifest.package_id as string, manifest_sha256: manifestHash, selection_count: 1, file_count: 2, byte_reread_verified: true },
+          package: { package_id: inlineManifest.package_id, manifest_sha256: manifestHash, selection_count: 1, file_count: 2, byte_reread_verified: true },
           package_envelope: validatedEnvelope,
         })), { status: 200 });
       }
       expect(body.package_envelope).toEqual(validatedEnvelope);
-      expect(body.manifest_sha256).toBe(validatedEnvelope!.manifest.seal.manifest_sha256);
+      const inlineManifest = validatedEnvelope!.manifest as { seal: { manifest_sha256: string } };
+      expect(body.manifest_sha256).toBe(inlineManifest.seal.manifest_sha256);
       return new Response(JSON.stringify(envelope({ receipt, audit_events: [event] })), { status: 200 });
     }) as unknown as typeof fetch;
     const client = new OrderClient(candidate, fetchImpl);
