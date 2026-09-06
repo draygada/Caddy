@@ -41,8 +41,8 @@ function cubeCells(pr: Projector): { cells: CubeCell[]; faces: CubeFace[] } {
     const fill = f.n[2] > 0.5 ? 'var(--m1)' : f.n[2] < -0.5 ? 'var(--m3)' : nx < 0 ? 'var(--m2)' : 'var(--m3)';
     const at = (a: number, b: number): Vec3 => add(add(add([0, 0, 0], f.n, 0.5), f.u, a), f.v, b);
     const outline = [at(-0.5, -0.5), at(0.5, -0.5), at(0.5, 0.5), at(-0.5, 0.5)].map(P).join(' ');
-    // a short line along each edge, inset by the edge-zone width, open at the corners
-    const k = CUTS[1], e = CUTS[2];
+    // a short line hugging each edge between the corner squares (no inner square across the face)
+    const k = 0.42, e = CUTS[2];
     const edgeLines = [
       P(at(-e, k)) + ' ' + P(at(e, k)), P(at(-e, -k)) + ' ' + P(at(e, -k)), P(at(k, -e)) + ' ' + P(at(k, e)), P(at(-k, -e)) + ' ' + P(at(-k, e)),
     ];
@@ -320,7 +320,9 @@ export function Viewport({ o: _o }: { o: Outcome }) {
               {/* faces: a wide same-colour round-joined stroke softens the silhouette corners */}
               {scene.cube.faces.map((cf, i) => <polygon key={'f' + i} points={cf.pts} fill={cf.fill} stroke={cf.fill} strokeWidth={6} strokeLinejoin="round" />)}
               {scene.cube.faces.map((cf, i) => <polygon key={'o' + i} points={cf.pts} fill="none" stroke="var(--ink)" strokeWidth={0.9} strokeLinejoin="round" strokeLinecap="round" />)}
-              {/* edge zones are lines running along each edge, open at the corners */}
+              {/* corner zones stay as small squares */}
+              {scene.cube.cells.filter((c) => c.kind === 'corner').map((c, i) => <polygon key={'k' + i} points={c.pts} fill="none" stroke="var(--ink)" strokeOpacity={0.35} strokeWidth={0.6} strokeLinejoin="round" />)}
+              {/* edge zones are lines running along each edge between the corner squares */}
               {scene.cube.faces.flatMap((cf, i) => cf.edgeLines.map((ln, j) => <polyline key={'e' + i + '-' + j} points={ln} fill="none" stroke="var(--ink)" strokeOpacity={0.35} strokeWidth={0.6} strokeLinecap="round" />))}
               {/* hover highlight: every cell sharing the direction (three at a corner, two along an edge) */}
               {scene.cube.cells.filter((c) => cubeHover === c.key).map((c, i) => <polygon key={'h' + i} points={c.pts} fill="var(--focus)" fillOpacity={0.55} stroke="none" />)}
