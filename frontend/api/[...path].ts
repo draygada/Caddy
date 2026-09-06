@@ -1,4 +1,4 @@
-import { jsonHeaders, runtimeEnv, type ApiResponse, type RuntimeDependencies } from './_machine-contracts';
+import { jsonHeaders, runtimeEnv, type ApiResponse, type RuntimeDependencies } from './_machine-contracts.js';
 
 type HeaderValue = string | string[] | undefined;
 
