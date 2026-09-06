@@ -11,26 +11,28 @@ export function Record() {
     <div className="text-[11px] text-muted border-t border-line2 pt-2 mt-4 grid gap-1">
       <div>22 CFR 120.41 Note 2: documents contemporaneous with development, in their totality · 22 CFR 122.5(a): none of it may be altered once recorded</div>
       <div>15 CFR 762.2 · 19 CFR 163.4 · 31 CFR 501.601 · retention computed per transaction as the longest applicable window (ITAR printed as five years from the 122.5 anchor; anchor and period to be confirmed from the section)</div>
-      <div>shaped like the record 19 CFR 163.4 asks for; a broker validates it · ephemeral demo key (production: KMS/HSM) · every count read off the log, never a table</div>
+      <div>shaped like the record 19 CFR 163.4 asks for; a broker validates it · ephemeral demo key only; production KMS/HSM-backed key custody is a roadmap requirement, not an implemented security control · every count read off the log, never a table</div>
     </div>
   );
   return (
-    <div role="dialog" aria-label="Design decision record" className="absolute inset-0 bg-bg z-[9] flex flex-col">
-      <div className="flex items-center justify-between gap-3 px-4 py-[10px] border-b border-line2 bg-surface print:hidden">
-        <span className="text-[13px] font-semibold">/record <span className="text-muted font-normal">· design decision record · printable</span></span>
-        <span className="flex gap-2"><button onClick={() => window.print()} className="btn btn-primary">Print · Cmd-P</button><button onClick={() => s.patch({ recordOpen: false })} className="btn">Close · Esc</button></span>
+    <div role="dialog" aria-label="Design decision record" className="absolute inset-0 bg-bg z-[9] flex flex-col overflow-x-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-[10px] border-b border-line2 bg-surface print:hidden">
+        <span className="min-w-0 break-words text-[13px] font-semibold">/record <span className="text-muted font-normal">· design decision record · printable</span></span>
+        <span className="flex flex-wrap gap-2"><button onClick={() => window.print()} className="btn btn-primary">Print · Cmd-P</button><button onClick={() => s.patch({ recordOpen: false })} className="btn">Close · Esc</button></span>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto p-6 bg-surface text-ink">
-        <div className="max-w-[880px] mx-auto grid gap-6 text-[13px]" id="record">
-          <section className="break-after-page">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 sm:p-6 bg-surface text-ink">
+        <div className="grid w-full min-w-0 max-w-[880px] mx-auto gap-6 text-[13px] [overflow-wrap:anywhere]" id="record">
+          <section className="min-w-0 break-after-page">
             <h1 className="text-[20px] font-bold m-0">Design decision record · Kestrel</h1>
             <div className="text-muted">log head #{s.events.length} · {s.events[0]?.hash} · export pack {s.pack} · printed {new Date().toISOString().slice(0, 16).replace('T', ' ')}</div>
             <h2 className="text-[15px] font-semibold mt-4 mb-1">1 · Design events</h2>
-            <table className="w-full border-collapse"><thead><tr className="text-left text-muted"><th className="py-1 pr-2">#</th><th className="pr-2">kind</th><th className="pr-2">what</th><th className="pr-2">paragraph · number</th><th>intent</th></tr></thead>
-              <tbody>{design.map((e) => <tr key={e.seq} className="border-t border-line2 align-top"><td className="py-1 pr-2 font-mono">{e.seq}</td><td className="pr-2 font-mono">{e.kind}</td><td className="pr-2">{e.text}</td><td className="pr-2 text-muted">{e.entry}</td><td className="italic text-muted">{e.intent || '(none typed)'}</td></tr>)}</tbody></table>
+            <div className="max-w-full overflow-x-auto overscroll-x-contain print:overflow-visible">
+              <table className="w-full min-w-[720px] border-collapse print:min-w-0"><thead><tr className="text-left text-muted"><th className="py-1 pr-2">#</th><th className="pr-2">kind</th><th className="pr-2">what</th><th className="pr-2">paragraph · number</th><th>intent</th></tr></thead>
+                <tbody>{design.map((e) => <tr key={e.seq} className="border-t border-line2 align-top"><td className="py-1 pr-2 font-mono">{e.seq}</td><td className="pr-2 font-mono">{e.kind}</td><td className="pr-2">{e.text}</td><td className="pr-2 text-muted">{e.entry}</td><td className="italic text-muted">{e.intent || '(none typed)'}</td></tr>)}</tbody></table>
+            </div>
             {footer}
           </section>
-          <section className="break-after-page">
+          <section className="min-w-0 break-after-page">
             <h2 className="text-[15px] font-semibold mb-1">2 · Party trees and outcomes</h2>
             {!r && <div className="text-muted">no round opened</div>}
             {r && Object.entries(r.offers).flatMap(([lineId, list]) => list.map((ro) => (
@@ -41,7 +43,7 @@ export function Record() {
             )))}
             {footer}
           </section>
-          <section className="break-after-page">
+          <section className="min-w-0 break-after-page">
             <h2 className="text-[15px] font-semibold mb-1">3 · Selections with declined alternatives and reasons</h2>
             {r && Object.entries(r.selections).map(([lineId, sel]) => (
               <div key={lineId} className="border-t border-line2 py-1"><b>{r.lines.find((l) => l.id === lineId)?.description}</b> · selected {r.offers[lineId]?.find((x) => x.offer.id === sel.offerId)?.offer.seller} · attestor {sel.attestor} · #{sel.seq}

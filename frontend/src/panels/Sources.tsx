@@ -14,32 +14,32 @@ export function Sources() {
   const accepted = src.proposals.filter((p) => p.verdict.ok);
   const rejected = src.proposals.filter((p) => !p.verdict.ok);
   return (
-    <div role="dialog" aria-label="Sources" className="absolute inset-0 bg-bg z-[8] flex flex-col">
+    <div role="dialog" aria-label="Sources" className="absolute inset-0 bg-bg z-[8] flex flex-col overflow-x-hidden">
       <div className="flex items-center justify-between gap-3 px-4 py-[10px] border-b border-line2 bg-surface flex-wrap">
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <span className="text-[13px] font-semibold">Sources <span className="text-muted font-normal">· no number enters a rule unless it resolves to bytes</span></span>
+        <div className="flex min-w-0 items-baseline gap-3 flex-wrap">
+          <span className="min-w-0 break-words text-[13px] font-semibold">Sources <span className="text-muted font-normal">· no number enters a rule unless it resolves to bytes</span></span>
           <span className="chip">{src.llmNote ? 'CACHED' : 'idle'}</span>
-          {s.apiNote && <span className="text-[12px] text-amber">{s.apiNote}</span>}
+          {s.apiNote && <span className="min-w-0 break-words text-[12px] text-amber">{s.apiNote}</span>}
         </div>
         <button onClick={() => s.patch({ sourcesOpen: false })} className="btn">Back to model · Esc</button>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start" style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)' }}>
-        <div className="grid gap-3 content-start">
-          <div className="panel">
-            <div className="panel-head"><div className="panel-title">Drop a datasheet or vendor page</div><span className="text-[12px] text-muted">fixtures · allowlisted fetcher</span></div>
+      <div className="grid flex-1 min-h-0 min-w-0 grid-cols-1 content-start gap-4 overflow-y-auto overflow-x-hidden p-4 [overflow-wrap:anywhere] lg:grid-cols-2">
+        <div className="grid min-w-0 gap-3 content-start">
+          <div className="panel min-w-0">
+            <div className="panel-head flex-wrap gap-2"><div className="panel-title min-w-0">Drop a datasheet or vendor page</div><span className="min-w-0 text-[12px] text-muted">fixtures · allowlisted fetcher</span></div>
             <div className="p-3 grid gap-2 text-[13px]">
-              <label className="grid gap-1 text-muted">onto which part?<select value={slot} onChange={(e) => setSlot(e.target.value as Slot)} className="field text-ink">{(['imu', 'thermal'] as Slot[]).map((x) => <option key={x} value={x}>{SLOT_LABEL[x]}</option>)}</select></label>
+              <label className="grid min-w-0 gap-1 text-muted">onto which part?<select value={slot} onChange={(e) => setSlot(e.target.value as Slot)} className="field min-w-0 w-full text-ink">{(['imu', 'thermal'] as Slot[]).map((x) => <option key={x} value={x}>{SLOT_LABEL[x]}</option>)}</select></label>
               <div className="flex gap-2 flex-wrap">
-                {DOC_IDS.map((id) => <button key={id} onClick={() => s.dropDocument(id, DOCS[id].slot ?? slot)} className={'btn ' + (src.doc === id ? 'btn-primary' : '')}>{DOCS[id].title}{DOCS[id].poisoned ? ' ☠' : ''}</button>)}
+                {DOC_IDS.map((id) => <button key={id} onClick={() => s.dropDocument(id, DOCS[id].slot ?? slot)} className={'btn whitespace-normal text-left ' + (src.doc === id ? 'btn-primary' : '')}>{DOCS[id].title}{DOCS[id].poisoned ? ' ☠' : ''}</button>)}
               </div>
               <div className="text-[12px] text-muted">Call A returns unverified claims (field, value, unit, quote, byte span, sha). No classification field exists in the schema. The verifier checks span, parse and value in that order; only its accept constructs a typed Spec.</div>
             </div>
           </div>
           {doc && (
-            <div className="panel">
-              <div className="panel-head"><div className="panel-title">{doc.title}</div><span className="font-mono text-[12px] text-muted">sha {doc.sha}{doc.poisoned ? ' · POISONED FIXTURE' : ''}</span></div>
+            <div className="panel min-w-0">
+              <div className="panel-head flex-wrap gap-2"><div className="panel-title min-w-0">{doc.title}</div><span className="min-w-0 break-all font-mono text-[12px] text-muted">sha {doc.sha}{doc.poisoned ? ' · POISONED FIXTURE' : ''}</span></div>
               <div className="p-3 grid gap-2 text-[13px]">
-                <pre className="font-mono text-[12px] whitespace-pre-wrap leading-[1.5] p-2 rounded-r border border-line2 bg-surface2 m-0">
+                <pre className="min-w-0 font-mono text-[12px] whitespace-pre-wrap break-words leading-[1.5] p-2 rounded-r border border-line2 bg-surface2 m-0">
                   {doc.hidden ? (<>{doc.text.slice(0, doc.hidden[0])}<mark style={{ background: src.showHidden ? 'var(--amber)' : 'transparent', color: src.showHidden ? 'var(--black)' : 'var(--surface2)', transition: 'background .3s' }}>{doc.text.slice(doc.hidden[0], doc.hidden[1])}</mark>{doc.text.slice(doc.hidden[1])}</>) : doc.text}
                 </pre>
                 {doc.poisoned && <button onClick={() => s.patch({ sources: { ...src, showHidden: !src.showHidden } })} className="btn justify-self-start">{src.showHidden ? 'Hide hidden text' : 'Show hidden text'}</button>}
@@ -47,24 +47,24 @@ export function Sources() {
               </div>
             </div>
           )}
-          <div className="panel">
-            <div className="panel-head"><div className="panel-title">Network strip</div><span className="text-[12px] text-muted">allowlist: flir.com · aerospace.honeywell.com · invensense.tdk.com · u-blox.com · molicel.com</span></div>
-            <div className="p-3 grid gap-1 font-mono text-[12px]">
+          <div className="panel min-w-0">
+            <div className="panel-head flex-wrap gap-2"><div className="panel-title min-w-0">Network strip</div><span className="min-w-0 break-words text-[12px] text-muted">allowlist: flir.com · aerospace.honeywell.com · invensense.tdk.com · u-blox.com · molicel.com</span></div>
+            <div className="grid min-w-0 gap-1 break-words p-3 font-mono text-[12px]">
               {src.network.length === 0 && <div className="text-muted">no requests yet</div>}
               {src.network.map((n, i) => <div key={i} style={{ color: n.status === 'BLOCKED' ? 'var(--red)' : 'var(--ink)' }}>{n.method} {n.host} · {n.status}{n.sha ? ' · sha ' + n.sha : ''}{n.status === 'BLOCKED' ? ' · not on the allowlist · logged' : ''}</div>)}
               <div className="text-muted mt-1">federalregister.gov stays off the allowlist for Call A and B; Call C reads it as a committed fixture.</div>
             </div>
           </div>
         </div>
-        <div className="grid gap-3 content-start">
+        <div className="grid min-w-0 gap-3 content-start">
           {src.proposals.length > 0 && (
-            <div className="panel">
-              <div className="panel-head"><div className="panel-title">Verifier</div><span className="font-mono text-[12px] text-muted">{accepted.length} ACCEPTED · {rejected.length} REJECTED</span></div>
+            <div className="panel min-w-0">
+              <div className="panel-head flex-wrap gap-2"><div className="panel-title min-w-0">Verifier</div><span className="font-mono text-[12px] text-muted">{accepted.length} ACCEPTED · {rejected.length} REJECTED</span></div>
               <div className="p-3 grid gap-2 text-[13px]">
                 {src.proposals.map((p, i) => (
                   <div key={i} className="border border-line rounded-r p-2 grid gap-1" style={{ borderColor: p.verdict.ok ? 'var(--green)' : 'var(--red)' }}>
-                    <div className="flex justify-between gap-2"><span className="font-semibold">{p.label} · {p.claim.field} = {p.claim.value} {p.claim.unit}</span><span className="font-mono font-bold" style={{ color: p.verdict.ok ? 'var(--green)' : 'var(--red)' }}>{p.verdict.ok ? 'ACCEPTED' : 'REJECT · ' + p.verdict.reason}</span></div>
-                    <div className="font-mono text-[12px] text-muted">quote “{p.claim.quote}” · bytes {p.claim.start}–{p.claim.end} · sha {p.claim.doc_sha256}</div>
+                    <div className="flex flex-wrap justify-between gap-2"><span className="min-w-0 font-semibold">{p.label} · {p.claim.field} = {p.claim.value} {p.claim.unit}</span><span className="min-w-0 font-mono font-bold" style={{ color: p.verdict.ok ? 'var(--green)' : 'var(--red)' }}>{p.verdict.ok ? 'ACCEPTED' : 'REJECT · ' + p.verdict.reason}</span></div>
+                    <div className="min-w-0 break-words font-mono text-[12px] text-muted">quote “{p.claim.quote}” · bytes {p.claim.start}–{p.claim.end} · sha {p.claim.doc_sha256}</div>
                     <div className="text-[12px] text-muted">{p.verdict.note}</div>
                     {p.verdict.ok && src.slot && (
                       <div className="flex gap-2 items-center flex-wrap">
@@ -81,8 +81,8 @@ export function Sources() {
             </div>
           )}
           {src.candidates.length > 0 && src.candidateNode && (
-            <div className="panel">
-              <div className="panel-head"><div className="panel-title">Find a compliant alternative · {SLOT_LABEL[src.candidateNode]}</div><span className="text-[12px] text-muted">agent proposals re-checked by the rule engine · CACHED</span></div>
+            <div className="panel min-w-0">
+              <div className="panel-head flex-wrap gap-2"><div className="panel-title min-w-0">Find a compliant alternative · {SLOT_LABEL[src.candidateNode]}</div><span className="min-w-0 text-[12px] text-muted">agent proposals re-checked by the rule engine · CACHED</span></div>
               <div className="p-3 grid gap-2 text-[13px]">
                 {src.candidates.map((c) => (
                   <div key={c.pid} className="border border-line rounded-r p-2 grid gap-1" style={{ borderColor: c.state === 'green' ? 'var(--green)' : c.state === 'grey' ? 'var(--line)' : 'var(--grey)' }}>
