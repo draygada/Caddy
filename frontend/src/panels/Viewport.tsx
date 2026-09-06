@@ -9,7 +9,6 @@ import type { Outcome } from '../lib/rules';
 import { Check, Display, Fit, Grid as GridIcon, Home, Orbit, Pan, Zoom } from './Icons';
 import { SketchView } from './SketchView';
 import { BoardView } from './BoardView';
-import { AuthoringWorkspace } from './AuthoringWorkspace';
 import { FeatureDialog } from './FeatureDialog';
 import { MarkingMenu } from './MarkingMenu';
 
@@ -93,37 +92,6 @@ function toPlate(pr: Projector, sx: number, sy: number, ca: number, sa: number, 
   return { x: a * ca + b * sa, y: -a * sa + b * ca };
 }
 
-function SheetView({ span }: { span: number }) {
-  const units = useStore((s) => s.units);
-  const title = useStore((s) => (s.project?.name ?? 'Kestrel') + (s.geo.kind === 'frame' ? ' frame' : ' bracket'));
-  const views = [
-    { name: 'Top', note: 'plan view · derived from the model on release' },
-    { name: 'Front', note: 'elevation · derived from the model on release' },
-    { name: 'Right', note: 'side elevation · derived from the model on release' },
-  ];
-  return (
-    <div className="flex-1 min-h-0 flex items-center justify-center p-4 bg-surface2">
-      <div className="w-full max-w-[820px] aspect-[1.414] bg-surface border border-line shadow-[0_2px_8px_rgba(0,0,0,.08)] grid grid-cols-2 grid-rows-[1fr_1fr_auto] gap-2 p-3">
-        {views.map((sv) => (
-          <div key={sv.name} className="border border-dashed border-line rounded-r relative min-h-0 flex items-center justify-center" style={{ background: 'repeating-linear-gradient(135deg,transparent 0 10px,var(--line2) 10px 11px)' }}>
-            <span className="absolute left-2 top-[6px] text-[13px] font-semibold">{sv.name}</span>
-            <span className="font-mono text-[12px] text-muted text-center px-3">{sv.note}</span>
-          </div>
-        ))}
-        <div className="border border-dashed border-line rounded-r relative min-h-0 flex items-center justify-center">
-          <span className="absolute left-2 top-[6px] text-[13px] font-semibold">Isometric</span>
-          <span className="font-mono text-[12px] text-muted">from the model view</span>
-        </div>
-        <div className="col-span-2 border border-line rounded-r grid grid-cols-[2fr_1fr_1fr_1fr] text-[13px]">
-          <div className="px-[10px] py-[6px] border-r border-line2"><span className="text-muted">title</span><br /><b>{title} · slot assembly</b></div>
-          <div className="px-[10px] py-[6px] border-r border-line2"><span className="text-muted">revision</span><br /><span className="font-mono">v{useStore.getState().versions.length}</span></div>
-          <div className="px-[10px] py-[6px] border-r border-line2"><span className="text-muted">span</span><br /><span className="font-mono">{fmtLen(span, units)}</span></div>
-          <div className="px-[10px] py-[6px]"><span className="text-muted">units · sheet</span><br /><span className="font-mono">{units} · A3 · not yet generated</span></div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function Viewport({ o: _o }: { o: Outcome }) {
   const s = useStore();
@@ -350,7 +318,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     <div data-panel="viewport" data-cad-workspace="design" className="panel flex-1 flex flex-col min-h-0 relative">
       <div className="flex items-center gap-2 px-3 py-[6px] border-b border-line2 flex-wrap">
         <div role="radiogroup" aria-label="View mode" className="flex border border-line rounded-r overflow-hidden">
-          {modeBtn('model', 'Model')}{modeBtn('sketch', 'Sketch', 'border-l border-line')}{modeBtn('board', 'Board', 'border-l border-line')}{modeBtn('authoring', 'CAD authoring', 'border-l border-line')}{modeBtn('sheet', 'Drawing sheet', 'border-l border-line')}
+          {modeBtn('model', 'Model')}{modeBtn('sketch', 'Sketch', 'border-l border-line')}{modeBtn('board', 'Board', 'border-l border-line')}
         </div>
         <label className="text-[13px] text-muted flex items-center gap-1">select
           <select aria-label="Selection filter" value={s.selFilter} onChange={(e) => s.patch({ selFilter: e.target.value as typeof s.selFilter, selFace: null })} className="btn text-ink">
@@ -365,7 +333,6 @@ export function Viewport({ o: _o }: { o: Outcome }) {
           <span role="status" className="sr-only">{mode} view</span>
         )}
       </div>
-      {mode === 'sheet' && <SheetView span={s.span} />}
       {mode === 'sketch' && (
         <div className="flex-1 min-h-0 flex">
           <SketchView />
@@ -373,7 +340,6 @@ export function Viewport({ o: _o }: { o: Outcome }) {
         </div>
       )}
       {mode === 'board' && <BoardView />}
-      {mode === 'authoring' && <div className="flex-1 min-h-0 overflow-auto bg-surface2"><AuthoringWorkspace /></div>}
       <div ref={canvasRef} onContextMenu={onContext} className="flex-1 min-h-0 items-center justify-center p-2 relative" style={{ display: mode === 'model' ? 'flex' : 'none', background: s.dragging ? 'var(--surface2)' : 'transparent' }}>
         <svg viewBox={`0 0 ${VB_W} ${VB_H}`} role="img" aria-label="Orbitable bracket with movable slot bodies"
           onMouseDown={vpDown} onMouseMove={vpMove} onMouseUp={vpUp} onMouseLeave={vpUp} onWheel={vpWheel} onDragOver={vpDragOver} onDrop={vpDrop}

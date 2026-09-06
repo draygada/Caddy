@@ -45,7 +45,6 @@ export const COMMANDS: Command[] = [
   ...NAVIGATION_COMMANDS,
   { id: 'view.home', label: 'Home view', group: 'view', keys: 'F', run: (st) => st.setView('iso') },
   { id: 'view.fit', label: 'Fit to view', group: 'view', run: (st) => st.fit() },
-  { id: 'view.authoring', label: 'CAD authoring · live kernel', group: 'view', run: (st) => st.patch({ viewMode: 'authoring' }) },
   { id: 'view.top', label: 'Look from top', group: 'view', run: (st) => st.setViewDir([0, 0, 1]) },
   { id: 'view.front', label: 'Look from front', group: 'view', run: (st) => st.setViewDir([0, 1, 0]) },
   { id: 'view.right', label: 'Look from right', group: 'view', run: (st) => st.setViewDir([1, 0, 0]) },
@@ -57,7 +56,6 @@ export const COMMANDS: Command[] = [
   { id: 'view.wire', label: 'Visual style · Wireframe', group: 'view', run: (st) => st.patch({ visualStyle: 'wireframe' }) },
   { id: 'view.grid', label: 'Toggle layout grid', group: 'view', run: (st) => st.patch({ grid: !st.grid }) },
   { id: 'view.model', label: 'Model view', group: 'view', run: (st) => { st.closeDialog(); st.patch({ viewMode: 'model' }); } },
-  { id: 'view.sheet', label: 'Drawing sheet', group: 'view', run: (st) => { st.closeDialog(); st.patch({ viewMode: 'sheet' }); } },
   { id: 'view.named', label: 'Save named view…', group: 'view', run: (st) => st.openDialog('named_view', null) },
   { id: 'view.sethome', label: 'Set current view as home', group: 'view', run: (st) => st.setHome() },
 

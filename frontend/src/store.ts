@@ -27,7 +27,7 @@ export const PRIMARY_WORKSPACES: { id: WorkspaceId; label: string }[] = [
   { id: 'classification', label: 'Classification' },
   { id: 'sourcing', label: 'Sourcing' },
 ];
-export type ViewMode = 'model' | 'sheet' | 'sketch' | 'board' | 'authoring';
+export type ViewMode = 'model' | 'sketch' | 'board';
 export type NavMode = 'orbit' | 'pan' | 'zoom';
 export type VisualStyle = 'shaded' | 'edges' | 'wireframe';
 export type SelFilter = 'component' | 'body' | 'face';

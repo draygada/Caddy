@@ -6,6 +6,18 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "frontend", "--", "--port", "5173", "--strictPort"],
       "port": 5173
+    },
+    {
+      "name": "product-service",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "PYTHONPATH=apps/product-service:packages/compliance-bridge:packages/sourcing CADDYDADDY_CAD_SERVICE_URL=http://127.0.0.1:8000 python3 -m product_service --host 127.0.0.1 --port 4173"],
+      "port": 4173
+    },
+    {
+      "name": "cad-service",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "PORT=8000 CAD_ALLOWED_HOSTS=localhost,127.0.0.1 uv run --project apps/cad-service python -m cad_service.server"],
+      "port": 8000
     }
   ]
 }
