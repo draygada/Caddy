@@ -17,7 +17,7 @@ export function IntakeForm({ value, onChange, disabled = false }: { value: Intak
       </fieldset>
       <fieldset className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-0 p-0 m-0 min-w-0"><legend className="text-[12px] font-mono uppercase tracking-[.06em] text-muted pb-2">shipping</legend>
         <label className="grid gap-1 text-muted">where does it ship?<select value={value.shipTo} disabled={disabled} onChange={(e) => set('shipTo', e.target.value as ShipTo)} className="field text-ink">{SHIP_TO.map((x) => <option key={x.code} value={x.code}>{x.label}</option>)}</select></label>
-        <label className="grid gap-1 text-muted">units<input type="number" min={1} max={500} value={value.qty} disabled={disabled} onChange={(e) => set('qty', Math.max(1, Math.min(500, +e.target.value || 1)))} className="field font-mono text-ink" /></label>
+        <label className="grid gap-1 text-muted"><span>units <span className="text-[12px]">· 1 to 500</span></span><input type="number" min={1} max={500} value={value.qty} disabled={disabled} onChange={(e) => set('qty', Math.max(1, Math.min(500, +e.target.value || 1)))} className="field font-mono text-ink" /></label>
         <label className="grid gap-1 text-muted">transport<select value={value.mode} disabled={disabled} onChange={(e) => set('mode', e.target.value as Mode)} className="field text-ink"><option value="air">air</option><option value="ocean">ocean</option></select></label>
       </fieldset>
       <fieldset className="grid gap-3 border-0 p-0 m-0 min-w-0"><legend className="text-[12px] font-mono uppercase tracking-[.06em] text-muted pb-2">declarations</legend>

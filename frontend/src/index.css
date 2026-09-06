@@ -107,7 +107,7 @@ input[type="checkbox"] { width: 24px; height: 24px; margin: 0; accent-color: var
   .btn-icon, .nav-btn { min-width: 44px; }
   .btn-icon.btn-xs { width: 44px; height: 44px; min-height: 44px; }
   .row-hover { min-height: 44px; }
-  .btn-xs { min-height: 36px; }
+  .btn-xs { min-height: 44px; }
 }
 
 @media (max-width: 639px) {

@@ -136,7 +136,7 @@ function StrafeApplication() {
         {mobilePanel === 'spec' && <SpecPanel o={o} />}
       </div>
       <nav aria-label="Mobile workspace" className="flex-none grid grid-cols-5 border-t border-line2 bg-surface pb-[env(safe-area-inset-bottom)]">
-        {([['browser', 'Browser'], ['model', 'Model'], ['status', 'Status'], ['spec', 'Spec']] as const).map(([id, label]) => (
+        {([['browser', 'Browser'], ['model', 'Viewport'], ['status', 'Status'], ['spec', 'Spec']] as const).map(([id, label]) => (
           <button key={id} aria-pressed={mobilePanel === id} onClick={() => setMobilePanel(id)} className="min-h-12 border-0 border-r border-line2 bg-transparent text-[12px] font-semibold text-ink aria-pressed:bg-accent aria-pressed:text-accentfg">{label}</button>
         ))}
         <button aria-label="Open timeline" onClick={openTimeline} className="min-h-12 border-0 bg-transparent text-[12px] font-semibold text-ink">History</button>
