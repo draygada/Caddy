@@ -1,4 +1,4 @@
-import { useMemo, useReducer, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties } from 'react';
 import {
   CadApiError,
   applyCadIntent,
@@ -96,6 +96,31 @@ export function claimCadSubmission(inFlight: Set<string>, key: string): (() => v
   return () => { inFlight.delete(key); };
 }
 
+export interface AuthoringWorkspaceSession {
+  state: ReturnType<typeof createCadAuthoringState>;
+  nativeEnvelope: CadNativeEnvelope | null;
+  sealedSnapshotArtifact: CadOutputArtifact | null;
+  outputBundle: CadOutputBundle | null;
+  outputMessage: string | null;
+  outputError: string | null;
+  kernelArtifacts: CadExportResponse[];
+  preferredSketchId: string;
+}
+
+let authoringWorkspaceSession: AuthoringWorkspaceSession | null = null;
+
+export function rememberAuthoringWorkspaceSession(session: AuthoringWorkspaceSession): void {
+  authoringWorkspaceSession = session;
+}
+
+export function restoreAuthoringWorkspaceSession(): AuthoringWorkspaceSession | null {
+  return authoringWorkspaceSession;
+}
+
+export function resetAuthoringWorkspaceSessionForTests(): void {
+  authoringWorkspaceSession = null;
+}
+
 export function productCadRevisionRegistration(response: CadRecomputeResponse, operationId: string | null): Parameters<typeof registerProductCadRevision>[0] {
   return {
     documentId: response.document.id,
@@ -140,8 +165,13 @@ export function productOutputRegistration(bundle: CadOutputBundle, acceptedCad: 
 }
 
 export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: AuthoringWorkspaceProps) {
-  const [state, dispatch] = useReducer(cadAuthoringReducer, initialDocument ?? createCadDocument(), createCadAuthoringState);
-  const [sketch, setSketch] = useState<CadSketch>(() => createSketchDraft(1));
+  const restoredSession = useRef(initialDocument ? null : restoreAuthoringWorkspaceSession()).current;
+  const [state, dispatch] = useReducer(
+    cadAuthoringReducer,
+    initialDocument ?? restoredSession?.state.lastValidDocument ?? createCadDocument(),
+    (document) => restoredSession?.state ?? createCadAuthoringState(document),
+  );
+  const [sketch, setSketch] = useState<CadSketch>(() => createSketchDraft((restoredSession?.state.lastValidDocument.sketches.length ?? 0) + 1));
   const [featureKind, setFeatureKind] = useState<CadFeatureKind>('feature.extrude');
   const [featureName, setFeatureName] = useState('Extrude 1');
   const [featureInputs, setFeatureInputs] = useState(sketch.id);
@@ -155,15 +185,29 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   const [mate, setMate] = useState<Pick<CadAssemblyMate, 'name' | 'kind' | 'instanceAId' | 'instanceBId' | 'offset'>>({ name: 'Mate 1', kind: 'coincident', instanceAId: '', instanceBId: '', offset: 0 });
   const [transferMessage, setTransferMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [nativeEnvelope, setNativeEnvelope] = useState<CadNativeEnvelope | null>(null);
-  const [sealedSnapshotArtifact, setSealedSnapshotArtifact] = useState<CadOutputArtifact | null>(null);
-  const [outputBundle, setOutputBundle] = useState<CadOutputBundle | null>(null);
-  const [outputMessage, setOutputMessage] = useState<string | null>(null);
-  const [outputError, setOutputError] = useState<string | null>(null);
+  const [nativeEnvelope, setNativeEnvelope] = useState<CadNativeEnvelope | null>(() => restoredSession?.nativeEnvelope ?? null);
+  const [sealedSnapshotArtifact, setSealedSnapshotArtifact] = useState<CadOutputArtifact | null>(() => restoredSession?.sealedSnapshotArtifact ?? null);
+  const [outputBundle, setOutputBundle] = useState<CadOutputBundle | null>(() => restoredSession?.outputBundle ?? null);
+  const [outputMessage, setOutputMessage] = useState<string | null>(() => restoredSession?.outputMessage ?? null);
+  const [outputError, setOutputError] = useState<string | null>(() => restoredSession?.outputError ?? null);
   const [outputBusy, setOutputBusy] = useState(false);
-  const [kernelArtifacts, setKernelArtifacts] = useState<CadExportResponse[]>([]);
-  const [preferredSketchId, setPreferredSketchId] = useState(sketch.id);
+  const [kernelArtifacts, setKernelArtifacts] = useState<CadExportResponse[]>(() => restoredSession?.kernelArtifacts ?? []);
+  const [preferredSketchId, setPreferredSketchId] = useState(() => restoredSession?.preferredSketchId ?? sketch.id);
   const inFlightSubmissions = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (initialDocument) return;
+    rememberAuthoringWorkspaceSession({
+      state,
+      nativeEnvelope,
+      sealedSnapshotArtifact,
+      outputBundle,
+      outputMessage,
+      outputError,
+      kernelArtifacts,
+      preferredSketchId,
+    });
+  }, [initialDocument, state, nativeEnvelope, sealedSnapshotArtifact, outputBundle, outputMessage, outputError, kernelArtifacts, preferredSketchId]);
 
   function invalidateOutputsForAcceptedRevision() {
     setNativeEnvelope(null);

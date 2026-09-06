@@ -98,8 +98,26 @@ export function createFeatureOperation(input: FeatureOperationInput): FeatureOpe
   };
 }
 
+const BOUNDED_PARAMETER_LITERAL = /^([+-]?(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?))(?:\s*(mm|cm|m|in|deg|rad))?$/;
+
+export function validateBoundedParameterExpression(parameter: CadParameter): number {
+  const expression = parameter.expression.trim();
+  const match = BOUNDED_PARAMETER_LITERAL.exec(expression);
+  if (!match) {
+    throw new Error(`Parameter ${parameter.name} requires a finite numeric literal with an optional declared unit; formulas and assignments are not evaluated in bounded browser mode.`);
+  }
+  const value = Number(match[1]);
+  const expressionUnit = match[2];
+  if (!Number.isFinite(value)) throw new Error(`Parameter ${parameter.name} requires a finite numeric literal.`);
+  if ((parameter.unit === 'unitless' && expressionUnit) || (expressionUnit && expressionUnit !== parameter.unit)) {
+    throw new Error(`Parameter ${parameter.name} expression unit ${expressionUnit} does not match declared unit ${parameter.unit}.`);
+  }
+  return value;
+}
+
 export function createParameterOperation(parameter: CadParameter, id = cadId('operation')): ParameterSetOperation {
   if (!parameter.name.trim() || !parameter.expression.trim()) throw new Error('Parameter name and expression are required.');
+  validateBoundedParameterExpression(parameter);
   return {
     id,
     kind: 'parameter.set',
