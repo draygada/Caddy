@@ -1,5 +1,8 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { applyCadIntent, createCadDocument, createFeatureOperation } from '../src/cad';
+import { OutputPanel } from '../src/panels/AuthoringWorkspace';
 import {
   CAD_OUTPUT_LIMITATIONS,
   CadOutputClientError,
@@ -57,6 +60,26 @@ async function sealedDocument(): Promise<NativeCadDocument & { revision_id: stri
 }
 
 describe('native CAD output client', () => {
+  it('enables the explicit sealed-snapshot download from admitted artifact state', async () => {
+    const sealedArtifact = await artifact('document/native.caddy.json', '{"sealed":true}', 'NATIVE_DOCUMENT');
+    const markup = renderToStaticMarkup(createElement(OutputPanel, {
+      busy: true,
+      nativeEnvelope: null,
+      sealedSnapshotArtifact: sealedArtifact,
+      bundle: null,
+      message: 'Sealed CADdyDaddy snapshot revision native-rev:test. Download it explicitly when ready.',
+      error: null,
+      retainedFormats: [],
+      onNativeSeal: vi.fn(),
+      onNativeLoad: vi.fn(),
+      onGenerate: vi.fn(),
+      onDownload: vi.fn(),
+    }));
+    const downloadButton = markup.match(/<button[^>]*aria-label="Download sealed CADdyDaddy snapshot \(\.caddy\.json\)"[^>]*>/)?.[0];
+    expect(downloadButton).toBeDefined();
+    expect(downloadButton).not.toContain('disabled');
+  });
+
   it('builds a multi-body-capable native draft bound to the exact kernel mesh hash', async () => {
     const source = await createKernelMeshSource(mesh());
     const draft = await createNativeDocumentDraft(document(), mesh());

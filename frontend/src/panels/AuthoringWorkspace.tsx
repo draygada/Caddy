@@ -75,6 +75,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   const [transferMessage, setTransferMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [nativeEnvelope, setNativeEnvelope] = useState<CadNativeEnvelope | null>(null);
+  const [sealedSnapshotArtifact, setSealedSnapshotArtifact] = useState<CadOutputArtifact | null>(null);
   const [outputBundle, setOutputBundle] = useState<CadOutputBundle | null>(null);
   const [outputMessage, setOutputMessage] = useState<string | null>(null);
   const [outputError, setOutputError] = useState<string | null>(null);
@@ -135,6 +136,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
       if (!state.lastValidMesh) throw new Error('Run one successful kernel recompute before sealing a CADdyDaddy snapshot.');
       const envelope = await sealNativeDocument(await createNativeDocumentDraft(state.lastValidDocument, state.lastValidMesh), fetchImpl);
       setNativeEnvelope(envelope);
+      setSealedSnapshotArtifact(envelope.artifact);
       setOutputError(null);
       setOutputMessage(`Sealed CADdyDaddy snapshot revision ${shortId(envelope.document.revision_id)} · ${shortId(envelope.document.document_hash)}. Download it explicitly when ready.`);
     } catch (error) {
@@ -163,6 +165,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
       const envelope = await loadNativeDocument(await fileToBase64(file), fetchImpl);
       dispatch({ type: 'replace-from-import', response: restoreNativeAuthoring(envelope.document) });
       setNativeEnvelope(envelope);
+      setSealedSnapshotArtifact(envelope.artifact);
       setOutputBundle(null);
       setKernelArtifacts([]);
       setOutputError(null);
@@ -182,6 +185,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
       const currentArtifacts = kernelArtifacts.filter((artifact) => artifact.revisionId === state.lastValidDocument.revisionId);
       const bundle = await generateCadOutputs({ document: envelope.document, mesh: state.lastValidMesh, kernelArtifacts: currentArtifacts }, fetchImpl);
       setNativeEnvelope(envelope);
+      setSealedSnapshotArtifact(envelope.artifact);
       setOutputBundle(bundle);
       setOutputError(null);
       setOutputMessage(`Validated ${bundle.artifacts.length} artifacts available for explicit download · package ${shortId(bundle.package.package_id)}.`);
@@ -220,6 +224,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
           <OutputPanel
             busy={outputBusy}
             nativeEnvelope={nativeEnvelope}
+            sealedSnapshotArtifact={sealedSnapshotArtifact}
             bundle={outputBundle}
             message={outputMessage}
             error={outputError}
@@ -338,9 +343,10 @@ function TransferPanel({ message, onImport, onExport }: { message: string | null
   return <section aria-labelledby="transfer-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}><h3 id="transfer-title" style={{ margin: 0, fontSize: 13 }}>Kernel exchange</h3><label style={{ ...button, textAlign: 'center' }}>Import STEP / IGES / STL<input aria-label="Import CAD file" type="file" accept=".step,.stp,.iges,.igs,.stl" style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, formatFromName(file.name)); }} /></label><div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>{(['STEP', 'IGES', 'STL'] as CadTransferFormat[]).map((format) => <button key={format} type="button" onClick={() => onExport(format)} style={button}>{format}{format !== 'STL' ? ' · OCCT' : ''}</button>)}</div><p style={{ margin: 0, fontSize: 9, lineHeight: 1.4, color: '#66736b' }}>Browser fallback imports and exports real STL mesh bytes. STEP/IGES require connected, owner-approved OCCT and fail closed when it is unavailable. No exchange format preserves editable feature history.</p>{message && <div role="status" style={{ fontSize: 9, padding: 6, background: '#f2f5f2' }}>{message}</div>}</section>;
 }
 
-function OutputPanel({ busy, nativeEnvelope, bundle, message, error, retainedFormats, onNativeSeal, onNativeLoad, onGenerate, onDownload }: {
+export function OutputPanel({ busy, nativeEnvelope, sealedSnapshotArtifact, bundle, message, error, retainedFormats, onNativeSeal, onNativeLoad, onGenerate, onDownload }: {
   busy: boolean;
   nativeEnvelope: CadNativeEnvelope | null;
+  sealedSnapshotArtifact: CadOutputArtifact | null;
   bundle: CadOutputBundle | null;
   message: string | null;
   error: string | null;
@@ -356,7 +362,7 @@ function OutputPanel({ busy, nativeEnvelope, bundle, message, error, retainedFor
       <button type="button" disabled={busy} onClick={onNativeSeal} style={button}>Seal current snapshot</button>
       <label style={{ ...button, textAlign: 'center', opacity: busy ? .55 : 1 }}>Load CADdyDaddy snapshot<input aria-label="Load CADdyDaddy snapshot (.caddy.json)" type="file" accept=".json,.caddy.json,application/json" disabled={busy} style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onNativeLoad(file); event.currentTarget.value = ''; }} /></label>
     </div>
-    <button type="button" disabled={busy || !nativeEnvelope} onClick={() => nativeEnvelope && onDownload(nativeEnvelope.artifact)} aria-label="Download sealed CADdyDaddy snapshot (.caddy.json)" style={{ ...button, opacity: busy || !nativeEnvelope ? .55 : 1 }}>Download sealed snapshot (.caddy.json)</button>
+    <button type="button" disabled={!sealedSnapshotArtifact} onClick={() => sealedSnapshotArtifact && onDownload(sealedSnapshotArtifact)} aria-label="Download sealed CADdyDaddy snapshot (.caddy.json)" style={{ ...button, opacity: sealedSnapshotArtifact ? 1 : .55 }}>Download sealed snapshot (.caddy.json)</button>
     <button type="button" disabled={busy} onClick={onGenerate} style={{ ...actionButton, opacity: busy ? .55 : 1 }}>{busy ? 'Validating outputs...' : 'Generate drawing + BOM package'}</button>
     <div style={{ ...mono, fontSize: 8, color: '#66736b' }}>Retained STEP / IGES / STL exchange · {retainedFormats.length ? retainedFormats.join(' / ') : 'none'} · CADdyDaddy snapshot {nativeEnvelope ? shortId(nativeEnvelope.document.document_hash) : 'not sealed'}</div>
     {error && <div role="alert" style={{ padding: 7, border: '1px solid #dca39a', background: '#fff0ed', color: '#7d281e', fontSize: 9 }}>{error}</div>}
