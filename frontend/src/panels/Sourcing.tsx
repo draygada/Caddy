@@ -4,6 +4,7 @@ import type { Outcome } from '../lib/rules';
 import { CATALOG, CORE_SLOTS, GENERIC_NAME, type Slot } from '../lib/catalog';
 import { THUMBS, AF_THUMB } from '../lib/geometry';
 import { IntakeForm } from './IntakeForm';
+import { filingDraftOf } from '../lib/customs';
 import { CHECKLIST, CLAIM_COST, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
 import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type LiveSourcingOffer, type OperationsEnvelope, type ServiceOffer, type SourcingDispatchEnvelope, type SourcingPackageEnvelope, type SourcingRoundEnvelope } from '../lib/operations-client';
 import { OrderClient, OrderServiceError, type OrderEnvelope, type RecordingOutcome } from '../lib/order-client';
@@ -27,12 +28,10 @@ function ownerNames(offer: ServiceOffer): string {
   return names.join(' → ');
 }
 
-/** The connected service round: kept as a component, not mounted in the three-step tab. */
-export function ServiceSourcing() {
+/** The connected service round (Benji's product service): offers, selection, adjudication, the sealed package and the order lifecycle for one part, all client-carried. */
+export function ServiceSourcing({ quantity, mode, partKey, partLabel }: { quantity: number; mode: 'air' | 'ocean'; partKey: string; partLabel: string }) {
   const productThread = useProductThread();
   const artifactGate = productArtifactGate(productThread.artifactBinding);
-  const [quantity, setQuantity] = useState(2);
-  const [mode, setMode] = useState<'air' | 'ocean'>('air');
   const [inputMode, setInputMode] = useState<'live-bounded' | 'offline-demo'>('live-bounded');
   const [seller, setSeller] = useState('Operator-provided supplier');
   const [manufacturer, setManufacturer] = useState('Operator-provided manufacturer');
@@ -123,7 +122,7 @@ export function ServiceSourcing() {
   const visibleOrderEvidence = orderEvidence ?? orderClient?.getLastValid() ?? null;
   const receipt = visibleOrderEvidence?.receipt;
   const createRound = (api: OperationsClient) => {
-    if (inputMode === 'offline-demo') return api.createSourcingRound({ part_key: 'flight-controller', quantity, mode, input_mode: 'offline-demo' });
+    if (inputMode === 'offline-demo') return api.createSourcingRound({ part_key: partKey, quantity, mode, input_mode: 'offline-demo' });
     const evidence = {
       status: screeningStatus,
       source_name: screeningSource,
@@ -134,7 +133,7 @@ export function ServiceSourcing() {
     } as const;
     const offer: LiveSourcingOffer = {
       offer_id: `offer:user:${seller.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'supplier'}`,
-      part_key: 'flight-controller',
+      part_key: partKey,
       seller,
       manufacturer,
       origin: origin.toUpperCase(),
@@ -145,13 +144,13 @@ export function ServiceSourcing() {
       declared_eccn: 'not-independently-verified',
       screening_evidence: { seller: evidence, manufacturer: evidence, ownership_complete: ownershipComplete },
     };
-    return api.createSourcingRound({ part_key: 'flight-controller', quantity, mode, input_mode: 'live-bounded', offers: [offer] });
+    return api.createSourcingRound({ part_key: partKey, quantity, mode, input_mode: 'live-bounded', offers: [offer] });
   };
 
   return (
-    <section className="panel min-w-0 lg:col-span-2" aria-label="Service-backed sourcing">
-      <div className="panel-head flex-wrap gap-2">
-        <div className="panel-title">Service-backed sourcing <span className="sub">· client-carried continuity</span></div>
+    <section className="min-w-0" aria-label="Connected service round">
+      <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-line2">
+        <div className="text-[13px] font-semibold">{partLabel} <span className="text-muted font-normal">· {quantity} unit{quantity === 1 ? '' : 's'} · {mode} · client-carried continuity</span></div>
         <span className="chip">{evidence ? evidence.status : 'not run'}</span>
       </div>
       <div className="p-3 grid gap-3 text-[13px]">
@@ -161,8 +160,6 @@ export function ServiceSourcing() {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <label className="grid gap-1 text-muted">input lane<select value={inputMode} onChange={(event) => { setInputMode(event.target.value as typeof inputMode); setRound(null); setSelectedOffer(null); setPkg(null); setPackageBinding(null); setDispatch(null); }} className="field text-ink"><option value="live-bounded">Connected Candidate 0.2 input</option><option value="offline-demo">Offline demo · 2-key fixture</option></select></label>
-          <label className="grid gap-1 text-muted">quantity<input type="number" min={1} max={10000} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(10000, Number(event.target.value) || 1)))} className="field w-28 font-mono text-ink" /></label>
-          <label className="grid gap-1 text-muted">mode<select value={mode} onChange={(event) => setMode(event.target.value as 'air' | 'ocean')} className="field text-ink"><option value="air">air</option><option value="ocean">ocean</option></select></label>
           <button className="btn btn-primary" disabled={busy !== null} onClick={() => run('round', async (api) => { const value = await createRound(api); setRound(value); setSelectedOffer(value.round.selected_offer_id); setPkg(null); setPackageBinding(null); setDispatch(null); await appendProductEvent({ sourceLane: 'sourcing', eventType: 'sourcing.round_created', summary: `${value.round.round_id} · ${value.round.offers.length} offer(s) · ${value.round.request.input_mode}.`, actorId: actor, actorAttestation: 'OPERATOR_ACTION_RECORDED', revisionId: value.candidate.revision_id, artifacts: [{ artifactId: value.candidate.candidate_id, kind: 'operations-candidate-snapshot', sha256: value.candidate.snapshot_sha256 }], payload: { roundId: value.round.round_id, offerCount: value.round.offers.length, partKey: value.round.request.part_key, quantity: value.round.request.quantity, claimCeiling: value.claim_ceiling } }); })}>{busy === 'round' ? 'Creating…' : inputMode === 'offline-demo' ? 'Run Offline demo' : 'Create connected bounded round'}</button>
         </div>
         {inputMode === 'live-bounded' && (
@@ -296,8 +293,10 @@ function consequences(ro: ResolvedOffer, line: Line, round: Round, o: Outcome): 
   return out;
 }
 
-type Step = 1 | 2 | 3;
-const STEPS: { n: Step; label: string }[] = [{ n: 1, label: 'Use case' }, { n: 2, label: 'Pick suppliers' }, { n: 3, label: 'Package and order' }];
+type Step = 1 | 2 | 3 | 4;
+const STEPS: { n: Step; label: string }[] = [{ n: 1, label: 'Use case' }, { n: 2, label: 'Pick suppliers' }, { n: 3, label: 'Package and order' }, { n: 4, label: 'Customs filing' }];
+/** the product service names parts by key; the design names them by slot */
+const PART_KEY: Partial<Record<string, string>> = { fc: 'flight-controller', battery: 'battery-pack', imu: 'imu', gnss: 'gnss-receiver', datalink: 'datalink-radio', thermal: 'thermal-core', pod: 'sensor-pod', esc: 'esc', motor: 'motor', prop: 'propeller', camera: 'camera', transponder: 'transponder' };
 
 /** Three steps across the top, one screen each. Step two is a parts list beside the offers for the selected part. */
 export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boolean }) {
@@ -309,6 +308,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
   const shipTo: ShipTo = intake.shipTo, qty = intake.qty, mode: Mode = intake.mode;
   const components: Slot[] = s.project?.components ?? [...CORE_SLOTS];
   const [stepWanted, setStepWanted] = useState<Step | null>(null);
+  const [serviceOpen, setServiceOpen] = useState(false);
   const [k, setK] = useState<number>(0);
   const [pick, setPick] = useState<string | null>(null);
   const [openOffer, setOpenOffer] = useState<string | null>(null);
@@ -333,9 +333,9 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
   const stepper = (
     <div className="grid grid-cols-[1fr_auto_1fr] max-md:grid-cols-1 items-center gap-3 px-4 py-2 border-b border-line2 bg-surface">
       <span className="max-md:hidden" />
-      <ol aria-label={'Sourcing steps · step ' + step + ' of 3'} className="m-0 p-0 list-none flex items-center gap-2 justify-self-center w-[min(100%,640px)]">
+      <ol aria-label={'Sourcing steps · step ' + step + ' of 4'} className="m-0 p-0 list-none flex items-center gap-2 justify-self-center w-[min(100%,760px)]">
         {STEPS.map((st, i) => {
-          const done = st.n === 1 ? !incomplete : st.n === 2 ? r != null && n > 0 && selectedCount === n : false;
+          const done = st.n === 1 ? !incomplete : st.n === 2 ? r != null && n > 0 && selectedCount === n : st.n === 3 ? !!r?.pkg : false;
           const on = st.n === step;
           const reachable = st.n === 1 || (r != null && !incomplete);
           return (
@@ -527,7 +527,107 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
         <div className="flex items-center gap-2 px-4 py-2 border-t border-line2 bg-surface text-[13px]">
           <button onClick={() => setStepWanted(2)} className="btn">Back to suppliers</button>
           <span className="flex-1" />
-          <span className="text-muted">modeled landed estimate · {r.qty} units</span><b className="font-mono">{usd(total)}</b>
+          <span className="text-muted hidden sm:inline">modeled landed estimate · {r.qty} units</span><b className="font-mono">{usd(total)}</b>
+          <button onClick={() => setStepWanted(4)} className={'btn ' + (r.pkg ? 'btn-primary' : '')} title={r.pkg ? 'the filing draft for this package' : 'the draft can be read before the package is built; it covers picked lines only'}>Customs filing</button>
+        </div>
+      </div>
+    );
+  }
+
+  // step 4 · the customs filing draft: one pre-entry line per picked part, from the round's own ladders
+  if (step === 4) {
+    const f = filingDraftOf(r, o);
+    const money = (v: number | null | undefined) => (v == null ? 'not verified' : usd(v));
+    return (
+      <div role="dialog" aria-label="Sourcing" className="absolute inset-0 bg-bg z-[8] flex flex-col">
+        {stepper}
+        {staleBar}
+        <div className="flex-1 min-h-0 overflow-auto p-4 grid gap-4 content-start" id="customs-filing">
+          <div className="panel">
+            <div className="panel-head"><div className="panel-title">Customs filing draft <span className="sub">· {f.roundId} · design #{f.designSeq} · entry date {f.entryDate}</span></div><div className="flex gap-1"><span className="chip">{f.shipTo === 'US' ? 'import leg' : 'export leg · ' + f.shipTo}</span>{r.pkg ? <span className="chip">package {r.pkg.preEntry}</span> : <span className="chip" style={{ color: 'var(--amber)' }}>no package yet</span>}</div></div>
+            <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 text-[13px]">
+              <div><div className="text-muted">declared value</div><div className="font-mono text-[16px] font-bold">{money(f.totals.declared)}</div></div>
+              <div><div className="text-muted">duties · base and overlays</div><div className="font-mono text-[16px] font-bold">{money(f.totals.duties)}</div></div>
+              <div><div className="text-muted">fees · MPF and HMF</div><div className="font-mono text-[16px] font-bold">{money(f.totals.fees)}</div></div>
+              <div><div className="text-muted">modeled landed</div><div className="font-mono text-[16px] font-bold">{money(f.totals.landed)}</div></div>
+            </div>
+            {f.open.length > 0 && <div role="status" className="px-4 pb-3 text-[13px] text-amber">{f.open.length} line{f.open.length === 1 ? ' has' : 's have'} no pick and {f.open.length === 1 ? 'is' : 'are'} not on the draft: {f.open.join(', ')}</div>}
+          </div>
+
+          <div className="panel">
+            <div className="panel-head"><div className="panel-title">Pre-entry lines <span className="sub">· {f.lines.length} · declared data, heading level only</span></div><span className="text-[12px] text-muted">{f.totals.unverified > 0 ? f.totals.unverified + ' rate' + (f.totals.unverified === 1 ? '' : 's') + ' not verified' : 'every rate dated'}</span></div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[13px]">
+                <thead><tr className="text-left text-[12px] text-muted"><th className="px-4 py-2 font-medium">Part</th><th className="px-3 py-2 font-medium">HTS</th><th className="px-3 py-2 font-medium">Origin</th><th className="px-3 py-2 font-medium text-right">Qty</th><th className="px-3 py-2 font-medium text-right">Unit value</th><th className="px-3 py-2 font-medium text-right">Duties</th><th className="px-3 py-2 font-medium text-right">Fees</th><th className="px-3 py-2 font-medium">Entry</th></tr></thead>
+                <tbody>
+                  {f.lines.map((l) => (
+                    <tr key={l.lineId} className="border-t border-line2 align-top">
+                      <td className="px-4 py-2 min-w-[220px]"><div className="font-semibold">{l.description.split(' · ')[0]}</div><div className="text-[12px] text-muted">{l.seller} · ships {l.shipFrom}{l.manufacturer !== 'not declared' ? ' · made by ' + l.manufacturer : ''}</div>
+                        {l.importModelled && (
+                          <details className="text-[12px] text-muted mt-1"><summary className="cursor-pointer min-h-6 flex items-center">layers, valuation, flags</summary>
+                            <div className="grid gap-1 mt-1">
+                              <div>valuation · {l.valuationBasis}</div>
+                              <div>tariff code · {l.htsBy}</div>
+                              <div>origin · {l.originBasis}</div>
+                              {l.base && <div className="font-mono">{l.base.layer} · {l.base.citation} · {l.base.rate}{l.base.amount != null ? ' · ' + usd(l.base.amount) : ''}</div>}
+                              {l.overlays.map((x, i) => <div key={i} className="font-mono">{x.program} · {x.citation} · {x.rate} · {usd(x.amount)}</div>)}
+                              <div>AD/CVD · {l.adcvd}</div>
+                              {l.mpf && <div className="font-mono">MPF · {l.mpf.citation} · {l.mpf.rate}{l.mpf.amount != null ? ' · ' + usd(l.mpf.amount) : ''} · {l.mpf.note}</div>}
+                              {l.hmf && <div className="font-mono">HMF · {l.hmf.citation} · {l.hmf.rate}{l.hmf.amount != null ? ' · ' + usd(l.hmf.amount) : ''}</div>}
+                              {l.flags.map((x, i) => <div key={'f' + i} className="text-amber">{x}</div>)}
+                              <div className="font-mono">estimate {l.estimateHash}</div>
+                            </div>
+                          </details>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 font-mono whitespace-nowrap">{l.hts}</td>
+                      <td className="px-3 py-2 font-mono">{l.origin}</td>
+                      <td className="px-3 py-2 font-mono text-right">{l.qty}</td>
+                      <td className="px-3 py-2 font-mono text-right whitespace-nowrap">{usd(l.unitValue)}</td>
+                      <td className="px-3 py-2 font-mono text-right whitespace-nowrap" style={{ color: l.unverified ? 'var(--grey)' : undefined }}>{l.importModelled ? usd(l.duties) : ''}</td>
+                      <td className="px-3 py-2 font-mono text-right whitespace-nowrap">{l.importModelled ? usd(l.fees) : ''}</td>
+                      <td className="px-3 py-2 text-[12px]">{l.importModelled ? <span className="font-mono font-bold text-green">MODELLED</span> : <span className="text-muted">{l.note}</span>}</td>
+                    </tr>
+                  ))}
+                  {f.lines.length === 0 && <tr><td colSpan={8} className="px-4 py-6 text-muted">No picked line yet. Pick suppliers and the draft fills in.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {f.exportRefs.length > 0 && (
+              <div className="panel">
+                <div className="panel-head"><div className="panel-title">Export references <span className="sub">· {f.shipTo} · EEI per line</span></div></div>
+                <div className="grid text-[13px]">
+                  {f.exportRefs.map((x) => (
+                    <div key={x.lineId} className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 items-center px-4 min-h-10 border-t border-line2">
+                      <span className="min-w-0"><span className="font-semibold">{x.description}</span> <span className="text-muted">· {x.eccn} · {x.para}</span><br /><span className="text-[12px] text-muted">{x.why}</span></span>
+                      <span className="font-mono font-bold text-[12px]" style={{ color: x.gate === 'DENIAL' || x.gate === 'DDTC' ? 'var(--red)' : x.gate === 'LIC' || x.gate === 'STA' || x.gate === 'REVIEW' ? 'var(--amber)' : 'var(--green)' }}>{x.gate}</span>
+                      <span className="chip chip-sm">{x.eeiRequired ? 'EEI' : 'NOEEI'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="panel">
+              <div className="panel-head"><div className="panel-title">Records and warnings</div></div>
+              <div className="p-4 grid gap-3 text-[13px]">
+                <div><div className="font-semibold">Retention · {f.retention.years} years · until {f.retention.until}</div>{f.retention.basis.map((b, i) => <div key={i} className="text-muted">{b}</div>)}</div>
+                <div><div className="font-semibold">Warnings</div>{f.warnings.map((w, i) => <div key={i} className="text-amber">{w}</div>)}</div>
+                <div><div className="font-semibold">First-run checklist</div>{f.checklist.map((c, i) => <div key={i} className="text-muted">{c}</div>)}</div>
+              </div>
+            </div>
+            <div className="panel md:col-span-2">
+              <div className="p-4 grid gap-1 text-[12px] text-muted">{f.disclaimer.map((d, i) => <div key={i}>{d}</div>)}</div>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 border-t border-line2 bg-surface text-[13px]">
+          <button onClick={() => setStepWanted(3)} className="btn">Back to package</button>
+          <span className="flex-1" />
+          <span className="text-muted hidden sm:inline">{f.lines.length} line{f.lines.length === 1 ? '' : 's'} · modeled landed</span><b className="font-mono">{money(f.totals.landed)}</b>
+          <button onClick={() => window.print()} className="btn btn-primary">Print the draft</button>
         </div>
       </div>
     );
@@ -695,6 +795,11 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                 </div>
               </details>
             )}
+
+            <details className="panel p-3 text-[13px]" open={serviceOpen} onToggle={(e) => setServiceOpen((e.currentTarget as HTMLDetailsElement).open)}>
+              <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Connected service round <span className="text-muted font-normal">· the product service screens, walks owners, costs and seals a package for this part</span></summary>
+              {serviceOpen && <div className="mt-2"><ServiceSourcing quantity={r.qty} mode={r.mode} partKey={PART_KEY[line.slot ?? ''] ?? line.id.replace(/^l-/, '')} partLabel={(slot ? GENERIC_NAME[slot as Slot] : line.description.split(' · ')[0])} /></div>}
+            </details>
 
             <details className="panel p-3 text-[13px]">
               <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Ask the supplier <span className="text-muted font-normal">· {supplierQuestions(line).length} questions from the rule fields</span></summary>
