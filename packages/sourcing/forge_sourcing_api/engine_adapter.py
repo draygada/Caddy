@@ -47,7 +47,8 @@ def _evaluation(det: dict | None) -> dict:
     if not det:
         return {"jurisdiction": None, "entries": [], "fired": [], "contains_defense_article": [], "flags": [], "flag_text": {},
                 "destinations": {}, "destinations_note": "no determination in the response", "engine_state": "absent", "unresolved": [], "evidence_level": None}
-    fired_rows = [t for t in list(det.get("direct_tripwires") or []) + list(det.get("propagated_tripwires") or []) if t.get("state") == "fired"]
+    plain_rows = list(det.get("direct_tripwires") or []) + list(det.get("propagated_tripwires") or [])
+    fired_rows = [t for t in plain_rows if t.get("state") == "fired"]
     flag_rows = [t for t in fired_rows if t.get("rule_id") == FLAG_848 or t.get("entry") == FLAG_ENTRY]
     fired = _dedupe([t["entry"] for t in fired_rows if t not in flag_rows])
     dest = det.get("destinations") or {}
@@ -56,8 +57,12 @@ def _evaluation(det: dict | None) -> dict:
     else:
         destinations = {cc: {"state": c["state"], "because": list(c.get("because") or [])} for cc, c in dest.items() if c and c.get("state")}
         note = None
-    unresolved = [{"rule_id": t.get("rule_id"), "entry": t.get("entry"), "problem": t.get("problem"),
-                   "missing": [f["attribute"] for f in (t.get("facts") or []) if f.get("observed") is None]} for t in det.get("unresolved_tripwires") or []]
+    unresolved = []                                            # cannot_evaluate is allowed on every list, not just unresolved_tripwires
+    for t in list(det.get("unresolved_tripwires") or []) + [t for t in plain_rows if t.get("state") == "cannot_evaluate"]:
+        if any(u["rule_id"] == t.get("rule_id") for u in unresolved):
+            continue                                           # same rule on two lists: the first occurrence's fields stand
+        unresolved.append({"rule_id": t.get("rule_id"), "entry": t.get("entry"), "problem": t.get("problem"),
+                           "missing": [f["attribute"] for f in (t.get("facts") or []) if f.get("observed") is None]})
     return {"jurisdiction": det.get("jurisdiction"), "entries": list(det.get("entries") or []), "fired": fired, "contains_defense_article": [],
             "flags": ["848_amber"] if flag_rows else [], "flag_text": {"848_amber": FLAG_TEXT_848} if flag_rows else {},
             "destinations": destinations, "destinations_note": note, "engine_state": det.get("state"), "unresolved": unresolved,

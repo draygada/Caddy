@@ -65,3 +65,50 @@ def test_the_848_row_becomes_the_amber_flag_and_a_bad_revision_is_refused():
     assert motor["flags"] == ["848_amber"] and motor["fired"] == [] and "848_amber" in motor["flag_text"]
     with pytest.raises(ValueError):
         design_for_round(design, {**resp, "design_revision": "nope"}, design_seq=6)
+
+
+def test_a_cannot_evaluate_row_off_the_plain_lists_reaches_unresolved():
+    """The Wave-0 base tripwire def allows cannot_evaluate on direct and propagated rows too; such a row is not a clean line."""
+    from forge_sourcing_api.engine_adapter import design_for_round
+    design, resp = _load("kestrel-baseline.design.json"), _load("evaluate-camera-flag.json")
+    resp = json.loads(json.dumps(resp))
+    row = {"rule_id": "CCL-9A012.a.3", "state": "cannot_evaluate", "jurisdiction": "EAR", "entry": "9A012.a.3", "reason_for_control": [],
+           "node_id": "datalink", "cause_node_id": "datalink", "text": None, "source_url": None, "ecfr_date": None, "rule_effective": None, "evidence": None,
+           "facts": [{"attribute": "range_km", "observed": None, "unit": "km", "operator": ">", "threshold": 100}]}
+    resp["determinations"]["datalink"] = {"state": "question", "jurisdiction": "EAR", "entries": ["EAR99"], "direct_tripwires": [row],
+                                          "propagated_tripwires": [], "unresolved_tripwires": [], "evidence_level": "declared",
+                                          "destinations": {"status": "not_evaluated", "reason": "P0 has no approved destination policy"}}
+    ev = next(n for n in design_for_round(design, resp, design_seq=7)["nodes"] if n["node_id"] == "datalink")["evaluation"]
+    assert ev["fired"] == [] and ev["unresolved"] == [{"rule_id": "CCL-9A012.a.3", "entry": "9A012.a.3", "problem": None, "missing": ["range_km"]}]
+    resp["determinations"]["datalink"]["unresolved_tripwires"] = [{**row, "problem": "missing_fact"}]   # same rule on both lists: carried once
+    ev = next(n for n in design_for_round(design, resp, design_seq=8)["nodes"] if n["node_id"] == "datalink")["evaluation"]
+    assert ev["unresolved"] == [{"rule_id": "CCL-9A012.a.3", "entry": "9A012.a.3", "problem": "missing_fact", "missing": ["range_km"]}]
+
+
+def _declared_line(**evaluation):
+    return {"line_id": "line:x", "evaluation": {"jurisdiction": "EAR", "entries": ["5A002.a"], **evaluation}}
+
+
+def test_an_unresolved_rule_blocks_the_declaration_and_the_words_name_the_cause():
+    from forge_sourcing.gate import build_declaration, required_reference
+    line = _declared_line(unresolved=[{"rule_id": "CCL-6A003.b.4.b", "entry": "6A003.b.4.b", "problem": "missing_fact", "missing": ["fpa_entry"]}])
+    kind, words = required_reference([line], "foreign_person", "controlled_drawings")
+    assert kind == "unknown_classification"
+    assert any(all(s in w for s in ("line:x", "CCL-6A003.b.4.b", "6A003.b.4.b", "missing_fact", "fpa_entry")) for w in words)
+    decl = build_declaration([line], party="assembler", person_status="foreign_person", sharing="controlled_drawings",
+                             reference="LIC-000", attestor="charlie", seq=1)
+    assert decl["blocked"] is True and any("package blocked: a reference cannot cure this" in w for w in decl["words"])
+    assert not any("until the reference is entered" in w for w in decl["words"])
+
+
+def test_an_established_line_keeps_its_kind_and_its_words():
+    from forge_sourcing.gate import build_declaration, required_reference
+    line = _declared_line()
+    assert required_reference([line], "foreign_person", "controlled_drawings")[0] == "ear_licence_or_exception"
+    blocked = build_declaration([line], party="assembler", person_status="foreign_person", sharing="controlled_drawings",
+                                reference=None, attestor="charlie", seq=1)
+    assert blocked["blocked"] is True and any("package blocked until the reference is entered" in w for w in blocked["words"])
+    assert not any("cannot cure" in w for w in blocked["words"])
+    passed = build_declaration([line], party="assembler", person_status="foreign_person", sharing="controlled_drawings",
+                               reference="ENC placeholder", attestor="charlie", seq=2)
+    assert passed["blocked"] is False and any("reference typed, not validated" in w for w in passed["words"])
