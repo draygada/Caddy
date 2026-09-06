@@ -1,3 +1,4 @@
+import type { PartId } from './catalog';
 // The replayable design state. Every timeline event carries the Snapshot that
 // resulted from it, so dragging the timeline marker to seq N shows exactly the
 // state at N without deleting anything: undo is supersede.
@@ -10,6 +11,10 @@ export type Positions = Record<Slot, Pos>;
 
 /** Plate geometry parameters driven by the feature dialogs. */
 export interface Geo {
+  /** what the airframe body is: a mounting plate (Kestrel) or a frame kit the parts bolt onto (Merlin). Missing means plate. */
+  kind?: 'plate' | 'frame';
+  /** the frame kit part when kind is frame; it is the airframe, not a slot */
+  frame?: PartId;
   /** plate length along X, m: the sensor-bay bracket, not the wing span */
   plateL: number;
   /** plate width along Y, m */

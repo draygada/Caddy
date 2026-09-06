@@ -25,6 +25,8 @@ export function SpecPanel({ o }: { o: Outcome }) {
   const [infoOpen, setInfoOpen] = useState(false);
   const commitSpan = (text: string) => { const p = parseDecimal(text); if (p == null) { s.setSpan(text); return; } s.setSpan(String(fromUnit(p, u))); };
   const title = slot ? GENERIC_NAME[slot] + ' Specifications' : sel === 'airframe' ? 'Airframe Specifications' : 'Specifications';
+  // a frame-kind airframe is a bought frame kit, not a plate with a wing span
+  const frameKit = s.geo.kind === 'frame' && s.geo.frame ? CATALOG[s.geo.frame] : null;
 
   return (
     <div data-panel="spec" className="panel flex flex-col relative">
@@ -82,9 +84,9 @@ export function SpecPanel({ o }: { o: Outcome }) {
         )}
         {sel === 'airframe' && selPart && (
           <div className="col-span-full py-2 text-[13px] text-muted flex flex-wrap gap-x-3 gap-y-1 items-center">
-            <span className="text-ink font-semibold">{selPart.name}</span>
-            <span>{selPart.vendor}</span>
-            <span>origin {selPart.origin}</span>
+            <span className="text-ink font-semibold">{frameKit ? frameKit.name + ' · ' + frameKit.mpn : selPart.name}</span>
+            <span>{frameKit ? frameKit.vendor : selPart.vendor}</span>
+            <span>origin {frameKit ? frameKit.origin : selPart.origin}</span>
           </div>
         )}
         {unconfirmedSeq != null && slot && (
@@ -93,7 +95,7 @@ export function SpecPanel({ o }: { o: Outcome }) {
             <button onClick={() => s.reopen(slot)} className="btn">Show comparison</button>
           </div>
         )}
-        {sel === 'airframe' && (
+        {sel === 'airframe' && !frameKit && (
           <div className="py-2">
             <label htmlFor="span" className="block text-[13px] text-muted mb-1">span</label>
             <div className="flex gap-2 items-center">

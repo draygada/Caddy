@@ -297,23 +297,26 @@ const baselineSnapshot = (): Snapshot => ({
 });
 const pickSnapshot = (s: Snapshot): Snapshot => ({ parts: s.parts, attrs: s.attrs, pos: s.pos, span: s.span, dims: s.dims, features: s.features, geo: s.geo, sketch: s.sketch, tint: s.tint, unconfirmed: s.unconfirmed, declared: s.declared });
 
-/** Merlin, the second sample: a 7 inch civil survey quad, about half built. Frame, pack, flight controller, its IMU, the 4-in-1 controller and a motor sit on the plate; the rest are in the project, not placed. */
-export const MERLIN_SLOTS: Slot[] = ['frame', 'battery', 'fc', 'imu', 'esc', 'motor', 'prop', 'gnss', 'datalink', 'camera', 'transponder'];
+/** Merlin, the second sample: a 7 inch civil survey quad on a Chimera7 frame, every part mounted where it bolts on. */
+export const MERLIN_SLOTS: Slot[] = ['battery', 'fc', 'imu', 'esc', 'motor', 'prop', 'gnss', 'datalink', 'camera', 'transponder'];
 const merlinSnapshot = (): Snapshot => {
-  // a 600 x 300 x 6 mm assembly plate: the 270 x 199 mm frame takes the far half, the small parts sit in two columns on the near half
-  const geo: Geo = { ...GEO0, plateL: 0.6, plateW: 0.3 };
-  const parts: Parts = { ...(Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts), frame: 'chimera7', battery: 'tattu1300', fc: 'px6cmini', imu: 'icm', esc: 'tekko65', motor: 'f60prov' };
+  // the Chimera7 frame is the airframe: no plate. Parts sit where they bolt on: the ESC and flight controller in the 30.5 mm stack
+  // between the plates, the pack, IMU breakout, GNSS mast and telemetry radio on the top plate, the camera in the nose cage,
+  // the transponder on the bottom plate ahead of the stack; motors and props repeat on the four arm pads (frame-local metres, z absolute)
+  const geo: Geo = { ...GEO0, kind: 'frame', frame: 'chimera7', plateL: 0.27, plateW: 0.199, plateT: 0.003 };
+  const parts: Parts = { ...(Object.fromEntries(SLOTS.map((sl) => [sl, null])) as Parts), battery: 'tattu1300', fc: 'px6cmini', imu: 'icm', esc: 'tekko65', motor: 'f60prov', prop: 'hq7035', gnss: 'm10gps', datalink: 'sik915', camera: 'thumbpro', transponder: 'ping200' };
   const pos: Positions = {
     ...posFor(geo.plateL, geo.plateW),
-    battery: { x: 0.02, y: 0.02 }, esc: { x: 0.02, y: 0.08 }, fc: { x: 0.02, y: 0.15 }, datalink: { x: 0.02, y: 0.22 }, camera: { x: 0.02, y: 0.265 },
-    imu: { x: 0.13, y: 0.02 }, gnss: { x: 0.17, y: 0.02 }, transponder: { x: 0.24, y: 0.02 }, motor: { x: 0.13, y: 0.06 }, prop: { x: 0.11, y: 0.115 }, frame: { x: 0.31, y: 0.09 },
+    esc: { x: 0.1135, y: 0.0775, z: 0.004 }, fc: { x: 0.108, y: 0.08, z: 0.012 },
+    battery: { x: 0.0975, y: 0.0805, z: 0.032 }, imu: { x: 0.16, y: 0.12, z: 0.032 }, gnss: { x: 0.11, y: 0.135, z: 0.06 }, datalink: { x: 0.175, y: 0.05, z: 0.032 },
+    camera: { x: 0.2, y: 0.087, z: 0.008 }, transponder: { x: 0.05, y: 0.11, z: 0.003 },
   };
-  return { ...baselineSnapshot(), parts, attrs: attrsFor(parts), pos, geo, features: [{ n: 'f1', text: 'assembly plate · 0.600 × 0.300 × 0.006 m', kind: 'sketch' }, { n: 'f2', text: 'flange · 0.006 × 0.300 × 0.060 m', kind: 'extrude' }, { n: 'f3', text: '4 holes ⌀ 6.5 mm · plate', kind: 'hole' }] };
+  return { ...baselineSnapshot(), parts, attrs: attrsFor(parts), pos, geo, features: [{ n: 'f1', text: 'frame · Chimera7 Pro V2 · 0.270 × 0.199 × 0.034 m', kind: 'sketch' }, { n: 'f2', text: 'stack · 30.5 mm M3 · 21 mm standoffs', kind: 'extrude' }, { n: 'f3', text: 'motor pads · 4 × 16 mm M3', kind: 'hole' }] };
 };
 export const SAMPLE_PROJECTS: Project[] = [
   { id: 'kestrel', name: 'Kestrel', description: 'Fixed-wing survey drone · 7 slots · the demo design', intake: { ...INTAKE_DEFAULT, civilProduct: true }, createdAt: '2026-09-04 18:10', openedAt: '2026-09-05 09:12', components: [...CORE_SLOTS] },
   {
-    id: 'merlin', name: 'Merlin', description: '7 inch civil survey quadcopter · 11 components · 6 placed, 5 to go',
+    id: 'merlin', name: 'Merlin', description: '7 inch civil survey quadcopter · Chimera7 frame · 10 components, all placed',
     intake: { endUse: 'civil survey and mapping', endUser: 'commercial operator', shipTo: 'US', qty: 25, mode: 'air', civilProduct: true, bvlos: false, usedOn: 'none', notes: 'orthomosaic mapping of construction sites · VLOS under Part 107 · 25 units for the first fleet' },
     createdAt: '2026-09-05 14:40', openedAt: '2026-09-05 16:05', components: [...MERLIN_SLOTS], snapshot: merlinSnapshot(),
   },
@@ -518,12 +521,14 @@ export const useStore = create<WorkbenchState>()((set, get) => {
       const id = 'r' + ((prev ? parseInt(prev.id.slice(1), 10) : 0) + 1);
       const snap = pickSnapshot(s);
       const designHash = designHashOf(snap);
-      const lines = linesFor(s.parts);
+      // a frame-kind airframe sources its frame kit on the airframe line
+      const sourcingParts: Parts = s.geo.kind === 'frame' && s.geo.frame ? { ...s.parts, frame: s.geo.frame } : s.parts;
+      const lines = linesFor(sourcingParts);
       const controlled = (line: Line) => { const o = service.evaluate(design(), get().pack); const node = line.slot ?? 'airframe'; return o.rules.some((r) => r.node === node); };
       const offers: Record<string, ResolvedOffer[]> = {};
       let screened = 0, est = 0;
       for (const line of lines) {
-        offers[line.id] = offersFor(s.parts).filter((o) => o.lineId === line.id).map((offer) => {
+        offers[line.id] = offersFor(sourcingParts).filter((o) => o.lineId === line.id).map((offer) => {
           const tier = tierFor(line, offer, controlled(line));
           const tree = walk(offer, tier);
           const ru = rollup(tree);

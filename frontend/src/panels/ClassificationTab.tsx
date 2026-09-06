@@ -75,7 +75,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
     return {
       node,
       name: node === 'airframe' ? 'Airframe' : GENERIC_NAME[node as Slot],
-      model: node === 'airframe' ? 'Kestrel bracket · span ' + s.span.toFixed(1) + ' m' : pid ? CATALOG[pid].name : 'slot empty',
+      model: node === 'airframe' ? (s.geo.kind === 'frame' && s.geo.frame ? CATALOG[s.geo.frame].name + ' · ' + CATALOG[s.geo.frame].mpn : (s.project?.name ?? 'Kestrel') + ' bracket · span ' + s.span.toFixed(1) + ' m') : pid ? CATALOG[pid].name : 'slot empty',
       thumb: node === 'airframe' ? AF_THUMB : pid ? THUMBS[pid] : null,
       level,
       why: whyOf(o, node, unconfirmed, level),

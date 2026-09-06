@@ -95,6 +95,7 @@ function toPlate(pr: Projector, sx: number, sy: number, ca: number, sa: number, 
 
 function SheetView({ span }: { span: number }) {
   const units = useStore((s) => s.units);
+  const title = useStore((s) => (s.project?.name ?? 'Kestrel') + (s.geo.kind === 'frame' ? ' frame' : ' bracket'));
   const views = [
     { name: 'Top', note: 'plan view · derived from the model on release' },
     { name: 'Front', note: 'elevation · derived from the model on release' },
@@ -114,7 +115,7 @@ function SheetView({ span }: { span: number }) {
           <span className="font-mono text-[12px] text-muted">from the model view</span>
         </div>
         <div className="col-span-2 border border-line rounded-r grid grid-cols-[2fr_1fr_1fr_1fr] text-[13px]">
-          <div className="px-[10px] py-[6px] border-r border-line2"><span className="text-muted">title</span><br /><b>Kestrel bracket · slot assembly</b></div>
+          <div className="px-[10px] py-[6px] border-r border-line2"><span className="text-muted">title</span><br /><b>{title} · slot assembly</b></div>
           <div className="px-[10px] py-[6px] border-r border-line2"><span className="text-muted">revision</span><br /><span className="font-mono">v{useStore.getState().versions.length}</span></div>
           <div className="px-[10px] py-[6px] border-r border-line2"><span className="text-muted">span</span><br /><span className="font-mono">{fmtLen(span, units)}</span></div>
           <div className="px-[10px] py-[6px]"><span className="text-muted">units · sheet</span><br /><span className="font-mono">{units} · A3 · not yet generated</span></div>
@@ -398,7 +399,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
           ))}
           {scene.plane && <polygon points={scene.plane} fill="var(--focus)" fillOpacity="0.08" stroke="var(--focus)" strokeWidth="1.2" strokeDasharray="6 4" style={{ pointerEvents: 'none' }} />}
           <line x1={scene.dim.x1} y1={scene.dim.y1} x2={scene.dim.x2} y2={scene.dim.y2} stroke="var(--muted)" strokeWidth="1" strokeDasharray="3 3" />
-          <text x={scene.dim.tx} y={scene.dim.ty} fill="var(--muted)" fontSize="13" fontFamily="Geist Mono, monospace" textAnchor="middle">plate L {fmtLen(L, s.units)}</text>
+          <text x={scene.dim.tx} y={scene.dim.ty} fill="var(--muted)" fontSize="13" fontFamily="Geist Mono, monospace" textAnchor="middle">{geo.kind === 'frame' ? 'frame' : 'plate'} L {fmtLen(L, s.units)}</text>
           {s.dragging && <text x="380" y="476" fill="var(--ink)" fontSize="14" fontWeight="600" textAnchor="middle">{dropHint}</text>}
         </svg>
         <div className="absolute right-1 top-1 group" onMouseDown={(e) => e.stopPropagation()}>

@@ -100,19 +100,29 @@ describe('units and geometry helpers', () => {
 });
 
 describe('the Merlin sample project', () => {
-  it('opens half built: six of eleven components placed, the rest listed but empty, and the preview scene builds for every slot', () => {
+  it('opens on its frame: ten components all mounted, the frame is the airframe body, four motors and props on the arm pads', () => {
     const st = useStore.getState();
     st.reset();
     st.openProject('merlin');
     const s = useStore.getState();
     expect(s.project?.id).toBe('merlin');
-    expect(s.project?.components).toHaveLength(11);
+    expect(s.project?.components).toHaveLength(10);
+    expect(s.project?.components).not.toContain('frame');
+    expect(s.geo.kind).toBe('frame');
+    expect(s.geo.frame).toBe('chimera7');
     const placed = s.project!.components.filter((sl) => s.parts[sl]);
-    expect(placed).toEqual(['frame', 'battery', 'fc', 'imu', 'esc', 'motor']);
-    expect(s.parts.prop).toBeNull();
+    expect(placed).toHaveLength(10);
+    expect(s.parts.frame).toBeNull();
     expect(s.parts.thermal).toBeNull();
     const bodies = buildBodies(s.snapshot());
+    expect(bodies.plate.faces.length).toBeGreaterThan(20);
+    expect(bodies.flange.faces).toHaveLength(0);
     for (const sl of placed) expect(bodies[sl].faces.length).toBeGreaterThan(6);
+    // four motors: the motor body spans the whole wheelbase, not one bell
+    const xs = bodies.motor.faces.flatMap((f) => f.pts.map((q) => q[0]));
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(0.25);
+    // every mounted part sits at or above the bottom plate
+    for (const sl of placed) if (sl !== 'motor' && sl !== 'prop') expect(s.pos[sl].z ?? 0).toBeGreaterThanOrEqual(0.003);
     expect(useStore.getState().projects.find((p) => p.id === 'kestrel')?.snapshot).toBeUndefined();
   });
 });
