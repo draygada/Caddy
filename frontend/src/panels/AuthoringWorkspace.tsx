@@ -1,4 +1,4 @@
-import { useMemo, useReducer, useState, type CSSProperties } from 'react';
+import { useMemo, useReducer, useRef, useState, type CSSProperties } from 'react';
 import {
   CadApiError,
   applyCadIntent,
@@ -25,6 +25,7 @@ import {
   type SketchDimensionKind,
   type SketchEntity,
 } from '../cad';
+import { exportCurrentCadInBrowser } from '../cad/browser-kernel';
 import {
   CAD_OUTPUT_LIMITATIONS,
   createNativeDocumentDraft,
@@ -46,10 +47,10 @@ const actionButton: CSSProperties = { ...button, background: '#173f35', borderCo
 
 type AuthoringWorkspaceProps = { fetchImpl?: typeof fetch; initialDocument?: CadDocument };
 
-function initialSketch(): CadSketch {
+export function createSketchDraft(sequence = 1): CadSketch {
   return {
     id: cadId('sketch'),
-    name: 'Sketch 1',
+    name: `Sketch ${sequence}`,
     plane: { kind: 'origin', plane: 'XY' },
     entities: [{ id: cadId('entity'), kind: 'rectangle', construction: false, origin: { x: -20, y: -12 }, width: 40, height: 24 }],
     dimensions: [],
@@ -58,9 +59,37 @@ function initialSketch(): CadSketch {
   };
 }
 
+export interface CadFeatureFormDraft {
+  name: string;
+  inputReferences: string;
+  targetReferences: string;
+  numericValue: number;
+  outputBodyName: string;
+}
+
+export function featureFormForKind(kind: CadFeatureKind, selectedId: string | null, document: CadDocument, preferredSketchId: string): CadFeatureFormDraft {
+  const selectedSketch = document.sketches.find((item) => item.id === selectedId || item.entities.some((entity) => entity.id === selectedId));
+  const selectedBody = document.bodies.find((item) => item.id === selectedId);
+  const profileReference = selectedSketch && selectedId ? selectedId : preferredSketchId;
+  const label = featureLabel(kind);
+  if (kind === 'feature.extrude') return { name: 'Extrude', inputReferences: profileReference, targetReferences: '', numericValue: 10, outputBodyName: 'Extrude result' };
+  if (kind === 'feature.revolve') return { name: 'Revolve', inputReferences: profileReference, targetReferences: '', numericValue: 360, outputBodyName: 'Revolve result' };
+  if (kind === 'feature.hole') return { name: 'Hole', inputReferences: profileReference, targetReferences: selectedBody?.id ?? '', numericValue: 5, outputBodyName: '' };
+  if (kind === 'feature.fillet' || kind === 'feature.chamfer') {
+    return { name: label, inputReferences: selectedBody?.id ?? '', targetReferences: selectedBody?.id ?? '', numericValue: 2, outputBodyName: '' };
+  }
+  return { name: label, inputReferences: '', targetReferences: selectedBody?.id ?? '', numericValue: 10, outputBodyName: `${label[0].toUpperCase()}${label.slice(1)} result` };
+}
+
+export function claimCadSubmission(inFlight: Set<string>, key: string): (() => void) | null {
+  if (inFlight.has(key)) return null;
+  inFlight.add(key);
+  return () => { inFlight.delete(key); };
+}
+
 export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: AuthoringWorkspaceProps) {
   const [state, dispatch] = useReducer(cadAuthoringReducer, initialDocument ?? createCadDocument(), createCadAuthoringState);
-  const [sketch, setSketch] = useState<CadSketch>(initialSketch);
+  const [sketch, setSketch] = useState<CadSketch>(() => createSketchDraft(1));
   const [featureKind, setFeatureKind] = useState<CadFeatureKind>('feature.extrude');
   const [featureName, setFeatureName] = useState('Extrude 1');
   const [featureInputs, setFeatureInputs] = useState(sketch.id);
@@ -81,29 +110,62 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   const [outputError, setOutputError] = useState<string | null>(null);
   const [outputBusy, setOutputBusy] = useState(false);
   const [kernelArtifacts, setKernelArtifacts] = useState<CadExportResponse[]>([]);
+  const [preferredSketchId, setPreferredSketchId] = useState(sketch.id);
+  const inFlightSubmissions = useRef(new Set<string>());
 
-  async function submitOperation(operation: CadOperation) {
+  async function submitOperation(operation: CadOperation): Promise<boolean> {
+    const release = claimCadSubmission(inFlightSubmissions.current, 'workspace-write');
+    if (!release) {
+      setFormError('A CAD write is already running. Duplicate or stale submission was ignored.');
+      return false;
+    }
     const requestId = cadId('request');
-    const draft = applyCadIntent(state.document, operation);
+    const acceptedBase = state.lastValidDocument;
+    const draft = applyCadIntent(acceptedBase, operation);
     const executionPreference = state.kernel?.engineMode === 'BROWSER_JSCAD_BOUNDED' ? 'BROWSER_JSCAD_BOUNDED' : 'AUTO';
     dispatch({ type: 'stage', operation, requestId });
     dispatch({ type: 'started', requestId });
     try {
-      const response = await recomputeCad({ document: draft, operation, expectedRevisionId: state.lastValidDocument.revisionId }, fetchImpl, executionPreference);
+      const response = await recomputeCad({ document: draft, operation, expectedRevisionId: acceptedBase.revisionId }, fetchImpl, executionPreference);
       dispatch({ type: 'succeeded', requestId, response });
       setFormError(null);
+      return true;
     } catch (error) {
       dispatch({ type: 'failed', requestId, error: error instanceof Error ? error.message : 'CAD recompute failed.', stale: error instanceof CadApiError && error.code === 'CAD_STALE', diagnostics: error instanceof CadApiError ? error.diagnostics : undefined });
+      return false;
+    } finally {
+      release();
     }
   }
 
-  function safely(build: () => CadOperation) {
+  async function safely(build: () => CadOperation): Promise<boolean> {
     try {
-      void submitOperation(build());
       setFormError(null);
+      return await submitOperation(build());
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'The operation is invalid.');
+      return false;
     }
+  }
+
+  async function handleSketchCommit() {
+    const committedSketch = sketch;
+    if (!await safely(() => createSketchOperation(committedSketch))) return;
+    setFeatureInputs(committedSketch.id);
+    setPreferredSketchId(committedSketch.id);
+    dispatch({ type: 'select', id: committedSketch.id });
+    setSketch(createSketchDraft(state.lastValidDocument.sketches.length + 2));
+  }
+
+  function handleFeatureKindChange(kind: CadFeatureKind) {
+    const next = featureFormForKind(kind, state.selectedId, state.lastValidDocument, preferredSketchId);
+    setFeatureKind(kind);
+    setFeatureName(next.name);
+    setFeatureInputs(next.inputReferences);
+    setFeatureTargets(next.targetReferences);
+    setFeatureValue(next.numericValue);
+    setOutputBodyName(next.outputBodyName);
+    setFormError(null);
   }
 
   async function handleImport(file: File, format: CadTransferFormat) {
@@ -120,7 +182,10 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
   async function handleExport(format: CadTransferFormat) {
     setTransferMessage(`Requesting ${format} export...`);
     try {
-      const result = await exportCad({ document: state.lastValidDocument, format, revisionId: state.lastValidDocument.revisionId }, fetchImpl);
+      const currentDocument = state.lastValidDocument;
+      const result = state.kernel?.engineMode === 'BROWSER_JSCAD_BOUNDED'
+        ? await exportCurrentCadInBrowser(currentDocument, format)
+        : await exportCad({ document: currentDocument, format, revisionId: currentDocument.revisionId }, fetchImpl);
       downloadExport(result);
       setKernelArtifacts((current) => [...current.filter((item) => item.format !== result.format), result]);
       setTransferMessage(`Exported ${result.fileName} from ${result.revisionId}.`);
@@ -181,14 +246,23 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
     setOutputMessage('Sealing CADdyDaddy snapshot and deriving output package...');
     try {
       if (!state.lastValidMesh) throw new Error('Run one successful kernel recompute before generating outputs.');
-      const envelope = await sealNativeDocument(await createNativeDocumentDraft(state.lastValidDocument, state.lastValidMesh), fetchImpl);
-      const currentArtifacts = kernelArtifacts.filter((artifact) => artifact.revisionId === state.lastValidDocument.revisionId);
-      const bundle = await generateCadOutputs({ document: envelope.document, mesh: state.lastValidMesh, kernelArtifacts: currentArtifacts }, fetchImpl);
+      const currentDocument = state.lastValidDocument;
+      const currentMesh = state.lastValidMesh;
+      const envelope = await sealNativeDocument(await createNativeDocumentDraft(currentDocument, currentMesh), fetchImpl);
+      let currentArtifacts = kernelArtifacts.filter((artifact) => artifact.revisionId === currentDocument.revisionId);
+      if (!currentArtifacts.some((artifact) => artifact.format === 'STL')) {
+        const stl = state.kernel?.engineMode === 'BROWSER_JSCAD_BOUNDED'
+          ? await exportCurrentCadInBrowser(currentDocument, 'STL')
+          : await exportCad({ document: currentDocument, format: 'STL', revisionId: currentDocument.revisionId }, fetchImpl);
+        currentArtifacts = [...currentArtifacts, stl];
+      }
+      const bundle = await generateCadOutputs({ document: envelope.document, mesh: currentMesh, kernelArtifacts: currentArtifacts }, fetchImpl);
       setNativeEnvelope(envelope);
       setSealedSnapshotArtifact(envelope.artifact);
       setOutputBundle(bundle);
+      setKernelArtifacts((current) => [...current.filter((artifact) => artifact.revisionId !== currentDocument.revisionId || artifact.format !== 'STL'), ...currentArtifacts.filter((artifact) => artifact.format === 'STL')]);
       setOutputError(null);
-      setOutputMessage(`Validated ${bundle.artifacts.length} artifacts available for explicit download · package ${shortId(bundle.package.package_id)}.`);
+      setOutputMessage(`Validated ${bundle.artifacts.length} artifacts, including current-revision STL, available for explicit download · package ${shortId(bundle.package.package_id)}.`);
     } catch (error) {
       setOutputError(error instanceof Error ? error.message : 'Output generation failed closed.');
       setOutputMessage('Last valid output bundle preserved. No replacement artifacts were admitted.');
@@ -242,10 +316,10 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
         </main>
 
         <aside className="cad-authoring-column" style={{ display: 'grid', gap: 9, minWidth: 0 }}>
-          <SketchEditor sketch={sketch} onChange={setSketch} onCommit={() => { setFeatureInputs(sketch.id); safely(() => createSketchOperation(sketch)); }} />
+          <SketchEditor sketch={sketch} busy={state.status === 'queued' || state.status === 'running'} onChange={setSketch} onCommit={() => { void handleSketchCommit(); }} />
           <section aria-labelledby="feature-builder-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
             <h3 id="feature-builder-title" style={{ margin: 0, fontSize: 13 }}>Feature builder</h3>
-            <select aria-label="Feature type" value={featureKind} onChange={(event) => { const kind = event.target.value as CadFeatureKind; setFeatureKind(kind); setFeatureName(featureLabel(kind)); }} style={field}>
+            <select aria-label="Feature type" value={featureKind} onChange={(event) => handleFeatureKindChange(event.target.value as CadFeatureKind)} style={field}>
               {FEATURE_KINDS.map((kind) => <option key={kind} value={kind}>{featureLabel(kind)}{kind === 'feature.fillet' || kind === 'feature.chamfer' ? ' · connected OCCT only' : ''}</option>)}
             </select>
             <input aria-label="Feature name" value={featureName} onChange={(event) => setFeatureName(event.target.value)} style={field} />
@@ -254,7 +328,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}><button type="button" disabled={!state.selectedId} onClick={() => state.selectedId && setFeatureInputs(state.selectedId)} style={button}>Use selected as input</button><button type="button" disabled={!state.selectedId} onClick={() => state.selectedId && setFeatureTargets(state.selectedId)} style={button}>Use selected as target</button></div>
             <label style={{ fontSize: 10 }}>Distance / angle / radius<input aria-label="Feature numeric value" type="number" value={featureValue} onChange={(event) => setFeatureValue(Number(event.target.value))} style={{ ...field, marginTop: 3 }} /></label>
             <input aria-label="Output body name" placeholder="New body name; blank modifies targets" value={outputBodyName} onChange={(event) => setOutputBodyName(event.target.value)} style={field} />
-            <button type="button" onClick={() => safely(() => createFeatureOperation({ kind: featureKind, name: featureName, inputIds: ids(featureInputs), targetBodyIds: ids(featureTargets), outputBodyName, parameters: featureParameters(featureKind, featureValue) }))} style={actionButton}>Queue {featureLabel(featureKind)}</button>
+            <button type="button" onClick={() => { void safely(() => createFeatureOperation({ kind: featureKind, name: featureName, inputIds: ids(featureInputs), targetBodyIds: ids(featureTargets), outputBodyName, parameters: featureParameters(featureKind, featureValue) })); }} style={actionButton}>Queue {featureLabel(featureKind)}</button>
           </section>
 
           <section aria-labelledby="parameters-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
@@ -264,7 +338,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
               <input aria-label="Parameter name" value={parameterName} onChange={(event) => setParameterName(event.target.value)} style={field} />
               <input aria-label="Parameter expression" value={parameterExpression} onChange={(event) => setParameterExpression(event.target.value)} style={field} />
             </div>
-            <button type="button" onClick={() => safely(() => createParameterOperation({ id: state.document.parameters.find((item) => item.name === parameterName)?.id ?? cadId('parameter'), name: parameterName, expression: parameterExpression, unit: 'mm', resolvedValue: null }))} style={button}>Stage parameter edit</button>
+            <button type="button" onClick={() => { void safely(() => createParameterOperation({ id: state.document.parameters.find((item) => item.name === parameterName)?.id ?? cadId('parameter'), name: parameterName, expression: parameterExpression, unit: 'mm', resolvedValue: null })); }} style={button}>Stage parameter edit</button>
           </section>
 
           <section aria-labelledby="assembly-title" style={{ ...card, padding: 10, display: 'grid', gap: 7 }}>
@@ -273,7 +347,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
             <select aria-label="Instance body" value={instanceBody} onChange={(event) => setInstanceBody(event.target.value)} style={field}>
               <option value="">Choose body</option>{state.document.bodies.map((body) => <option key={body.id} value={body.id}>{body.name}</option>)}
             </select>
-            <button type="button" disabled={!instanceBody} onClick={() => safely(() => createInstanceOperation({ id: cadId('instance'), name: instanceName, bodyId: instanceBody, grounded: state.document.assembly.instances.length === 0, transform: { translation: [0, 0, 0], rotationDegrees: [0, 0, 0] } }))} style={button}>Insert instance</button>
+            <button type="button" disabled={!instanceBody} onClick={() => { void safely(() => createInstanceOperation({ id: cadId('instance'), name: instanceName, bodyId: instanceBody, grounded: state.document.assembly.instances.length === 0, transform: { translation: [0, 0, 0], rotationDegrees: [0, 0, 0] } })); }} style={button}>Insert instance</button>
             <div style={{ borderTop: '1px solid #d9dfdb', paddingTop: 7, display: 'grid', gap: 5 }}>
               <input aria-label="Mate name" value={mate.name} onChange={(event) => setMate({ ...mate, name: event.target.value })} style={field} />
               <select aria-label="Mate type" value={mate.kind} onChange={(event) => setMate({ ...mate, kind: event.target.value as CadAssemblyMate['kind'] })} style={field}>{MATE_KINDS.map((kind) => <option key={kind}>{kind}</option>)}</select>
@@ -281,7 +355,7 @@ export function AuthoringWorkspace({ fetchImpl = fetch, initialDocument }: Autho
                 <select aria-label="First mate instance" value={mate.instanceAId} onChange={(event) => setMate({ ...mate, instanceAId: event.target.value })} style={field}><option value="">Instance A</option>{state.document.assembly.instances.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
                 <select aria-label="Second mate instance" value={mate.instanceBId} onChange={(event) => setMate({ ...mate, instanceBId: event.target.value })} style={field}><option value="">Instance B</option>{state.document.assembly.instances.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
               </div>
-              <button type="button" onClick={() => safely(() => createMateOperation({ id: cadId('mate'), name: mate.name, kind: mate.kind, instanceAId: mate.instanceAId, instanceBId: mate.instanceBId, referenceA: 'origin', referenceB: 'origin', offset: mate.offset, unit: mate.kind === 'angle' ? 'deg' : 'mm' }))} style={button}>Stage mate</button>
+              <button type="button" onClick={() => { void safely(() => createMateOperation({ id: cadId('mate'), name: mate.name, kind: mate.kind, instanceAId: mate.instanceAId, instanceBId: mate.instanceBId, referenceA: 'origin', referenceB: 'origin', offset: mate.offset, unit: mate.kind === 'angle' ? 'deg' : 'mm' })); }} style={button}>Stage mate</button>
             </div>
           </section>
         </aside>
@@ -295,7 +369,7 @@ const MATE_KINDS: CadAssemblyMate['kind'][] = ['fixed', 'coincident', 'concentri
 
 function ProjectTree({ document, selectedId, onSelect }: { document: CadDocument; selectedId: string | null; onSelect: (id: string) => void }) {
   const sections = [
-    { label: 'Sketches', rows: document.sketches.map((item) => ({ id: item.id, label: item.name, meta: `${item.entities.length} entities · ${item.solverState}` })) },
+    { label: 'Sketches', rows: document.sketches.flatMap((item) => [{ id: item.id, label: item.name, meta: `${item.entities.length} entities · ${item.solverState}` }, ...item.entities.map((entity, index) => ({ id: entity.id, label: `${item.name} / ${index + 1}. ${entity.kind}`, meta: 'selectable feature input' }))]) },
     { label: 'Bodies', rows: document.bodies.map((item) => ({ id: item.id, label: item.name, meta: `${item.featureIds.length} features · ${item.state}` })) },
     { label: 'Instances', rows: document.assembly.instances.map((item) => ({ id: item.id, label: item.name, meta: item.grounded ? 'grounded' : 'free' })) },
     { label: 'Mates', rows: document.assembly.mates.map((item) => ({ id: item.id, label: item.name, meta: item.kind })) },
@@ -303,7 +377,7 @@ function ProjectTree({ document, selectedId, onSelect }: { document: CadDocument
   return <section aria-labelledby="project-tree-title" style={{ ...card, padding: 10 }}><h3 id="project-tree-title" style={{ margin: '0 0 8px', fontSize: 13 }}>Model tree</h3>{sections.map((section) => <div key={section.label} style={{ marginTop: 8 }}><div style={{ ...mono, fontSize: 9, fontWeight: 850, textTransform: 'uppercase', color: '#66736b' }}>{section.label} · {section.rows.length}</div>{section.rows.length === 0 && <div style={{ fontSize: 10, color: '#7c867f', padding: '4px 0' }}>None authored</div>}{section.rows.map((row) => <button key={row.id} type="button" onClick={() => onSelect(row.id)} style={{ ...button, width: '100%', textAlign: 'left', marginTop: 4, background: selectedId === row.id ? '#e6f0e9' : '#fff' }}><span>{row.label}</span><span style={{ display: 'block', ...mono, marginTop: 2, fontSize: 8, color: '#68746c' }}>{row.meta}</span></button>)}</div>)}</section>;
 }
 
-function SketchEditor({ sketch, onChange, onCommit }: { sketch: CadSketch; onChange: (sketch: CadSketch) => void; onCommit: () => void }) {
+function SketchEditor({ sketch, busy, onChange, onCommit }: { sketch: CadSketch; busy: boolean; onChange: (sketch: CadSketch) => void; onCommit: () => void }) {
   const [dimensionKind, setDimensionKind] = useState<SketchDimensionKind>('distance');
   const [constraintKind, setConstraintKind] = useState<SketchConstraintKind>('coincident');
   const [referenceIds, setReferenceIds] = useState('');
@@ -321,7 +395,7 @@ function SketchEditor({ sketch, onChange, onCommit }: { sketch: CadSketch; onCha
       <button type="button" onClick={() => onChange({ ...sketch, constraints: [...sketch.constraints, { id: cadId('constraint'), kind: constraintKind, entityIds: ids(referenceIds) }] })} style={button}>Add constraint</button>
     </div>
     <div style={{ ...mono, fontSize: 9, color: '#66736b' }}>{sketch.dimensions.length} dimensions · {sketch.constraints.length} constraints · connected OCCT may solve; browser fallback records but does not solve</div>
-    <button type="button" onClick={onCommit} style={actionButton}>Queue sketch for recompute</button>
+    <button type="button" disabled={busy} onClick={onCommit} style={{ ...actionButton, opacity: busy ? .55 : 1 }}>{busy ? 'Sketch recompute running...' : 'Queue sketch for recompute'}</button>
   </section>;
 }
 
@@ -363,7 +437,7 @@ export function OutputPanel({ busy, nativeEnvelope, sealedSnapshotArtifact, bund
       <label style={{ ...button, textAlign: 'center', opacity: busy ? .55 : 1 }}>Load CADdyDaddy snapshot<input aria-label="Load CADdyDaddy snapshot (.caddy.json)" type="file" accept=".json,.caddy.json,application/json" disabled={busy} style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; if (file) onNativeLoad(file); event.currentTarget.value = ''; }} /></label>
     </div>
     <button type="button" disabled={!sealedSnapshotArtifact} onClick={() => sealedSnapshotArtifact && onDownload(sealedSnapshotArtifact)} aria-label="Download sealed CADdyDaddy snapshot (.caddy.json)" style={{ ...button, opacity: sealedSnapshotArtifact ? 1 : .55 }}>Download sealed snapshot (.caddy.json)</button>
-    <button type="button" disabled={busy} onClick={onGenerate} style={{ ...actionButton, opacity: busy ? .55 : 1 }}>{busy ? 'Validating outputs...' : 'Generate drawing + BOM package'}</button>
+    <button type="button" disabled={busy} onClick={onGenerate} style={{ ...actionButton, opacity: busy ? .55 : 1 }}>{busy ? 'Validating outputs...' : 'Generate drawing + BOM + STL package'}</button>
     <div style={{ ...mono, fontSize: 8, color: '#66736b' }}>Retained STEP / IGES / STL exchange · {retainedFormats.length ? retainedFormats.join(' / ') : 'none'} · CADdyDaddy snapshot {nativeEnvelope ? shortId(nativeEnvelope.document.document_hash) : 'not sealed'}</div>
     {error && <div role="alert" style={{ padding: 7, border: '1px solid #dca39a', background: '#fff0ed', color: '#7d281e', fontSize: 9 }}>{error}</div>}
     {message && <div role="status" aria-live="polite" style={{ padding: 7, background: '#f2f5f2', fontSize: 9, lineHeight: 1.35 }}>{message}</div>}

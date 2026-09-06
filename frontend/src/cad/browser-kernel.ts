@@ -12,6 +12,7 @@ import type {
   CadRecomputeRequest,
   CadRecomputeResponse,
   CadSketch,
+  CadTransferFormat,
   FeatureOperation,
   SketchEntity,
 } from './types';
@@ -127,6 +128,10 @@ export async function exportCadInBrowser(request: CadExportRequest): Promise<Cad
     revisionId: request.revisionId,
     documentHash: await hashCanonical(request.document),
   };
+}
+
+export async function exportCurrentCadInBrowser(document: CadDocument, format: CadTransferFormat = 'STL'): Promise<CadExportResponse> {
+  return exportCadInBrowser({ document, format, revisionId: document.revisionId });
 }
 
 function evaluateDocument(document: CadDocument): { bodies: EvaluatedBody[]; bodyIds: Set<string>; diagnostics: CadDiagnostic[] } {
