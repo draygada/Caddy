@@ -170,7 +170,11 @@ export default function App() {
           <span>service not reachable · replaying the cached baseline · last outcome 2026-09-05 09:12</span>
         </div>
       )}
-      {workspaceSurface}
+      {workspace === 'design' ? workspaceSurface : (
+        <main className="flex-1 min-h-0 overflow-auto p-2">
+          {workspaceSurface}
+        </main>
+      )}
       {reasoningOpen && <Reasoning o={o} />}
       {sourcingOpen && <Sourcing o={o} />}
       {sourcesOpen && <Sources />}

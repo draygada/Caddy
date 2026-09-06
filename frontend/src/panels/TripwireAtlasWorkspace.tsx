@@ -70,7 +70,7 @@ export function TripwireAtlasWorkspace() {
         : 'Contract error; the candidate response is blocked';
 
   return (
-    <section aria-label="Tripwire Atlas workspace" className="absolute inset-0 z-[8] bg-bg text-ink flex flex-col overflow-hidden">
+    <section aria-label="Tripwire Atlas workspace" className="h-full min-h-0 bg-bg text-ink flex flex-col overflow-hidden">
       <header className="shrink-0 border-b border-line bg-surface px-4 py-3 grid gap-3">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
