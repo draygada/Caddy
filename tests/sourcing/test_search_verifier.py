@@ -150,3 +150,43 @@ def test_a_degree_unit_flush_against_its_number_parses():
     """C3: no-space vendor spelling; the bare 'h' alias must not win."""
     from forge_search.verify import parse_number_unit
     assert parse_number_unit("0.3°/h") == (Decimal("0.3"), "deg/h")
+
+
+def test_a_comma_between_digits_refuses_the_quote_instead_of_inventing_a_number():
+    """F1: stripping every comma read "0,3" as 3 (a 10x error) and "1,2,3" as 123 — numbers no document states."""
+    from forge_search.documents import text_sha256
+    from forge_search.verify import Rejected, parse_number_unit, verify
+    for field, unit, quote, value in (("gyro_bias_stability_1mo_deg_h", "deg/h", "Bias stability: 0,3 °/h", "3"),
+                                      ("frame_rate_hz", "Hz", "Channels 1,2,3 Hz", "123")):
+        text = quote + "\n"
+        out = verify(text, _claim(text, text_sha256(text), field, value, unit, quote), field_units=UNITS)
+        assert isinstance(out, Rejected) and out.reason == "unparseable", quote
+    assert parse_number_unit("Sample rate: 1,000 Hz") == (Decimal("1000"), "Hz")
+
+
+def test_two_figures_of_the_expected_unit_are_ambiguous_not_a_free_pick():
+    """F2: widening the quote by one clause must not launder the room-temperature 5 °/h into the 1-month
+    field — nor let the honest 0.3 through on a quote that supports both. Equal figures are not ambiguous."""
+    from forge_search.documents import text_sha256
+    from forge_search.verify import Accepted, Rejected, verify
+    two = "Bias stability: 5 °/h at 25 degC; 1-month: 0.3 °/h"
+    text = two + "\n"
+    for value in ("5", "0.3"):
+        out = verify(text, _claim(text, text_sha256(text), "gyro_bias_stability_1mo_deg_h", value, "deg/h", two), field_units=UNITS)
+        assert isinstance(out, Rejected) and out.reason == "number_mismatch" and "ambiguous" in out.detail, value
+    same = "Bias stability: 0.3 °/h typical; 0.3 °/h max"
+    text = same + "\n"
+    out = verify(text, _claim(text, text_sha256(text), "gyro_bias_stability_1mo_deg_h", "0.3", "deg/h", same), field_units=UNITS)
+    assert isinstance(out, Accepted) and out.spec.value == "0.3"
+
+
+def test_the_stored_value_is_the_documents_number_not_the_models_spelling():
+    """F3: "8.7\\n" is not a decimal string, and "+0.3"/"0.30" must not mint a second record hash for 0.3."""
+    from forge_search.verify import Accepted, Rejected, verify
+    text, sha = _doc("lepton35_test_sheet.txt")
+    out = verify(text, _claim(text, sha, "frame_rate_hz", "8.7\n", "Hz", "Frame rate: 8.7 Hz effective."), field_units=UNITS)
+    assert isinstance(out, Rejected) and out.reason == "schema_violation"
+    text, sha = _doc("gx220_vendor_page.html")
+    for spelling in ("0.3", "+0.3", "0.30"):
+        out = verify(text, _claim(text, sha, "gyro_bias_stability_1mo_deg_h", spelling, "deg/h", "Bias stability: 0.3 °/h"), field_units=UNITS)
+        assert isinstance(out, Accepted) and out.spec.value == "0.3", spelling
