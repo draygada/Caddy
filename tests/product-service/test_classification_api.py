@@ -62,7 +62,7 @@ def _ear99_model(pack) -> ScriptedModel:
                             "via": "enumerated",
                         }
                     ],
-                    "specially_designed_read": "Civil-use facts are recorded but not treated as dispositive.",
+                    "specially_designed_read": "not_applicable: no specially-designed USML candidate was routed.",
                     "no_usml_reasoning": "",
                 }
             ],
