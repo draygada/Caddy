@@ -56,6 +56,16 @@ export function FeatureDialog() {
 
   switch (d.kind) {
     case 'extrude': {
+      if (d.target === 'plate') {
+        const thickness = geo.plateT ?? PLATE_T;
+        return (
+          <Frame title="Extrude" sub="plate sketch → solid body" onCancel={cancel} okDisabled={readOnly} onOk={() => { s.applyGeo({ plateT: thickness }, 'extrude', 'extrude · plate profile to ' + thickness.toFixed(3) + ' m'); s.closeDialog(); }} okLabel="Commit extrusion">
+            {ro}
+            <LenField id="dlg-extrude-plate" label="profile depth" metres={thickness} units={u} min={0.02} max={0.5} onChange={(m) => s.setPreview({ ...s.preview, geo: { ...s.geo, plateT: m } })} hint="drives the rendered plate, mounted bodies, properties, section plane, and design hash" />
+            <div className="text-[12px] text-muted">Consumes the committed plate profile and appends an <span className="font-mono">extrude</span> feature plus a <span className="font-mono">feature_added</span> event.</div>
+          </Frame>
+        );
+      }
       const node = d.target ? nodeOfBody(d.target) : 'airframe';
       const label = node === 'airframe' ? 'flange' : SLOT_LABEL[node];
       return (
@@ -158,7 +168,7 @@ export function FeatureDialog() {
         </div>
       );
       return (
-        <Frame title="Sketch" sub="plate profile" onCancel={cancel} onOk={cancel} okLabel="Finish sketch">
+        <Frame title="Sketch" sub="plate profile → extrusion input" onCancel={cancel} onOk={() => { s.commitSketch(); s.closeDialog(); }} okLabel="Commit sketch" okDisabled={readOnly || r.overall === 'CONTRADICTORY'}>
           {ro}
           <div className="grid gap-1">
             {(['rect', 'holes'] as const).map((e) => (
@@ -172,6 +182,7 @@ export function FeatureDialog() {
           {group('required', 'constraints')}
           {group('redundant', 'add a redundant constraint')}
           {group('contradictory', 'add a contradictory constraint')}
+          <div className="text-[12px] text-muted">A committed sketch becomes the explicit input to <b className="text-ink">Extrude</b>. Under-constrained sketches remain editable; contradictory sketches cannot be committed.</div>
         </Frame>
       );
     }

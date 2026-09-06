@@ -10,6 +10,8 @@ export interface Command {
   label: string;
   group: CommandGroup;
   keys?: string;
+  /** Commands default to the Design workspace; global commands remain safe elsewhere. */
+  scope?: 'design' | 'global';
   /** false hides the command in menus for the current state */
   when?: (st: WorkbenchState, target: BodyId | null) => boolean;
   run: (st: WorkbenchState, target: BodyId | null) => void;
@@ -36,7 +38,7 @@ export const COMMANDS: Command[] = [
   { id: 'view.named', label: 'Save named view…', group: 'view', run: (st) => st.openDialog('named_view', null) },
   { id: 'view.sethome', label: 'Set current view as home', group: 'view', run: (st) => st.setHome() },
 
-  { id: 'create.sketch', label: 'Sketch · plate profile & constraints', group: 'create', run: (st) => st.openDialog('sketch', 'plate') },
+  { id: 'create.sketch', label: 'Sketch · plate profile & constraints', group: 'create', run: (st) => { st.patch({ sel: 'airframe', selBody: 'plate', selFace: null }); st.openDialog('sketch', 'plate'); } },
   { id: 'create.extrude', label: 'Extrude…', group: 'create', keys: 'E', when: needsBody, run: (st, t) => st.openDialog('extrude', t) },
   { id: 'create.hole', label: 'Hole… (plate)', group: 'create', keys: 'H', run: (st) => st.openDialog('hole', 'plate') },
   { id: 'modify.fillet', label: 'Fillet… (plate corners)', group: 'modify', run: (st) => st.openDialog('fillet', 'plate') },
@@ -61,29 +63,38 @@ export const COMMANDS: Command[] = [
   { id: 'doc.door3', label: 'New from description… (Door 3)', group: 'create', run: (st) => st.openDialog('door3', null) },
   { id: 'doc.target', label: 'Design to a target…', group: 'create', run: (st) => { st.openReasoning(); } },
   { id: 'view.board', label: 'Board view · flight controller', group: 'view', run: (st) => { st.closeDialog(); st.patch({ viewMode: 'board' }); } },
-  { id: 'doc.now', label: '/now · Shipyard observation', group: 'document', run: () => { location.search = '?now=1'; } },
+  { id: 'doc.now', label: '/now · Shipyard observation', group: 'document', scope: 'global', run: () => { location.search = '?now=1'; } },
   { id: 'doc.version', label: 'Save version…', group: 'document', run: (st) => st.openDialog('save_version', null) },
   { id: 'doc.comment', label: 'Add comment…', group: 'document', run: (st) => st.openDialog('add_comment', null) },
   ...UNITS.map((u) => ({ id: 'doc.units.' + u, label: 'Units · ' + u, group: 'document' as CommandGroup, run: (st: WorkbenchState) => st.setUnits(u) })),
   { id: 'doc.live', label: 'Timeline · back to live', group: 'document', when: (st) => st.viewSeq != null, run: (st) => st.viewAt(null) },
   { id: 'doc.restore', label: 'Timeline · restore this state (supersede)', group: 'document', when: (st) => st.viewSeq != null, run: (st) => st.restoreHere() },
 
-  { id: 'review.tripwire', label: 'Tripwire · review a canonical Candidate 0.1 entity…', group: 'review', keys: 'T', run: () => useTripwireStore.getState().openPanel() },
+  { id: 'review.tripwire', label: 'Tripwire · review a canonical Candidate 0.1 entity…', group: 'review', keys: 'T', scope: 'global', run: () => useTripwireStore.getState().openPanel() },
 
   { id: 'panels.timeline', label: 'Timeline drawer', group: 'panels', keys: 'L', run: (st) => st.toggleTimeline() },
   { id: 'panels.reasoning', label: 'Reasoning · why the product reads', group: 'panels', run: (st) => st.openReasoning() },
-  { id: 'panels.help', label: 'Keyboard and mouse help', group: 'panels', keys: '?', run: (st) => st.toggleHelp() },
-  { id: 'panels.theme', label: 'Toggle dark theme', group: 'panels', run: (st) => st.toggleTheme() },
+  { id: 'panels.help', label: 'Keyboard and mouse help', group: 'panels', keys: '?', scope: 'global', run: (st) => st.toggleHelp() },
+  { id: 'panels.theme', label: 'Toggle dark theme', group: 'panels', scope: 'global', run: (st) => st.toggleTheme() },
   { id: 'panels.rederive', label: 'Re-derive the log', group: 'panels', run: (st) => { st.rederiveLog(); st.openTimeline(); } },
 ];
 
 export const commandById = (id: string) => COMMANDS.find((c) => c.id === id);
+
+export const commandAvailable = (command: Command, designMounted: boolean) => command.scope === 'global' || designMounted;
+
+/** The Design viewport is deliberately unmounted in other mission workspaces. */
+export function designWorkspaceMounted() {
+  return typeof document === 'undefined' || Boolean(document.querySelector('[data-cad-workspace="design"]'));
+}
 
 /** Run a command against the live store, tracking recency for the command box. */
 export function runCommand(id: string, target?: BodyId | null) {
   const st = useStore.getState();
   const c = commandById(id);
   if (!c) return;
+  // Never let a shortcut silently mutate the off-screen Design store.
+  if (!commandAvailable(c, designWorkspaceMounted())) return;
   const t = target === undefined ? (st.selBody ?? (st.sel === 'airframe' ? 'plate' : st.sel)) : target;
   if (c.when && !c.when(st, t)) return;
   c.run(st, t);

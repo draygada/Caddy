@@ -11,9 +11,11 @@ import { BoardView } from './BoardView';
 import { FeatureDialog } from './FeatureDialog';
 import { MarkingMenu } from './MarkingMenu';
 import { TimelineStrip } from './TimelineStrip';
+import { runCommand } from '../commands';
+import { solveSketch } from '../lib/sketch';
 
 const VB_W = 760, VB_H = 490;
-const W = PLATE_W, T = PLATE_T;
+const W = PLATE_W;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** ViewCube cells: each face split 3×3; centre = face view, edge strips = edge views, corners = corner views (26 directions). */
@@ -56,11 +58,11 @@ function cubeCells(pr: Projector): CubeCell[] {
 interface Deco { stroke: string; sw: number; dash: string; hoverMix: boolean; selFace: boolean; tint?: string }
 interface Extent { dx0: number; dx1: number; dy0: number; dy1: number }
 
-function toPlate(pr: Projector, sx: number, sy: number, ca: number, sa: number): Pos | null {
+function toPlate(pr: Projector, sx: number, sy: number, ca: number, sa: number, thickness: number): Pos | null {
   if (Math.abs(pr.se) < 0.08) return null;
   const UK = pr.U * K;
   const a = (sx - pr.ox) / UK;
-  const b = ((sy - pr.oy) / UK + T * pr.ce) / pr.se;
+  const b = ((sy - pr.oy) / UK + thickness * pr.ce) / pr.se;
   return { x: a * ca + b * sa, y: -a * sa + b * ca };
 }
 
@@ -106,6 +108,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
 
   const L = s.span;
   const dims = s.preview?.dims ?? s.dims, geo = s.preview?.geo ?? s.geo, pos = s.preview?.pos ?? s.pos;
+  const plateT = geo.plateT ?? PLATE_T;
   const visible = (b: BodyId) => !s.hidden[b] && (!s.isolated || s.isolated === b);
 
   const scene = useMemo(() => {
@@ -172,7 +175,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
     const dim = { x1: d1[0].toFixed(1), y1: d1[1].toFixed(1), x2: d2[0].toFixed(1), y2: d2[1].toFixed(1), tx: ((d1[0] + d2[0]) / 2).toFixed(1), ty: (Math.max(d1[1], d2[1]) + 18).toFixed(1) };
     let plane: string | null = null;
     if (s.section.on) {
-      const zTop = T + Math.max(dims.airframe, 1.2), a = s.section.at;
+      const zTop = plateT + Math.max(dims.airframe, 1.2), a = s.section.at;
       const corners: Vec3[] = s.section.axis === 0 ? [[a, -0.2, -0.05], [a, W + 0.2, -0.05], [a, W + 0.2, zTop], [a, -0.2, zTop]] : s.section.axis === 1 ? [[-0.2, a, -0.05], [L + 0.2, a, -0.05], [L + 0.2, a, zTop], [-0.2, a, zTop]] : [[-0.2, -0.2, a], [L + 0.2, -0.2, a], [L + 0.2, W + 0.2, a], [-0.2, W + 0.2, a]];
       plane = corners.map((p) => pr.pt(p[0], p[1], p[2]).map((v) => v.toFixed(1)).join(',')).join(' ');
     }
@@ -183,7 +186,7 @@ export function Viewport({ o: _o }: { o: Outcome }) {
 
   const svgPt = (e: { clientX: number; clientY: number; currentTarget: Element }): [number, number] => { const r = e.currentTarget.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * VB_W, ((e.clientY - r.top) / r.height) * VB_H]; };
   const onPlate = (slot: Slot, p: Pos): Pos => { const ex = prRef.current?.extents[slot]; if (!ex) return p; return { x: clamp(p.x, 0.12 - ex.dx0, L - 0.05 - ex.dx1), y: clamp(p.y, 0.05 - ex.dy0, W - 0.05 - ex.dy1) }; };
-  const platePt = (sx: number, sy: number): Pos | null => { const c = prRef.current; return c ? toPlate(c.pr, sx, sy, c.ca, c.sa) : null; };
+  const platePt = (sx: number, sy: number): Pos | null => { const c = prRef.current; return c ? toPlate(c.pr, sx, sy, c.ca, c.sa, plateT) : null; };
 
   const vpDown = (e: RMouseEvent<SVGSVGElement>) => {
     if (e.button !== 0 && e.button !== 1) return;
@@ -256,9 +259,22 @@ export function Viewport({ o: _o }: { o: Outcome }) {
   const modeBtn = (m: typeof mode, label: string, extra = '') => (
     <button role="radio" aria-checked={mode === m} onClick={() => { if (m === 'sketch') s.openDialog('sketch', 'plate'); else { if (s.dialog?.kind === 'sketch') s.closeDialog(); s.patch({ viewMode: m }); } }} className={'min-h-8 px-[10px] border-0 cursor-pointer text-[13px] font-semibold ' + extra} style={{ background: mode === m ? 'var(--accent)' : 'transparent', color: mode === m ? 'var(--accentfg)' : 'var(--ink)' }}>{label}</button>
   );
+  const cadTarget: BodyId = s.selBody ?? 'plate';
+  const sketchResult = solveSketch(s.sketch);
+  const latestFeature = s.features.at(-1);
+  const cadTools: { id: string; label: string; target: BodyId | null; disabled?: boolean }[] = [
+    { id: 'create.sketch', label: 'Sketch', target: 'plate' },
+    { id: 'create.extrude', label: 'Extrude', target: cadTarget },
+    { id: 'create.hole', label: 'Hole', target: 'plate' },
+    { id: 'modify.fillet', label: 'Fillet', target: 'plate' },
+    { id: 'modify.chamfer', label: 'Chamfer', target: 'plate' },
+    { id: 'modify.move', label: 'Move', target: cadTarget, disabled: cadTarget === 'plate' || cadTarget === 'flange' },
+    { id: 'inspect.measure', label: 'Measure', target: null },
+    { id: 'inspect.section', label: 'Section', target: null },
+  ];
 
   return (
-    <div data-panel="viewport" className="panel flex-1 flex flex-col min-h-0 relative">
+    <div data-panel="viewport" data-cad-workspace="design" className="panel flex-1 flex flex-col min-h-0 relative">
       <div className="flex items-center gap-2 px-3 py-[6px] border-b border-line2 flex-wrap">
         <div role="radiogroup" aria-label="View mode" className="flex border border-line rounded-r overflow-hidden">
           {modeBtn('model', 'Model')}{modeBtn('sketch', 'Sketch', 'border-l border-line')}{modeBtn('board', 'Board', 'border-l border-line')}{modeBtn('sheet', 'Drawing sheet', 'border-l border-line')}
@@ -273,9 +289,26 @@ export function Viewport({ o: _o }: { o: Outcome }) {
         {s.viewSeq != null ? (
           <span className="text-[13px] font-semibold text-amber">replaying #{s.viewSeq} · read-only · <button onClick={() => s.viewAt(null)} className="underline">back to live</button></span>
         ) : (
-          <span className="text-[13px] text-muted">right-click for commands · <span className="font-mono">S</span> command box · drag a body to move it</span>
+          <span className="text-[13px] text-muted">right-click for marking menu · drag a body to move it</span>
         )}
-        <button onClick={() => s.patch({ cmdOpen: true })} className="btn font-mono" title="Command box (S)">S</button>
+      </div>
+      <div data-cad-feature-rail role="toolbar" aria-label="CAD feature tools" className="px-3 py-2 border-b border-line2 bg-surface2 flex items-center gap-2 overflow-x-auto">
+        <div className="shrink-0 pr-2 border-r border-line">
+          <div className="text-[10px] uppercase tracking-[.12em] text-muted">Feature chain</div>
+          <div className="text-[12px] font-semibold whitespace-nowrap">Sketch → solid → detail</div>
+        </div>
+        {cadTools.map((tool) => (
+          <button key={tool.id} type="button" disabled={s.viewSeq != null || tool.disabled} onClick={() => runCommand(tool.id, tool.target)}
+            className="btn shrink-0 disabled:opacity-40" title={tool.id === 'create.extrude' ? 'Extrude ' + BODY_LABEL[cadTarget] : tool.label}>
+            {tool.label}
+          </button>
+        ))}
+        <div className="ml-auto shrink-0 pl-2 border-l border-line text-right">
+          <div className="font-mono text-[11px] text-muted">target · {BODY_LABEL[cadTarget]} · plate depth {fmtLen(plateT, s.units, true)}</div>
+          <div className="font-mono text-[11px]" style={{ color: sketchResult.overall === 'CONTRADICTORY' ? 'var(--red)' : sketchResult.overall === 'REDUNDANT' ? 'var(--amber)' : 'var(--ink)' }}>
+            sketch {sketchResult.overall} · latest {latestFeature?.n ?? '—'} {latestFeature?.kind ?? 'feature'}
+          </div>
+        </div>
       </div>
       {mode === 'sheet' && <SheetView span={s.span} />}
       {mode === 'sketch' && <SketchView />}

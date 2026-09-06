@@ -3,6 +3,8 @@ import { useStore } from '../src/store';
 import { solveSketch, SKETCH_DEFAULT } from '../src/lib/sketch';
 import { fmtLen, fromUnit, toUnit } from '../src/lib/units';
 import { clipFaces, boxFaces, plateOutline } from '../src/lib/geometry';
+import { buildBodies } from '../src/lib/scene';
+import { commandAvailable, commandById } from '../src/commands';
 
 describe('timeline replay (undo is supersede)', () => {
   it('viewAt shows the snapshot at seq N, live returns, restore appends instead of deleting', () => {
@@ -43,6 +45,26 @@ describe('timeline replay (undo is supersede)', () => {
     useStore.getState().saveVersion('rounded corners');
     expect(useStore.getState().versions.length).toBe(2);
     expect(useStore.getState().events[0].kind).toBe('version_saved');
+  });
+  it('commits a solved sketch and extrudes its plate profile into rendered geometry', () => {
+    const st = useStore.getState();
+    st.reset();
+    st.toggleConstraint('hole_inset_y');
+    expect(st.commitSketch()).toBe('SOLVED · 0 DOF');
+    expect(useStore.getState().features.at(-1)?.kind).toBe('sketch');
+    useStore.getState().applyGeo({ plateT: 0.2 }, 'extrude', 'extrude · plate profile to 0.200 m');
+    const current = useStore.getState();
+    expect(current.geo.plateT).toBe(0.2);
+    expect(current.features.at(-1)?.kind).toBe('extrude');
+    expect(buildBodies(current.snapshot()).plate.c?.[2]).toBeCloseTo(0.1, 9);
+  });
+});
+
+describe('command workspace scope', () => {
+  it('keeps global review commands available but blocks hidden Design mutations', () => {
+    expect(commandAvailable(commandById('review.tripwire')!, false)).toBe(true);
+    expect(commandAvailable(commandById('create.extrude')!, false)).toBe(false);
+    expect(commandAvailable(commandById('create.extrude')!, true)).toBe(true);
   });
 });
 

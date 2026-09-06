@@ -9,6 +9,8 @@ export type Positions = Record<Slot, Pos>;
 
 /** Plate geometry parameters driven by the feature dialogs. */
 export interface Geo {
+  /** extrusion depth of the committed plate profile, m */
+  plateT: number;
   /** corner fillet radius on the base plate, m (0 = none) */
   fillet: number;
   /** corner chamfer on the base plate, m (0 = none; fillet wins when both set) */
@@ -16,7 +18,7 @@ export interface Geo {
   /** plate hole diameter, m */
   holeD: number;
 }
-export const GEO0: Geo = { fillet: 0, chamfer: 0, holeD: 0.14 };
+export const GEO0: Geo = { plateT: 0.08, fillet: 0, chamfer: 0, holeD: 0.14 };
 
 export interface Snapshot {
   parts: Parts;
