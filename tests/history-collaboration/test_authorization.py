@@ -71,6 +71,15 @@ class AuthorizationLedgerTests(unittest.TestCase):
             with self.assertRaisesRegex(DiagnosticError, "AUTHORIZATION_TRANSITION_INVALID"):
                 ledger.append("authorization:1", "APPLIED", SERVICE, "2026-09-05T16:00:02Z", "fixture:apply", SUBJECT)
 
+    def test_authorized_decision_cannot_be_replaced_by_rejection(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = self.make_ledger(directory)
+            ledger.append("authorization:1", "REQUESTED", AGENT, "2026-09-05T16:00:00Z", "fixture:request", SUBJECT)
+            ledger.append("authorization:1", "AUTHORIZED", HUMAN, "2026-09-05T16:00:01Z", "fixture:approval", SUBJECT)
+            with self.assertRaisesRegex(DiagnosticError, "AUTHORIZATION_TRANSITION_INVALID"):
+                ledger.append("authorization:1", "REJECTED", HUMAN, "2026-09-05T16:00:02Z", "fixture:late-rejection", SUBJECT)
+            self.assertEqual(ledger.state("authorization:1"), "AUTHORIZED")
+
     def test_concurrent_terminal_decisions_cannot_both_commit(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             self.make_ledger(directory).append(

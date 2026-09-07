@@ -25,6 +25,21 @@ except ImportError:  # pragma: no cover - exercised only on unsupported hosts.
     fcntl = None
 
 
+_PATH_LOCKS_GUARD = threading.Lock()
+_PATH_LOCKS: dict[str, threading.RLock] = {}
+
+
+def _shared_path_lock(path: Path) -> threading.RLock:
+    """Serialize same-process log instances; flock still covers other processes."""
+    key = str(path.resolve())
+    with _PATH_LOCKS_GUARD:
+        lock = _PATH_LOCKS.get(key)
+        if lock is None:
+            lock = threading.RLock()
+            _PATH_LOCKS[key] = lock
+        return lock
+
+
 _UTC_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$")
 _EVENT_PROTOCOL = "forge.history-event/1"
 _TransactionResult = TypeVar("_TransactionResult")
@@ -191,8 +206,8 @@ class AppendOnlyEventLog:
     def __init__(self, path: Path, max_bytes: int = 16 * 1024 * 1024) -> None:
         self.path = Path(path)
         self.max_bytes = max_bytes
-        self._lock = threading.RLock()
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._lock = _shared_path_lock(self.path)
 
     def _decode(self, payload: bytes) -> List[HistoryEvent]:
         if len(payload) > self.max_bytes:
