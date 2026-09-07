@@ -5,8 +5,6 @@ import { CATALOG, CORE_SLOTS, GENERIC_NAME, SLOTS, type Node, type Slot } from '
 import { AF_THUMB, THUMBS, type ThumbFace } from '../lib/geometry';
 import type { Outcome, Rule } from '../lib/rules';
 import { destCellsOf, overallOf, slotStatus } from '../lib/viewmodel';
-import { LiveClassificationPanel } from './LiveClassificationPanel';
-
 type Level = 0 | 1 | 2 | 3 | 4;
 const LEVEL_COLOR: Record<Level, string> = { 0: 'var(--m2)', 1: 'var(--amber)', 2: 'var(--amber)', 3: 'var(--red)', 4: 'var(--black)' };
 const LEVEL_WORD: Record<Level, string> = { 0: 'no match in the modeled rows', 1: 'missing evidence', 2: 'needs attention', 3: 'modeled candidate match', 4: 'USML candidate' };
@@ -151,8 +149,6 @@ export function ClassificationTab({ o }: { o: Outcome }) {
           <EngineRun scopeKey={(s.project?.id ?? 'unopened') + ':product'} label={s.project?.name ?? 'the product'} description={(s.project?.name ?? 'Kestrel') + ': ' + (s.project?.description ?? 'survey drone') + ' · airframe ' + (rows[0]?.model ?? '')} facts={productFacts} />
         </div>
       </div>
-
-      <LiveClassificationPanel />
 
       <div className="panel">
         <div className="panel-head"><div className="panel-title">Parts of concern <span className="sub">· {concern.length} of {rows.length}</span></div><span /></div>
