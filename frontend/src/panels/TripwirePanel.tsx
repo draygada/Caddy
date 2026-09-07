@@ -13,6 +13,7 @@ import {
   type ValidatedTripwireResult,
 } from '../lib/tripwire';
 import { useTripwireStore } from '../tripwire-store';
+import { useModalFocusTrap } from '../lib/modal-focus';
 
 const short = (value: string | undefined, keep = 12) => !value ? '—' : value.length <= keep * 2 + 1 ? value : value.slice(0, keep) + '…' + value.slice(-keep);
 
@@ -28,6 +29,7 @@ function Fact({ label, value }: { label: string; value: string | undefined }) {
 export function TripwirePanel() {
   const open = useTripwireStore((state) => state.open);
   const closePanel = useTripwireStore((state) => state.closePanel);
+  const dialogRef = useModalFocusTrap<HTMLElement>(open);
   const [loadResult, setLoadResult] = useState<CoreCandidateLoad | null>(null);
   const [phase, setPhase] = useState<'idle' | 'loading' | 'ready' | 'running' | 'bound' | 'blocked' | 'stale' | 'unavailable' | 'error'>('idle');
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
@@ -99,7 +101,7 @@ export function TripwirePanel() {
 
   return (
     <div className="fixed inset-0 z-[50] bg-scrim flex justify-end" onMouseDown={closePanel}>
-      <section role="dialog" aria-modal="true" aria-label="Tripwire review readiness" onMouseDown={(e) => e.stopPropagation()} className="h-full w-[min(900px,calc(100vw-16px))] bg-surface border-l border-line shadow-[-12px_0_32px_rgba(0,0,0,.2)] flex flex-col">
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Tripwire review readiness" tabIndex={-1} onMouseDown={(e) => e.stopPropagation()} className="h-full w-[min(900px,calc(100vw-16px))] bg-surface border-l border-line shadow-[-12px_0_32px_rgba(0,0,0,.2)] flex flex-col">
         <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line2">
           <div className="min-w-0">
             <div className="font-semibold">Tripwire <span className="text-muted font-normal">· current-revision evidence gate</span></div>

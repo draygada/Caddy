@@ -5,6 +5,7 @@ import { CATALOG, CORE_SLOTS, GENERIC_NAME, SLOTS, type Node, type Slot } from '
 import { AF_THUMB, THUMBS, type ThumbFace } from '../lib/geometry';
 import type { Outcome, Rule } from '../lib/rules';
 import { destCellsOf, overallOf, slotStatus } from '../lib/viewmodel';
+import { useModalFocusTrap } from '../lib/modal-focus';
 type Level = 0 | 1 | 2 | 3 | 4;
 const LEVEL_COLOR: Record<Level, string> = { 0: 'var(--m2)', 1: 'var(--amber)', 2: 'var(--amber)', 3: 'var(--red)', 4: 'var(--black)' };
 const LEVEL_WORD: Record<Level, string> = { 0: 'no match in the modeled rows', 1: 'missing evidence', 2: 'needs attention', 3: 'modeled candidate match', 4: 'USML candidate' };
@@ -60,6 +61,7 @@ function Thumb({ faces }: { faces: ThumbFace[] | null }) {
 export function ClassificationTab({ o }: { o: Outcome }) {
   const s = useStore();
   const [reasonFor, setReasonFor] = useState<Node | null>(null);
+  const reasoningDialogRef = useModalFocusTrap<HTMLDivElement>(reasonFor !== null);
   useEffect(() => {
     if (!reasonFor) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setReasonFor(null); };
@@ -172,7 +174,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
         return (
           <>
             <div className="fixed inset-0 z-[29] bg-scrim" onMouseDown={() => setReasonFor(null)} />
-            <div role="dialog" aria-modal="true" aria-label={r.name + ' reasoning'} className="fixed z-[30] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(96vw,1100px)] max-h-[90vh] panel flex flex-col">
+            <div ref={reasoningDialogRef} role="dialog" aria-modal="true" aria-label={r.name + ' reasoning'} tabIndex={-1} className="fixed z-[30] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(96vw,1100px)] max-h-[90vh] panel flex flex-col">
               <div className="panel-head">
                 <div className="panel-title text-[15px]">{r.name} <span className="sub">· {r.model}</span></div>
                 <div className="flex items-center gap-2">

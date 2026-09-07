@@ -46,6 +46,7 @@ function useKeyboard() {
       // One global authority opens the command search and refuses modal stacking.
       if (handleCommandPaletteKeydown(e)) return;
       if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (commandPaletteBlocked()) return;
       const k = e.key.toLowerCase();
       if (e.key === '?') st.toggleHelp();
       else if (k === 's') { if (commandPaletteBlocked()) return; e.preventDefault(); st.patch({ cmdOpen: true, marking: null }); }

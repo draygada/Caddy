@@ -6,6 +6,7 @@ import { fmtLen, fmtNum, fromUnit, unitStep, type Unit } from '../lib/units';
 import { buildBodies } from '../lib/scene';
 import { bounds3, boundsCenter, boundsVolume } from '../lib/geometry';
 import { parseDecimal } from '../lib/hash';
+import { useModalFocusTrap } from '../lib/modal-focus';
 
 function LenField({ id, label, metres, units, min, max, onChange, hint }: { id: string; label: string; metres: number; units: Unit; min: number; max: number; onChange: (m: number) => void; hint?: string }) {
   const [text, setText] = useState(fmtNum(metres, units, true));
@@ -25,12 +26,13 @@ function LenField({ id, label, metres, units, min, max, onChange, hint }: { id: 
 }
 
 function Frame({ title, sub, children, onOk, onCancel, okLabel = 'OK', okDisabled, placement = 'right-3 top-[176px]', docked = false }: { title: string; sub?: string; children: React.ReactNode; onOk?: () => void; onCancel: () => void; okLabel?: string; okDisabled?: boolean; placement?: string; docked?: boolean }) {
+  const dialogRef = useModalFocusTrap<HTMLDivElement>(!docked);
   // docked: a side column that takes its own width, so the canvas beside it is never covered
   const cls = docked
     ? 'relative z-[30] flex-none w-[340px] max-w-[45%] h-full flex flex-col bg-surface border-l border-line2'
     : 'absolute ' + placement + ' w-[min(300px,calc(100%-24px))] max-h-[calc(100%-180px)] flex flex-col bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] z-[30]';
   return (
-    <div role="dialog" aria-modal={docked ? undefined : true} aria-label={title} className={cls} onMouseDown={(e) => e.stopPropagation()}>
+    <div ref={dialogRef} role="dialog" aria-modal={docked ? undefined : true} aria-label={title} tabIndex={docked ? undefined : -1} className={cls} onMouseDown={(e) => e.stopPropagation()}>
       <div className="px-3 py-2 border-b border-line2 flex items-baseline justify-between gap-2">
         <span className="text-[13px] font-semibold">{title}</span>
         {sub && <span className="text-[12px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">{sub}</span>}

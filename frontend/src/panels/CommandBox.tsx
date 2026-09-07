@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { COMMANDS, commandAvailable, designWorkspaceMounted, runCommand, searchCommands, type Command } from '../commands';
+import { useModalFocusTrap } from '../lib/modal-focus';
 
 const GROUP_LABEL: Record<Command['group'], string> = { navigate: 'Navigate', view: 'View', create: 'Create', modify: 'Modify', inspect: 'Inspect', select: 'Select', document: 'Document', review: 'Review', panels: 'Panels' };
 
@@ -28,6 +29,7 @@ export function CommandBox() {
   const [idx, setIdx] = useState(0);
   const [designMounted, setDesignMounted] = useState(designWorkspaceMounted);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useModalFocusTrap<HTMLDivElement>(open);
   useEffect(() => { if (open) { setQ(''); setIdx(0); setTimeout(() => inputRef.current?.focus(), 0); } }, [open]);
   useEffect(() => {
     const syncWorkspace = () => setDesignMounted(designWorkspaceMounted());
@@ -60,7 +62,7 @@ export function CommandBox() {
   };
   return (
     <div className="fixed inset-0 z-[50] flex items-start justify-center px-2 pt-16 bg-[rgba(15,23,32,.18)]" onMouseDown={() => st.patch({ cmdOpen: false })}>
-      <div role="dialog" aria-modal="true" aria-label="Commands" onMouseDown={(e) => e.stopPropagation()} className="w-[min(520px,100%)] max-h-[70%] flex flex-col bg-surface border border-line rounded-r shadow-[0_16px_40px_rgba(0,0,0,.22)] overflow-hidden">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Commands" tabIndex={-1} onMouseDown={(e) => e.stopPropagation()} className="w-[min(520px,100%)] max-h-[70%] flex flex-col bg-surface border border-line rounded-r shadow-[0_16px_40px_rgba(0,0,0,.22)] overflow-hidden">
         <div className="flex items-center gap-2 px-3 border-b border-line2">
           <span className="font-mono text-[12px] text-muted">S / ⌘K</span>
           <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setIdx(0); }} placeholder="type a command…" className="flex-1 min-h-11 bg-transparent border-0 outline-none text-[15px] text-ink"
