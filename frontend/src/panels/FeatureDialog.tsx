@@ -30,7 +30,7 @@ function Frame({ title, sub, children, onOk, onCancel, okLabel = 'OK', okDisable
     ? 'relative z-[30] flex-none w-[340px] max-w-[45%] h-full flex flex-col bg-surface border-l border-line2'
     : 'absolute ' + placement + ' w-[min(300px,calc(100%-24px))] max-h-[calc(100%-180px)] flex flex-col bg-surface border border-line rounded-r shadow-[0_8px_24px_rgba(0,0,0,.14)] z-[30]';
   return (
-    <div role="dialog" aria-label={title} className={cls} onMouseDown={(e) => e.stopPropagation()}>
+    <div role="dialog" aria-modal={docked ? undefined : true} aria-label={title} className={cls} onMouseDown={(e) => e.stopPropagation()}>
       <div className="px-3 py-2 border-b border-line2 flex items-baseline justify-between gap-2">
         <span className="text-[13px] font-semibold">{title}</span>
         {sub && <span className="text-[12px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">{sub}</span>}

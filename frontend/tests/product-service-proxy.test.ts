@@ -80,6 +80,7 @@ describe('integrated preview routing', () => {
     expect(vercel.rewrites.some(({ source, destination }) => source.startsWith('/api/') || /^https?:/i.test(destination))).toBe(false);
     expect(vercelSource).not.toContain('caddydaddy-product-service.vercel.app');
     expect(vercel.functions['api/[...path].ts'].maxDuration).toBe(120);
+    expect(CLASSIFICATION_REQUEST_TIMEOUT_MS).toBeLessThan(vercel.functions['api/[...path].ts'].maxDuration * 1_000);
   });
 
   it('fails closed without an exact approved Vercel origin', async () => {

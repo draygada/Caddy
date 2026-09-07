@@ -274,6 +274,22 @@ class ReleaseEvidenceTest(unittest.TestCase):
             "source-owned trailing whitespace  \n",
         )
 
+    def test_hygiene_accepts_receipted_prefixed_deltas_and_source_ancestry(self) -> None:
+        candidate = self.fixture.commit_unified_tripwire_delta()
+        completed = run(
+            sys.executable,
+            str(HYGIENE),
+            "--repo",
+            str(self.fixture.root),
+            "--base",
+            self.fixture.base,
+            "--candidate",
+            candidate,
+            cwd=self.fixture.root,
+        )
+        self.assertIn("AUTHORED_DIFF_HYGIENE_PASS", completed.stdout)
+        self.assertIn("TRIPWIRE_PROVENANCE_PASS", completed.stdout)
+
     def test_hygiene_rejects_authored_whitespace(self) -> None:
         candidate = self.fixture.commit_owned("authored trailing whitespace  \n")
         completed = run(

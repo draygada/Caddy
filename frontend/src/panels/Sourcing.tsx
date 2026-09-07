@@ -7,7 +7,7 @@ import { IntakeForm } from './IntakeForm';
 import { filingDraftOf } from '../lib/customs';
 import { CHECKLIST, CLAIM_COST, CLAIM_PACKAGE, CLAIM_SCREEN, DECLINE_REASONS, FIXTURES, SHIP_TO, STATUS_COLOR, STATUS_WORD, WARNINGS, escalationReason, gateFor, sortOffers, supplierQuestions, type DeclineReason, type Line, type Mode, type PartyNode, type ResolvedOffer, type ShipTo } from '../lib/sourcing';
 import { OperationsClient, OperationsServiceError, loadOperationsCandidateIdentity, type LiveSourcingOffer, type OperationsEnvelope, type ServiceOffer, type SourcingDispatchEnvelope, type SourcingPackageEnvelope, type SourcingRoundEnvelope } from '../lib/operations-client';
-import { OrderClient, OrderServiceError, orderDisplayLabel, type OrderEnvelope, type RecordingOutcome } from '../lib/order-client';
+import { OrderClient, OrderServiceError, orderDisplayLabel, type OrderEnvelope, type OrderStateToken, type RecordingOutcome } from '../lib/order-client';
 import { appendProductEvent, productArtifactGate, useProductThread, type ProductArtifactBinding, type ProductArtifactRef } from '../lib/product-thread';
 
 const usd = (v: number | null | undefined) => (v == null ? 'rate not verified' : v.toLocaleString(undefined, { style: 'currency', currency: 'USD' }));
@@ -26,6 +26,60 @@ function ownerNames(offer: ServiceOffer): string {
   visit(offer.ownership_walk.seller);
   if (offer.ownership_walk.manufacturer) visit(offer.ownership_walk.manufacturer);
   return names.join(' → ');
+}
+
+const CONNECTED_SOURCING_SESSION_SCHEMA = 'caddydaddy.connected-sourcing-session/1' as const;
+
+interface ConnectedSourcingSession {
+  schema_version: typeof CONNECTED_SOURCING_SESSION_SCHEMA;
+  input?: {
+    inputMode?: 'live-bounded' | 'offline-demo';
+    seller?: string;
+    manufacturer?: string;
+    origin?: string;
+    unitPrice?: string;
+    leadDays?: number;
+    screeningStatus?: 'NO_CANDIDATE_MATCH' | 'POTENTIAL_MATCH' | 'UNKNOWN';
+    screeningSource?: string;
+    screeningText?: string;
+    screeningComplete?: boolean;
+    ownershipComplete?: boolean;
+    screeningAttestor?: string;
+  };
+  operationsContinuity?: ReturnType<OperationsClient['exportContinuity']> | null;
+  round?: SourcingRoundEnvelope | null;
+  selectedOffer?: string | null;
+  package?: SourcingPackageEnvelope | null;
+  dispatch?: SourcingDispatchEnvelope | null;
+  packageBinding?: ProductArtifactBinding | null;
+  orderState?: OrderStateToken | null;
+  orderReceiptId?: string | null;
+  validatedManifest?: string | null;
+  recordingOutcome?: RecordingOutcome;
+  orderKey?: string;
+  acknowledgementRef?: string;
+  resolutionRef?: string;
+  reconciledEffect?: 'NOT_SENT' | 'SIMULATED';
+}
+
+function sessionRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readConnectedSourcingSession(key: string): ConnectedSourcingSession | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const value: unknown = JSON.parse(window.sessionStorage.getItem(key) ?? 'null');
+    if (!sessionRecord(value) || value.schema_version !== CONNECTED_SOURCING_SESSION_SCHEMA) return null;
+    return value as unknown as ConnectedSourcingSession;
+  } catch {
+    return null;
+  }
+}
+
+function writeConnectedSourcingSession(key: string, value: ConnectedSourcingSession): void {
+  if (typeof window === 'undefined') return;
+  try { window.sessionStorage.setItem(key, JSON.stringify(value)); } catch { /* storage is best-effort; service seals remain authoritative */ }
 }
 
 /** The connected service round (Benji's product service): offers, selection, adjudication, the sealed package and the order lifecycle for one part, all client-carried. */
@@ -63,8 +117,83 @@ export function ServiceSourcing({ quantity, mode, partKey, partLabel }: { quanti
   const [resolutionRef, setResolutionRef] = useState('');
   const [reconciledEffect, setReconciledEffect] = useState<'NOT_SENT' | 'SIMULATED'>('NOT_SENT');
   const [packageBinding, setPackageBinding] = useState<ProductArtifactBinding | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [sessionWritable, setSessionWritable] = useState(false);
+  const sessionKey = useMemo(() => `caddydaddy.connected-sourcing/1:${encodeURIComponent(partKey)}:${quantity}:${mode}`, [mode, partKey, quantity]);
   const now = () => new Date().toISOString();
   const actor = 'operator:browser-demo';
+
+  useEffect(() => {
+    const saved = readConnectedSourcingSession(sessionKey);
+    if (!saved) {
+      setHydrated(true);
+      setSessionWritable(true);
+      return;
+    }
+    let active = true;
+    void (async () => {
+      try {
+        const identity = await loadOperationsCandidateIdentity();
+        const operations = new OperationsClient(identity);
+        const restoredRound = saved.round ? operations.restoreSourcingRound(saved.round) : null;
+        const restoredPackage = saved.package ? operations.restoreSourcingPackage(saved.package) : null;
+        const restoredDispatch = saved.dispatch ? operations.restoreSourcingDispatch(saved.dispatch) : null;
+        if (saved.operationsContinuity) operations.resumeContinuity(saved.operationsContinuity);
+
+        let restoredBinding: ProductArtifactBinding | null = null;
+        if (saved.packageBinding && productArtifactGate(saved.packageBinding).ready) restoredBinding = saved.packageBinding;
+
+        let restoredOrderClient: OrderClient | null = null;
+        let restoredOrderEvidence: OrderEnvelope | null = null;
+        let receiptRestoreError: string | null = null;
+        if (saved.orderState) {
+          restoredOrderClient = new OrderClient(identity);
+          await restoredOrderClient.resume(saved.orderState);
+          if (saved.orderReceiptId) {
+            try { restoredOrderEvidence = await restoredOrderClient.readReceipt(saved.orderReceiptId); }
+            catch (caught) { receiptRestoreError = serviceError(caught); }
+          }
+        }
+        if (!active) return;
+
+        const input = sessionRecord(saved.input) ? saved.input : null;
+        if (input?.inputMode === 'live-bounded' || input?.inputMode === 'offline-demo') setInputMode(input.inputMode);
+        if (typeof input?.seller === 'string') setSeller(input.seller);
+        if (typeof input?.manufacturer === 'string') setManufacturer(input.manufacturer);
+        if (typeof input?.origin === 'string') setOrigin(input.origin);
+        if (typeof input?.unitPrice === 'string') setUnitPrice(input.unitPrice);
+        if (typeof input?.leadDays === 'number' && Number.isFinite(input.leadDays)) setLeadDays(Math.max(0, Math.min(3650, input.leadDays)));
+        if (input?.screeningStatus === 'NO_CANDIDATE_MATCH' || input?.screeningStatus === 'POTENTIAL_MATCH' || input?.screeningStatus === 'UNKNOWN') setScreeningStatus(input.screeningStatus);
+        if (typeof input?.screeningSource === 'string') setScreeningSource(input.screeningSource);
+        if (typeof input?.screeningText === 'string') setScreeningText(input.screeningText);
+        if (typeof input?.screeningComplete === 'boolean') setScreeningComplete(input.screeningComplete);
+        if (typeof input?.ownershipComplete === 'boolean') setOwnershipComplete(input.ownershipComplete);
+        if (typeof input?.screeningAttestor === 'string') setScreeningAttestor(input.screeningAttestor);
+        setClient(operations);
+        setRound(restoredRound);
+        setSelectedOffer(typeof saved.selectedOffer === 'string' ? saved.selectedOffer : restoredRound?.round.selected_offer_id ?? null);
+        setPkg(restoredPackage);
+        setDispatch(restoredDispatch);
+        setPackageBinding(restoredBinding);
+        setOrderClient(restoredOrderClient);
+        setOrderEvidence(restoredOrderEvidence);
+        if (receiptRestoreError) setOrderError(`Saved receipt could not be refreshed. ${receiptRestoreError}`);
+        if (typeof saved.validatedManifest === 'string' && saved.validatedManifest === restoredPackage?.package.manifest_sha256) setValidatedManifest(saved.validatedManifest);
+        if (saved.recordingOutcome && ['SIMULATED', 'ACKNOWLEDGED', 'EXCEPTION', 'UNKNOWN'].includes(saved.recordingOutcome)) setRecordingOutcome(saved.recordingOutcome);
+        if (typeof saved.orderKey === 'string') setOrderKey(saved.orderKey);
+        if (typeof saved.acknowledgementRef === 'string') setAcknowledgementRef(saved.acknowledgementRef);
+        if (typeof saved.resolutionRef === 'string') setResolutionRef(saved.resolutionRef);
+        if (saved.reconciledEffect === 'NOT_SENT' || saved.reconciledEffect === 'SIMULATED') setReconciledEffect(saved.reconciledEffect);
+        setHydrated(true);
+        setSessionWritable(true);
+      } catch (caught) {
+        if (!active) return;
+        setError(`Saved same-tab state was not resumed or replaced. ${serviceError(caught)}`);
+        setHydrated(true);
+      }
+    })();
+    return () => { active = false; };
+  }, [sessionKey]);
 
   const currentClient = async () => {
     if (client) return client;
@@ -76,7 +205,7 @@ export function ServiceSourcing({ quantity, mode, partKey, partLabel }: { quanti
   const run = async (label: string, action: (value: OperationsClient) => Promise<void>) => {
     setBusy(label);
     setError(null);
-    try { await action(await currentClient()); } catch (caught) { setError(serviceError(caught)); } finally { setBusy(null); }
+    try { await action(await currentClient()); setSessionWritable(true); } catch (caught) { setError(serviceError(caught)); } finally { setBusy(null); }
   };
   const currentOrderClient = async () => {
     if (orderClient) return orderClient;
@@ -92,6 +221,7 @@ export function ServiceSourcing({ quantity, mode, partKey, partLabel }: { quanti
       const value = await action(await currentOrderClient());
       setOrderEvidence(value);
       setOrderRetry(null);
+      setSessionWritable(true);
       const artifacts: ProductArtifactRef[] = [{ artifactId: value.candidate.candidate_id, kind: 'operations-candidate-snapshot', sha256: value.candidate.artifact_sha256 }];
       if (packageBinding) artifacts.push(
         { artifactId: `cad:${packageBinding.revisionId}`, kind: 'cad-geometry', sha256: packageBinding.cadArtifactSha256 },
@@ -121,6 +251,27 @@ export function ServiceSourcing({ quantity, mode, partKey, partLabel }: { quanti
   const evidence: OperationsEnvelope | null = dispatch ?? pkg ?? round ?? client?.getLastValid('sourcing') ?? null;
   const visibleOrderEvidence = orderEvidence ?? orderClient?.getLastValid() ?? null;
   const receipt = visibleOrderEvidence?.receipt;
+  useEffect(() => {
+    if (!hydrated || !sessionWritable) return;
+    writeConnectedSourcingSession(sessionKey, {
+      schema_version: CONNECTED_SOURCING_SESSION_SCHEMA,
+      input: { inputMode, seller, manufacturer, origin, unitPrice, leadDays, screeningStatus, screeningSource, screeningText, screeningComplete, ownershipComplete, screeningAttestor },
+      operationsContinuity: client?.exportContinuity() ?? null,
+      round,
+      selectedOffer,
+      package: pkg,
+      dispatch,
+      packageBinding,
+      orderState: orderClient?.getStateToken() ?? null,
+      orderReceiptId: receipt?.receipt_id ?? null,
+      validatedManifest,
+      recordingOutcome,
+      orderKey,
+      acknowledgementRef,
+      resolutionRef,
+      reconciledEffect,
+    });
+  }, [acknowledgementRef, busy, client, dispatch, hydrated, inputMode, leadDays, manufacturer, mode, orderBusy, orderClient, orderKey, origin, ownershipComplete, packageBinding, partKey, pkg, quantity, receipt?.receipt_id, reconciledEffect, recordingOutcome, resolutionRef, round, screeningAttestor, screeningComplete, screeningSource, screeningStatus, screeningText, selectedOffer, seller, sessionKey, sessionWritable, unitPrice, validatedManifest]);
   const createRound = (api: OperationsClient) => {
     if (inputMode === 'offline-demo') return api.createSourcingRound({ part_key: partKey, quantity, mode, input_mode: 'offline-demo' });
     const evidence = {
@@ -147,10 +298,12 @@ export function ServiceSourcing({ quantity, mode, partKey, partLabel }: { quanti
     return api.createSourcingRound({ part_key: partKey, quantity, mode, input_mode: 'live-bounded', offers: [offer] });
   };
 
+  if (!hydrated) return <section className="min-w-0 p-3 text-[13px] text-muted" role="status">Restoring validated same-tab sourcing continuity…</section>;
+
   return (
     <section className="min-w-0" aria-label="Connected service round">
       <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-line2">
-        <div className="text-[13px] font-semibold">{partLabel} <span className="text-muted font-normal">· {quantity} unit{quantity === 1 ? '' : 's'} · {mode} · client-carried continuity</span></div>
+        <div className="text-[13px] font-semibold">{partLabel} <span className="text-muted font-normal">· {quantity} unit{quantity === 1 ? '' : 's'} · {mode} · validated same-tab continuity</span></div>
         <span className="chip">{evidence ? evidence.status : 'not run'}</span>
       </div>
       <div className="p-3 grid gap-3 text-[13px]">
@@ -820,7 +973,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
 
             <details className="panel p-3 text-[13px]" open={serviceOpen} onToggle={(e) => setServiceOpen((e.currentTarget as HTMLDetailsElement).open)}>
               <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Connected service round <span className="text-muted font-normal">· screened by the product service</span></summary>
-              {serviceOpen && <div className="mt-2"><ServiceSourcing quantity={r.qty} mode={r.mode} partKey={PART_KEY[line.slot ?? ''] ?? line.id.replace(/^l-/, '')} partLabel={(slot ? GENERIC_NAME[slot as Slot] : line.description.split(' · ')[0])} /></div>}
+              {serviceOpen && <div className="mt-2"><ServiceSourcing key={`${PART_KEY[line.slot ?? ''] ?? line.id.replace(/^l-/, '')}:${r.qty}:${r.mode}`} quantity={r.qty} mode={r.mode} partKey={PART_KEY[line.slot ?? ''] ?? line.id.replace(/^l-/, '')} partLabel={(slot ? GENERIC_NAME[slot as Slot] : line.description.split(' · ')[0])} /></div>}
             </details>
 
             <details className="panel p-3 text-[13px]">

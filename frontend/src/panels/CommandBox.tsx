@@ -6,11 +6,15 @@ const GROUP_LABEL: Record<Command['group'], string> = { navigate: 'Navigate', vi
 
 type PaletteShortcutEvent = Pick<KeyboardEvent, 'metaKey' | 'ctrlKey' | 'key' | 'preventDefault'>;
 
+export function commandPaletteBlocked(): boolean {
+  return Boolean(useStore.getState().dialog || (typeof document !== 'undefined' && document.querySelector('[aria-modal="true"]')));
+}
+
 export function handleCommandPaletteKeydown(event: PaletteShortcutEvent): boolean {
   if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return false;
   event.preventDefault();
   const state = useStore.getState();
-  if (state.dialog || (typeof document !== 'undefined' && document.querySelector('[aria-modal="true"]'))) return true;
+  if (commandPaletteBlocked()) return true;
   state.patch({ cmdOpen: true, marking: null });
   return true;
 }
@@ -27,12 +31,10 @@ export function CommandBox() {
   useEffect(() => { if (open) { setQ(''); setIdx(0); setTimeout(() => inputRef.current?.focus(), 0); } }, [open]);
   useEffect(() => {
     const syncWorkspace = () => setDesignMounted(designWorkspaceMounted());
-    const onKey = (event: KeyboardEvent) => { handleCommandPaletteKeydown(event); };
     syncWorkspace();
     const observer = typeof MutationObserver === 'undefined' ? null : new MutationObserver(syncWorkspace);
     observer?.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener('keydown', onKey);
-    return () => { observer?.disconnect(); window.removeEventListener('keydown', onKey); };
+    return () => { observer?.disconnect(); };
   }, []);
   const target = st.selBody ?? (st.sel === 'airframe' ? 'plate' : st.sel);
   const list = useMemo(() => {
@@ -46,7 +48,7 @@ export function CommandBox() {
   }, [q, recent, st, target, designMounted]);
   // the floating opener belongs to the design workspace; on the other tabs it only covered content
   if (!open) return st.workspace !== 'design' ? null : (
-    <button type="button" aria-label="Open command palette" aria-keyshortcuts="Meta+K Control+K S" onClick={() => st.patch({ cmdOpen: true })}
+    <button type="button" aria-label="Open command palette" aria-keyshortcuts="Meta+K Control+K S" onClick={() => { if (!commandPaletteBlocked()) st.patch({ cmdOpen: true }); }}
       className="btn btn-icon fixed sm:hidden left-3 bottom-[68px] md:bottom-3 z-[28] min-h-11 min-w-11 flex items-center justify-center bg-surface shadow-[0_4px_14px_rgba(0,0,0,.14)]">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
       <span className="sr-only">Commands</span>
@@ -58,7 +60,7 @@ export function CommandBox() {
   };
   return (
     <div className="fixed inset-0 z-[50] flex items-start justify-center px-2 pt-16 bg-[rgba(15,23,32,.18)]" onMouseDown={() => st.patch({ cmdOpen: false })}>
-      <div role="dialog" aria-label="Commands" onMouseDown={(e) => e.stopPropagation()} className="w-[min(520px,100%)] max-h-[70%] flex flex-col bg-surface border border-line rounded-r shadow-[0_16px_40px_rgba(0,0,0,.22)] overflow-hidden">
+      <div role="dialog" aria-modal="true" aria-label="Commands" onMouseDown={(e) => e.stopPropagation()} className="w-[min(520px,100%)] max-h-[70%] flex flex-col bg-surface border border-line rounded-r shadow-[0_16px_40px_rgba(0,0,0,.22)] overflow-hidden">
         <div className="flex items-center gap-2 px-3 border-b border-line2">
           <span className="font-mono text-[12px] text-muted">S / ⌘K</span>
           <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setIdx(0); }} placeholder="type a command…" className="flex-1 min-h-11 bg-transparent border-0 outline-none text-[15px] text-ink"

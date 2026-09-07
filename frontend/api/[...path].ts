@@ -15,7 +15,7 @@ type ProxyDependencies = Pick<RuntimeDependencies, 'env' | 'fetchImpl'>;
 const PRODUCT_SERVICE_ENV = 'CADDYDADDY_PRODUCT_SERVICE_URL';
 const LIVE_TOKEN_HEADER = 'X-CADdyDaddy-Live-Token';
 const REQUEST_TIMEOUT_MS = 15_000;
-export const CLASSIFICATION_REQUEST_TIMEOUT_MS = 150_000;
+export const CLASSIFICATION_REQUEST_TIMEOUT_MS = 110_000;
 export const MAX_PROXY_BODY_BYTES = 4_000_000;
 
 const ROUTES = new Map<string, ReadonlySet<string>>([

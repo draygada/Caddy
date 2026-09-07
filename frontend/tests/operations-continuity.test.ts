@@ -63,6 +63,36 @@ function jsonResponse(value: unknown, status = 200): Response {
 }
 
 describe('operations client-carried continuity', () => {
+  it('resumes a candidate-bound sourcing seal and exports the refreshed continuity', async () => {
+    const savedState = { schema_version: 'caddydaddy.sourcing-state/1', candidate, seal_sha256: HASH_B, opaque: 'saved-round' };
+    const requests: Array<Record<string, unknown>> = [];
+    const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      requests.push(JSON.parse(String(init?.body)));
+      return jsonResponse(envelope('sourcing', {
+        status: 'SELECTED',
+        round_id: 'round:one',
+        selected_offer: offer,
+        offers: [offer],
+        audit_events: [{ event_type: 'OFFER_SELECTED', event_sha256: HASH_A }],
+      }));
+    });
+    const client = new OperationsClient(candidate, fetchMock as typeof fetch);
+    client.resumeContinuity({
+      schema_version: 'caddydaddy.operations-client-continuity/1',
+      candidate,
+      states: { sourcing: savedState },
+    });
+
+    await client.selectSourcingOffer('round:one', offer.offer_id);
+
+    expect(requests[0].state).toEqual(savedState);
+    expect(client.exportContinuity()).toMatchObject({
+      schema_version: 'caddydaddy.operations-client-continuity/1',
+      candidate,
+      states: { sourcing: { schema_version: 'caddydaddy.sourcing-state/1', candidate } },
+    });
+  });
+
   it('carries sourcing state into a follow-up and starts a new round without stale state', async () => {
     const firstState = { schema_version: 'caddydaddy.sourcing-state/1', candidate, seal_sha256: HASH_B, opaque: 'round-1' };
     const requests: Array<Record<string, unknown>> = [];

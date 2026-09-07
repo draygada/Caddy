@@ -13,6 +13,12 @@ export interface ClientCarriedState {
   [key: string]: unknown;
 }
 
+export interface OperationsClientContinuitySnapshot {
+  schema_version: 'caddydaddy.operations-client-continuity/1';
+  candidate: OperationsCandidateIdentity;
+  states: Partial<Record<OperationsDomain, ClientCarriedState>>;
+}
+
 export interface OperationsEnvelope {
   schema_version: string;
   status: string;
@@ -417,6 +423,69 @@ export class OperationsClient {
 
   getCarriedState(domain: OperationsDomain): ClientCarriedState | null {
     return this.carriedState[domain] ?? null;
+  }
+
+  exportContinuity(): OperationsClientContinuitySnapshot {
+    return {
+      schema_version: 'caddydaddy.operations-client-continuity/1',
+      candidate: { ...this.candidate },
+      states: { ...this.carriedState },
+    };
+  }
+
+  resumeContinuity(value: unknown): void {
+    if (
+      !isRecord(value)
+      || value.schema_version !== 'caddydaddy.operations-client-continuity/1'
+      || !isRecord(value.candidate)
+      || !isRecord(value.states)
+    ) {
+      throw new OperationsServiceError('CONTINUITY_INVALID', 'Saved operations continuity is malformed.');
+    }
+    const restoredCandidate = {
+      candidate_id: requireString(value.candidate.candidate_id, 'CONTINUITY_INVALID'),
+      revision_id: requireString(value.candidate.revision_id, 'CONTINUITY_INVALID'),
+      snapshot_sha256: requireHash(value.candidate.snapshot_sha256, 'CONTINUITY_INVALID'),
+    };
+    if (!sameCandidate(restoredCandidate, this.candidate)) {
+      throw new OperationsServiceError('CONTINUITY_STALE', 'Saved operations continuity belongs to another candidate.');
+    }
+    const domains: OperationsDomain[] = ['sourcing', 'provenance'];
+    if (Object.keys(value.states).some((domain) => !domains.includes(domain as OperationsDomain))) {
+      throw new OperationsServiceError('CONTINUITY_INVALID', 'Saved operations continuity contains an unknown domain.');
+    }
+    const restored: Partial<Record<OperationsDomain, ClientCarriedState>> = {};
+    for (const domain of domains) {
+      const state = value.states[domain];
+      if (state === undefined) continue;
+      validateCarriedState({ state } as OperationsEnvelope, this.candidate, domain);
+      restored[domain] = state as ClientCarriedState;
+    }
+    for (const domain of domains) {
+      if (restored[domain]) this.carriedState[domain] = restored[domain];
+      else delete this.carriedState[domain];
+    }
+  }
+
+  private restoreSourcing<T extends OperationsEnvelope>(value: unknown, validate: (candidate: OperationsEnvelope) => asserts candidate is T): T {
+    validateEnvelope(value, this.candidate, 'sourcing');
+    validate(value);
+    validateCarriedState(value, this.candidate, 'sourcing');
+    if (value.state) this.carriedState.sourcing = value.state;
+    this.lastValid.sourcing = value;
+    return value;
+  }
+
+  restoreSourcingRound(value: unknown): SourcingRoundEnvelope {
+    return this.restoreSourcing(value, validateRound);
+  }
+
+  restoreSourcingPackage(value: unknown): SourcingPackageEnvelope {
+    return this.restoreSourcing(value, validatePackage);
+  }
+
+  restoreSourcingDispatch(value: unknown): SourcingDispatchEnvelope {
+    return this.restoreSourcing(value, validateDispatch);
   }
 
   private async post<T extends OperationsEnvelope>(domain: OperationsDomain, path: string, payload: Record<string, unknown>, validate: (value: OperationsEnvelope) => asserts value is T, continueState = true): Promise<T> {

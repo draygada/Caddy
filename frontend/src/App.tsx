@@ -10,7 +10,7 @@ import { Sourcing } from './panels/Sourcing';
 import { Timeline } from './panels/Timeline';
 import { HelpOverlay } from './panels/HelpOverlay';
 import { DemoBar } from './panels/DemoBar';
-import { CommandBox } from './panels/CommandBox';
+import { CommandBox, commandPaletteBlocked, handleCommandPaletteKeydown } from './panels/CommandBox';
 import { TripwirePanel } from './panels/TripwirePanel';
 import { ClassificationTab } from './panels/ClassificationTab';
 import { ProjectsHome } from './panels/ProjectsHome';
@@ -43,12 +43,12 @@ function useKeyboard() {
         else st.closeAll();
         return;
       }
-      // ⌘K / Ctrl+K opens the command search from anywhere, like the original workbench
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); st.patch({ cmdOpen: !st.cmdOpen, marking: null }); return; }
+      // One global authority opens the command search and refuses modal stacking.
+      if (handleCommandPaletteKeydown(e)) return;
       if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.metaKey || e.ctrlKey || e.altKey) return;
       const k = e.key.toLowerCase();
       if (e.key === '?') st.toggleHelp();
-      else if (k === 's') { e.preventDefault(); st.patch({ cmdOpen: !st.cmdOpen, marking: null }); }
+      else if (k === 's') { if (commandPaletteBlocked()) return; e.preventDefault(); st.patch({ cmdOpen: true, marking: null }); }
       else if (k === 'l') st.toggleTimeline();
       else if (k === 'f') st.setView('iso');
       else if (k === 'e') runCommand('create.extrude');

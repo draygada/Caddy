@@ -7,7 +7,7 @@ import {
   runCommand,
   searchCommands,
 } from '../src/commands';
-import { handleCommandPaletteKeydown } from '../src/panels/CommandBox';
+import { commandPaletteBlocked, handleCommandPaletteKeydown } from '../src/panels/CommandBox';
 import { useStore } from '../src/store';
 import type { WorkspaceId } from '../src/store';
 
@@ -25,6 +25,15 @@ describe('global command palette', () => {
       expect(preventDefault).toHaveBeenCalledOnce();
       expect(useStore.getState().cmdOpen).toBe(true);
     }
+  });
+
+  it('refuses to stack the command palette over an active modal', () => {
+    vi.stubGlobal('document', { querySelector: vi.fn(() => ({ role: 'dialog' })) });
+    const preventDefault = vi.fn();
+    expect(commandPaletteBlocked()).toBe(true);
+    expect(handleCommandPaletteKeydown({ metaKey: true, ctrlKey: false, key: 'k', preventDefault })).toBe(true);
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(useStore.getState().cmdOpen).toBe(false);
   });
 
   it('finds every primary surface through user-facing labels and aliases off Design', () => {

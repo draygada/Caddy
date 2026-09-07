@@ -11,6 +11,7 @@ from pathlib import Path
 
 
 PROVENANCE_PATH = "docs/imports/tripwire-898f6167.json"
+UNIFIED_PROVENANCE_PATH = "docs/imports/tripwire-unified-20260905.json"
 TRIPWIRE_PREFIX = "features/tripwire"
 
 
@@ -40,6 +41,17 @@ def load_manifest(repo: Path, revision: str) -> dict[str, object]:
         return json.loads(payload)
     except json.JSONDecodeError as exc:
         raise HygieneError(f"invalid provenance manifest at {revision}: {exc}") from exc
+
+
+def load_json_path(repo: Path, revision: str, path: str) -> dict[str, object]:
+    payload = git(repo, "show", f"{revision}:{path}").stdout
+    try:
+        value = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise HygieneError(f"invalid provenance manifest {path} at {revision}: {exc}") from exc
+    if not isinstance(value, dict):
+        raise HygieneError(f"invalid provenance manifest {path} at {revision}: expected object")
+    return value
 
 
 def path_matches(path: str, patterns: list[str]) -> bool:
@@ -84,7 +96,8 @@ def check_tripwire_identity(repo: Path, provenance_ref: str, candidate: str) -> 
     except (KeyError, TypeError) as exc:
         raise HygieneError(f"incomplete Tripwire provenance manifest: {exc}") from exc
 
-    actual_tree = git_text(repo, "rev-parse", f"{candidate}:{TRIPWIRE_PREFIX}")
+    if not isinstance(candidate_import, dict):
+        raise HygieneError("TRIPWIRE_PROVENANCE_DRIFT candidate import binding is malformed")
     source_tree = git_text(repo, "rev-parse", f"{source_commit}^{{tree}}")
     if candidate_recorded_tree != expected_tree:
         raise HygieneError(
@@ -94,9 +107,80 @@ def check_tripwire_identity(repo: Path, provenance_ref: str, candidate: str) -> 
         raise HygieneError("TRIPWIRE_PROVENANCE_DRIFT candidate import binding changed")
     if source_tree != expected_tree:
         raise HygieneError(f"TRIPWIRE_SOURCE_DRIFT source={source_tree} recorded={expected_tree}")
-    if actual_tree != expected_tree:
-        raise HygieneError(f"TRIPWIRE_TREE_DRIFT candidate={actual_tree} recorded={expected_tree}")
-    return actual_tree, expected_tree
+    composed_tree = expected_tree
+    unified_exists = git(
+        repo,
+        "cat-file",
+        "-e",
+        f"{candidate}:{UNIFIED_PROVENANCE_PATH}",
+        check=False,
+    ).returncode == 0
+    if unified_exists:
+        unified = load_json_path(repo, candidate, UNIFIED_PROVENANCE_PATH)
+        original = unified.get("original_import")
+        deltas = unified.get("applied_deltas")
+        ancestry_merges = unified.get("ancestry_merges")
+        if (
+            unified.get("schema_version") != "caddydaddy.import-provenance/2"
+            or unified.get("base_manifest") != PROVENANCE_PATH
+            or unified.get("prefix") != TRIPWIRE_PREFIX
+            or not isinstance(original, dict)
+            or not isinstance(deltas, list)
+            or not isinstance(ancestry_merges, list)
+        ):
+            raise HygieneError("TRIPWIRE_UNIFIED_PROVENANCE_INVALID receipt header is malformed")
+        if (
+            original.get("source_commit") != source_commit
+            or original.get("source_tree") != expected_tree
+            or original.get("import_commit") != candidate_import.get("commit")
+        ):
+            raise HygieneError("TRIPWIRE_UNIFIED_PROVENANCE_INVALID original import binding changed")
+        composed_tree = unified.get("current_prefix_tree")
+        if not isinstance(composed_tree, str) or not composed_tree:
+            raise HygieneError("TRIPWIRE_UNIFIED_PROVENANCE_INVALID current prefix tree is missing")
+
+        ancestry_heads: set[str] = set()
+        for entry in ancestry_merges:
+            if not isinstance(entry, dict):
+                raise HygieneError("TRIPWIRE_UNIFIED_PROVENANCE_INVALID ancestry entry is malformed")
+            source_head = entry.get("source_head")
+            merge_commit = entry.get("merge_commit")
+            if not isinstance(source_head, str) or not isinstance(merge_commit, str):
+                raise HygieneError("TRIPWIRE_UNIFIED_PROVENANCE_INVALID ancestry identity is missing")
+            if git(repo, "merge-base", "--is-ancestor", merge_commit, candidate, check=False).returncode != 0:
+                raise HygieneError(f"TRIPWIRE_UNIFIED_PROVENANCE_INVALID merge {merge_commit} is not in candidate ancestry")
+            parents = git_text(repo, "rev-list", "--parents", "-n", "1", merge_commit).split()[1:]
+            if source_head not in parents:
+                raise HygieneError(f"TRIPWIRE_UNIFIED_PROVENANCE_INVALID source {source_head} is not a direct merge parent")
+            ancestry_heads.add(source_head)
+
+        for entry in deltas:
+            if not isinstance(entry, dict):
+                raise HygieneError("TRIPWIRE_UNIFIED_PROVENANCE_INVALID delta entry is malformed")
+            source_head = entry.get("source_head")
+            delta_commit = entry.get("commit")
+            if not isinstance(source_head, str) or not isinstance(delta_commit, str):
+                raise HygieneError("TRIPWIRE_UNIFIED_PROVENANCE_INVALID delta identity is missing")
+            if source_head not in ancestry_heads:
+                raise HygieneError(f"TRIPWIRE_UNIFIED_PROVENANCE_INVALID source {source_head} has no ancestry merge")
+            if git(repo, "merge-base", "--is-ancestor", delta_commit, candidate, check=False).returncode != 0:
+                raise HygieneError(f"TRIPWIRE_UNIFIED_PROVENANCE_INVALID delta {delta_commit} is not in candidate ancestry")
+            delta_paths = git_text(
+                repo,
+                "diff-tree",
+                "--root",
+                "--no-commit-id",
+                "--name-only",
+                "-r",
+                delta_commit,
+            ).splitlines()
+            if any(path != TRIPWIRE_PREFIX and not path.startswith(TRIPWIRE_PREFIX + "/") for path in delta_paths):
+                raise HygieneError(f"TRIPWIRE_UNIFIED_PROVENANCE_INVALID delta {delta_commit} escapes {TRIPWIRE_PREFIX}")
+
+    actual_tree = git_text(repo, "rev-parse", f"{candidate}:{TRIPWIRE_PREFIX}")
+    if actual_tree != composed_tree:
+        raise HygieneError(f"TRIPWIRE_TREE_DRIFT candidate={actual_tree} recorded={composed_tree}")
+    return actual_tree, composed_tree
 
 
 def parse_args() -> argparse.Namespace:

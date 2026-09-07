@@ -172,7 +172,7 @@ export function ClassificationTab({ o }: { o: Outcome }) {
         return (
           <>
             <div className="fixed inset-0 z-[29] bg-scrim" onMouseDown={() => setReasonFor(null)} />
-            <div role="dialog" aria-label={r.name + ' reasoning'} className="fixed z-[30] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(96vw,1100px)] max-h-[90vh] panel flex flex-col">
+            <div role="dialog" aria-modal="true" aria-label={r.name + ' reasoning'} className="fixed z-[30] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(96vw,1100px)] max-h-[90vh] panel flex flex-col">
               <div className="panel-head">
                 <div className="panel-title text-[15px]">{r.name} <span className="sub">· {r.model}</span></div>
                 <div className="flex items-center gap-2">
