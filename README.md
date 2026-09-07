@@ -1,55 +1,74 @@
-# Strafe Forge
+# Caddy
 
-Strafe Forge is the provisional name for an experimental browser-native parametric mechanical CAD workflow. This repository is a standalone product boundary; Strafe Shipyard may observe its Git state and evidence, but is not its CAD database, geometry engine, or release authority.
+Caddy is CAD designed for ITAR and hardware teams. It surfaces how a design change reads against the export-control rules (ITAR and EAR), quoted word for word.
 
-There is no implemented CAD capability in this bootstrap commit. The strongest permitted description remains the claim ceiling in the canonical capability baseline.
+[Demo video](https://drive.google.com/file/d/1vKpyvdiFhcUQ6lwq6Rlr4LLmRkFlHDOR/view?usp=sharing)
 
-## Canonical baseline
+## The problem
 
-The current denominator and claim ceiling live outside this repository at:
+Export controls change with the hardware design. One part swap can move a product from freely exportable to license-required, which controls who may see the product, where it can ship, and the trajectory of the product itself. Today the engineer who made the swap finds out after the design is frozen, from counsel or at the shipping dock, when the only fix is a redesign.
 
-`/Users/benjihuh/Programming/Strafe/CAD_CAPABILITY_ATLAS_2026.md`
+## What Caddy does
 
-The bootstrap observed SHA-256 is `1f231b57dd2cb7fbe1cb427725d00890b6c9454ee25dba90a55a767bdcc44cb2`. See [docs/BASELINE.md](docs/BASELINE.md) for the binding and drift rule. Do not copy the denominator into this repository.
+An engineer swaps a battery or types a wing span. Caddy shows which USML paragraph or ECCN the design now meets, the number that crossed the line, and what that means for export. It then sources each part with a landed-cost estimate and a walkthrough of the supply-chain and import considerations, and writes every accepted change to a log that re-derives when the rules change.
 
-Forge's unifying object is a versioned product thread from requirement/scenario through design, product structure, process/work order, assembly/inspection/test, and immutable release evidence. CAD is one governed module in that thread, not the whole product. Anduril ArsenalOS is a public-principles inspiration only; Forge claims no affiliation, compatibility, equivalence, or knowledge of proprietary internals.
+Caddy is the design-time front door of Albatrust, our startup building the system of record for regulatory compliance, starting with export controls: classify a product when it is first designed, then re-classify it when the product or the law moves.
 
-The initial market is a small manufacturer, supplier, new program, or engineering team forming its operating institution before it has an integrated PLM/ERP/MES/simulation/compliance organization. The wedge is zero-to-first-controlled-release for low-volume/high-mix work, beginning with an RFQ, requirement packet, drawing, imported model, or rough concept. Integrations are incremental; neutral artifacts and explicit human gates remain first-class.
+## The three tabs
 
-“We’re closing the loop from idea to execution for high-stakes industries” is approved positioning. It does not make any individual feature proven. The loop is `idea/need -> requirements -> engineering model -> product structure -> sourcing/process -> authorized order send-off -> build -> inspect/test -> authorized release -> operational feedback`. Forge owns its versioned product thread; Shipyard may visualize progress, blockers, authority, evidence, and verification without becoming a source of product truth.
+- **Design.** A parametric drone on a browser CAD viewport with a component browser, spec dock and product status. Every project starts with the declared use case, because the rules read it.
+- **Classification.** The parts of concern with the modeled row that fired, the number that crossed, the eCFR text behind it, and a destination strip. A deterministic rules engine recomputes on every edit. A guarded live lane sends a part or the whole product to the classification engine, which follows the order of review under strict output schemas and hash-verified citations.
+- **Sourcing.** Four steps: the declared use case, a supplier pick per part signed by a named attestor, the package and a simulated order that dispatches exactly once, and a customs filing draft with pre-entry lines, duties, fees and export references for the broker to review. Every seller is screened against the Consolidated Screening List; every round is sealed to the exact design revision.
 
-The hackathon order proof is synthetic/local only: an RFQ, purchase order, or internal work order binds the exact approved design/BOM revision, recipient, quantity, hashed attachments, approvals, idempotency key, dispatch/acknowledgment/exception state, delivery/receiving, inspection, and closeout. Any real external send is a separately authorized communication.
+## Run it locally
 
-## First target contract
+Three processes, from the repository root.
 
-The first target is one editable parametric part that proves:
+Frontend on port 5173:
 
-- a constrained sketch with useful solved, under-constrained, redundant, and contradictory diagnostics;
-- an ordered feature history with stable feature/entity identifiers;
-- deterministic replay and explicit recompute failure with a separately labeled last-valid result;
-- server-authoritative exact geometry, browser selection against derived tessellation, and STEP/STL export;
-- a semantic branch/change review flow with recoverable conflicts; and
-- provenance from actor intent and authorization through kernel inputs, outputs, diagnostics, tests, and export hashes.
+```bash
+npm run dev --prefix frontend -- --port 5173 --strictPort
+```
 
-The exact acceptance contract is [docs/contracts/first-target.md](docs/contracts/first-target.md). Broad assemblies, drawings, PMI authoring, production CAM, validated FEA, deployment, and incumbent-replacement claims are outside this bootstrap.
+Product service on port 4173. `python3 tools/live_stack.py init` writes `.env.live.local` (gitignored) with every live setting and a generated access token; paste an Anthropic key on the `ANTHROPIC_API_KEY=` line, then:
 
-## Provisional architecture
+```bash
+python3 tools/live_stack.py serve
+```
 
-- `NATIVE`: versioned product-thread/document graph, stable IDs, recompute state machine, semantic changes, authorization/provenance receipts, and topology-reference policy.
-- `BORROWED`: OCCT geometry/exchange through a pinned server adapter; Three.js for rendering; a constraint solver only after a bounded license and robustness bake-off.
-- `DEFERRED`: browser-side OCCT/Replicad as a non-authoritative latency preview; Yjs for presence/comments; PMI, CAM, meshing, and FEA adapters.
-- `REJECTED` for the first contract: mesh/CSG as exact-model authority, whole-FreeCAD embedding, silent CRDT merging of B-rep operations, and dual authoritative browser/server kernels.
+Use `serve-scripted` instead for a run that makes no model calls. Put `VITE_API_TARGET=http://127.0.0.1:4173` in `frontend/.env.local` so the dev server proxies `/api` to it.
 
-The decision and reversal conditions are in [docs/adr/0001-kernel-reuse-and-runtime-boundary.md](docs/adr/0001-kernel-reuse-and-runtime-boundary.md). The sourced component ledger is in [docs/research/component-ledger.v1.json](docs/research/component-ledger.v1.json); the comparative evaluation and exact observed repository heads are in [docs/research/reuse-evaluation.md](docs/research/reuse-evaluation.md) and [docs/research/repository-snapshots.v1.json](docs/research/repository-snapshots.v1.json).
+CAD service on port 8000:
 
-Forge emits evidence-linked lane observations for Shipyard's top-level **Now** (`LIVE NOW`) view under [docs/contracts/now-observation.md](docs/contracts/now-observation.md). Now is observed execution; the Build document is plan/design. Neither view is a second product-thread, progress, authorization, or release authority.
+```bash
+PORT=8000 CAD_ALLOWED_HOSTS=localhost,127.0.0.1 uv run --directory apps/cad-service python -m cad_service.server
+```
 
-## Custodied lanes
+In the app, open Settings, paste the access token from `.env.live.local`, confirm the data is public or synthetic, and press "Run classification" on any part.
 
-| Lane | Branch | Worktree | Sole mutable product paths |
-|---|---|---|---|
-| Core kernel | `lane/core-kernel` | `/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/core-kernel` | `packages/core-kernel/**`, `tests/core-kernel/**` |
-| Browser workbench | `lane/browser-workbench` | `/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/browser-workbench` | `apps/browser-workbench/**`, `tests/browser-workbench/**` |
-| History/collaboration | `lane/history-collaboration` | `/Users/benjihuh/Programming/Strafe/strafe-forge-worktrees/history-collaboration` | `packages/history-collaboration/**`, `tests/history-collaboration/**` |
+## Repository layout
 
-Each lane also owns only its exact receipt path. That receipt carries a browser-safe `now_observation` subset; its private `worktree` value must never enter a browser bundle. Root configuration, root dependency locks, shared contracts, architecture, deployment, and integration refs remain main-integrator custody. Run `python3 tools/check_custody.py --lane <lane> --base <bootstrap-sha>` before a handoff.
+| Path | What it holds |
+|---|---|
+| `frontend/` | The React and TypeScript app, its Vercel proxy and tests |
+| `apps/product-service/` | The Python service: classification, sourcing, provenance and order lanes |
+| `apps/cad-service/` | The OpenCascade CAD service |
+| `packages/classification/` | The classification engine and the order of review |
+| `packages/sourcing/` | Supplier search, screening, ownership and landed cost |
+| `packages/compliance-bridge/`, `packages/core-kernel/`, `packages/cad-output/` | Shared contracts, the design kernel and sealed CAD outputs |
+| `features/tripwire/` | The rule pack and the compliance-at-design-click engine |
+| `tests/` | Package and service suites |
+
+## Tests
+
+```bash
+cd frontend && npx vitest run
+```
+
+```bash
+PYTHONPATH=packages/sourcing uv run --python 3.12 --with pytest --with pypdf --with jsonschema --with fastapi --with uvicorn --with httpx python -m pytest tests/sourcing -q
+```
+
+## Engineering notes
+
+The kernel decisions, the first target contract and the lane custody model are documented in [docs/BASELINE.md](docs/BASELINE.md), [docs/contracts/first-target.md](docs/contracts/first-target.md) and [docs/adr/0001-kernel-reuse-and-runtime-boundary.md](docs/adr/0001-kernel-reuse-and-runtime-boundary.md). The classification and order lanes are review support only and never a legal conclusion; the data boundary admits public or synthetic data only.
