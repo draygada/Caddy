@@ -9,7 +9,9 @@ type PaletteShortcutEvent = Pick<KeyboardEvent, 'metaKey' | 'ctrlKey' | 'key' | 
 export function handleCommandPaletteKeydown(event: PaletteShortcutEvent): boolean {
   if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return false;
   event.preventDefault();
-  useStore.getState().patch({ cmdOpen: true });
+  const state = useStore.getState();
+  if (state.dialog || (typeof document !== 'undefined' && document.querySelector('[aria-modal="true"]'))) return true;
+  state.patch({ cmdOpen: true, marking: null });
   return true;
 }
 
@@ -50,7 +52,10 @@ export function CommandBox() {
       <span className="sr-only">Commands</span>
     </button>
   );
-  const run = (c: Command) => runCommand(c.id, target);
+  const run = (c: Command) => {
+    st.patch({ cmdOpen: false, marking: null });
+    runCommand(c.id, target);
+  };
   return (
     <div className="fixed inset-0 z-[50] flex items-start justify-center px-2 pt-16 bg-[rgba(15,23,32,.18)]" onMouseDown={() => st.patch({ cmdOpen: false })}>
       <div role="dialog" aria-label="Commands" onMouseDown={(e) => e.stopPropagation()} className="w-[min(520px,100%)] max-h-[70%] flex flex-col bg-surface border border-line rounded-r shadow-[0_16px_40px_rgba(0,0,0,.22)] overflow-hidden">

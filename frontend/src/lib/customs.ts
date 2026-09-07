@@ -130,7 +130,7 @@ export function filingDraftOf(round: Round, o: Outcome, entryDate = new Date().t
   const basis = ['19 CFR 163.4 · entry records five years from the date of entry'];
   if (anyItar) basis.push('22 CFR 122.5 · ITAR records five years from expiry of the licence or the export');
   if (round.shipTo !== 'US') basis.push('15 CFR 762.6 · EAR records five years from the export');
-  const warnings = [...WARNINGS.filter((w) => !w.startsWith('EEI')), round.shipTo === 'US' ? 'EEI required: no · this is the import leg; EEI applies to an export shipment' : 'EEI required: see the export references per line (over $2,500 per Schedule B line, or any licensed or ITAR line)'];
+  const warnings = [...WARNINGS.filter((w) => !w.startsWith('EEI')), round.shipTo === 'US' ? 'EEI filing is not evaluated for this import package; reassess any later export leg' : 'EEI filing review is required for this export leg; assess each Schedule B line and any licence or ITAR condition'];
   void anyImport;
   return {
     roundId: round.id, designSeq: round.designSeq, designHash: round.designHash, shipTo: round.shipTo, qty: round.qty, mode: round.mode, entryDate,

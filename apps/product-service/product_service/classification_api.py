@@ -150,7 +150,10 @@ def _default_scripted_model() -> ScriptedModel:
 
 
 def _default_live_model(model: str, api_key: str) -> ModelClient:
-    return LiveAnthropicModel(model=model, api_key=api_key)
+    # Leave the outer proxy enough time to return a structured result after a provider timeout.
+    timeout = os.environ.get("CADDYDADDY_LIVE_LLM_TIMEOUT_SECONDS", "").strip()
+    seconds = float(timeout) if timeout.replace(".", "", 1).isdigit() and 0 < float(timeout) <= 35 else 35.0
+    return LiveAnthropicModel(model=model, api_key=api_key, timeout_seconds=seconds)
 
 
 def _required_secret(environment: Mapping[str, str], name: str) -> str:

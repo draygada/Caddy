@@ -15,6 +15,8 @@ export function ProjectsHome() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [intake, setIntake] = useState<Intake>(INTAKE_DEFAULT);
+  const hasProjectName = name.trim().length > 0;
+  const hasDescription = description.trim().length > 0;
   useEffect(() => {
     if (!creating) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setCreating(false); };
@@ -27,6 +29,7 @@ export function ProjectsHome() {
       <header className="h-12 flex-none flex items-center gap-3 px-4 border-b border-line2 bg-surface">
         <a href="/" onClick={(e) => e.preventDefault()} aria-label="Caddy home" className="flex items-center gap-3 text-ink no-underline min-h-11"><img src="/logo.png" alt="" width={34} height={34} className="block w-[34px] h-[34px]" /><span className="font-bold tracking-[.01em]">Caddy</span></a>
         <span className="text-muted text-[13px]" role="status">{projects.length} project{projects.length === 1 ? '' : 's'}</span>
+        <span className="chip chip-sm max-sm:hidden">Candidate 0.2 preview</span>
         <div className="flex-1" />
         <button onClick={toggleTheme} className="btn min-w-11" aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}><span className="hidden sm:inline">{theme === 'dark' ? 'Light theme' : 'Dark theme'}</span><span className="sm:hidden" aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span></button>
       </header>
@@ -35,7 +38,7 @@ export function ProjectsHome() {
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-[22px] font-bold m-0">Projects</h1>
-              <div className="text-[13px] text-muted">Open a design, or start a new one. Every project carries the use-case answers that classification and sourcing read.</div>
+              <div className="text-[13px] text-muted">Move a public or synthetic design through bounded CAD authoring, ordered classification review, and a review-gated sourcing package. Nothing here authorizes a shipment.</div>
             </div>
             <button onClick={() => setCreating(true)} className="btn btn-primary btn-lg">New project</button>
           </div>
@@ -54,10 +57,10 @@ export function ProjectsHome() {
                   <IntakeForm value={intake} onChange={setIntake} />
                 </div>
                 <div className="flex justify-between gap-2 flex-wrap items-center border-t border-line2 pt-3">
-                  <button onClick={() => createProject(name, description, null)} className="btn" title="just tinkering: the design opens, but classification and sourcing will ask for these answers before they complete">Skip for now · I don't know yet</button>
+                  <button onClick={() => createProject(name.trim(), description.trim(), null)} disabled={!hasProjectName} className="btn disabled:opacity-50" title="just tinkering: the design opens, but classification and sourcing will ask for these answers before they complete">Skip for now · I don't know yet</button>
                   <div className="flex gap-2 items-center">
-                    {intakeIncomplete(intake) && <span role="status" className="text-[12px] text-amber">some answers are “not sure yet”; the project will ask again</span>}
-                    <button onClick={() => createProject(name, description, intake)} className="btn btn-primary btn-lg">Create project</button>
+                    {!hasProjectName ? <span role="status" className="text-[12px] text-amber">project name required</span> : !hasDescription ? <span role="status" className="text-[12px] text-amber">describe what you are building</span> : intakeIncomplete(intake) && <span role="status" className="text-[12px] text-amber">some answers are “not sure yet”; the project will ask again</span>}
+                    <button onClick={() => createProject(name.trim(), description.trim(), intake)} disabled={!hasProjectName || !hasDescription} className="btn btn-primary btn-lg disabled:opacity-50">Create project</button>
                   </div>
                 </div>
               </div>

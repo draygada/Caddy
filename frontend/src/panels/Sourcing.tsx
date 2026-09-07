@@ -503,7 +503,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
               <div className="panel-head"><div className="panel-title">Package</div>{r.pkg && <span className="chip">ready</span>}</div>
               <div className="p-3 grid gap-2 text-[13px]">
                 <button onClick={() => s.buildPackage(o)} disabled={s.viewSeq != null} className="btn btn-primary btn-lg justify-self-start disabled:opacity-50">Build the package</button>
-                {r.pkgRefusal && (() => { const i = r.lines.findIndex((l) => !r.selections[l.id]); return (
+                {r.pkgRefusal && (() => { const i = r.lines.findIndex((l) => !r.selections[l.id]); if (i < 0 && /unselected/i.test(r.pkgRefusal)) return null; return (
                   <div role="alert" className="grid gap-2 justify-items-start">
                     <div className="text-red font-semibold">refused: {r.pkgRefusal}</div>
                     {i >= 0 && <button onClick={() => { setK(i); setStepWanted(2); }} className="btn">Go to {r.lines[i].description.split(' · ')[0]} · the first open line</button>}
@@ -514,7 +514,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
                     <div className="grid grid-cols-[1fr_auto] gap-2"><span>pre-entry lines for broker validation</span><span className="font-mono">{r.pkg.preEntry}</span></div>
                     <div className="grid grid-cols-[1fr_auto] gap-2"><span>diligence record</span><span className="font-mono">{r.pkg.diligence}</span></div>
                     <div className="grid grid-cols-[1fr_auto] gap-2"><span>export references</span><span className="font-mono">{r.pkg.exportRefs}</span></div>
-                    <details className="text-[12px] text-muted"><summary className="cursor-pointer flex items-center min-h-8 max-sm:min-h-11">what this package is, checklist and warnings</summary><div className="mt-1">{CLAIM_PACKAGE} Draft prepared for review by a licensed customs broker. Not a customs entry, not a broker engagement or power of attorney, not legal, customs or tax advice. The importer of record remains responsible under 19 CFR 141.1.</div><div className="mt-1"><b>first-run checklist</b> · {CHECKLIST.join(' · ')}</div><div><b>warnings</b> · {WARNINGS.join(' · ')}</div></details>
+                    <details className="text-[12px] text-muted"><summary className="cursor-pointer flex items-center min-h-8 max-sm:min-h-11">what this package is, checklist and warnings</summary><div className="mt-1">{CLAIM_PACKAGE} Draft prepared for review by a licensed customs broker. Not a customs entry, not a broker engagement or power of attorney, not legal, customs or tax advice. The importer of record remains responsible under 19 CFR 141.1.</div><div className="mt-1"><b>first-run checklist</b> · {CHECKLIST.join(' · ')}</div><div><b>warnings</b> · {[...WARNINGS.filter((warning) => !warning.startsWith('EEI')), r.shipTo === 'US' ? 'EEI filing is not evaluated for this import package; reassess any later export leg' : 'EEI filing review is required for this export leg; assess each Schedule B line and any licence or ITAR condition'].join(' · ')}</div></details>
                   </div>
                 )}
               </div>
@@ -565,7 +565,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
           </div>
 
           <div className="panel">
-            <div className="panel-head"><div className="panel-title">Pre-entry lines <span className="sub">· {f.lines.length} · declared data, heading level only</span></div><span className="text-[12px] text-muted">{f.totals.unverified > 0 ? f.totals.unverified + ' rate' + (f.totals.unverified === 1 ? '' : 's') + ' not verified' : 'every rate dated'}</span></div>
+            <div className="panel-head"><div className="panel-title">Pre-entry lines <span className="sub">· {f.lines.length} · heading level</span></div><span className="text-[12px] text-muted">{f.totals.unverified > 0 ? f.totals.unverified + ' rate' + (f.totals.unverified === 1 ? '' : 's') + ' not verified' : 'every rate dated'}</span></div>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-[13px]">
                 <thead><tr className="text-left text-[12px] text-muted"><th className="px-4 py-2 font-medium">Part</th><th className="px-3 py-2 font-medium">HTS</th><th className="px-3 py-2 font-medium">Origin</th><th className="px-3 py-2 font-medium text-right">Qty</th><th className="px-3 py-2 font-medium text-right">Unit value</th><th className="px-3 py-2 font-medium text-right">Duties</th><th className="px-3 py-2 font-medium text-right">Fees</th><th className="px-3 py-2 font-medium">Entry</th></tr></thead>
@@ -819,7 +819,7 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
             )}
 
             <details className="panel p-3 text-[13px]" open={serviceOpen} onToggle={(e) => setServiceOpen((e.currentTarget as HTMLDetailsElement).open)}>
-              <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Connected service round <span className="text-muted font-normal">· the product service screens, walks owners, costs and seals a package for this part</span></summary>
+              <summary className="cursor-pointer font-semibold flex items-center gap-2 flex-wrap min-h-8 max-sm:min-h-11">Connected service round <span className="text-muted font-normal">· screened by the product service</span></summary>
               {serviceOpen && <div className="mt-2"><ServiceSourcing quantity={r.qty} mode={r.mode} partKey={PART_KEY[line.slot ?? ''] ?? line.id.replace(/^l-/, '')} partLabel={(slot ? GENERIC_NAME[slot as Slot] : line.description.split(' · ')[0])} /></div>}
             </details>
 
@@ -834,13 +834,13 @@ export function Sourcing({ o, embedded = false }: { o: Outcome; embedded?: boole
           </div>
         )}
       </div>
-      <div className="flex items-center gap-2 px-4 py-2 border-t border-line2 bg-surface text-[13px]">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-t border-line2 bg-surface text-[13px]">
         <button onClick={() => setK(Math.max(0, k - 1))} disabled={k === 0} className="btn disabled:opacity-40">Back</button>
         <span role="status" className="text-muted whitespace-nowrap">part {k + 1} of {n}{sel ? ' · picked' : ''}</span>
-        <span className="flex-1" />
+        <span className="flex-1 max-sm:hidden" />
         <span className="text-muted hidden sm:inline">modeled landed estimate</span><b className="font-mono">{usd(total)}</b>
         {k + 1 < n ? <button onClick={() => setK(k + 1)} className="btn">{sel ? 'Next part' : 'Skip for now'}</button> : null}
-        <button onClick={() => setStepWanted(3)} className={'btn ' + (selectedCount === n ? 'btn-primary' : '')}>Package{selectedCount < n ? ' · ' + (n - selectedCount) + ' open' : ''}</button>
+        <button onClick={() => setStepWanted(3)} className={'btn max-sm:flex-1 max-sm:min-w-[132px] whitespace-normal ' + (selectedCount === n ? 'btn-primary' : '')}>Package{selectedCount < n ? ' · ' + (n - selectedCount) + ' open' : ''}</button>
       </div>
     </div>
   );

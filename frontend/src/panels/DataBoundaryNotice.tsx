@@ -35,8 +35,8 @@ export function DataBoundaryNotice({ children }: DataBoundaryNoticeProps) {
               <p className="m-0 text-muted">
                 No authentication or GovCloud assurance. This selection gate does not scan content or claim regulated compliance.
               </p>
-              <label htmlFor="deployment-data-class" className="grid gap-1">
-                <span className="text-[12px] text-muted">Declared data class</span>
+              <div className="grid gap-1">
+                <label htmlFor="deployment-data-class" className="text-[12px] text-muted">Declared data class</label>
                 <select
                   id="deployment-data-class"
                   value={selection}
@@ -49,7 +49,7 @@ export function DataBoundaryNotice({ children }: DataBoundaryNoticeProps) {
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
-              </label>
+              </div>
               <p id="data-boundary-decision" role={selection ? 'alert' : 'status'} aria-live="polite" className={'m-0 font-semibold ' + (selection ? 'text-red' : 'text-muted')}>
                 {decision.reason}
               </p>

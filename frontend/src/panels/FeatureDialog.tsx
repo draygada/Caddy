@@ -233,7 +233,7 @@ export function FeatureDialog({ docked = false }: { docked?: boolean } = {}) {
     case 'door3': {
       const p = s.slotList;
       return (
-        <Frame title="New from description" sub="Door 3 · a prompt becomes a slot list" onCancel={() => { s.patch({ slotList: null }); cancel(); }} onOk={p ? () => { s.acceptSlotList(text2.trim() || 'engineer'); s.closeDialog(); } : () => s.proposeSlots(text)} okLabel={p ? 'Accept · seeds the design' : 'Propose slots'} okDisabled={p ? false : !text.trim()}>
+        <Frame title="New from description" sub="Door 3 · a prompt becomes a slot list" onCancel={() => { s.patch({ slotList: null }); cancel(); }} onOk={p ? () => { s.acceptSlotList(text2.trim()); s.closeDialog(); } : () => s.proposeSlots(text)} okLabel={p ? 'Accept · seeds the design' : 'Propose slots'} okDisabled={p ? !text2.trim() : !text.trim()}>
           {!p && <textarea aria-label="description" value={text} onChange={(e) => setText(e.target.value)} rows={4} placeholder="a long-range survey drone with a thermal camera, GNSS, a datalink and a laser rangefinder pod" className="field py-2 font-sans" autoFocus />}
           {p && (
             <div className="grid gap-1 text-[13px]">

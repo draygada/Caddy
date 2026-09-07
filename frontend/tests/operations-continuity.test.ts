@@ -184,4 +184,32 @@ describe('operations client-carried continuity', () => {
     await expect(client.createSourcingRound({ part_key: 'flight-controller', quantity: 1, mode: 'air' })).rejects.toMatchObject<Partial<OperationsServiceError>>({ code: 'RESPONSE_STATE_INVALID' });
     expect(client.getLastValid('sourcing')).toBeNull();
   });
+
+  it('carries a candidate-bound resealed state from a 409 rejection into the next request', async () => {
+    const blockedState = { schema_version: 'caddydaddy.sourcing-state/1', candidate, seal_sha256: HASH_B, opaque: 'blocked-event-recorded' };
+    const requests: Array<Record<string, unknown>> = [];
+    const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      requests.push(JSON.parse(String(init?.body)));
+      if (requests.length === 1) return jsonResponse(envelope('sourcing', { state: blockedState, status: 'REJECTED', diagnostic: { code: 'OFFER_BLOCKED', message: 'The offer remains blocked.' } }), 409);
+      return jsonResponse(envelope('sourcing', { status: 'SELECTED', round_id: 'round:one', selected_offer: offer, offers: [offer], audit_events: [{ event_type: 'OFFER_SELECTED', event_sha256: HASH_A }] }));
+    });
+    const client = new OperationsClient(candidate, fetchMock as typeof fetch);
+
+    await expect(client.createSourcingRound({ part_key: 'flight-controller', quantity: 1, mode: 'air' })).rejects.toMatchObject({ code: 'OFFER_BLOCKED', status: 409 });
+    expect(client.getCarriedState('sourcing')).toEqual(blockedState);
+    await client.selectSourcingOffer('round:one', 'offer:user:one');
+    expect(requests[1].state).toEqual(blockedState);
+  });
+
+  it('rejects malformed state attached to a 409 instead of poisoning continuity', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(envelope('sourcing', {
+      state: { schema_version: 'caddydaddy.sourcing-state/1', candidate, seal_sha256: 'tampered' },
+      status: 'REJECTED',
+      diagnostic: { code: 'OFFER_BLOCKED', message: 'The offer remains blocked.' },
+    }), 409));
+    const client = new OperationsClient(candidate, fetchMock as typeof fetch);
+
+    await expect(client.createSourcingRound({ part_key: 'flight-controller', quantity: 1, mode: 'air' })).rejects.toMatchObject({ code: 'RESPONSE_STATE_INVALID' });
+    expect(client.getCarriedState('sourcing')).toBeNull();
+  });
 });

@@ -125,6 +125,16 @@ describe('classification client', () => {
       .rejects.toMatchObject({ code: 'POLICY_BLOCKED', message: 'REAL_LLM_AUTHORIZED is unset.' });
   });
 
+  it('preserves live access and budget diagnostics as blocked outcomes', async () => {
+    const denied = vi.fn(async () => jsonResponse({ status: 'BLOCKED', diagnostic: { code: 'CLASSIFICATION_LIVE_ACCESS_DENIED', message: 'live classification access denied' } }, 401));
+    await expect(evaluateClassification({ description: 'part', facts: {}, item_kind: 'commodity' }, { fetchImpl: denied }))
+      .rejects.toMatchObject({ code: 'POLICY_BLOCKED', message: 'live classification access denied' });
+
+    const exhausted = vi.fn(async () => jsonResponse({ status: 'BLOCKED', diagnostic: { code: 'CLASSIFICATION_BUDGET_EXHAUSTED', message: 'classification budget exhausted before completion' } }, 429));
+    await expect(evaluateClassification({ description: 'part', facts: {}, item_kind: 'commodity' }, { fetchImpl: exhausted }))
+      .rejects.toMatchObject({ code: 'POLICY_BLOCKED', message: 'classification budget exhausted before completion' });
+  });
+
   it('distinguishes schema failure, backend failure, and invalid local input', async () => {
     const invalidSchema = vi.fn(async () => jsonResponse({ schema_version: 'forge-classification.determination/1' }));
     await expect(evaluateClassification({ description: 'part', facts: {}, item_kind: 'commodity' }, { fetchImpl: invalidSchema }))

@@ -27,6 +27,7 @@ export function LiveClassificationPanel() {
   const parts = useStore((state) => state.parts);
   const span = useStore((state) => state.span);
   const geometry = useStore((state) => state.geo);
+  const liveAuth = useStore((state) => state.liveAuth);
   const sourceFacts = useMemo(() => ({
     'data.classification': 'SYNTHETIC_PUBLIC_DEMO_ONLY',
     'project.name': project?.name ?? 'Untitled project',
@@ -45,8 +46,6 @@ export function LiveClassificationPanel() {
   const [factsText, setFactsText] = useState(JSON.stringify(sourceFacts, null, 2));
   const [itemKind, setItemKind] = useState<ClassificationItemKind>('commodity');
   const [mode, setMode] = useState<ClassificationExecutionMode>('scripted');
-  const [accessToken, setAccessToken] = useState('');
-  const [publicSyntheticConfirmed, setPublicSyntheticConfirmed] = useState(false);
   const [state, setState] = useState<'idle' | 'running' | 'valid' | 'error'>('idle');
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [result, setResult] = useState<ClassificationDetermination | null>(null);
@@ -81,7 +80,7 @@ export function LiveClassificationPanel() {
       const determination = await evaluateClassification(
         { description, facts, item_kind: itemKind },
         mode === 'live-claude'
-          ? { signal: controller.signal, liveAuthorization: { accessToken, publicSyntheticDataConfirmed: publicSyntheticConfirmed } }
+          ? { signal: controller.signal, liveAuthorization: liveAuth }
           : { signal: controller.signal },
       );
       if (request.current !== controller) return;
@@ -97,18 +96,18 @@ export function LiveClassificationPanel() {
     }
   }
 
-  const enabled = classificationExecutionEnabled(mode, state === 'running', accessToken, publicSyntheticConfirmed);
+  const enabled = classificationExecutionEnabled(mode, state === 'running', liveAuth.accessToken, liveAuth.publicSyntheticDataConfirmed);
   const decision = result?.determination;
 
   return (
-    <section className="panel" aria-labelledby="connected-classification-title">
-      <div className="panel-head">
+    <details className="panel">
+      <summary className="panel-head cursor-pointer" aria-labelledby="connected-classification-title">
         <div>
-          <div id="connected-classification-title" className="panel-title">Charlie engine</div>
-          <div className="sub">Ordered USML to CCL to EAR99 review with strict structured output</div>
+          <div id="connected-classification-title" className="panel-title">Custom engine request</div>
+          <div className="sub">Advanced arbitrary description, facts, and item-kind input</div>
         </div>
         <span className="chip chip-sm">legal effect: NONE</span>
-      </div>
+      </summary>
       <div className="p-4 grid gap-4">
         <div role="note" className="border-l-4 border-amber bg-surface px-3 py-2 text-[12px] leading-[1.45]">
           Jurisdiction-screening support only. This is not legal advice, an export authorization, transaction clearance, sanctions screening, or permission to ship.
@@ -145,11 +144,7 @@ export function LiveClassificationPanel() {
 
             {mode === 'live-claude' && <div aria-label="Live Claude authorization" className="grid gap-3 rounded-r border border-amber bg-surface p-3">
               <div role="note" className="text-[12px] leading-[1.45]"><b>External data transfer.</b> Public or synthetic demo data only. Never submit CUI, export-controlled technical data, customer data, credentials, or secrets.</div>
-              <label className="grid gap-1 text-[12px] font-semibold">Demo access token
-                <input aria-label="Live Claude demo access token" type="password" autoComplete="off" spellCheck={false} value={accessToken} onChange={(event) => setAccessToken(event.target.value)} className="rounded-r border border-line bg-bg p-2 font-normal" />
-                <span className="text-[11px] font-normal text-muted">This is the deployment access token, not an Anthropic API key. It remains in this browser session only.</span>
-              </label>
-              <label className="flex items-start gap-2 text-[12px] font-semibold"><input aria-label="Confirm public or synthetic data only" type="checkbox" checked={publicSyntheticConfirmed} onChange={(event) => setPublicSyntheticConfirmed(event.target.checked)} /><span>I confirm this request contains public or synthetic data only.</span></label>
+              <div className="text-[12px]"><b>{liveAuth.accessToken.trim() && liveAuth.publicSyntheticDataConfirmed ? 'Live access is available.' : 'Live access is not armed.'}</b> Configure the deployment token and public-or-synthetic attestation in Settings. The provider key remains server-side.</div>
             </div>}
 
             <button type="button" className="btn btn-primary" disabled={!enabled} onClick={run}>
@@ -168,6 +163,6 @@ export function LiveClassificationPanel() {
           <div className="grid gap-1 font-mono text-[10px] text-muted"><div>snapshot {result.snapshot_sha256}</div><div>reference pack {result.pack_sha256}</div></div>
         </div> : <div className="text-[12px] text-muted">No connected-service result yet. Run the deterministic path for a no-spend check, or use the guarded live path with the deployment token.</div>}
       </div>
-    </section>
+    </details>
   );
 }

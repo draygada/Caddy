@@ -18,6 +18,29 @@ import { draftMemo, memoHash, citationsWithin, type Memo } from './lib/memo';
 import { proposeSlotList, searchTarget, type Ranked, type SlotListProposal, type TargetConstraints } from './lib/propose';
 import { PACKS, type PackId } from './lib/catalog';
 
+/** Browser authorization for explicit live-classification calls. This is a deployment token, never the provider key. */
+export interface LiveAuth { accessToken: string; publicSyntheticDataConfirmed: boolean }
+const LIVE_AUTH_KEY = 'caddy.live-auth';
+const readLiveAuth = (): LiveAuth => {
+  try {
+    const storage = typeof globalThis.sessionStorage === 'undefined' ? null : globalThis.sessionStorage;
+    const raw = storage?.getItem(LIVE_AUTH_KEY);
+    if (raw) {
+      const value = JSON.parse(raw) as Partial<LiveAuth>;
+      if (typeof value.accessToken === 'string') return { accessToken: value.accessToken, publicSyntheticDataConfirmed: value.publicSyntheticDataConfirmed === true };
+    }
+  } catch { /* storage unavailable: the lane stays scripted */ }
+  return { accessToken: '', publicSyntheticDataConfirmed: false };
+};
+const writeLiveAuth = (value: LiveAuth) => {
+  try {
+    const storage = typeof globalThis.sessionStorage === 'undefined' ? null : globalThis.sessionStorage;
+    if (!storage) return;
+    if (value.accessToken) storage.setItem(LIVE_AUTH_KEY, JSON.stringify(value));
+    else storage.removeItem(LIVE_AUTH_KEY);
+  } catch { /* storage unavailable: the lane stays scripted */ }
+};
+
 export type { Pos, Positions } from './lib/design';
 export type Theme = 'light' | 'dark';
 /** The three tabs. */
@@ -179,6 +202,8 @@ export interface WorkbenchState extends Snapshot {
   projects: Project[];
   project: Project | null;
   intakeOpen: boolean;
+  liveAuth: LiveAuth;
+  setLiveAuth: (next: LiveAuth) => void;
   openProject: (id: string) => void;
   createProject: (name: string, description: string, intake: Intake | null) => void;
   setProjectIntake: (intake: Intake | null) => void;
@@ -369,8 +394,12 @@ const readWorkbenchSession = (): Partial<WorkbenchState> => {
     if (!raw) return {};
     const envelope = JSON.parse(raw) as { schemaVersion?: unknown; state?: unknown };
     if (envelope.schemaVersion !== 1 || !envelope.state || typeof envelope.state !== 'object' || Array.isArray(envelope.state)) return {};
+    const restored = { ...(envelope.state as Partial<WorkbenchState>) };
+    // Live authorization has its own deliberately tab-scoped record. Never duplicate it in the broad workbench snapshot.
+    delete restored.liveAuth;
+    delete restored.setLiveAuth;
     return {
-      ...(envelope.state as Partial<WorkbenchState>),
+      ...restored,
       cmdOpen: false,
       dialog: null,
       dragging: false,
@@ -392,7 +421,7 @@ const writeWorkbenchSession = (state: WorkbenchState) => {
   try {
     const storage = typeof globalThis.sessionStorage === 'undefined' ? null : globalThis.sessionStorage;
     if (!storage) return;
-    const safeState = {
+    const safeState: Partial<WorkbenchState> = {
       ...state,
       copied: null,
       dialog: null,
@@ -403,6 +432,8 @@ const writeWorkbenchSession = (state: WorkbenchState) => {
       preview: null,
       viewSeq: null,
     };
+    delete safeState.liveAuth;
+    delete safeState.setLiveAuth;
     storage.setItem(WORKBENCH_SESSION_KEY, JSON.stringify(
       { schemaVersion: 1, state: safeState },
       (_key, value) => typeof value === 'function' ? undefined : value,
@@ -445,6 +476,8 @@ export const useStore = create<WorkbenchState>()((set, get) => {
     project: null,
     intakeOpen: false,
     ...readWorkbenchSession(),
+    liveAuth: readLiveAuth(),
+    setLiveAuth: (next) => { writeLiveAuth(next); set({ liveAuth: next }); },
     openProject: (id) => {
       const s = get();
       const p = s.projects.find((x) => x.id === id);
